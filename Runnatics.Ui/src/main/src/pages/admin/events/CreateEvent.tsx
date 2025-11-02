@@ -16,7 +16,7 @@ import {
   Stack,
   SelectChangeEvent,
 } from "@mui/material";
-import { eventService } from "../../../services/EventService";
+import { EventService } from "../../../services/EventService";
 import { EventType } from "@/main/src/models";
 import { CreateEventRequest } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
@@ -230,11 +230,11 @@ export const CreateEvent: React.FC = () => {
 
     try {
       // Create event
-      const createdEvent = await eventService.createEvent(formData);
+      const createdEvent = await EventService.createEvent(formData);
 
       // Upload banner image if provided
       if (bannerFile && createdEvent.id) {
-        await eventService.uploadBannerImage(createdEvent.id, bannerFile);
+        await EventService.uploadBannerImage(createdEvent.id, bannerFile);
       }
 
       // Show success message
