@@ -50,7 +50,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   return (
     <ThemeContext.Provider value={value}>
       <MuiThemeProvider theme={theme}>
-        <CssBaseline />
+        <CssBaseline enableColorScheme />
         {children}
       </MuiThemeProvider>
     </ThemeContext.Provider>
