@@ -1,6 +1,7 @@
-import { EventType } from "react-hook-form";
+import { EventType } from "./EventType";
 
 export interface CreateEventRequest {
+  organizationId?: number | null;
   name: string;
   description: string;
   eventType: EventType;

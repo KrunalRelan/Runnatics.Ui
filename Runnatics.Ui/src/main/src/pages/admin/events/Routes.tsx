@@ -1,6 +1,6 @@
 import { RouteObject } from "react-router-dom";
 import Dashboard from "./Dashboard";
-import CreateEvent from "./CreateEvent";
+import { CreateEvent } from "./CreateEvent";
 import ViewEvent from "./ViewEvent";
 
 export const eventsRoutes: RouteObject[] = [

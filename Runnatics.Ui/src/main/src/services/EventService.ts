@@ -87,4 +87,16 @@ export const eventService = {
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-+|-+$/g, '');
     },
+
+    // Upload banner image
+    async uploadBannerImage(eventId: string, file: File): Promise<void> {
+        const formData = new FormData();
+        formData.append('bannerImage', file);
+
+        await apiClient.post(`/events/${eventId}/banner`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+    }
 };
