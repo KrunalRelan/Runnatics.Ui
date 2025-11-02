@@ -1,20 +1,20 @@
-import { EventSettings } from "./EventSettings";
-import { EventStatus } from "./EventStatus";
+import { EventType } from "react-hook-form";
 
 export interface CreateEventRequest {
-    organizationId: number;
-    name: string;
-    slug: string;
-    description?: string;
-    eventDate: string;
-    timeZone: string;
-    venueName?: string;
-    venueAddress?: string;
-    venueLatitude?: number;
-    venueLongitude?: number;
-    status: EventStatus;
-    maxParticipants?: number;
-    registrationDeadline?: string;
-    settings?: EventSettings;
-    organizers: string[]; // Array of organizer names
-  }
+  name: string;
+  description: string;
+  eventType: EventType;
+  startDate: string; // ISO string format
+  endDate: string;
+  registrationOpenDate: string;
+  registrationCloseDate: string;
+  location: string;
+  city: string;
+  state: string;
+  country: string;
+  zipCode: string;
+  capacity: number;
+  price: number;
+  currency: string;
+  bannerImageUrl?: string;
+}

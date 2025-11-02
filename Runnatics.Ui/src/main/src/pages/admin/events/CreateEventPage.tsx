@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { CreateEventForm } from "../../../components/events/CreateEventForm";
+import { CreateEvent } from "../../../components/events/CreateEvent";
     //"../../components/events/CreateEventForm";
 //import { useAuthStore } from "../../stores/auth.store";
 
@@ -26,5 +26,5 @@ export const CreateEventPage = () => {
     );
   }
 
-  return <CreateEventForm organizationId={orgId} />;
+  return <CreateEvent organizationId={orgId} />;
 };

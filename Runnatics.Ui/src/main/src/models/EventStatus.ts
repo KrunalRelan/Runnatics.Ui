@@ -1,1 +1,8 @@
-export type EventStatus = 'Draft' | 'Published' | 'InProgress' | 'Completed' | 'Cancelled';
+export enum EventStatus {
+    Draft = 'Draft',
+    Published = 'Published',
+    RegistrationOpen = 'RegistrationOpen',
+    RegistrationClosed = 'RegistrationClosed',
+    Completed = 'Completed',
+    Cancelled = 'Cancelled'
+  }
