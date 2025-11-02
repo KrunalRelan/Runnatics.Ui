@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
@@ -40,8 +40,8 @@ import {
   Send as SendIcon,
   Logout as LogoutIcon,
   Notifications as NotificationsIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
+  KeyboardDoubleArrowLeft as KeyboardDoubleArrowLeftIcon,
+  KeyboardDoubleArrowRight as KeyboardDoubleArrowRightIcon,
 } from "@mui/icons-material";
 import {
   DashboardLayoutProps,
@@ -61,6 +61,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [submenuAnchorEl, setSubmenuAnchorEl] = useState<null | HTMLElement>(null);
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const currentDrawerWidth = isMinimized ? miniDrawerWidth : drawerWidth;
 
@@ -88,6 +89,11 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
   
   const handleMouseEnter = (item: string, event: React.MouseEvent<HTMLElement>): void => {
     if (isMinimized) {
+      // Clear any pending close timeout
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
       setHoveredItem(item);
       setSubmenuAnchorEl(event.currentTarget);
     }
@@ -95,9 +101,26 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleMouseLeave = (): void => {
     if (isMinimized) {
-      setHoveredItem(null);
-      setSubmenuAnchorEl(null);
+      // Add a delay before closing to allow mouse movement to the popup
+      closeTimeoutRef.current = setTimeout(() => {
+        setHoveredItem(null);
+        setSubmenuAnchorEl(null);
+      }, 200); // 200ms delay
     }
+  };
+  
+  const handlePopperMouseEnter = (): void => {
+    // Clear the close timeout when mouse enters the popper
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  };
+
+  const handlePopperMouseLeave = (): void => {
+    // Close immediately when leaving the popper
+    setHoveredItem(null);
+    setSubmenuAnchorEl(null);
   };
 
   const handleProfileMenuOpen = (
@@ -202,8 +225,19 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
       
       {/* Minimize Toggle Button */}
       <Box sx={{ display: "flex", justifyContent: "center", py: 1 }}>
-        <IconButton onClick={handleMinimizeToggle} size="small">
-          {isMinimized ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+        <IconButton 
+          onClick={handleMinimizeToggle} 
+          size="small"
+          sx={{
+            color: 'primary.main',
+            '&:hover': {
+              backgroundColor: 'primary.light',
+              color: 'white',
+            },
+            transition: 'all 0.3s',
+          }}
+        >
+          {isMinimized ? <KeyboardDoubleArrowRightIcon /> : <KeyboardDoubleArrowLeftIcon />}
         </IconButton>
       </Box>
       <Divider />
@@ -330,7 +364,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
                 ]}
                 sx={{ zIndex: 1300 }}
               >
-                <ClickAwayListener onClickAway={handleMouseLeave}>
+                <ClickAwayListener onClickAway={handlePopperMouseLeave}>
                   <Paper
                     elevation={8}
                     sx={{
@@ -338,8 +372,8 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
                       minWidth: 200,
                       backgroundColor: "background.paper",
                     }}
-                    onMouseEnter={() => setHoveredItem(item.text)}
-                    onMouseLeave={handleMouseLeave}
+                    onMouseEnter={handlePopperMouseEnter}
+                    onMouseLeave={handlePopperMouseLeave}
                   >
                     <Box sx={{ p: 1 }}>
                       <Typography
@@ -358,11 +392,15 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
                               backgroundColor: isActive(subItem.path)
                                 ? "action.selected"
                                 : "transparent",
+                              '&:hover': {
+                                backgroundColor: 'primary.light',
+                                color: 'white',
+                              },
                             }}
                             onClick={() => {
                               navigate(subItem.path);
                               setMobileOpen(false);
-                              handleMouseLeave();
+                              handlePopperMouseLeave();
                             }}
                           >
                             <ListItemIcon sx={{ color: "text.secondary", minWidth: 36 }}>
