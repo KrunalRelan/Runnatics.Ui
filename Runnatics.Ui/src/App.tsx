@@ -10,7 +10,10 @@ function App() {
       <BrowserRouter>
         <DashboardLayout>
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route
+              path="/"
+              element={<Navigate to="/events/events-dashboard" replace />}
+            />
             {routes.map((route, index) => (
               <Route key={index} path={route.path} element={route.element}>
                 {route.children?.map((child, childIndex) => (

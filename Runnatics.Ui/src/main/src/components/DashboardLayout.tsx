@@ -28,6 +28,8 @@ import {
   BarChart as BarChartIcon,
   Settings as SettingsIcon,
   Inbox as InboxIcon,
+  Event as EventIcon,
+  Add as AddIcon,
   ExpandLess,
   ExpandMore,
   Star as StarIcon,
@@ -74,9 +76,31 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
   // Navigation menu items
   const menuItems: MenuItemType[] = [
     {
-      text: "Dashboard",
+      text: "Events Dashboard",
       icon: <DashboardIcon />,
-      path: "/dashboard",
+      path: "/events/events-dashboard", // ← Your default events page
+    },
+    {
+      text: "Events",
+      icon: <EventIcon />, // ← Import from @mui/icons-material
+      path: "/events",
+      submenu: [
+        // {
+        //   text: "Events Dashboard",
+        //   icon: <DashboardIcon />,
+        //   path: "/events/events-dashboard",
+        // },
+        {
+          text: "Create Event",
+          icon: <AddIcon />,
+          path: "/events/events-create",
+        },
+        {
+          text: "View Event",
+          icon: <InboxIcon />,
+          path: "/events/events-detail/:eventId",
+        },
+      ],
     },
     {
       text: "Products",
