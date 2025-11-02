@@ -33,11 +33,13 @@ import {
   Star as StarIcon,
   Send as SendIcon,
   Logout as LogoutIcon,
+  Notifications as NotificationsIcon,
 } from "@mui/icons-material";
 import {
   DashboardLayoutProps,
   MenuItem as MenuItemType,
 } from "../models/components";
+import ThemeSwitcher from "../theme/ThemeSwitcher";
 
 const drawerWidth = 240;
 
@@ -254,9 +256,11 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
-          backgroundColor: "white",
+          backgroundColor: "background.paper",
           color: "text.primary",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+          boxShadow: 1,
+          borderBottom: 1,
+          borderColor: "divider",
         }}
       >
         <Toolbar>
@@ -276,9 +280,11 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
           </Typography>
 
           {/* Right side icons */}
+          <ThemeSwitcher />
+
           <IconButton color="inherit" sx={{ mr: 1 }}>
             <Badge badgeContent={4} color="error">
-              <Box component="span">🔔</Box>
+              <NotificationsIcon />
             </Badge>
           </IconButton>
 
@@ -354,7 +360,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
           flexGrow: 1,
           p: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
-          backgroundColor: "#f5f5f5",
+          backgroundColor: "background.default",
           minHeight: "100vh",
         }}
       >
