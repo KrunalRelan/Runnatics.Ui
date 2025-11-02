@@ -76,7 +76,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
   // Navigation menu items
   const menuItems: MenuItemType[] = [
     {
-      text: "Events Dashboard",
+      text: "Dashboard",
       icon: <DashboardIcon />,
       path: "/events/events-dashboard", // ← Your default events page
     },

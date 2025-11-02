@@ -1,6 +1,7 @@
 import { createTheme, ThemeOptions } from '@mui/material/styles';
 import { ThemeMode } from '../models/theme';
 
+
 // MUI Website Theme - Exact Colors
 // Primary Blue from MUI site
 const muiBlue = {

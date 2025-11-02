@@ -3,6 +3,8 @@
 import axios, { AxiosResponse } from 'axios';
 import { Event, CreateEventRequest, ServiceUrl } from '../models';
 import config from '../config/environment';
+import { SearchCriteria } from '../models/SearchCirteria';
+import { SearchReponse } from '../models/SearchReponse';
 
 const API_BASE_URL = config.apiBaseUrl;
 
@@ -45,13 +47,10 @@ export class EventService {
      * Get all events with optional filters
      */
     static async getAllEvents(params?: {
-        page?: number;
-        pageSize?: number;
-        search?: string;
-        status?: string;
-    }): Promise<{ data: Event[]; total: number }> {
-        const response: AxiosResponse = await eventApi.get('/', { params });
-        return response.data;
+       searchCriteria?: SearchCriteria;
+    }): Promise<SearchReponse<Event>> {
+        return axios.post<SearchReponse<Event>>(ServiceUrl.searchEventService(), params?.searchCriteria)
+            .then(response => response.data);
     }
 
     /**
@@ -61,17 +60,6 @@ export class EventService {
         const response: AxiosResponse<Event> = await eventApi.get(`/${id}`);
         return response.data;
     }
-
-    /**
-     * Search events
-     */
-    static async searchEvents(query: string): Promise<Event[]> {
-        const response: AxiosResponse<Event[]> = await eventApi.get(ServiceUrl.searchEventService(), {
-            params: { q: query },
-        });
-        return response.data;
-    }
-
     /**
      * Create new event
      */

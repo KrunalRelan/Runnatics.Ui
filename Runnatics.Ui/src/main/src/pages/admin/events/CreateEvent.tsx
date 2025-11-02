@@ -134,10 +134,10 @@ export const CreateEvent: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Organization validation
-    if (!formData.organizationId) {
-      newErrors.organizationId = "Organization is required";
-    }
+    // Organization validation - N/A is acceptable
+        if (formData.organizationId == null) {
+          newErrors.organizationId = "Organization is required";
+        }
 
     // Required field validations
     if (!formData.name.trim()) {
@@ -184,13 +184,14 @@ export const CreateEvent: React.FC = () => {
       newErrors.price = "Price cannot be negative";
     }
 
-    // Date validations
+    // Date and time validations
     if (formData.startDate && formData.endDate) {
       const start = new Date(formData.startDate);
       const end = new Date(formData.endDate);
 
-      if (end < start) {
-        newErrors.endDate = "End date must be after start date";
+      // Compare timestamps to include both date and time
+      if (end.getTime() <= start.getTime()) {
+        newErrors.endDate = "End date and time must be after start date and time";
       }
     }
 
@@ -198,9 +199,10 @@ export const CreateEvent: React.FC = () => {
       const regOpen = new Date(formData.registrationOpenDate);
       const regClose = new Date(formData.registrationCloseDate);
 
-      if (regClose < regOpen) {
+      // Compare timestamps to include both date and time
+      if (regClose.getTime() <= regOpen.getTime()) {
         newErrors.registrationCloseDate =
-          "Registration close date must be after open date";
+          "Registration close date and time must be after open date and time";
       }
     }
 
@@ -208,7 +210,8 @@ export const CreateEvent: React.FC = () => {
       const regClose = new Date(formData.registrationCloseDate);
       const eventStart = new Date(formData.startDate);
 
-      if (regClose > eventStart) {
+      // Compare timestamps to include both date and time
+      if (regClose.getTime() > eventStart.getTime()) {
         newErrors.registrationCloseDate =
           "Registration must close before event starts";
       }
@@ -285,7 +288,7 @@ export const CreateEvent: React.FC = () => {
     { value: "EUR", label: "EUR - Euro" },
     { value: "GBP", label: "GBP - British Pound" },
     { value: "CAD", label: "CAD - Canadian Dollar" },
-    { value: "AUD", label: "AUD - Australian Dollar" },
+    { value: "AUD", label: "AUD - Australian Dollar" }
   ];
 
   return (
@@ -337,6 +340,7 @@ export const CreateEvent: React.FC = () => {
                   <MenuItem value="">
                     <em>Select an organization</em>
                   </MenuItem>
+                  <MenuItem value="N/A">N/A</MenuItem>
                   {organizations.map((org) => (
                     <MenuItem key={org.id} value={org.id}>
                       {org.name}
