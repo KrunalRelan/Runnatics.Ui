@@ -1,7 +1,7 @@
 // src/main/src/services/EventService.ts
 
 import axios, { AxiosResponse } from 'axios';
-import { Event, CreateEventRequest } from '../models';
+import { Event, CreateEventRequest, ServiceUrl } from '../models';
 import config from '../config/environment';
 
 const API_BASE_URL = config.apiBaseUrl;
@@ -63,10 +63,20 @@ export class EventService {
     }
 
     /**
+     * Search events
+     */
+    static async searchEvents(query: string): Promise<Event[]> {
+        const response: AxiosResponse<Event[]> = await eventApi.get(ServiceUrl.searchEventService(), {
+            params: { q: query },
+        });
+        return response.data;
+    }
+
+    /**
      * Create new event
      */
     static async createEvent(eventData: CreateEventRequest): Promise<Event> {
-        const response: AxiosResponse<Event> = await eventApi.post('/', eventData);
+        const response: AxiosResponse<Event> = await eventApi.post(ServiceUrl.createEvent(), eventData);
         return response.data;
     }
 
