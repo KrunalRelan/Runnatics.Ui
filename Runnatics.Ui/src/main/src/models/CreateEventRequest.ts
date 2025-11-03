@@ -18,4 +18,6 @@ export interface CreateEventRequest {
   price: number;
   currency: string;
   bannerImageUrl?: string;
+  timeZone: string;
+  smsText?: string;
 }
