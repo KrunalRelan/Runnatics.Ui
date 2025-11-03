@@ -1,5 +1,7 @@
 export const config = {
-    apiBaseUrl: (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5286/api',
+    // Use proxy in development to avoid CORS, direct URL in production
+    apiBaseUrl: (import.meta as any).env?.VITE_API_BASE_URL || 
+                ((import.meta as any).env?.DEV ? '/api' : 'http://localhost:5286/api'),
     isDevelopment: (import.meta as any).env?.DEV,
     isProduction: (import.meta as any).env?.PROD,
     mode: (import.meta as any).env?.MODE,

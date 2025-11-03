@@ -15,5 +15,17 @@ export default defineConfig({
       // '@/models': path.resolve(__dirname, './src/main/src/models'),
       // '@/types': path.resolve(__dirname, './src/main/src/types')
     }
+  },
+  server: {
+    port: 5173,
+    proxy: {
+      // Proxy API requests to backend to avoid CORS issues
+      '/api': {
+        target: 'http://localhost:5286',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
+      }
+    }
   }
 })

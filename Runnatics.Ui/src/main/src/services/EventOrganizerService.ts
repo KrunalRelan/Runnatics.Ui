@@ -1,15 +1,5 @@
 import axios from 'axios';
 import {  EventOrganizer, ServiceUrl } from '../models';
-import config from '../config/environment';
-
-const API_BASE_URL = config.apiBaseUrl;
-
-const eventOrganizerApi = axios.create({
-    baseURL: `${API_BASE_URL}/eventOrganizers`,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-});
 
 export class EventOrganizerService {
     /**

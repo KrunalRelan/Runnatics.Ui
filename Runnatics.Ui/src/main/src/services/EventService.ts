@@ -13,6 +13,7 @@ const eventApi = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: false, // Set to true if you need to send cookies
 });
 
 // Add auth token interceptor
@@ -33,6 +34,18 @@ eventApi.interceptors.request.use(
 eventApi.interceptors.response.use(
     (response) => response,
     (error) => {
+        // Log CORS errors
+        if (!error.response) {
+            console.error('Network Error (possibly CORS):', {
+                message: error.message,
+                config: {
+                    url: error.config?.url,
+                    method: error.config?.method,
+                    baseURL: error.config?.baseURL,
+                }
+            });
+        }
+        
         if (error.response?.status === 401) {
             // Handle unauthorized - redirect to login
             localStorage.removeItem('authToken');

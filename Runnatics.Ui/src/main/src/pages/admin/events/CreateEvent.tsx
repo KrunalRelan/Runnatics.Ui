@@ -18,9 +18,11 @@ import {
   FormControlLabel,
   Switch,
   Divider,
+  Alert,
+  AlertTitle,
 } from "@mui/material";
 import { EventService } from "../../../services/EventService";
-import { EventOrganizer, EventType, timeZoneOptions } from "@/main/src/models";
+import { EventOrganizer, EventType, timeZoneOptions, EventSettings, LeaderBoardSettings } from "@/main/src/models";
 import { CreateEventRequest } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
 
@@ -36,11 +38,34 @@ export const CreateEvent: React.FC = () => {
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
 
+  // Event Settings state
+  const [eventSettings, setEventSettings] = useState<EventSettings>({
+    RemoveBanner: false,
+    PublishEvent: true,
+    RankOnNet: false,
+    AllowParticipantsEdit: false,
+    UseOldData: false,
+    ConfirmedEvent: false,
+    AllNameCheck: false,
+    ShowResultsSummaryForRaces: false,
+  });
+
   // Leaderboard settings state
-  const [showOverallResults, setShowOverallResults] = useState(true);
-  const [overallResultsCount, setOverallResultsCount] = useState<number>(5);
-  const [showCategoryResults, setShowCategoryResults] = useState(true);
-  const [categoryResultsCount, setCategoryResultsCount] = useState<number>(5);
+  // Logic:
+  // - ShowOverallResults and ShowCategoryResults can be toggled independently
+  // - When enabled, at least one time type (Chip or Gun) must be selected
+  // - Chip Time and Gun Time are mutually exclusive (only one can be active at a time)
+  // - Time type switches are disabled when parent result toggle is off
+  // - NumberOfResultsToShow applies to both Overall and Category results
+  const [leaderBoardSettings, setLeaderBoardSettings] = useState<LeaderBoardSettings>({
+    ShowOverallResults: true,
+    ShowCategoryResults: true,
+    OverAllResultChipTime: true,
+    CategoryResultChipTime: true,
+    OverallResultGunTime: false,
+    CategoryResultGunTime: false,
+    NumberOfResultsToShow: 5,
+  });
 
   const [formData, setFormData] = useState<CreateEventRequest>({
     organizationId: null,
@@ -61,16 +86,44 @@ export const CreateEvent: React.FC = () => {
     currency: "INR",
     timeZone: "Asia/Kolkata", // Default to India timezone
     smsText: "",
+    leaderBoardSettings: {
+      ShowOverallResults: true,
+      ShowCategoryResults: true,
+      OverAllResultChipTime: true,
+      CategoryResultChipTime: true,
+      OverallResultGunTime: true,
+      CategoryResultGunTime: true,
+      NumberOfResultsToShow: 5,
+    },
+    eventSettings: {
+      RemoveBanner: false,
+      PublishEvent: true,
+      RankOnNet: false,
+      AllowParticipantsEdit: false,
+      UseOldData: false,
+      ConfirmedEvent: true,
+      AllNameCheck: true,
+      ShowResultsSummaryForRaces: false,
+    },
   });
 
   // derive user role from localStorage (fallback to empty string if not set)
-  const userRole =
-    typeof window !== "undefined" ? (localStorage.getItem("userRole") || "") : "";
+  //TODO: I want to take this from context later. when i integrate auth.
+  const userRole = typeof window !== "undefined" ? (localStorage.getItem("userRole") || "") : "";
 
   // Fetch organizations on component mount
   useEffect(() => {
     fetchOrganizations();
   }, []);
+
+  // Sync event settings and leaderboard settings with formData
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      eventSettings,
+      leaderBoardSettings,
+    }));
+  }, [eventSettings, leaderBoardSettings]);
 
   const fetchOrganizations = async () => {
     try {
@@ -154,25 +207,25 @@ export const CreateEvent: React.FC = () => {
       newErrors.name = "Event name is required";
     }
 
-    if (!formData.description.trim()) {
-      newErrors.description = "Description is required";
-    }
+    // if (!formData.description.trim()) {
+    //   newErrors.description = "Description is required";
+    // }
 
     if (!formData.startDate) {
       newErrors.startDate = "Start date is required";
     }
 
-    if (!formData.endDate) {
-      newErrors.endDate = "End date is required";
-    }
+    // if (!formData.endDate) {
+    //   newErrors.endDate = "End date is required";
+    // }
 
-    if (!formData.registrationOpenDate) {
-      newErrors.registrationOpenDate = "Registration open date is required";
-    }
+    // if (!formData.registrationOpenDate) {
+    //   newErrors.registrationOpenDate = "Registration open date is required";
+    // }
 
-    if (!formData.registrationCloseDate) {
-      newErrors.registrationCloseDate = "Registration close date is required";
-    }
+    // if (!formData.registrationCloseDate) {
+    //   newErrors.registrationCloseDate = "Registration close date is required";
+    // }
 
     if (!formData.location.trim()) {
       newErrors.location = "Location is required";
@@ -199,37 +252,37 @@ export const CreateEvent: React.FC = () => {
     }
 
     // Date and time validations
-    if (formData.startDate && formData.endDate) {
-      const start = new Date(formData.startDate);
-      const end = new Date(formData.endDate);
+    // // if (formData.startDate && formData.endDate) {
+    // //   const start = new Date(formData.startDate);
+    // //   const end = new Date(formData.endDate);
 
-      // Compare timestamps to include both date and time
-      if (end.getTime() <= start.getTime()) {
-        newErrors.endDate = "End date and time must be after start date and time";
-      }
-    }
+    // //   // Compare timestamps to include both date and time
+    // //   if (end.getTime() <= start.getTime()) {
+    // //     newErrors.endDate = "End date and time must be after start date and time";
+    // //   }
+    // }
 
-    if (formData.registrationOpenDate && formData.registrationCloseDate) {
-      const regOpen = new Date(formData.registrationOpenDate);
-      const regClose = new Date(formData.registrationCloseDate);
+    // if (formData.registrationOpenDate && formData.registrationCloseDate) {
+    //   const regOpen = new Date(formData.registrationOpenDate);
+    //   const regClose = new Date(formData.registrationCloseDate);
 
-      // Compare timestamps to include both date and time
-      if (regClose.getTime() <= regOpen.getTime()) {
-        newErrors.registrationCloseDate =
-          "Registration close date and time must be after open date and time";
-      }
-    }
+    //   // Compare timestamps to include both date and time
+    //   if (regClose.getTime() <= regOpen.getTime()) {
+    //     newErrors.registrationCloseDate =
+    //       "Registration close date and time must be after open date and time";
+    //   }
+    // }
 
-    if (formData.registrationCloseDate && formData.startDate) {
-      const regClose = new Date(formData.registrationCloseDate);
-      const eventStart = new Date(formData.startDate);
+    // if (formData.registrationCloseDate && formData.startDate) {
+    //   const regClose = new Date(formData.registrationCloseDate);
+    //   const eventStart = new Date(formData.startDate);
 
-      // Compare timestamps to include both date and time
-      if (regClose.getTime() > eventStart.getTime()) {
-        newErrors.registrationCloseDate =
-          "Registration must close before event starts";
-      }
-    }
+    //   // Compare timestamps to include both date and time
+    //   if (regClose.getTime() > eventStart.getTime()) {
+    //     newErrors.registrationCloseDate =
+    //       "Registration must close before event starts";
+    //   }
+    // }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -239,14 +292,25 @@ export const CreateEvent: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    console.log("Form submitted");
+    console.log("Form data:", formData);
+
+    const isValid = validateForm();
+    console.log("Validation result:", isValid);
+    
+    if (!isValid) {
+      console.log("Validation failed. Errors:", errors);
+      // Scroll to first error
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
+    console.log("Validation passed, creating event...");
     setIsSubmitting(true);
 
     try {
       // Create event
+      console.log("Calling EventService.createEvent with data:", formData);
       const createdEvent = await EventService.createEvent(formData);
 
       // Upload banner image if provided
@@ -321,6 +385,18 @@ export const CreateEvent: React.FC = () => {
 
       <Paper elevation={2} sx={{ p: 3 }}>
         <form onSubmit={handleSubmit}>
+          {/* Error Summary */}
+          {Object.keys(errors).length > 0 && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              <AlertTitle>Please fix the following errors:</AlertTitle>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {Object.entries(errors).map(([field, message]) => (
+                  <li key={field}>{message}</li>
+                ))}
+              </ul>
+            </Alert>
+          )}
+
           {/* Basic Information */}
           <Box sx={{ mb: 4 }}>
             <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
@@ -355,12 +431,12 @@ export const CreateEvent: React.FC = () => {
                   required
                   disabled={isLoadingOrgs}
                 >
-                  <InputLabel>Organization</InputLabel>
+                  <InputLabel>Event Organizers</InputLabel>
                   <Select
                     name="organizationId"
                     value={formData.organizationId || ""}
                     onChange={handleSelectChange}
-                    label="Organization"
+                    label="Event Organizers"
                   >
                     <MenuItem value="">
                       <em>Select an organization</em>
@@ -413,7 +489,7 @@ export const CreateEvent: React.FC = () => {
                   error={!!errors.description}
                   helperText={errors.description}
                   placeholder="Describe your event"
-                  required
+                  // required
                   multiline
                   rows={1}
                 />
@@ -676,19 +752,39 @@ export const CreateEvent: React.FC = () => {
                   {/* Left Sub-column */}
                   <Stack spacing={2} sx={{ flex: 1 }}>
                     <FormControlLabel
-                      control={<Switch defaultChecked />}
+                      control={
+                        <Switch
+                          checked={eventSettings.RemoveBanner}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, RemoveBanner: e.target.checked }))}
+                        />
+                      }
                       label="Remove Banner"
                     />
                     <FormControlLabel
-                      control={<Switch defaultChecked />}
+                      control={
+                        <Switch
+                          checked={eventSettings.PublishEvent}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, PublishEvent: e.target.checked }))}
+                        />
+                      }
                       label="Publish Event"
                     />
                     <FormControlLabel
-                      control={<Switch defaultChecked />}
+                      control={
+                        <Switch
+                          checked={eventSettings.RankOnNet}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, RankOnNet: e.target.checked }))}
+                        />
+                      }
                       label="Rank On Net"
                     />
                     <FormControlLabel
-                      control={<Switch defaultChecked />}
+                      control={
+                        <Switch
+                          checked={eventSettings.AllowParticipantsEdit}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, AllowParticipantsEdit: e.target.checked }))}
+                        />
+                      }
                       label="All Participants Edit"
                     />
                   </Stack>
@@ -696,20 +792,40 @@ export const CreateEvent: React.FC = () => {
                   {/* Right Sub-column */}
                   <Stack spacing={2} sx={{ flex: 1 }}>
                     <FormControlLabel
-                      control={<Switch defaultChecked />}
+                      control={
+                        <Switch
+                          checked={eventSettings.UseOldData}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, UseOldData: e.target.checked }))}
+                        />
+                      }
                       label="Use Old Data"
                     />
                     <FormControlLabel
-                      control={<Switch defaultChecked />}
+                      control={
+                        <Switch
+                          checked={eventSettings.ConfirmedEvent}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, ConfirmedEvent: e.target.checked }))}
+                        />
+                      }
                       label="Confirmed Event"
                     />
                     <FormControlLabel
-                      control={<Switch defaultChecked />}
+                      control={
+                        <Switch
+                          checked={eventSettings.AllNameCheck}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, AllNameCheck: e.target.checked }))}
+                        />
+                      }
                       label="All Name Check"
                     />
                     <FormControlLabel
-                      control={<Switch defaultChecked />}
-                      label="Show Results Summary For Recess"
+                      control={
+                        <Switch
+                          checked={eventSettings.ShowResultsSummaryForRaces}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, ShowResultsSummaryForRaces: e.target.checked }))}
+                        />
+                      }
+                      label="Show Results Summary For Races"
                     />
                   </Stack>
                 </Stack>
@@ -733,44 +849,72 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={showOverallResults}
-                          onChange={(e) =>
-                            setShowOverallResults(e.target.checked)
-                          }
+                          checked={leaderBoardSettings.ShowOverallResults}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            setLeaderBoardSettings(prev => {
+                              // When enabling, ensure at least one time type is selected
+                              if (isChecked && !prev.OverAllResultChipTime && !prev.OverallResultGunTime) {
+                                return { 
+                                  ...prev, 
+                                  ShowOverallResults: true,
+                                  OverAllResultChipTime: true,
+                                  OverallResultGunTime: false
+                                };
+                              }
+                              return { ...prev, ShowOverallResults: isChecked };
+                            });
+                          }}
                         />
                       }
                       label="Show Overall Results"
                     />
 
-                    {/* Conditionally show number of results input */}
-                    {showOverallResults && (
-                      <TextField
-                        fullWidth
-                        label="Number of Results to Show"
-                        type="number"
-                        value={overallResultsCount}
-                        onChange={(e) =>
-                          setOverallResultsCount(parseInt(e.target.value) || 0)
-                        }
-                        placeholder="Enter number of results"
-                        size="small"
-                        inputProps={{ min: 1, step: 1 }}
-                        sx={{ pl: "16px" }}
-                      />
-                    )}
-
                     <Typography
                       variant="body2"
-                      sx={{ fontWeight: 600, pl: "16px", mb: 0.5 }}
+                      sx={{ 
+                        fontWeight: 600, 
+                        pl: "16px", 
+                        mb: 0.5,
+                        opacity: leaderBoardSettings.ShowOverallResults ? 1 : 0.5 
+                      }}
                     >
                       Overall Result Sort By
                     </Typography>
                     <FormControlLabel
-                      control={<Switch defaultChecked />}
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.OverAllResultChipTime}
+                          disabled={!leaderBoardSettings.ShowOverallResults}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setLeaderBoardSettings(prev => ({ 
+                                ...prev, 
+                                OverAllResultChipTime: true,
+                                OverallResultGunTime: false 
+                              }));
+                            }
+                          }}
+                        />
+                      }
                       label="Chip Time"
                     />
                     <FormControlLabel
-                      control={<Switch defaultChecked />}
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.OverallResultGunTime}
+                          disabled={!leaderBoardSettings.ShowOverallResults}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setLeaderBoardSettings(prev => ({ 
+                                ...prev, 
+                                OverallResultGunTime: true,
+                                OverAllResultChipTime: false 
+                              }));
+                            }
+                          }}
+                        />
+                      }
                       label="Gun Time"
                     />
                   </Stack>
@@ -786,48 +930,98 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={showCategoryResults}
-                          onChange={(e) =>
-                            setShowCategoryResults(e.target.checked)
-                          }
+                          checked={leaderBoardSettings.ShowCategoryResults}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            setLeaderBoardSettings(prev => {
+                              // When enabling, ensure at least one time type is selected
+                              if (isChecked && !prev.CategoryResultChipTime && !prev.CategoryResultGunTime) {
+                                return { 
+                                  ...prev, 
+                                  ShowCategoryResults: true,
+                                  CategoryResultChipTime: true,
+                                  CategoryResultGunTime: false
+                                };
+                              }
+                              return { ...prev, ShowCategoryResults: isChecked };
+                            });
+                          }}
                         />
                       }
                       label="Show Category Results"
                     />
 
-                    {/* Conditionally show number of results input */}
-                    {showCategoryResults && (
-                      <TextField
-                        fullWidth
-                        label="Number of Results to Show"
-                        type="number"
-                        value={categoryResultsCount}
-                        onChange={(e) =>
-                          setCategoryResultsCount(parseInt(e.target.value) || 0)
-                        }
-                        placeholder="Enter number of results"
-                        size="small"
-                        inputProps={{ min: 1, step: 1 }}
-                        sx={{ pl: "16px" }}
-                      />
-                    )}
-
                     <Typography
                       variant="body2"
-                      sx={{ fontWeight: 600, pl: "16px", mb: 0.5 }}
+                      sx={{ 
+                        fontWeight: 600, 
+                        pl: "16px", 
+                        mb: 0.5,
+                        opacity: leaderBoardSettings.ShowCategoryResults ? 1 : 0.5 
+                      }}
                     >
                       Category Result Sort By
                     </Typography>
                     <FormControlLabel
-                      control={<Switch defaultChecked />}
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.CategoryResultChipTime}
+                          disabled={!leaderBoardSettings.ShowCategoryResults}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setLeaderBoardSettings(prev => ({ 
+                                ...prev, 
+                                CategoryResultChipTime: true,
+                                CategoryResultGunTime: false 
+                              }));
+                            }
+                          }}
+                        />
+                      }
                       label="Chip Time"
                     />
                     <FormControlLabel
-                      control={<Switch defaultChecked />}
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.CategoryResultGunTime}
+                          disabled={!leaderBoardSettings.ShowCategoryResults}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setLeaderBoardSettings(prev => ({ 
+                                ...prev, 
+                                CategoryResultGunTime: true,
+                                CategoryResultChipTime: false 
+                              }));
+                            }
+                          }}
+                        />
+                      }
                       label="Gun Time"
                     />
                   </Stack>
                 </Stack>
+
+                {/* Shared setting for number of results - centered below both columns */}
+                {(leaderBoardSettings.ShowOverallResults || leaderBoardSettings.ShowCategoryResults) && (
+                  <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+                    <TextField
+                      label="Number of Results to Show"
+                      type="number"
+                      value={leaderBoardSettings.NumberOfResultsToShow || 5}
+                      onChange={(e) =>
+                        setLeaderBoardSettings(prev => ({ 
+                          ...prev, 
+                          NumberOfResultsToShow: parseInt(e.target.value) || 5 
+                        }))
+                      }
+                      placeholder="Enter number of results"
+                      size="small"
+                      inputProps={{ min: 1, step: 1 }}
+                      helperText="Applies to both Overall and Category results"
+                      sx={{ width: { xs: '100%', sm: '300px' } }}
+                    />
+                  </Box>
+                )}
               </Box>
             </Stack>
           </Box>
