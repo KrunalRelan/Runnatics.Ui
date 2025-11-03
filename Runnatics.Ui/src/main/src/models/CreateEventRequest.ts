@@ -1,7 +1,9 @@
+import { EventSettings } from "./EventSettings";
 import { EventType } from "./EventType";
+import { LeaderBoardSettings } from "./LeaderBoardSettings";
 
 export interface CreateEventRequest {
-  organizationId?: number | null;
+  organizationId?: string | null;
   name: string;
   description: string;
   eventType: EventType;
@@ -18,4 +20,8 @@ export interface CreateEventRequest {
   price: number;
   currency: string;
   bannerImageUrl?: string;
+  timeZone: string;
+  smsText?: string;
+  leaderBoardSettings?: LeaderBoardSettings;
+  eventSettings?: EventSettings;
 }

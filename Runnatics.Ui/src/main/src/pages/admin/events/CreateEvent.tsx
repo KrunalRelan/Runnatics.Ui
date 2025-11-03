@@ -15,9 +15,14 @@ import {
   Paper,
   Stack,
   SelectChangeEvent,
+  FormControlLabel,
+  Switch,
+  Divider,
+  Alert,
+  AlertTitle,
 } from "@mui/material";
-import { eventService } from "../../../services/EventService";
-import { EventType } from "@/main/src/models";
+import { EventService } from "../../../services/EventService";
+import { EventOrganizer, EventType, timeZoneOptions, EventSettings, LeaderBoardSettings } from "@/main/src/models";
 import { CreateEventRequest } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
 
@@ -25,18 +30,42 @@ interface FormErrors {
   [key: string]: string;
 }
 
-interface Organization {
-  id: string;
-  name: string;
-}
-
 export const CreateEvent: React.FC = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
+
+  // Event Settings state
+  const [eventSettings, setEventSettings] = useState<EventSettings>({
+    RemoveBanner: false,
+    PublishEvent: true,
+    RankOnNet: false,
+    AllowParticipantsEdit: false,
+    UseOldData: false,
+    ConfirmedEvent: false,
+    AllNameCheck: false,
+    ShowResultsSummaryForRaces: false,
+  });
+
+  // Leaderboard settings state
+  // Logic:
+  // - ShowOverallResults and ShowCategoryResults can be toggled independently
+  // - When enabled, at least one time type (Chip or Gun) must be selected
+  // - Chip Time and Gun Time are mutually exclusive (only one can be active at a time)
+  // - Time type switches are disabled when parent result toggle is off
+  // - NumberOfResultsToShow applies to both Overall and Category results
+  const [leaderBoardSettings, setLeaderBoardSettings] = useState<LeaderBoardSettings>({
+    ShowOverallResults: true,
+    ShowCategoryResults: true,
+    OverAllResultChipTime: true,
+    CategoryResultChipTime: true,
+    OverallResultGunTime: false,
+    CategoryResultGunTime: false,
+    NumberOfResultsToShow: 5,
+  });
 
   const [formData, setFormData] = useState<CreateEventRequest>({
     organizationId: null,
@@ -54,13 +83,47 @@ export const CreateEvent: React.FC = () => {
     zipCode: "",
     capacity: 0,
     price: 0,
-    currency: "USD",
+    currency: "INR",
+    timeZone: "Asia/Kolkata", // Default to India timezone
+    smsText: "",
+    leaderBoardSettings: {
+      ShowOverallResults: true,
+      ShowCategoryResults: true,
+      OverAllResultChipTime: true,
+      CategoryResultChipTime: true,
+      OverallResultGunTime: true,
+      CategoryResultGunTime: true,
+      NumberOfResultsToShow: 5,
+    },
+    eventSettings: {
+      RemoveBanner: false,
+      PublishEvent: true,
+      RankOnNet: false,
+      AllowParticipantsEdit: false,
+      UseOldData: false,
+      ConfirmedEvent: true,
+      AllNameCheck: true,
+      ShowResultsSummaryForRaces: false,
+    },
   });
+
+  // derive user role from localStorage (fallback to empty string if not set)
+  //TODO: I want to take this from context later. when i integrate auth.
+  const userRole = typeof window !== "undefined" ? (localStorage.getItem("userRole") || "") : "";
 
   // Fetch organizations on component mount
   useEffect(() => {
     fetchOrganizations();
   }, []);
+
+  // Sync event settings and leaderboard settings with formData
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      eventSettings,
+      leaderBoardSettings,
+    }));
+  }, [eventSettings, leaderBoardSettings]);
 
   const fetchOrganizations = async () => {
     try {
@@ -134,35 +197,35 @@ export const CreateEvent: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Organization validation
-    if (!formData.organizationId) {
-      newErrors.organizationId = "Organization is required";
-    }
+    // Organization validation - N/A is acceptable
+        if (formData.organizationId == null) {
+          newErrors.organizationId = "Organization is required";
+        }
 
     // Required field validations
     if (!formData.name.trim()) {
       newErrors.name = "Event name is required";
     }
 
-    if (!formData.description.trim()) {
-      newErrors.description = "Description is required";
-    }
+    // if (!formData.description.trim()) {
+    //   newErrors.description = "Description is required";
+    // }
 
     if (!formData.startDate) {
       newErrors.startDate = "Start date is required";
     }
 
-    if (!formData.endDate) {
-      newErrors.endDate = "End date is required";
-    }
+    // if (!formData.endDate) {
+    //   newErrors.endDate = "End date is required";
+    // }
 
-    if (!formData.registrationOpenDate) {
-      newErrors.registrationOpenDate = "Registration open date is required";
-    }
+    // if (!formData.registrationOpenDate) {
+    //   newErrors.registrationOpenDate = "Registration open date is required";
+    // }
 
-    if (!formData.registrationCloseDate) {
-      newErrors.registrationCloseDate = "Registration close date is required";
-    }
+    // if (!formData.registrationCloseDate) {
+    //   newErrors.registrationCloseDate = "Registration close date is required";
+    // }
 
     if (!formData.location.trim()) {
       newErrors.location = "Location is required";
@@ -184,35 +247,42 @@ export const CreateEvent: React.FC = () => {
       newErrors.price = "Price cannot be negative";
     }
 
-    // Date validations
-    if (formData.startDate && formData.endDate) {
-      const start = new Date(formData.startDate);
-      const end = new Date(formData.endDate);
-
-      if (end < start) {
-        newErrors.endDate = "End date must be after start date";
-      }
+    if (!formData.timeZone) {
+      newErrors.timeZone = "Time zone is required";
     }
 
-    if (formData.registrationOpenDate && formData.registrationCloseDate) {
-      const regOpen = new Date(formData.registrationOpenDate);
-      const regClose = new Date(formData.registrationCloseDate);
+    // Date and time validations
+    // // if (formData.startDate && formData.endDate) {
+    // //   const start = new Date(formData.startDate);
+    // //   const end = new Date(formData.endDate);
 
-      if (regClose < regOpen) {
-        newErrors.registrationCloseDate =
-          "Registration close date must be after open date";
-      }
-    }
+    // //   // Compare timestamps to include both date and time
+    // //   if (end.getTime() <= start.getTime()) {
+    // //     newErrors.endDate = "End date and time must be after start date and time";
+    // //   }
+    // }
 
-    if (formData.registrationCloseDate && formData.startDate) {
-      const regClose = new Date(formData.registrationCloseDate);
-      const eventStart = new Date(formData.startDate);
+    // if (formData.registrationOpenDate && formData.registrationCloseDate) {
+    //   const regOpen = new Date(formData.registrationOpenDate);
+    //   const regClose = new Date(formData.registrationCloseDate);
 
-      if (regClose > eventStart) {
-        newErrors.registrationCloseDate =
-          "Registration must close before event starts";
-      }
-    }
+    //   // Compare timestamps to include both date and time
+    //   if (regClose.getTime() <= regOpen.getTime()) {
+    //     newErrors.registrationCloseDate =
+    //       "Registration close date and time must be after open date and time";
+    //   }
+    // }
+
+    // if (formData.registrationCloseDate && formData.startDate) {
+    //   const regClose = new Date(formData.registrationCloseDate);
+    //   const eventStart = new Date(formData.startDate);
+
+    //   // Compare timestamps to include both date and time
+    //   if (regClose.getTime() > eventStart.getTime()) {
+    //     newErrors.registrationCloseDate =
+    //       "Registration must close before event starts";
+    //   }
+    // }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -222,19 +292,30 @@ export const CreateEvent: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    console.log("Form submitted");
+    console.log("Form data:", formData);
+
+    const isValid = validateForm();
+    console.log("Validation result:", isValid);
+    
+    if (!isValid) {
+      console.log("Validation failed. Errors:", errors);
+      // Scroll to first error
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
+    console.log("Validation passed, creating event...");
     setIsSubmitting(true);
 
     try {
       // Create event
-      const createdEvent = await eventService.createEvent(formData);
+      console.log("Calling EventService.createEvent with data:", formData);
+      const createdEvent = await EventService.createEvent(formData);
 
       // Upload banner image if provided
       if (bannerFile && createdEvent.id) {
-        await eventService.uploadBannerImage(createdEvent.id, bannerFile);
+        await EventService.uploadBannerImage(createdEvent.id, bannerFile);
       }
 
       // Show success message
@@ -285,8 +366,11 @@ export const CreateEvent: React.FC = () => {
     { value: "EUR", label: "EUR - Euro" },
     { value: "GBP", label: "GBP - British Pound" },
     { value: "CAD", label: "CAD - Canadian Dollar" },
-    { value: "AUD", label: "AUD - Australian Dollar" },
+    { value: "AUD", label: "AUD - Australian Dollar" }
   ];
+
+  // Generate timezone options with UTC offset
+  // Common timezone options with UTC offsets
 
   return (
     <Box sx={{ maxWidth: 1200, mx: "auto", p: 3 }}>
@@ -301,122 +385,151 @@ export const CreateEvent: React.FC = () => {
 
       <Paper elevation={2} sx={{ p: 3 }}>
         <form onSubmit={handleSubmit}>
+          {/* Error Summary */}
+          {Object.keys(errors).length > 0 && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              <AlertTitle>Please fix the following errors:</AlertTitle>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {Object.entries(errors).map(([field, message]) => (
+                  <li key={field}>{message}</li>
+                ))}
+              </ul>
+            </Alert>
+          )}
+
           {/* Basic Information */}
           <Box sx={{ mb: 4 }}>
             <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
               Basic Information
             </Typography>
 
-            <Stack spacing={3}>
-              {/* Event Name */}
-              <TextField
-                fullWidth
-                label="Event Name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                error={!!errors.name}
-                helperText={errors.name}
-                placeholder="Enter event name"
-                required
-              />
-              {/* Organization Dropdown */}
-              <FormControl
-                fullWidth
-                error={!!errors.organizationId}
-                required
-                disabled={isLoadingOrgs}
-              >
-                <InputLabel>Organization</InputLabel>
-                <Select
-                  name="organizationId"
-                  value={formData.organizationId || ""}
-                  onChange={handleSelectChange}
-                  label="Organization"
+            {/* Two Column Layout */}
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              spacing={3}
+              sx={{ mb: 3 }}
+            >
+              {/* Left Column */}
+              <Stack spacing={3} sx={{ flex: 1 }}>
+                {/* Event Name */}
+                <TextField
+                  fullWidth
+                  label="Event Name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  error={!!errors.name}
+                  helperText={errors.name}
+                  placeholder="Enter event name"
+                  required
+                />
+
+                {/* Organization Dropdown */}
+                <FormControl
+                  fullWidth
+                  error={!!errors.organizationId}
+                  required
+                  disabled={isLoadingOrgs}
                 >
-                  <MenuItem value="">
-                    <em>Select an organization</em>
-                  </MenuItem>
-                  {organizations.map((org) => (
-                    <MenuItem key={org.id} value={org.id}>
-                      {org.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {errors.organizationId && (
-                  <FormHelperText>{errors.organizationId}</FormHelperText>
-                )}
-                {isLoadingOrgs && (
-                  <FormHelperText>Loading organizations...</FormHelperText>
-                )}
-              </FormControl>
-              {/* Description */}
-              <TextField
-                fullWidth
-                label="Description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                error={!!errors.description}
-                helperText={errors.description}
-                placeholder="Describe your event"
-                required
-                multiline
-                rows={6}
-              />
-
-              {/* Event Type and Banner - Side by Side */}
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 3,
-                  flexDirection: { xs: "column", md: "row" },
-                }}
-              >
-                <Box sx={{ flex: 1 }}>
-                  <FormControl fullWidth error={!!errors.eventType} required>
-                    <InputLabel>Event Type</InputLabel>
-                    <Select
-                      name="eventType"
-                      value={formData.eventType}
-                      onChange={handleSelectChange}
-                      label="Event Type"
-                    >
-                      {eventTypeOptions.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>
-                          {option.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {errors.eventType && (
-                      <FormHelperText>{errors.eventType}</FormHelperText>
-                    )}
-                  </FormControl>
-                </Box>
-
-                <Box sx={{ flex: 1 }}>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    fullWidth
-                    sx={{ height: 56 }}
+                  <InputLabel>Event Organizers</InputLabel>
+                  <Select
+                    name="organizationId"
+                    value={formData.organizationId || ""}
+                    onChange={handleSelectChange}
+                    label="Event Organizers"
                   >
-                    {bannerFile ? bannerFile.name : "Upload Event Banner Image"}
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        handleFileChange(file);
-                      }}
-                    />
-                  </Button>
-                  {errors.bannerImage && (
-                    <FormHelperText error>{errors.bannerImage}</FormHelperText>
+                    <MenuItem value="">
+                      <em>Select an organization</em>
+                    </MenuItem>
+                    <MenuItem value="N/A">N/A</MenuItem>
+                    {organizations.map((org) => (
+                      <MenuItem key={org.id} value={org.id}>
+                        {org.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.organizationId && (
+                    <FormHelperText>{errors.organizationId}</FormHelperText>
                   )}
-                </Box>
-              </Box>
+                  {isLoadingOrgs && (
+                    <FormHelperText>Loading organizations...</FormHelperText>
+                  )}
+                </FormControl>
+
+                {/* Event Type */}
+                <FormControl fullWidth error={!!errors.eventType} required>
+                  <InputLabel>Event Type</InputLabel>
+                  <Select
+                    name="eventType"
+                    value={formData.eventType}
+                    onChange={handleSelectChange}
+                    label="Event Type"
+                  >
+                    {eventTypeOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.eventType && (
+                    <FormHelperText>{errors.eventType}</FormHelperText>
+                  )}
+                </FormControl>
+              </Stack>
+
+              {/* Right Column */}
+              <Stack spacing={3} sx={{ flex: 1 }}>
+                {/* Description */}
+                <TextField
+                  fullWidth
+                  label="Description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  error={!!errors.description}
+                  helperText={errors.description}
+                  placeholder="Describe your event"
+                  // required
+                  multiline
+                  rows={1}
+                />
+                {/* SMS Text*/}
+                <TextField
+                  fullWidth
+                  label="SMS Text"
+                  name="smsText"
+                  value={formData.smsText}
+                  onChange={handleInputChange}
+                  error={!!errors.smsText}
+                  helperText={errors.smsText}
+                  placeholder="Enter SMS text"
+                  required
+                  multiline
+                  disabled={userRole !== "superadmin"}
+                  rows={1}
+                />
+                {/* Banner Upload */}
+                <Button
+                  variant="outlined"
+                  component="label"
+                  fullWidth
+                  sx={{ height: 56 }}
+                >
+                  {bannerFile ? bannerFile.name : "Upload Event Banner Image"}
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      handleFileChange(file);
+                    }}
+                  />
+                </Button>
+                {errors.bannerImage && (
+                  <FormHelperText error>{errors.bannerImage}</FormHelperText>
+                )}
+              </Stack>
             </Stack>
           </Box>
 
@@ -426,84 +539,107 @@ export const CreateEvent: React.FC = () => {
               Event Schedule
             </Typography>
 
-            <Stack spacing={3}>
-              {/* Start and End Date - Side by Side */}
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 3,
-                  flexDirection: { xs: "column", md: "row" },
-                }}
-              >
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="Start Date & Time"
-                    name="startDate"
-                    type="datetime-local"
-                    value={formData.startDate}
-                    onChange={handleInputChange}
-                    error={!!errors.startDate}
-                    helperText={errors.startDate}
-                    required
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Box>
+            {/* Two Column Layout */}
+            <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
+              {/* Left Column */}
+              <Stack spacing={3} sx={{ flex: 1 }}>
+                {/* Start Date & Time */}
+                <TextField
+                  fullWidth
+                  label="Event Date & Time"
+                  name="startDate"
+                  type="datetime-local"
+                  value={formData.startDate}
+                  onChange={handleInputChange}
+                  error={!!errors.startDate}
+                  helperText={errors.startDate}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                />
 
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="End Date & Time"
-                    name="endDate"
-                    type="datetime-local"
-                    value={formData.endDate}
-                    onChange={handleInputChange}
-                    error={!!errors.endDate}
-                    helperText={errors.endDate}
-                    required
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Box>
-              </Box>
+                {/* Registration Opens
+                <TextField
+                  fullWidth
+                  label="Registration Opens"
+                  name="registrationOpenDate"
+                  type="datetime-local"
+                  value={formData.registrationOpenDate}
+                  onChange={handleInputChange}
+                  error={!!errors.registrationOpenDate}
+                  helperText={errors.registrationOpenDate}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                /> */}
 
-              {/* Registration Dates - Side by Side */}
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 3,
-                  flexDirection: { xs: "column", md: "row" },
-                }}
-              >
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="Registration Opens"
-                    name="registrationOpenDate"
-                    type="datetime-local"
-                    value={formData.registrationOpenDate}
-                    onChange={handleInputChange}
-                    error={!!errors.registrationOpenDate}
-                    helperText={errors.registrationOpenDate}
-                    required
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Box>
+                {/* Time Zone */}
+                {/* <FormControl fullWidth error={!!errors.timeZone} required>
+                  <InputLabel>Time Zone</InputLabel>
+                  <Select
+                    name="timeZone"
+                    value={formData.timeZone}
+                    onChange={handleSelectChange}
+                    label="Time Zone"
+                  >
+                    {timeZoneOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.timeZone && (
+                    <FormHelperText>{errors.timeZone}</FormHelperText>
+                  )}
+                </FormControl> */}
+              </Stack>
 
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="Registration Closes"
-                    name="registrationCloseDate"
-                    type="datetime-local"
-                    value={formData.registrationCloseDate}
-                    onChange={handleInputChange}
-                    error={!!errors.registrationCloseDate}
-                    helperText={errors.registrationCloseDate}
-                    required
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Box>
-              </Box>
+              {/* Right Column */}
+              <Stack spacing={3} sx={{ flex: 1 }}>
+                {/* End Date & Time */}
+                {/* <TextField
+                  fullWidth
+                  label="End Date & Time"
+                  name="endDate"
+                  type="datetime-local"
+                  value={formData.endDate}
+                  onChange={handleInputChange}
+                  error={!!errors.endDate}
+                  helperText={errors.endDate}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                /> */}
+                <FormControl fullWidth error={!!errors.timeZone} required>
+                  <InputLabel>Time Zone</InputLabel>
+                  <Select
+                    name="timeZone"
+                    value={formData.timeZone}
+                    onChange={handleSelectChange}
+                    label="Time Zone"
+                  >
+                    {timeZoneOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.timeZone && (
+                    <FormHelperText>{errors.timeZone}</FormHelperText>
+                  )}
+                </FormControl>
+
+                {/* Registration Closes
+                <TextField
+                  fullWidth
+                  label="Registration Closes"
+                  name="registrationCloseDate"
+                  type="datetime-local"
+                  value={formData.registrationCloseDate}
+                  onChange={handleInputChange}
+                  error={!!errors.registrationCloseDate}
+                  helperText={errors.registrationCloseDate}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                /> */}
+              </Stack>
             </Stack>
           </Box>
 
@@ -513,90 +649,379 @@ export const CreateEvent: React.FC = () => {
               Location Details
             </Typography>
 
-            <Stack spacing={3}>
-              {/* Venue */}
-              <TextField
-                fullWidth
-                label="Venue/Location"
-                name="location"
-                value={formData.location}
-                onChange={handleInputChange}
-                error={!!errors.location}
-                helperText={errors.location}
-                placeholder="Enter venue or starting location"
-                required
-              />
+            {/* Two Column Layout */}
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              spacing={3}
+              sx={{ mb: 3 }}
+            >
+              {/* Left Column */}
+              <Stack spacing={3} sx={{ flex: 1 }}>
+                {/* Venue/Location */}
+                <TextField
+                  fullWidth
+                  label="Venue/Location"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                  error={!!errors.location}
+                  helperText={errors.location}
+                  placeholder="Enter venue or starting location"
+                  required
+                />
 
-              {/* City and State - Side by Side */}
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 3,
-                  flexDirection: { xs: "column", md: "row" },
-                }}
-              >
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="City"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    error={!!errors.city}
-                    helperText={errors.city}
-                    placeholder="Enter city"
-                    required
-                  />
-                </Box>
+                {/* City */}
+                <TextField
+                  fullWidth
+                  label="City"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  error={!!errors.city}
+                  helperText={errors.city}
+                  placeholder="Enter city"
+                  required
+                />
 
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="State/Province"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleInputChange}
-                    error={!!errors.state}
-                    helperText={errors.state}
-                    placeholder="Enter state or province"
-                  />
-                </Box>
+                {/* Country */}
+                <TextField
+                  fullWidth
+                  label="Country"
+                  name="country"
+                  value={formData.country}
+                  onChange={handleInputChange}
+                  error={!!errors.country}
+                  helperText={errors.country}
+                  placeholder="Enter country"
+                  required
+                />
+              </Stack>
+
+              {/* Right Column */}
+              <Stack spacing={3} sx={{ flex: 1 }}>
+                {/* State/Province */}
+                <TextField
+                  fullWidth
+                  label="State/Province"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleInputChange}
+                  error={!!errors.state}
+                  helperText={errors.state}
+                  placeholder="Enter state or province"
+                />
+
+                {/* Zip/Postal Code */}
+                <TextField
+                  fullWidth
+                  label="Zip/Postal Code"
+                  name="zipCode"
+                  value={formData.zipCode}
+                  onChange={handleInputChange}
+                  error={!!errors.zipCode}
+                  helperText={errors.zipCode}
+                  placeholder="Enter zip or postal code"
+                />
+              </Stack>
+            </Stack>
+          </Box>
+
+          {/* Event Settings & Leaderboard Settings */}
+          <Box sx={{ mb: 4 }}>
+            {/* Two Column Layout with Dividers */}
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              spacing={0}
+              divider={
+                <Divider
+                  orientation="vertical"
+                  flexItem
+                  sx={{
+                    display: { xs: "none", md: "block" },
+                    mx: 2,
+                  }}
+                />
+              }
+            >
+              {/* Left Side - Event Settings */}
+              <Box sx={{ flex: 1, pr: { xs: 0, md: 2 } }}>
+                <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+                  Event Settings
+                </Typography>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={3}>
+                  {/* Left Sub-column */}
+                  <Stack spacing={2} sx={{ flex: 1 }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={eventSettings.RemoveBanner}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, RemoveBanner: e.target.checked }))}
+                        />
+                      }
+                      label="Remove Banner"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={eventSettings.PublishEvent}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, PublishEvent: e.target.checked }))}
+                        />
+                      }
+                      label="Publish Event"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={eventSettings.RankOnNet}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, RankOnNet: e.target.checked }))}
+                        />
+                      }
+                      label="Rank On Net"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={eventSettings.AllowParticipantsEdit}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, AllowParticipantsEdit: e.target.checked }))}
+                        />
+                      }
+                      label="All Participants Edit"
+                    />
+                  </Stack>
+
+                  {/* Right Sub-column */}
+                  <Stack spacing={2} sx={{ flex: 1 }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={eventSettings.UseOldData}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, UseOldData: e.target.checked }))}
+                        />
+                      }
+                      label="Use Old Data"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={eventSettings.ConfirmedEvent}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, ConfirmedEvent: e.target.checked }))}
+                        />
+                      }
+                      label="Confirmed Event"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={eventSettings.AllNameCheck}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, AllNameCheck: e.target.checked }))}
+                        />
+                      }
+                      label="All Name Check"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={eventSettings.ShowResultsSummaryForRaces}
+                          onChange={(e) => setEventSettings(prev => ({ ...prev, ShowResultsSummaryForRaces: e.target.checked }))}
+                        />
+                      }
+                      label="Show Results Summary For Races"
+                    />
+                  </Stack>
+                </Stack>
               </Box>
 
-              {/* Country and Zip - Side by Side */}
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 3,
-                  flexDirection: { xs: "column", md: "row" },
-                }}
-              >
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="Country"
-                    name="country"
-                    value={formData.country}
-                    onChange={handleInputChange}
-                    error={!!errors.country}
-                    helperText={errors.country}
-                    placeholder="Enter country"
-                    required
-                  />
-                </Box>
+              {/* Right Side - Leaderboard Settings */}
+              <Box sx={{ flex: 1, pl: { xs: 0, md: 2 } }}>
+                <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+                  Leaderboard Settings
+                </Typography>
+                {/* Two Sub-columns for Leaderboard Settings */}
+                <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                  {/* Left Sub-column */}
+                  <Stack spacing={1.5} sx={{ flex: 1 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 600, pl: "16px", mb: 0.5 }}
+                    >
+                      Overall Results
+                    </Typography>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.ShowOverallResults}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            setLeaderBoardSettings(prev => {
+                              // When enabling, ensure at least one time type is selected
+                              if (isChecked && !prev.OverAllResultChipTime && !prev.OverallResultGunTime) {
+                                return { 
+                                  ...prev, 
+                                  ShowOverallResults: true,
+                                  OverAllResultChipTime: true,
+                                  OverallResultGunTime: false
+                                };
+                              }
+                              return { ...prev, ShowOverallResults: isChecked };
+                            });
+                          }}
+                        />
+                      }
+                      label="Show Overall Results"
+                    />
 
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="Zip/Postal Code"
-                    name="zipCode"
-                    value={formData.zipCode}
-                    onChange={handleInputChange}
-                    error={!!errors.zipCode}
-                    helperText={errors.zipCode}
-                    placeholder="Enter zip or postal code"
-                  />
-                </Box>
+                    <Typography
+                      variant="body2"
+                      sx={{ 
+                        fontWeight: 600, 
+                        pl: "16px", 
+                        mb: 0.5,
+                        opacity: leaderBoardSettings.ShowOverallResults ? 1 : 0.5 
+                      }}
+                    >
+                      Overall Result Sort By
+                    </Typography>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.OverAllResultChipTime}
+                          disabled={!leaderBoardSettings.ShowOverallResults}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setLeaderBoardSettings(prev => ({ 
+                                ...prev, 
+                                OverAllResultChipTime: true,
+                                OverallResultGunTime: false 
+                              }));
+                            }
+                          }}
+                        />
+                      }
+                      label="Chip Time"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.OverallResultGunTime}
+                          disabled={!leaderBoardSettings.ShowOverallResults}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setLeaderBoardSettings(prev => ({ 
+                                ...prev, 
+                                OverallResultGunTime: true,
+                                OverAllResultChipTime: false 
+                              }));
+                            }
+                          }}
+                        />
+                      }
+                      label="Gun Time"
+                    />
+                  </Stack>
+
+                  {/* Right Sub-column */}
+                  <Stack spacing={1.5} sx={{ flex: 1 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 600, pl: "16px", mb: 0.5 }}
+                    >
+                      Category Results
+                    </Typography>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.ShowCategoryResults}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            setLeaderBoardSettings(prev => {
+                              // When enabling, ensure at least one time type is selected
+                              if (isChecked && !prev.CategoryResultChipTime && !prev.CategoryResultGunTime) {
+                                return { 
+                                  ...prev, 
+                                  ShowCategoryResults: true,
+                                  CategoryResultChipTime: true,
+                                  CategoryResultGunTime: false
+                                };
+                              }
+                              return { ...prev, ShowCategoryResults: isChecked };
+                            });
+                          }}
+                        />
+                      }
+                      label="Show Category Results"
+                    />
+
+                    <Typography
+                      variant="body2"
+                      sx={{ 
+                        fontWeight: 600, 
+                        pl: "16px", 
+                        mb: 0.5,
+                        opacity: leaderBoardSettings.ShowCategoryResults ? 1 : 0.5 
+                      }}
+                    >
+                      Category Result Sort By
+                    </Typography>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.CategoryResultChipTime}
+                          disabled={!leaderBoardSettings.ShowCategoryResults}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setLeaderBoardSettings(prev => ({ 
+                                ...prev, 
+                                CategoryResultChipTime: true,
+                                CategoryResultGunTime: false 
+                              }));
+                            }
+                          }}
+                        />
+                      }
+                      label="Chip Time"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.CategoryResultGunTime}
+                          disabled={!leaderBoardSettings.ShowCategoryResults}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setLeaderBoardSettings(prev => ({ 
+                                ...prev, 
+                                CategoryResultGunTime: true,
+                                CategoryResultChipTime: false 
+                              }));
+                            }
+                          }}
+                        />
+                      }
+                      label="Gun Time"
+                    />
+                  </Stack>
+                </Stack>
+
+                {/* Shared setting for number of results - centered below both columns */}
+                {(leaderBoardSettings.ShowOverallResults || leaderBoardSettings.ShowCategoryResults) && (
+                  <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+                    <TextField
+                      label="Number of Results to Show"
+                      type="number"
+                      value={leaderBoardSettings.NumberOfResultsToShow || 5}
+                      onChange={(e) =>
+                        setLeaderBoardSettings(prev => ({ 
+                          ...prev, 
+                          NumberOfResultsToShow: parseInt(e.target.value) || 5 
+                        }))
+                      }
+                      placeholder="Enter number of results"
+                      size="small"
+                      inputProps={{ min: 1, step: 1 }}
+                      helperText="Applies to both Overall and Category results"
+                      sx={{ width: { xs: '100%', sm: '300px' } }}
+                    />
+                  </Box>
+                )}
               </Box>
             </Stack>
           </Box>
@@ -607,14 +1032,11 @@ export const CreateEvent: React.FC = () => {
               Registration & Pricing
             </Typography>
 
-            <Box
-              sx={{
-                display: "flex",
-                gap: 3,
-                flexDirection: { xs: "column", sm: "row" },
-              }}
-            >
-              <Box sx={{ flex: 1 }}>
+            {/* Two Column Layout */}
+            <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
+              {/* Left Column */}
+              <Stack spacing={3} sx={{ flex: 1 }}>
+                {/* Capacity */}
                 <TextField
                   fullWidth
                   label="Capacity"
@@ -628,25 +1050,8 @@ export const CreateEvent: React.FC = () => {
                   required
                   inputProps={{ min: 1, step: 1 }}
                 />
-              </Box>
 
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="Registration Price"
-                  name="price"
-                  type="number"
-                  value={formData.price}
-                  onChange={handleInputChange}
-                  error={!!errors.price}
-                  helperText={errors.price}
-                  placeholder="0.00"
-                  required
-                  inputProps={{ min: 0, step: 0.01 }}
-                />
-              </Box>
-
-              <Box sx={{ flex: 1 }}>
+                {/* Currency */}
                 <FormControl fullWidth error={!!errors.currency} required>
                   <InputLabel>Currency</InputLabel>
                   <Select
@@ -665,8 +1070,26 @@ export const CreateEvent: React.FC = () => {
                     <FormHelperText>{errors.currency}</FormHelperText>
                   )}
                 </FormControl>
-              </Box>
-            </Box>
+              </Stack>
+
+              {/* Right Column */}
+              <Stack spacing={3} sx={{ flex: 1 }}>
+                {/* Registration Price */}
+                <TextField
+                  fullWidth
+                  label="Registration Price"
+                  name="price"
+                  type="number"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  error={!!errors.price}
+                  helperText={errors.price}
+                  placeholder="0.00"
+                  required
+                  inputProps={{ min: 0, step: 0.01 }}
+                />
+              </Stack>
+            </Stack>
           </Box>
 
           {/* Form Actions */}

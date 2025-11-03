@@ -1,6 +1,7 @@
 import { createTheme, ThemeOptions } from '@mui/material/styles';
 import { ThemeMode } from '../models/theme';
 
+
 // MUI Website Theme - Exact Colors
 // Primary Blue from MUI site
 const muiBlue = {
@@ -46,7 +47,7 @@ const lightThemeOptions: ThemeOptions = {
             dark: '#C51162',
         },
         background: {
-            default: '#fff',
+            default: muiBlue[50], // Light blue background
             paper: '#fff',
         },
         text: {
@@ -264,6 +265,18 @@ const lightThemeOptions: ThemeOptions = {
                 },
             },
         },
+        MuiCssBaseline: {
+            styleOverrides: {
+                body: {
+                    backgroundColor: muiBlue[50],
+                    backgroundImage: 'none',
+                },
+                '#root': {
+                    backgroundColor: muiBlue[50],
+                    minHeight: '100vh',
+                },
+            },
+        },
     },
 };
 
@@ -283,8 +296,8 @@ const darkThemeOptions: ThemeOptions = {
             dark: '#C51162',
         },
         background: {
-            default: muiGrey[900],
-            paper: '#001E3C',
+            default: 'hsl(210, 14%, 7%)', // MUI docs dark background
+            paper: '#0A1929',
         },
         text: {
             primary: '#fff',
@@ -390,7 +403,19 @@ const darkThemeOptions: ThemeOptions = {
                     boxShadow: 'none',
                     borderBottom: '1px solid',
                     borderColor: 'rgba(194, 224, 255, 0.08)',
-                    backgroundColor: '#001E3C',
+                    backgroundColor: '#0A1929',
+                },
+            },
+        },
+        MuiCssBaseline: {
+            styleOverrides: {
+                body: {
+                    backgroundColor: 'hsl(210, 14%, 7%)', // MUI docs dark background
+                    backgroundImage: 'none',
+                },
+                '#root': {
+                    backgroundColor: 'hsl(210, 14%, 7%)', // MUI docs dark background
+                    minHeight: '100vh',
                 },
             },
         },
