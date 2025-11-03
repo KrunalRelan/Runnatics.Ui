@@ -530,7 +530,7 @@ export const CreateEvent: React.FC = () => {
                 {/* Start Date & Time */}
                 <TextField
                   fullWidth
-                  label="Start Date & Time"
+                  label="Event Date & Time"
                   name="startDate"
                   type="datetime-local"
                   value={formData.startDate}
@@ -541,7 +541,7 @@ export const CreateEvent: React.FC = () => {
                   InputLabelProps={{ shrink: true }}
                 />
 
-                {/* Registration Opens */}
+                {/* Registration Opens
                 <TextField
                   fullWidth
                   label="Registration Opens"
@@ -553,9 +553,44 @@ export const CreateEvent: React.FC = () => {
                   helperText={errors.registrationOpenDate}
                   required
                   InputLabelProps={{ shrink: true }}
-                />
+                /> */}
 
                 {/* Time Zone */}
+                {/* <FormControl fullWidth error={!!errors.timeZone} required>
+                  <InputLabel>Time Zone</InputLabel>
+                  <Select
+                    name="timeZone"
+                    value={formData.timeZone}
+                    onChange={handleSelectChange}
+                    label="Time Zone"
+                  >
+                    {timeZoneOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.timeZone && (
+                    <FormHelperText>{errors.timeZone}</FormHelperText>
+                  )}
+                </FormControl> */}
+              </Stack>
+
+              {/* Right Column */}
+              <Stack spacing={3} sx={{ flex: 1 }}>
+                {/* End Date & Time */}
+                {/* <TextField
+                  fullWidth
+                  label="End Date & Time"
+                  name="endDate"
+                  type="datetime-local"
+                  value={formData.endDate}
+                  onChange={handleInputChange}
+                  error={!!errors.endDate}
+                  helperText={errors.endDate}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                /> */}
                 <FormControl fullWidth error={!!errors.timeZone} required>
                   <InputLabel>Time Zone</InputLabel>
                   <Select
@@ -574,25 +609,8 @@ export const CreateEvent: React.FC = () => {
                     <FormHelperText>{errors.timeZone}</FormHelperText>
                   )}
                 </FormControl>
-              </Stack>
 
-              {/* Right Column */}
-              <Stack spacing={3} sx={{ flex: 1 }}>
-                {/* End Date & Time */}
-                <TextField
-                  fullWidth
-                  label="End Date & Time"
-                  name="endDate"
-                  type="datetime-local"
-                  value={formData.endDate}
-                  onChange={handleInputChange}
-                  error={!!errors.endDate}
-                  helperText={errors.endDate}
-                  required
-                  InputLabelProps={{ shrink: true }}
-                />
-
-                {/* Registration Closes */}
+                {/* Registration Closes
                 <TextField
                   fullWidth
                   label="Registration Closes"
@@ -604,13 +622,10 @@ export const CreateEvent: React.FC = () => {
                   helperText={errors.registrationCloseDate}
                   required
                   InputLabelProps={{ shrink: true }}
-                />
+                /> */}
               </Stack>
             </Stack>
           </Box>
-
-          {/* Divider */}
-          <Divider sx={{ my: 4 }} />
 
           {/* Location Details */}
           <Box sx={{ mb: 4 }}>
@@ -694,9 +709,6 @@ export const CreateEvent: React.FC = () => {
               </Stack>
             </Stack>
           </Box>
-
-          {/* Divider */}
-          <Divider sx={{ my: 4 }} />
 
           {/* Event Settings & Leaderboard Settings */}
           <Box sx={{ mb: 4 }}>
@@ -833,14 +845,16 @@ export const CreateEvent: React.FC = () => {
                     </Typography>
                     <FormControlLabel
                       control={
-                        <Switch 
+                        <Switch
                           checked={showCategoryResults}
-                          onChange={(e) => setShowCategoryResults(e.target.checked)}
+                          onChange={(e) =>
+                            setShowCategoryResults(e.target.checked)
+                          }
                         />
                       }
                       label="Show Category Results"
                     />
-                    
+
                     {/* Conditionally show number of results input */}
                     {showCategoryResults && (
                       <TextField
@@ -857,7 +871,7 @@ export const CreateEvent: React.FC = () => {
                         sx={{ pl: "16px" }}
                       />
                     )}
-                    
+
                     <Typography
                       variant="body2"
                       sx={{ fontWeight: 600, pl: "16px", mb: 0.5 }}
@@ -877,9 +891,6 @@ export const CreateEvent: React.FC = () => {
               </Box>
             </Stack>
           </Box>
-
-          {/* Divider */}
-          <Divider sx={{ my: 4 }} />
 
           {/* Registration & Pricing */}
           <Box sx={{ mb: 4 }}>
