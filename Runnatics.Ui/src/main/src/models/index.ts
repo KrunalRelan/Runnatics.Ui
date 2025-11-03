@@ -6,3 +6,4 @@ export * from "./EventType";
 export * from "./EventOrganizer";
 export * from "./ServiceUrls";
 export * from "./Event";
+export * from "./TimeZoneOptions";
