@@ -1,10 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
-import { ThemeProvider } from "../src/main/src/theme";
-import { AuthProvider } from "../src/main/src/contexts/AuthContext";
-import DashboardLayout from "../src/main/src/components/DashboardLayout";
-import AuthLayout from "../src/main/src/components/AuthLayout";
-import LoginPage from "../src/main/src/pages/auth/LoginPage";
-import Dashboard from "../src/main/src/pages/Dashboard";
+import { ThemeProvider } from "./main/src/theme";
+import { AuthProvider } from "./main/src/contexts/AuthContext";
+import DashboardLayout from "./main/src/components/DashboardLayout";
+import AuthLayout from "./main/src/components/AuthLayout";
+import LoginPage from "./main/src/pages/auth/LoginPage";
+import Dashboard from "./main/src/pages/Dashboard";
 import { eventsRoutes } from "./main/src/pages/admin/events/Routes";
 
 // Layout wrapper for auth pages (header only, no side nav)
