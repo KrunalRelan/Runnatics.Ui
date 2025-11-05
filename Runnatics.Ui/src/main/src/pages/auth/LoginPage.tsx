@@ -34,8 +34,8 @@ const LoginPage: React.FC = () => {
             // Call login which will automatically store the JWT token
             await login(formData);
 
-            // Navigate to support after successful login
-            navigate('/support');
+            // Navigate to dashboard after successful login
+            navigate('/dashboard');
         } catch (err: any) {
             console.error('Login error:', err);
             setError(

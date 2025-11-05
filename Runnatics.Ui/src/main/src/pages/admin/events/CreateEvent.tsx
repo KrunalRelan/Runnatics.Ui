@@ -41,6 +41,7 @@ export const CreateEvent: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [apiError, setApiError] = useState<string>('');
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
 
@@ -300,6 +301,10 @@ export const CreateEvent: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Clear previous errors
+    setApiError('');
+    setErrors({});
+
     const isValid = validateForm();
 
     if (!isValid) {
@@ -307,34 +312,67 @@ export const CreateEvent: React.FC = () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
+    
     setIsSubmitting(true);
+    
     try {
+      // Log the token status for debugging
+      const token = localStorage.getItem('authToken');
+      console.log('🔑 Token exists:', !!token);
+      if (token) {
+        console.log('🔑 Token preview:', token.substring(0, 50) + '...');
+      } else {
+        console.error('❌ NO TOKEN FOUND! User may not be logged in.');
+      }
+      
       // Create event
-      console.log("Calling EventService.createEvent with data:", formData);
+      console.log("📤 Calling EventService.createEvent with data:", formData);
       const createdEvent = await EventService.createEvent(formData);
+      console.log("✅ Event created successfully:", createdEvent);
 
       // Upload banner image if provided
       if (bannerFile && createdEvent.id) {
         await EventService.uploadBannerImage(createdEvent.id, bannerFile);
       }
 
-      // Show success message
-      alert("Event created successfully!");
-
       // Navigate to events list or event detail page
-      navigate("/events");
+      navigate("/events/events-dashboard");
     } catch (error: any) {
-      console.error("Error creating event:", error);
+      console.error("❌ Error creating event:", error);
 
-      // Handle API errors
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors);
+      // Extract error message
+      let errorMessage = 'Failed to create event. Please try again.';
+      
+      if (error.response) {
+        // Server responded with error
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+        
+        if (error.response.data?.errors) {
+          // Validation errors
+          setErrors(error.response.data.errors);
+          errorMessage = 'Please fix the validation errors below.';
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.status === 401) {
+          errorMessage = 'Authentication failed. Please check if you are logged in and your token is valid.';
+        } else if (error.response.status === 403) {
+          errorMessage = 'You do not have permission to create events.';
+        }
+      } else if (error.request) {
+        // Request made but no response
+        console.error('No response received:', error.request);
+        errorMessage = 'No response from server. Please check if the backend is running.';
       } else {
-        alert(
-          error.response?.data?.message ||
-            "Failed to create event. Please try again."
-        );
+        // Error in request setup
+        console.error('Error message:', error.message);
+        errorMessage = error.message || errorMessage;
       }
+      
+      setApiError(errorMessage);
+      
+      // Scroll to top to show error
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
     }
@@ -385,7 +423,15 @@ export const CreateEvent: React.FC = () => {
 
       <Paper elevation={2} sx={{ p: 3 }}>
         <form onSubmit={handleSubmit}>
-          {/* Error Summary */}
+          {/* API Error Alert */}
+          {apiError && (
+            <Alert severity="error" sx={{ mb: 3 }} onClose={() => setApiError('')}>
+              <AlertTitle>Error</AlertTitle>
+              {apiError}
+            </Alert>
+          )}
+
+          {/* Validation Errors Summary */}
           {Object.keys(errors).length > 0 && (
             <Alert severity="error" sx={{ mb: 3 }}>
               <AlertTitle>Please fix the following errors:</AlertTitle>

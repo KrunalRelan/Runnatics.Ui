@@ -2,6 +2,7 @@
 
 import { apiClient, tokenManager } from '../utils/axios.config';
 import { LoginRequest, LoginResponse, RegisterRequest } from '../models/Auth';
+import { ServiceUrl } from '../models/ServiceUrls';
 
 /**
  * Authentication Service
@@ -15,26 +16,42 @@ class AuthService {
      */
     async login(credentials: LoginRequest): Promise<LoginResponse> {
         try {
-            const response = await apiClient.post<LoginResponse>('/auth/login', credentials);
-            
+            console.log('📤 Sending login request...');
+            const response = await apiClient.post<LoginResponse>(ServiceUrl.login(), credentials);
+            console.log('📥 Login response received:', response.data);
+
             // Store the JWT token in localStorage
             if (response.data.token) {
+                console.log('🔑 Storing token in localStorage...');
+                console.log('🔑 Token preview:', response.data.token.substring(0, 50) + '...');
                 tokenManager.setToken(response.data.token);
+                
+                // Verify token was stored
+                const storedToken = tokenManager.getToken();
+                if (storedToken) {
+                    console.log('✅ Token successfully stored!');
+                } else {
+                    console.error('❌ Token was NOT stored!');
+                }
+            } else {
+                console.error('❌ No token in response! Response data:', response.data);
             }
             
             // Store refresh token if available
             if (response.data.refreshToken) {
+                console.log('🔄 Storing refresh token...');
                 tokenManager.setRefreshToken(response.data.refreshToken);
             }
             
             // Store user data
             if (response.data.user) {
+                console.log('👤 Storing user data...');
                 localStorage.setItem('user', JSON.stringify(response.data.user));
             }
             
             return response.data;
         } catch (error: any) {
-            console.error('Login error:', error);
+            console.error('❌ Login error:', error);
             throw error;
         }
     }
