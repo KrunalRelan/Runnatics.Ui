@@ -37,7 +37,6 @@ const LoginPage: React.FC = () => {
             // Navigate to dashboard after successful login
             navigate('/dashboard');
         } catch (err: any) {
-            console.error('Login error:', err);
             setError(
                 err.response?.data?.message || 
                 err.userMessage || 

@@ -319,21 +319,9 @@ export const CreateEvent: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      // Log the token status for debugging
-      const token = localStorage.getItem('authToken');
-      console.log('🔑 Token exists:', !!token);
-      if (token) {
-        console.log('🔑 Token preview:', token.substring(0, 50) + '...');
-      } else {
-        console.error('❌ NO TOKEN FOUND! User may not be logged in.');
-      }
-      
       // Transform the form data to match the API structure
       // Exclude capacity, price, and currency (UI only fields)
       const { capacity, price, currency, ...apiData } = formData;
-      
-      // Log organization ID for debugging
-      console.log('📋 Organization ID being sent:', apiData.organizationId);
       
       // Create the API request payload
       const requestPayload = {
@@ -375,9 +363,7 @@ export const CreateEvent: React.FC = () => {
       };
       
       // Create event
-      console.log("📤 Calling EventService.createEvent with payload:", requestPayload);
       const createdEvent = await EventService.createEvent(requestPayload as any);
-      console.log("✅ Event created successfully:", createdEvent);
 
       // Upload banner image if provided
       if (bannerFile && createdEvent.id) {
@@ -387,16 +373,11 @@ export const CreateEvent: React.FC = () => {
       // Navigate to events list or event detail page
       navigate("/events/events-dashboard");
     } catch (error: any) {
-      console.error("❌ Error creating event:", error);
-
       // Extract error message
       let errorMessage = 'Failed to create event. Please try again.';
       
       if (error.response) {
         // Server responded with error
-        console.error('Response data:', error.response.data);
-        console.error('Response status:', error.response.status);
-        
         if (error.response.data?.errors) {
           // Validation errors
           setErrors(error.response.data.errors);
@@ -410,11 +391,9 @@ export const CreateEvent: React.FC = () => {
         }
       } else if (error.request) {
         // Request made but no response
-        console.error('No response received:', error.request);
         errorMessage = 'No response from server. Please check if the backend is running.';
       } else {
         // Error in request setup
-        console.error('Error message:', error.message);
         errorMessage = error.message || errorMessage;
       }
       

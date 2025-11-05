@@ -16,42 +16,25 @@ class AuthService {
      */
     async login(credentials: LoginRequest): Promise<LoginResponse> {
         try {
-            console.log('📤 Sending login request...');
             const response = await apiClient.post<LoginResponse>(ServiceUrl.login(), credentials);
-            console.log('📥 Login response received:', response.data);
 
             // Store the JWT token in localStorage
             if (response.data.message.token) {
-                console.log('🔑 Storing token in localStorage...');
-                console.log('🔑 Token preview:', response.data.message.token.substring(0, 50) + '...');
                 tokenManager.setToken(response.data.message.token);
-
-                // Verify token was stored
-                const storedToken = tokenManager.getToken();
-                if (storedToken) {
-                    console.log('✅ Token successfully stored!');
-                } else {
-                    console.error('❌ Token was NOT stored!');
-                }
-            } else {
-                console.error('❌ No token in response! Response data:', response.data);
             }
             
             // Store refresh token if available
             if (response.data.message.refreshToken) {
-                console.log('🔄 Storing refresh token...');
                 tokenManager.setRefreshToken(response.data.message.refreshToken);
             }
             
             // Store user data
             if (response.data.message.user) {
-                console.log('👤 Storing user data...');
                 localStorage.setItem('user', JSON.stringify(response.data.message.user));
             }
             
             return response.data;
         } catch (error: any) {
-            console.error('❌ Login error:', error);
             throw error;
         }
     }
@@ -82,7 +65,6 @@ class AuthService {
             
             return response.data;
         } catch (error: any) {
-            console.error('Registration error:', error);
             throw error;
         }
     }
@@ -95,7 +77,7 @@ class AuthService {
             // Call logout endpoint if available
             await apiClient.post('/auth/logout');
         } catch (error) {
-            console.error('Logout error:', error);
+            // Ignore logout errors
         } finally {
             // Clear tokens and user data regardless of API call result
             tokenManager.clearTokens();
@@ -126,7 +108,6 @@ class AuthService {
             
             return response.data.token;
         } catch (error: any) {
-            console.error('Token refresh error:', error);
             // Clear tokens if refresh fails
             tokenManager.clearTokens();
             throw error;
@@ -143,7 +124,6 @@ class AuthService {
             try {
                 return JSON.parse(userStr);
             } catch (error) {
-                console.error('Error parsing user data:', error);
                 return null;
             }
         }

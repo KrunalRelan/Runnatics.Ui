@@ -43,47 +43,14 @@ apiClient.interceptors.request.use(
         // Get token from localStorage
         const token = tokenManager.getToken();
         
-        // Detailed logging for debugging
-        console.log('🔍 Interceptor Debug:', {
-            tokenExists: !!token,
-            tokenPreview: token ? token.substring(0, 50) + '...' : 'NO TOKEN',
-            url: config.url,
-            method: config.method?.toUpperCase(),
-        });
-        
         // Add Bearer token to Authorization header if token exists
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
-            console.log('✅ Authorization header added:', config.headers.Authorization.substring(0, 50) + '...');
-        } else if (!token) {
-            console.error('❌ NO TOKEN FOUND IN LOCALSTORAGE!');
-        } else if (!config.headers) {
-            console.error('❌ NO HEADERS OBJECT IN CONFIG!');
-        }
-
-        // Log request in development
-        if ((import.meta as any).env?.DEV) {
-            const authHeader = config.headers?.Authorization;
-            const authPreview = authHeader && typeof authHeader === 'string' ? 
-                authHeader.substring(0, 50) + '...' : 
-                'NOT SET';
-                
-            console.log('🚀 API Request:', {
-                method: config.method?.toUpperCase(),
-                url: config.url,
-                baseURL: config.baseURL,
-                headers: {
-                    ...config.headers,
-                    Authorization: authPreview
-                },
-                data: config.data,
-            });
         }
 
         return config;
     },
     (error: AxiosError) => {
-        console.error('❌ Request Error:', error);
         return Promise.reject(error);
     }
 );
@@ -91,47 +58,22 @@ apiClient.interceptors.request.use(
 // Response interceptor
 apiClient.interceptors.response.use(
     (response) => {
-        // Log response in development
-        if ((import.meta as any).env?.DEV) {
-            console.log('✅ API Response:', {
-                status: response.status,
-                url: response.config.url,
-                data: response.data,
-            });
-        }
         return response;
     },
     (error) => {
         // Handle different error types
         if (!error.response) {
             // Network error or CORS error
-            console.error('🚫 Network/CORS Error:', {
-                message: error.message,
-                url: error.config?.url,
-                method: error.config?.method,
-                baseURL: error.config?.baseURL,
-            });
-            
-            // Create user-friendly error message
             error.userMessage = 'Unable to connect to the server. Please check:\n' +
                 '1. Is the backend server running?\n' +
                 '2. Is CORS configured on the backend?\n' +
                 '3. Is the API URL correct?';
         } else {
             // Server responded with error
-            console.error('❌ API Error:', {
-                status: error.response.status,
-                url: error.config?.url,
-                data: error.response.data,
-            });
-
             // Handle specific status codes
             switch (error.response.status) {
                 case 401:
-                    // Unauthorized - add user-friendly message but DON'T redirect
-                    // Let the component handle showing the error
                     error.userMessage = 'Authentication failed. Please check your credentials or login again.';
-                    console.error('🔒 Authorization Error: Token may be invalid or expired');
                     break;
                 case 403:
                     error.userMessage = 'You do not have permission to perform this action.';
