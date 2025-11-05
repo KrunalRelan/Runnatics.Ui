@@ -22,7 +22,13 @@ import {
   AlertTitle,
 } from "@mui/material";
 import { EventService } from "../../../services/EventService";
-import { EventOrganizer, EventType, timeZoneOptions, EventSettings, LeaderBoardSettings } from "@/main/src/models";
+import {
+  EventOrganizer,
+  EventType,
+  timeZoneOptions,
+  EventSettings,
+  LeaderBoardSettings,
+} from "@/main/src/models";
 import { CreateEventRequest } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
 
@@ -57,15 +63,16 @@ export const CreateEvent: React.FC = () => {
   // - Chip Time and Gun Time are mutually exclusive (only one can be active at a time)
   // - Time type switches are disabled when parent result toggle is off
   // - NumberOfResultsToShow applies to both Overall and Category results
-  const [leaderBoardSettings, setLeaderBoardSettings] = useState<LeaderBoardSettings>({
-    ShowOverallResults: true,
-    ShowCategoryResults: true,
-    OverAllResultChipTime: true,
-    CategoryResultChipTime: true,
-    OverallResultGunTime: false,
-    CategoryResultGunTime: false,
-    NumberOfResultsToShow: 5,
-  });
+  const [leaderBoardSettings, setLeaderBoardSettings] =
+    useState<LeaderBoardSettings>({
+      ShowOverallResults: true,
+      ShowCategoryResults: true,
+      SortByCategoryChipTime: true,
+      SortByOverallChipTime: true,
+      SortByOverallGunTime: false,
+      SortByCategoryGunTime: false,
+      NumberOfResultsToShow: 5,
+    });
 
   const [formData, setFormData] = useState<CreateEventRequest>({
     organizationId: null,
@@ -83,16 +90,16 @@ export const CreateEvent: React.FC = () => {
     zipCode: "",
     capacity: 0,
     price: 0,
-    currency: "INR",
+    // currency: "INR",
     timeZone: "Asia/Kolkata", // Default to India timezone
     smsText: "",
     leaderBoardSettings: {
       ShowOverallResults: true,
       ShowCategoryResults: true,
-      OverAllResultChipTime: true,
-      CategoryResultChipTime: true,
-      OverallResultGunTime: true,
-      CategoryResultGunTime: true,
+      SortByOverallChipTime: true,
+      SortByCategoryChipTime: true,
+      SortByOverallGunTime: true,
+      SortByCategoryGunTime: true,
       NumberOfResultsToShow: 5,
     },
     eventSettings: {
@@ -109,7 +116,8 @@ export const CreateEvent: React.FC = () => {
 
   // derive user role from localStorage (fallback to empty string if not set)
   //TODO: I want to take this from context later. when i integrate auth.
-  const userRole = typeof window !== "undefined" ? (localStorage.getItem("userRole") || "") : "";
+  const userRole =
+    typeof window !== "undefined" ? localStorage.getItem("userRole") || "" : "";
 
   // Fetch organizations on component mount
   useEffect(() => {
@@ -198,9 +206,9 @@ export const CreateEvent: React.FC = () => {
     const newErrors: FormErrors = {};
 
     // Organization validation - N/A is acceptable
-        if (formData.organizationId == null) {
-          newErrors.organizationId = "Organization is required";
-        }
+    if (formData.organizationId == null) {
+      newErrors.organizationId = "Organization is required";
+    }
 
     // Required field validations
     if (!formData.name.trim()) {
@@ -239,13 +247,13 @@ export const CreateEvent: React.FC = () => {
       newErrors.country = "Country is required";
     }
 
-    if (formData.capacity <= 0) {
-      newErrors.capacity = "Capacity must be greater than 0";
-    }
+    // if (formData.capacity <= 0) {
+    //   newErrors.capacity = "Capacity must be greater than 0";
+    // }
 
-    if (formData.price < 0) {
-      newErrors.price = "Price cannot be negative";
-    }
+    // if (formData.price < 0) {
+    //   newErrors.price = "Price cannot be negative";
+    // }
 
     if (!formData.timeZone) {
       newErrors.timeZone = "Time zone is required";
@@ -292,22 +300,14 @@ export const CreateEvent: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("Form submitted");
-    console.log("Form data:", formData);
-
     const isValid = validateForm();
-    console.log("Validation result:", isValid);
-    
+
     if (!isValid) {
-      console.log("Validation failed. Errors:", errors);
       // Scroll to first error
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-
-    console.log("Validation passed, creating event...");
     setIsSubmitting(true);
-
     try {
       // Create event
       console.log("Calling EventService.createEvent with data:", formData);
@@ -366,7 +366,7 @@ export const CreateEvent: React.FC = () => {
     { value: "EUR", label: "EUR - Euro" },
     { value: "GBP", label: "GBP - British Pound" },
     { value: "CAD", label: "CAD - Canadian Dollar" },
-    { value: "AUD", label: "AUD - Australian Dollar" }
+    { value: "AUD", label: "AUD - Australian Dollar" },
   ];
 
   // Generate timezone options with UTC offset
@@ -389,7 +389,7 @@ export const CreateEvent: React.FC = () => {
           {Object.keys(errors).length > 0 && (
             <Alert severity="error" sx={{ mb: 3 }}>
               <AlertTitle>Please fix the following errors:</AlertTitle>
-              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+              <ul style={{ margin: 0, paddingLeft: "20px" }}>
                 {Object.entries(errors).map(([field, message]) => (
                   <li key={field}>{message}</li>
                 ))}
@@ -755,7 +755,12 @@ export const CreateEvent: React.FC = () => {
                       control={
                         <Switch
                           checked={eventSettings.RemoveBanner}
-                          onChange={(e) => setEventSettings(prev => ({ ...prev, RemoveBanner: e.target.checked }))}
+                          onChange={(e) =>
+                            setEventSettings((prev) => ({
+                              ...prev,
+                              RemoveBanner: e.target.checked,
+                            }))
+                          }
                         />
                       }
                       label="Remove Banner"
@@ -764,7 +769,12 @@ export const CreateEvent: React.FC = () => {
                       control={
                         <Switch
                           checked={eventSettings.PublishEvent}
-                          onChange={(e) => setEventSettings(prev => ({ ...prev, PublishEvent: e.target.checked }))}
+                          onChange={(e) =>
+                            setEventSettings((prev) => ({
+                              ...prev,
+                              PublishEvent: e.target.checked,
+                            }))
+                          }
                         />
                       }
                       label="Publish Event"
@@ -773,7 +783,12 @@ export const CreateEvent: React.FC = () => {
                       control={
                         <Switch
                           checked={eventSettings.RankOnNet}
-                          onChange={(e) => setEventSettings(prev => ({ ...prev, RankOnNet: e.target.checked }))}
+                          onChange={(e) =>
+                            setEventSettings((prev) => ({
+                              ...prev,
+                              RankOnNet: e.target.checked,
+                            }))
+                          }
                         />
                       }
                       label="Rank On Net"
@@ -782,7 +797,12 @@ export const CreateEvent: React.FC = () => {
                       control={
                         <Switch
                           checked={eventSettings.AllowParticipantsEdit}
-                          onChange={(e) => setEventSettings(prev => ({ ...prev, AllowParticipantsEdit: e.target.checked }))}
+                          onChange={(e) =>
+                            setEventSettings((prev) => ({
+                              ...prev,
+                              AllowParticipantsEdit: e.target.checked,
+                            }))
+                          }
                         />
                       }
                       label="All Participants Edit"
@@ -795,7 +815,12 @@ export const CreateEvent: React.FC = () => {
                       control={
                         <Switch
                           checked={eventSettings.UseOldData}
-                          onChange={(e) => setEventSettings(prev => ({ ...prev, UseOldData: e.target.checked }))}
+                          onChange={(e) =>
+                            setEventSettings((prev) => ({
+                              ...prev,
+                              UseOldData: e.target.checked,
+                            }))
+                          }
                         />
                       }
                       label="Use Old Data"
@@ -804,7 +829,12 @@ export const CreateEvent: React.FC = () => {
                       control={
                         <Switch
                           checked={eventSettings.ConfirmedEvent}
-                          onChange={(e) => setEventSettings(prev => ({ ...prev, ConfirmedEvent: e.target.checked }))}
+                          onChange={(e) =>
+                            setEventSettings((prev) => ({
+                              ...prev,
+                              ConfirmedEvent: e.target.checked,
+                            }))
+                          }
                         />
                       }
                       label="Confirmed Event"
@@ -813,7 +843,12 @@ export const CreateEvent: React.FC = () => {
                       control={
                         <Switch
                           checked={eventSettings.AllNameCheck}
-                          onChange={(e) => setEventSettings(prev => ({ ...prev, AllNameCheck: e.target.checked }))}
+                          onChange={(e) =>
+                            setEventSettings((prev) => ({
+                              ...prev,
+                              AllNameCheck: e.target.checked,
+                            }))
+                          }
                         />
                       }
                       label="All Name Check"
@@ -822,7 +857,12 @@ export const CreateEvent: React.FC = () => {
                       control={
                         <Switch
                           checked={eventSettings.ShowResultsSummaryForRaces}
-                          onChange={(e) => setEventSettings(prev => ({ ...prev, ShowResultsSummaryForRaces: e.target.checked }))}
+                          onChange={(e) =>
+                            setEventSettings((prev) => ({
+                              ...prev,
+                              ShowResultsSummaryForRaces: e.target.checked,
+                            }))
+                          }
                         />
                       }
                       label="Show Results Summary For Races"
@@ -852,14 +892,18 @@ export const CreateEvent: React.FC = () => {
                           checked={leaderBoardSettings.ShowOverallResults}
                           onChange={(e) => {
                             const isChecked = e.target.checked;
-                            setLeaderBoardSettings(prev => {
+                            setLeaderBoardSettings((prev) => {
                               // When enabling, ensure at least one time type is selected
-                              if (isChecked && !prev.OverAllResultChipTime && !prev.OverallResultGunTime) {
-                                return { 
-                                  ...prev, 
+                              if (
+                                isChecked &&
+                                !prev.SortByOverallChipTime &&
+                                !prev.SortByOverallGunTime
+                              ) {
+                                return {
+                                  ...prev,
                                   ShowOverallResults: true,
-                                  OverAllResultChipTime: true,
-                                  OverallResultGunTime: false
+                                  SortByOverallChipTime: true,
+                                  SortByOverallGunTime: false,
                                 };
                               }
                               return { ...prev, ShowOverallResults: isChecked };
@@ -872,11 +916,13 @@ export const CreateEvent: React.FC = () => {
 
                     <Typography
                       variant="body2"
-                      sx={{ 
-                        fontWeight: 600, 
-                        pl: "16px", 
+                      sx={{
+                        fontWeight: 600,
+                        pl: "16px",
                         mb: 0.5,
-                        opacity: leaderBoardSettings.ShowOverallResults ? 1 : 0.5 
+                        opacity: leaderBoardSettings.ShowOverallResults
+                          ? 1
+                          : 0.5,
                       }}
                     >
                       Overall Result Sort By
@@ -884,14 +930,14 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={leaderBoardSettings.OverAllResultChipTime}
+                          checked={leaderBoardSettings.SortByOverallChipTime}
                           disabled={!leaderBoardSettings.ShowOverallResults}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setLeaderBoardSettings(prev => ({ 
-                                ...prev, 
-                                OverAllResultChipTime: true,
-                                OverallResultGunTime: false 
+                              setLeaderBoardSettings((prev) => ({
+                                ...prev,
+                                SortByOverallChipTime: true,
+                                SortByOverallGunTime: false,
                               }));
                             }
                           }}
@@ -902,14 +948,14 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={leaderBoardSettings.OverallResultGunTime}
+                          checked={leaderBoardSettings.SortByOverallGunTime}
                           disabled={!leaderBoardSettings.ShowOverallResults}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setLeaderBoardSettings(prev => ({ 
-                                ...prev, 
-                                OverallResultGunTime: true,
-                                OverAllResultChipTime: false 
+                              setLeaderBoardSettings((prev) => ({
+                                ...prev,
+                                SortByOverallGunTime: true,
+                                SortByOverallChipTime: false,
                               }));
                             }
                           }}
@@ -933,17 +979,24 @@ export const CreateEvent: React.FC = () => {
                           checked={leaderBoardSettings.ShowCategoryResults}
                           onChange={(e) => {
                             const isChecked = e.target.checked;
-                            setLeaderBoardSettings(prev => {
+                            setLeaderBoardSettings((prev) => {
                               // When enabling, ensure at least one time type is selected
-                              if (isChecked && !prev.CategoryResultChipTime && !prev.CategoryResultGunTime) {
-                                return { 
-                                  ...prev, 
+                              if (
+                                isChecked &&
+                                !prev.SortByCategoryChipTime &&
+                                !prev.SortByCategoryGunTime
+                              ) {
+                                return {
+                                  ...prev,
                                   ShowCategoryResults: true,
-                                  CategoryResultChipTime: true,
-                                  CategoryResultGunTime: false
+                                  SortByCategoryChipTime: true,
+                                  SortByCategoryGunTime: false,
                                 };
                               }
-                              return { ...prev, ShowCategoryResults: isChecked };
+                              return {
+                                ...prev,
+                                ShowCategoryResults: isChecked,
+                              };
                             });
                           }}
                         />
@@ -953,11 +1006,13 @@ export const CreateEvent: React.FC = () => {
 
                     <Typography
                       variant="body2"
-                      sx={{ 
-                        fontWeight: 600, 
-                        pl: "16px", 
+                      sx={{
+                        fontWeight: 600,
+                        pl: "16px",
                         mb: 0.5,
-                        opacity: leaderBoardSettings.ShowCategoryResults ? 1 : 0.5 
+                        opacity: leaderBoardSettings.ShowCategoryResults
+                          ? 1
+                          : 0.5,
                       }}
                     >
                       Category Result Sort By
@@ -965,14 +1020,14 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={leaderBoardSettings.CategoryResultChipTime}
+                          checked={leaderBoardSettings.SortByCategoryChipTime}
                           disabled={!leaderBoardSettings.ShowCategoryResults}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setLeaderBoardSettings(prev => ({ 
-                                ...prev, 
-                                CategoryResultChipTime: true,
-                                CategoryResultGunTime: false 
+                              setLeaderBoardSettings((prev) => ({
+                                ...prev,
+                                SortByCategoryChipTime: true,
+                                SortByCategoryGunTime: false,
                               }));
                             }
                           }}
@@ -983,14 +1038,14 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={leaderBoardSettings.CategoryResultGunTime}
+                          checked={leaderBoardSettings.SortByCategoryGunTime}
                           disabled={!leaderBoardSettings.ShowCategoryResults}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setLeaderBoardSettings(prev => ({ 
-                                ...prev, 
-                                CategoryResultGunTime: true,
-                                CategoryResultChipTime: false 
+                              setLeaderBoardSettings((prev) => ({
+                                ...prev,
+                                SortByCategoryGunTime: true,
+                                SortByCategoryChipTime: false,
                               }));
                             }
                           }}
@@ -1002,23 +1057,26 @@ export const CreateEvent: React.FC = () => {
                 </Stack>
 
                 {/* Shared setting for number of results - centered below both columns */}
-                {(leaderBoardSettings.ShowOverallResults || leaderBoardSettings.ShowCategoryResults) && (
-                  <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+                {(leaderBoardSettings.ShowOverallResults ||
+                  leaderBoardSettings.ShowCategoryResults) && (
+                  <Box
+                    sx={{ mt: 3, display: "flex", justifyContent: "center" }}
+                  >
                     <TextField
                       label="Number of Results to Show"
                       type="number"
                       value={leaderBoardSettings.NumberOfResultsToShow || 5}
                       onChange={(e) =>
-                        setLeaderBoardSettings(prev => ({ 
-                          ...prev, 
-                          NumberOfResultsToShow: parseInt(e.target.value) || 5 
+                        setLeaderBoardSettings((prev) => ({
+                          ...prev,
+                          NumberOfResultsToShow: parseInt(e.target.value) || 5,
                         }))
                       }
                       placeholder="Enter number of results"
                       size="small"
                       inputProps={{ min: 1, step: 1 }}
                       helperText="Applies to both Overall and Category results"
-                      sx={{ width: { xs: '100%', sm: '300px' } }}
+                      sx={{ width: { xs: "100%", sm: "300px" } }}
                     />
                   </Box>
                 )}

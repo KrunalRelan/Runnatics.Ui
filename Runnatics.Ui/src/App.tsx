@@ -12,7 +12,7 @@ function App() {
           <Routes>
             <Route
               path="/"
-              element={<Navigate to="/events/events-dashboard" replace />}
+              element={<Navigate to="/support" replace />}
             />
             {routes.map((route, index) => (
               <Route key={index} path={route.path} element={route.element}>
