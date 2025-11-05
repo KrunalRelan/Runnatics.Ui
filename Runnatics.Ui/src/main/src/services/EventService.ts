@@ -2,9 +2,10 @@
 
 import { AxiosResponse } from 'axios';
 import { Event, CreateEventRequest, ServiceUrl } from '../models';
-import { SearchCriteria } from '../models/SearchCirteria';
-import { SearchReponse } from '../models/SearchReponse';
+
+import { SearchResponse } from '../models/SearchReponse';
 import { apiClient } from '../utils/axios.config';
+import { EventSearchRequest } from '../models/EventSearchRequest';
 
 // Use the centralized apiClient with JWT interceptor
 // All requests will automatically include the Bearer token
@@ -15,9 +16,9 @@ export class EventService {
      * Note: JWT token is automatically included via interceptor
      */
     static async getAllEvents(params?: {
-       searchCriteria?: SearchCriteria;
-    }): Promise<SearchReponse<Event>> {
-        const response = await apiClient.post<SearchReponse<Event>>(
+       searchCriteria?: EventSearchRequest;
+    }): Promise<SearchResponse<Event>> {
+        const response = await apiClient.post<SearchResponse<Event>>(
             ServiceUrl.searchEventService(), 
             params?.searchCriteria
         );

@@ -1,4 +1,4 @@
-export interface SearchReponse<T>{
+export interface SearchResponse<T>{
     totalCount: number;
-    results: T[];
+    message: T[];
 }
