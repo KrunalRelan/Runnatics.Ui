@@ -1,5 +1,5 @@
 // src/pages/Events/EventsList.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -8,13 +8,6 @@ import {
   CardContent,
   Container,
   IconButton,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Typography,
   Chip,
   Dialog,
@@ -27,7 +20,6 @@ import {
   TextField,
   InputAdornment,
   Stack,
-  Pagination,
   Tooltip,
 } from "@mui/material";
 import {
@@ -36,9 +28,16 @@ import {
   Add as AddIcon,
   Search as SearchIcon,
 } from "@mui/icons-material";
+import { AgGridReact } from "ag-grid-react";
+import { ColDef, GridReadyEvent, ModuleRegistry, AllCommunityModule } from "ag-grid-community";
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-material.css";
 import { EventService } from "../../../services/EventService";
 import { Event } from "../../../models/Event";
 import { EventSearchRequest } from "../../../models/EventSearchRequest";
+
+// Register AG Grid modules
+ModuleRegistry.registerModules([AllCommunityModule]);
 // Default search criteria with required pagination values
 const defaultSearchCriteria: EventSearchRequest = {
   pageNumber: 1,
@@ -99,20 +98,13 @@ const EventsList: React.FC = () => {
     }
   };
 
-  const handlePageChange = (
-    _event: React.ChangeEvent<unknown>,
-    page: number
-  ) => {
-    setSearchCriteria((prev) => ({ ...prev, pageNumber: page }));
-  };
-
   const handleCreateEvent = () => {
-    navigate("/events/create");
+    navigate("/events/events-create");
   };
 
   const handleEditEvent = (eventId: string | undefined) => {
     if (eventId) {
-      navigate(`/events/edit/${eventId}`);
+      navigate(`/events/events-edit/${eventId}`);
     }
   };
 
@@ -151,6 +143,120 @@ const EventsList: React.FC = () => {
       day: "numeric",
     });
   };
+
+  // Actions cell renderer
+  const ActionsCellRenderer = (props: any) => {
+    const event = props.data;
+    return (
+      <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ height: '100%' }}>
+        <Tooltip title="Edit">
+          <IconButton
+            color="primary"
+            size="small"
+            onClick={() => handleEditEvent(event.id)}
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Delete">
+          <IconButton
+            color="error"
+            size="small"
+            onClick={() => handleDeleteClick(event)}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+    );
+  };
+
+  // Published status cell renderer
+  const PublishedCellRenderer = (props: any) => {
+    const isActive = props.value;
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+        <Chip
+          label={isActive ? "Yes" : "No"}
+          color={isActive ? "success" : "default"}
+          size="small"
+        />
+      </Box>
+    );
+  };
+
+  // AG Grid column definitions
+  const columnDefs: ColDef<Event>[] = useMemo(() => [
+    {
+      headerName: "#",
+      valueGetter: (params) => {
+        const pageSize = searchCriteria.pageSize || 10;
+        const pageNumber = searchCriteria.pageNumber || 1;
+        return (pageNumber - 1) * pageSize + (params.node?.rowIndex ?? 0) + 1;
+      },
+      width: 80,
+      sortable: false,
+      filter: false,
+    },
+    {
+      field: "name",
+      headerName: "Event Name",
+      flex: 2,
+      sortable: true,
+      filter: true,
+    },
+    {
+      field: "eventDate",
+      headerName: "Event Date",
+      flex: 1.5,
+      sortable: true,
+      filter: "agDateColumnFilter",
+      valueFormatter: (params) => formatDate(params.value || params.data?.startDate),
+    },
+    {
+      field: "venueAddress",
+      headerName: "Address",
+      flex: 2,
+      sortable: true,
+      filter: true,
+      valueGetter: (params) => params.data?.venueAddress || params.data?.location || "N/A",
+    },
+    {
+      field: "eventOrganizerName",
+      headerName: "Organizer",
+      flex: 1.5,
+      sortable: true,
+      filter: true,
+      valueGetter: (params) => params.data?.eventOrganizerName || params.data?.organizerId || "N/A",
+    },
+    {
+      field: "isActive",
+      headerName: "Published",
+      width: 120,
+      sortable: true,
+      filter: true,
+      cellRenderer: PublishedCellRenderer,
+    },
+    {
+      headerName: "Action",
+      width: 140,
+      sortable: false,
+      filter: false,
+      cellRenderer: ActionsCellRenderer,
+      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    },
+  ], [searchCriteria]);
+
+  // Default column definitions
+  const defaultColDef = useMemo<ColDef>(() => ({
+    resizable: true,
+    sortable: true,
+    filter: true,
+  }), []);
+
+  const onGridReady = useCallback((_params: GridReadyEvent) => {
+    // Grid is ready - can be used for additional initialization if needed
+  }, []);
 
   const pageSize = searchCriteria.pageSize || 10;
   const pageNumber = searchCriteria.pageNumber || 1;
@@ -240,121 +346,91 @@ const EventsList: React.FC = () => {
         </Card>
       ) : (
         <>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: "grey.100" }}>
-                  <TableCell>
-                    <strong>#</strong>
-                  </TableCell>
-                  <TableCell>
-                    <strong>Event Name</strong>
-                  </TableCell>
-                  <TableCell>
-                    <strong>Event Date</strong>
-                  </TableCell>
-                  <TableCell>
-                    <strong>Address</strong>
-                  </TableCell>
-                  <TableCell>
-                    <strong>Organizer</strong>
-                  </TableCell>
-                  <TableCell>
-                    <strong>Published</strong>
-                  </TableCell>
-                  <TableCell align="center">
-                    <strong>Action</strong>
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} align="center">
-                      <CircularProgress size={30} />
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  events.map((event, index) => (
-                    <TableRow
-                      key={event.id}
-                      sx={{
-                        "&:hover": {
-                          backgroundColor: "action.hover",
-                        },
-                      }}
-                    >
-                      <TableCell>
-                        {(pageNumber - 1) * pageSize + index + 1}
-                      </TableCell>
-                      <TableCell>{event.name}</TableCell>
-                      <TableCell>{formatDate(event.eventDate || event.startDate)}</TableCell>
-                      <TableCell>{event.venueAddress || event.location || "N/A"}</TableCell>
-                      <TableCell>{event.eventOrganizerName || event.organizerId || "N/A"}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={event.isActive ? "Yes" : "No"}
-                          color={event.isActive ? "success" : "default"}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell align="center">
-                        <Stack
-                          direction="row"
-                          spacing={1}
-                          justifyContent="center"
-                        >
-                          <Tooltip title="Edit">
-                            <IconButton
-                              color="primary"
-                              size="small"
-                              onClick={() => handleEditEvent(event.id)}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Delete">
-                            <IconButton
-                              color="error"
-                              size="small"
-                              onClick={() => handleDeleteClick(event)}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          {/* AG Grid Table */}
+          <Box
+            className="ag-theme-material"
+            sx={{
+              height: "600px",
+              width: "100%",
+              "& .ag-header-cell-label": {
+                fontWeight: "bold",
+              },
+            }}
+          >
+            <AgGridReact<Event>
+              rowData={events}
+              columnDefs={columnDefs}
+              defaultColDef={defaultColDef}
+              onGridReady={onGridReady}
+              pagination={false}
+              domLayout="normal"
+              animateRows={true}
+              rowHeight={60}
+              headerHeight={50}
+              loading={loading}
+              overlayLoadingTemplate={
+                '<span class="ag-overlay-loading-center">Loading events...</span>'
+              }
+              overlayNoRowsTemplate={
+                '<span class="ag-overlay-no-rows-center">No events to display</span>'
+              }
+            />
+          </Box>
 
-          {/* Pagination */}
+          {/* Custom Pagination */}
           <Box
             sx={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               mt: 3,
+              p: 2,
+              backgroundColor: "background.paper",
+              borderRadius: 1,
             }}
           >
             <Typography variant="body2" color="text.secondary">
-              Showing {(pageNumber - 1) * pageSize + 1} to{" "}
-              {Math.min(pageNumber * pageSize, totalRecords)} of {totalRecords}{" "}
-              entries
+              Showing {events.length > 0 ? (pageNumber - 1) * pageSize + 1 : 0} to{" "}
+              {Math.min(pageNumber * pageSize, totalRecords)} of {totalRecords} entries
             </Typography>
 
-            <Pagination
-              count={totalPages}
-              page={pageNumber}
-              onChange={handlePageChange}
-              color="primary"
-              showFirstButton
-              showLastButton
-              disabled={loading}
-            />
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Button
+                variant="outlined"
+                size="small"
+                disabled={pageNumber === 1 || loading}
+                onClick={() => setSearchCriteria((prev) => ({ ...prev, pageNumber: 1 }))}
+              >
+                First
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                disabled={pageNumber === 1 || loading}
+                onClick={() => setSearchCriteria((prev) => ({ ...prev, pageNumber: pageNumber - 1 }))}
+              >
+                Previous
+              </Button>
+              <Typography variant="body2">
+                Page {pageNumber} of {totalPages}
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                disabled={pageNumber >= totalPages || loading}
+                onClick={() => setSearchCriteria((prev) => ({ ...prev, pageNumber: pageNumber + 1 }))}
+              >
+                Next
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                disabled={pageNumber >= totalPages || loading}
+                onClick={() => setSearchCriteria((prev) => ({ ...prev, pageNumber: totalPages }))}
+              >
+                Last
+              </Button>
+            </Stack>
           </Box>
         </>
       )}
