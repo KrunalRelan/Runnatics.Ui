@@ -29,15 +29,44 @@ import {
   Search as SearchIcon,
 } from "@mui/icons-material";
 import { AgGridReact } from "ag-grid-react";
-import { ColDef, GridReadyEvent, ModuleRegistry, AllCommunityModule } from "ag-grid-community";
-import "ag-grid-community/styles/ag-grid.css";
-import "ag-grid-community/styles/ag-theme-material.css";
+import {
+  ColDef,
+  GridReadyEvent,
+  ModuleRegistry,
+  AllCommunityModule,
+  themeQuartz,
+} from "ag-grid-community";
+// Remove these old CSS imports
+// import "ag-grid-community/styles/ag-grid.css";
+// import "ag-grid-community/styles/ag-theme-material.css";
 import { EventService } from "../../../services/EventService";
 import { Event } from "../../../models/Event";
 import { EventSearchRequest } from "../../../models/EventSearchRequest";
 
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule]);
+
+// Create custom theme based on Quartz
+const myTheme = themeQuartz.withParams({
+  accentColor: "#1976d2",
+  backgroundColor: "#ffffff",
+  borderColor: "#e0e0e0",
+  borderRadius: 4,
+  browserColorScheme: "light",
+  chromeBackgroundColor: "#f5f5f5",
+  columnBorder: true,
+  fontFamily: "Roboto, sans-serif",
+  fontSize: 14,
+  foregroundColor: "#000000",
+  headerBackgroundColor: "#f5f5f5",
+  headerFontSize: 14,
+  headerFontWeight: 600,
+  headerTextColor: "#000000",
+  oddRowBackgroundColor: "#fafafa",
+  rowBorder: true,
+  spacing: 8,
+});
+
 // Default search criteria with required pagination values
 const defaultSearchCriteria: EventSearchRequest = {
   pageNumber: 1,
@@ -82,8 +111,8 @@ const EventsList: React.FC = () => {
       setError(null);
 
       // Call the API with search criteria wrapped in the correct format
-      const response = await EventService.getAllEvents({ 
-        searchCriteria: searchCriteria 
+      const response = await EventService.getAllEvents({
+        searchCriteria: searchCriteria,
       });
 
       // Backend returns events directly in the message property as an array
@@ -135,7 +164,7 @@ const EventsList: React.FC = () => {
 
   const formatDate = (date: Date | string | undefined | null) => {
     if (!date) return "N/A";
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const dateObj = typeof date === "string" ? new Date(date) : date;
     if (isNaN(dateObj.getTime())) return "Invalid Date";
     return dateObj.toLocaleDateString("en-US", {
       year: "numeric",
@@ -148,7 +177,13 @@ const EventsList: React.FC = () => {
   const ActionsCellRenderer = (props: any) => {
     const event = props.data;
     return (
-      <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ height: '100%' }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        justifyContent="center"
+        alignItems="center"
+        sx={{ height: "100%" }}
+      >
         <Tooltip title="Edit">
           <IconButton
             color="primary"
@@ -175,7 +210,7 @@ const EventsList: React.FC = () => {
   const PublishedCellRenderer = (props: any) => {
     const isActive = props.value;
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+      <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
         <Chip
           label={isActive ? "Yes" : "No"}
           color={isActive ? "success" : "default"}
@@ -186,73 +221,86 @@ const EventsList: React.FC = () => {
   };
 
   // AG Grid column definitions
-  const columnDefs: ColDef<Event>[] = useMemo(() => [
-    {
-      headerName: "#",
-      valueGetter: (params) => {
-        const pageSize = searchCriteria.pageSize || 10;
-        const pageNumber = searchCriteria.pageNumber || 1;
-        return (pageNumber - 1) * pageSize + (params.node?.rowIndex ?? 0) + 1;
+  const columnDefs: ColDef<Event>[] = useMemo(
+    () => [
+      {
+        headerName: "#",
+        valueGetter: (params) => {
+          const pageSize = searchCriteria.pageSize || 10;
+          const pageNumber = searchCriteria.pageNumber || 1;
+          return (pageNumber - 1) * pageSize + (params.node?.rowIndex ?? 0) + 1;
+        },
+        width: 80,
+        sortable: false,
+        filter: false,
       },
-      width: 80,
-      sortable: false,
-      filter: false,
-    },
-    {
-      field: "name",
-      headerName: "Event Name",
-      flex: 2,
-      sortable: true,
-      filter: true,
-    },
-    {
-      field: "eventDate",
-      headerName: "Event Date",
-      flex: 1.5,
-      sortable: true,
-      filter: "agDateColumnFilter",
-      valueFormatter: (params) => formatDate(params.value || params.data?.startDate),
-    },
-    {
-      field: "venueAddress",
-      headerName: "Address",
-      flex: 2,
-      sortable: true,
-      filter: true,
-      valueGetter: (params) => params.data?.venueAddress || params.data?.location || "N/A",
-    },
-    {
-      field: "eventOrganizerName",
-      headerName: "Organizer",
-      flex: 1.5,
-      sortable: true,
-      filter: true,
-      valueGetter: (params) => params.data?.eventOrganizerName || params.data?.organizerId || "N/A",
-    },
-    {
-      field: "isActive",
-      headerName: "Published",
-      width: 120,
-      sortable: true,
-      filter: true,
-      cellRenderer: PublishedCellRenderer,
-    },
-    {
-      headerName: "Action",
-      width: 140,
-      sortable: false,
-      filter: false,
-      cellRenderer: ActionsCellRenderer,
-      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
-    },
-  ], [searchCriteria]);
+      {
+        field: "name",
+        headerName: "Event Name",
+        flex: 2,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: "eventDate",
+        headerName: "Event Date",
+        flex: 1.5,
+        sortable: true,
+        filter: "agDateColumnFilter",
+        valueFormatter: (params) =>
+          formatDate(params.value || params.data?.startDate),
+      },
+      {
+        field: "venueAddress",
+        headerName: "Address",
+        flex: 2,
+        sortable: true,
+        filter: true,
+        valueGetter: (params) =>
+          params.data?.venueAddress || params.data?.location || "N/A",
+      },
+      {
+        field: "eventOrganizerName",
+        headerName: "Organizer",
+        flex: 1.5,
+        sortable: true,
+        filter: true,
+        valueGetter: (params) =>
+          params.data?.eventOrganizerName || params.data?.organizerId || "N/A",
+      },
+      {
+        field: "isActive",
+        headerName: "Published",
+        width: 120,
+        sortable: true,
+        filter: true,
+        cellRenderer: PublishedCellRenderer,
+      },
+      {
+        headerName: "Action",
+        width: 140,
+        sortable: false,
+        filter: false,
+        cellRenderer: ActionsCellRenderer,
+        cellStyle: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        },
+      },
+    ],
+    [searchCriteria]
+  );
 
   // Default column definitions
-  const defaultColDef = useMemo<ColDef>(() => ({
-    resizable: true,
-    sortable: true,
-    filter: true,
-  }), []);
+  const defaultColDef = useMemo<ColDef>(
+    () => ({
+      resizable: true,
+      sortable: true,
+      filter: true,
+    }),
+    []
+  );
 
   const onGridReady = useCallback((_params: GridReadyEvent) => {
     // Grid is ready - can be used for additional initialization if needed
@@ -348,16 +396,13 @@ const EventsList: React.FC = () => {
         <>
           {/* AG Grid Table */}
           <Box
-            className="ag-theme-material"
             sx={{
               height: "600px",
               width: "100%",
-              "& .ag-header-cell-label": {
-                fontWeight: "bold",
-              },
             }}
           >
             <AgGridReact<Event>
+              theme={myTheme}
               rowData={events}
               columnDefs={columnDefs}
               defaultColDef={defaultColDef}
@@ -390,8 +435,9 @@ const EventsList: React.FC = () => {
             }}
           >
             <Typography variant="body2" color="text.secondary">
-              Showing {events.length > 0 ? (pageNumber - 1) * pageSize + 1 : 0} to{" "}
-              {Math.min(pageNumber * pageSize, totalRecords)} of {totalRecords} entries
+              Showing {events.length > 0 ? (pageNumber - 1) * pageSize + 1 : 0}{" "}
+              to {Math.min(pageNumber * pageSize, totalRecords)} of{" "}
+              {totalRecords} entries
             </Typography>
 
             <Stack direction="row" spacing={2} alignItems="center">
@@ -399,7 +445,9 @@ const EventsList: React.FC = () => {
                 variant="outlined"
                 size="small"
                 disabled={pageNumber === 1 || loading}
-                onClick={() => setSearchCriteria((prev) => ({ ...prev, pageNumber: 1 }))}
+                onClick={() =>
+                  setSearchCriteria((prev) => ({ ...prev, pageNumber: 1 }))
+                }
               >
                 First
               </Button>
@@ -407,7 +455,12 @@ const EventsList: React.FC = () => {
                 variant="outlined"
                 size="small"
                 disabled={pageNumber === 1 || loading}
-                onClick={() => setSearchCriteria((prev) => ({ ...prev, pageNumber: pageNumber - 1 }))}
+                onClick={() =>
+                  setSearchCriteria((prev) => ({
+                    ...prev,
+                    pageNumber: pageNumber - 1,
+                  }))
+                }
               >
                 Previous
               </Button>
@@ -418,7 +471,12 @@ const EventsList: React.FC = () => {
                 variant="outlined"
                 size="small"
                 disabled={pageNumber >= totalPages || loading}
-                onClick={() => setSearchCriteria((prev) => ({ ...prev, pageNumber: pageNumber + 1 }))}
+                onClick={() =>
+                  setSearchCriteria((prev) => ({
+                    ...prev,
+                    pageNumber: pageNumber + 1,
+                  }))
+                }
               >
                 Next
               </Button>
@@ -426,7 +484,12 @@ const EventsList: React.FC = () => {
                 variant="outlined"
                 size="small"
                 disabled={pageNumber >= totalPages || loading}
-                onClick={() => setSearchCriteria((prev) => ({ ...prev, pageNumber: totalPages }))}
+                onClick={() =>
+                  setSearchCriteria((prev) => ({
+                    ...prev,
+                    pageNumber: totalPages,
+                  }))
+                }
               >
                 Last
               </Button>
