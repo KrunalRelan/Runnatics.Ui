@@ -89,9 +89,9 @@ export const CreateEvent: React.FC = () => {
     state: "",
     country: "",
     zipCode: "",
-    capacity: 0,
-    price: 0,
-    // currency: "INR",
+    capacity: 0, // UI only, not sent to API
+    price: 0, // UI only, not sent to API
+    currency: "INR", // UI only, not sent to API
     timeZone: "Asia/Kolkata", // Default to India timezone
     smsText: "",
     leaderBoardSettings: {
@@ -175,9 +175,17 @@ export const CreateEvent: React.FC = () => {
   const handleSelectChange = (e: SelectChangeEvent<string | number>) => {
     const { name, value } = e.target;
 
+    // Special handling for organizationId
+    let processedValue = value === "" ? null : value;
+    
+    // If organizationId is "N/A", set it to 1
+    if (name === "organizationId" && value === "N/A") {
+      processedValue = 1;
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name as string]: value === "" ? null : value,
+      [name as string]: processedValue,
     }));
 
     // Clear error for this field
@@ -248,13 +256,8 @@ export const CreateEvent: React.FC = () => {
       newErrors.country = "Country is required";
     }
 
-    // if (formData.capacity <= 0) {
-    //   newErrors.capacity = "Capacity must be greater than 0";
-    // }
-
-    // if (formData.price < 0) {
-    //   newErrors.price = "Price cannot be negative";
-    // }
+    // Capacity, price, and currency are UI-only fields (optional)
+    // No validation needed as they're not sent to the API
 
     if (!formData.timeZone) {
       newErrors.timeZone = "Time zone is required";
@@ -325,9 +328,55 @@ export const CreateEvent: React.FC = () => {
         console.error('❌ NO TOKEN FOUND! User may not be logged in.');
       }
       
+      // Transform the form data to match the API structure
+      // Exclude capacity, price, and currency (UI only fields)
+      const { capacity, price, currency, ...apiData } = formData;
+      
+      // Log organization ID for debugging
+      console.log('📋 Organization ID being sent:', apiData.organizationId);
+      
+      // Create the API request payload
+      const requestPayload = {
+        ...apiData,
+        // Map form fields to API fields if needed
+        eventDate: apiData.startDate,
+        venueName: apiData.location,
+        venueAddress: `${apiData.city}, ${apiData.state}, ${apiData.country}`,
+        // Add default values for fields not in the form
+        slug: apiData.name.toLowerCase().replace(/\s+/g, '-'),
+        status: "Draft",
+        maxParticipants: 1000, // Default value
+        registrationDeadline: apiData.registrationCloseDate || apiData.startDate,
+        // Transform settings to match API naming conventions
+        eventSettings: {
+          removeBanner: eventSettings.RemoveBanner,
+          published: eventSettings.PublishEvent,
+          rankOnNet: eventSettings.RankOnNet,
+          showResultSummaryForRaces: eventSettings.ShowResultsSummaryForRaces,
+          useOldData: eventSettings.UseOldData,
+          confirmedEvent: eventSettings.ConfirmedEvent,
+          allowNameCheck: eventSettings.AllNameCheck,
+          allowParticipantEdit: eventSettings.AllowParticipantsEdit,
+        },
+        leaderboardSettings: {
+          showOverallResults: leaderBoardSettings.ShowOverallResults,
+          showCategoryResults: leaderBoardSettings.ShowCategoryResults,
+          showGenderResults: true,
+          showAgeGroupResults: true,
+          enableLiveLeaderboard: true,
+          showSplitTimes: true,
+          showPace: true,
+          showTeamResults: false,
+          showMedalIcon: true,
+          allowAnonymousView: true,
+          autoRefreshIntervalSec: 30,
+          maxDisplayedRecords: leaderBoardSettings.NumberOfResultsToShow || 100,
+        },
+      };
+      
       // Create event
-      console.log("📤 Calling EventService.createEvent with data:", formData);
-      const createdEvent = await EventService.createEvent(formData);
+      console.log("📤 Calling EventService.createEvent with payload:", requestPayload);
+      const createdEvent = await EventService.createEvent(requestPayload as any);
       console.log("✅ Event created successfully:", createdEvent);
 
       // Upload banner image if provided
@@ -1134,6 +1183,9 @@ export const CreateEvent: React.FC = () => {
           <Box sx={{ mb: 4 }}>
             <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
               Registration & Pricing
+              <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
+                (For display purposes only - not sent to API)
+              </Typography>
             </Typography>
 
             {/* Two Column Layout */}
@@ -1143,26 +1195,25 @@ export const CreateEvent: React.FC = () => {
                 {/* Capacity */}
                 <TextField
                   fullWidth
-                  label="Capacity"
+                  label="Capacity (Optional)"
                   name="capacity"
                   type="number"
                   value={formData.capacity}
                   onChange={handleInputChange}
                   error={!!errors.capacity}
-                  helperText={errors.capacity}
+                  helperText={errors.capacity || "For UI display only"}
                   placeholder="Maximum participants"
-                  required
                   inputProps={{ min: 1, step: 1 }}
                 />
 
                 {/* Currency */}
-                <FormControl fullWidth error={!!errors.currency} required>
-                  <InputLabel>Currency</InputLabel>
+                <FormControl fullWidth error={!!errors.currency}>
+                  <InputLabel>Currency (Optional)</InputLabel>
                   <Select
                     name="currency"
                     value={formData.currency}
                     onChange={handleSelectChange}
-                    label="Currency"
+                    label="Currency (Optional)"
                   >
                     {currencyOptions.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
@@ -1170,9 +1221,9 @@ export const CreateEvent: React.FC = () => {
                       </MenuItem>
                     ))}
                   </Select>
-                  {errors.currency && (
-                    <FormHelperText>{errors.currency}</FormHelperText>
-                  )}
+                  <FormHelperText>
+                    {errors.currency || "For UI display only"}
+                  </FormHelperText>
                 </FormControl>
               </Stack>
 
@@ -1181,15 +1232,14 @@ export const CreateEvent: React.FC = () => {
                 {/* Registration Price */}
                 <TextField
                   fullWidth
-                  label="Registration Price"
+                  label="Registration Price (Optional)"
                   name="price"
                   type="number"
                   value={formData.price}
                   onChange={handleInputChange}
                   error={!!errors.price}
-                  helperText={errors.price}
+                  helperText={errors.price || "For UI display only"}
                   placeholder="0.00"
-                  required
                   inputProps={{ min: 0, step: 0.01 }}
                 />
               </Stack>

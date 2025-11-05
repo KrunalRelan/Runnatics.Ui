@@ -21,11 +21,11 @@ class AuthService {
             console.log('📥 Login response received:', response.data);
 
             // Store the JWT token in localStorage
-            if (response.data.token) {
+            if (response.data.message.token) {
                 console.log('🔑 Storing token in localStorage...');
-                console.log('🔑 Token preview:', response.data.token.substring(0, 50) + '...');
-                tokenManager.setToken(response.data.token);
-                
+                console.log('🔑 Token preview:', response.data.message.token.substring(0, 50) + '...');
+                tokenManager.setToken(response.data.message.token);
+
                 // Verify token was stored
                 const storedToken = tokenManager.getToken();
                 if (storedToken) {
@@ -38,15 +38,15 @@ class AuthService {
             }
             
             // Store refresh token if available
-            if (response.data.refreshToken) {
+            if (response.data.message.refreshToken) {
                 console.log('🔄 Storing refresh token...');
-                tokenManager.setRefreshToken(response.data.refreshToken);
+                tokenManager.setRefreshToken(response.data.message.refreshToken);
             }
             
             // Store user data
-            if (response.data.user) {
+            if (response.data.message.user) {
                 console.log('👤 Storing user data...');
-                localStorage.setItem('user', JSON.stringify(response.data.user));
+                localStorage.setItem('user', JSON.stringify(response.data.message.user));
             }
             
             return response.data;
@@ -66,18 +66,18 @@ class AuthService {
             const response = await apiClient.post<LoginResponse>('/auth/register', userData);
             
             // Store the JWT token in localStorage
-            if (response.data.token) {
-                tokenManager.setToken(response.data.token);
+            if (response.data.message.token) {
+                tokenManager.setToken(response.data.message.token);
             }
             
             // Store refresh token if available
-            if (response.data.refreshToken) {
-                tokenManager.setRefreshToken(response.data.refreshToken);
+            if (response.data.message.refreshToken) {
+                tokenManager.setRefreshToken(response.data.message.refreshToken);
             }
             
             // Store user data
-            if (response.data.user) {
-                localStorage.setItem('user', JSON.stringify(response.data.user));
+            if (response.data.message.user) {
+                localStorage.setItem('user', JSON.stringify(response.data.message.user));
             }
             
             return response.data;

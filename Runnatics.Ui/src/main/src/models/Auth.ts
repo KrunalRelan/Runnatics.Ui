@@ -6,19 +6,49 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-    token: string;
-    refreshToken?: string;
-    user: User;
-    expiresIn?: number;
-}
+    message: {
+        token: string;
+        refreshToken: string;
+        expiresAt: string;
+        user: {
+            id: number;
+            firstName: string;
+            lastName: string;
+            email: string;
+            role: string;
+            profileImageUrl: string;
+            createdAt: string;
+            lastLoginAt: string;
+            isActive: boolean;
+            organizationId: number;
+            organizationName: string;
+        };
+        organization: {
+            id: number;
+            name: string;
+            website: string;
+            logoUrl: string;
+            subscriptionPlan: string;
+            createdAt: string;
+            isActive: boolean;
+            totalUsers: number;
+            activeEvents: number;
+        };
+    };
+  }
 
 export interface User {
-    id: string;
-    email: string;
+    id: number;
     firstName: string;
     lastName: string;
-    role?: string;
-    permissions?: string[];
+    email: string;
+    role: string;
+    profileImageUrl: string;
+    createdAt: string;
+    lastLoginAt: string;
+    isActive: boolean;
+    organizationId: number;
+    organizationName: string;
 }
 
 export interface RegisterRequest {

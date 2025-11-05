@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
             setIsLoading(true);
             const response = await authService.login(credentials);
-            setUser(response.user);
+            setUser(response.message.user);
         } catch (error) {
             console.error('Login failed:', error);
             throw error;
@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
             setIsLoading(true);
             const response = await authService.register(userData);
-            setUser(response.user);
+            setUser(response.message.user);
         } catch (error) {
             console.error('Registration failed:', error);
             throw error;
