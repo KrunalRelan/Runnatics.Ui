@@ -4,20 +4,20 @@
 
 The application now has two types of routes:
 
-1. **Public Auth Routes** - Full page, no navigation (login, register)
-2. **Protected Routes** - With DashboardLayout (navigation + content)
+1. **Public Auth Routes** - Header only (login, register) - NO side navigation
+2. **Protected Routes** - Full DashboardLayout (header + side navigation)
 
 ## Route Structure
 
 ```
 /
-├── /login              → LoginPage (NO LAYOUT - full page)
-├── /register           → RegisterPage (NO LAYOUT - full page)
+├── /login              → LoginPage (AuthLayout - header only)
+├── /register           → RegisterPage (AuthLayout - header only)
 ├── /                   → Redirect to /login
 └── /* (all other)      → DashboardLayout wrapper
-    ├── /support        → With navigation
-    ├── /events         → With navigation
-    └── ...             → With navigation
+    ├── /support        → With header + side navigation
+    ├── /events         → With header + side navigation
+    └── ...             → With header + side navigation
 ```
 
 ## Implementation
@@ -26,10 +26,12 @@ The application now has two types of routes:
 
 ```tsx
 <Routes>
-  {/* Auth routes - NO LAYOUT */}
-  <Route path="/login" element={<LoginPage />} />
+  {/* Auth routes - HEADER ONLY (no side nav) */}
+  <Route element={<AuthLayoutWrapper />}>
+    <Route path="/login" element={<LoginPage />} />
+  </Route>
   
-  {/* Protected routes - WITH LAYOUT */}
+  {/* Protected routes - FULL DASHBOARD (header + side nav) */}
   <Route element={<DashboardLayoutWrapper />}>
     {/* All event routes render inside DashboardLayout */}
     {eventsRoutes.map(...)}
@@ -41,21 +43,25 @@ The application now has two types of routes:
 
 ### 1. Login Page (`/login`)
 - **URL**: `http://localhost:5173/login`
-- **Layout**: None
-- **Display**: Only the login form, no navigation
+- **Layout**: AuthLayout (header only)
+- **Display**: Header bar with theme switcher + login form
+- **Navigation**: NO side navigation
 - **Purpose**: User authentication
 
 ### 2. Protected Pages (e.g., `/support`, `/events`)
 - **URL**: `http://localhost:5173/support`
-- **Layout**: DashboardLayout (with side nav + top nav)
-- **Display**: Full dashboard with navigation
+- **Layout**: DashboardLayout (full layout)
+- **Display**: Header bar + side navigation + content
+- **Navigation**: Full side navigation menu
 - **Purpose**: Application content
 
 ## Benefits
 
-✅ **Clean Login Experience** - Users see only the login form, no distractions
-✅ **Consistent Dashboard** - All app pages share the same navigation
-✅ **Easy to Extend** - Add new auth pages (register, forgot password) without layout
+✅ **Professional Login** - Users see header with branding and login form
+✅ **No Distractions** - No side navigation on login page
+✅ **Consistent Branding** - Header appears on all pages
+✅ **Theme Toggle** - Users can change theme even on login page
+✅ **Easy to Extend** - Add new auth pages (register, forgot password) with same header
 ✅ **Better UX** - Clear separation between auth and app
 
 ## Example: Adding a Register Page
@@ -88,6 +94,19 @@ The page will automatically render with the dashboard layout.
 
 ## Key Components
 
+### AuthLayoutWrapper
+```tsx
+const AuthLayoutWrapper = () => {
+  return (
+    <AuthLayout>
+      <Outlet /> {/* Child routes render here */}
+    </AuthLayout>
+  );
+};
+```
+
+This wrapper provides **header only** for auth pages (login, register).
+
 ### DashboardLayoutWrapper
 ```tsx
 const DashboardLayoutWrapper = () => {
@@ -99,39 +118,49 @@ const DashboardLayoutWrapper = () => {
 };
 ```
 
-This wrapper ensures all child routes have the dashboard navigation.
+This wrapper provides **full dashboard** (header + side nav) for protected pages.
 
 ## Testing
 
-### Test Login Route (No Layout):
+### Test Login Route (Header Only):
 1. Navigate to `/login`
-2. ✅ Should see: Only login form, no navigation
-3. ✅ Should NOT see: Side navigation, top bar
+2. ✅ Should see: Header bar (with app name and theme switcher)
+3. ✅ Should see: Login form
+4. ✅ Should NOT see: Side navigation
 
-### Test Protected Route (With Layout):
+### Test Protected Route (Full Layout):
 1. Navigate to `/support` (or any protected route)
-2. ✅ Should see: Full dashboard with navigation
-3. ✅ Should see: Side navigation, top bar, content area
+2. ✅ Should see: Header bar
+3. ✅ Should see: Side navigation
+4. ✅ Should see: Page content
 
 ## Visual Comparison
 
-### Before (Incorrect):
+### Login Page Layout:
 ```
-/login → DashboardLayout + LoginPage
-         ├── Side Navigation ❌
-         ├── Top Bar ❌
-         └── LoginPage
+/login → AuthLayout
+         ├── Header Bar (Top) ✅
+         │   ├── App Name: "Runnatics"
+         │   └── Theme Switcher
+         ├── NO Side Navigation ❌
+         └── LoginPage Content ✅
 ```
 
-### After (Correct):
+### Protected Page Layout:
 ```
-/login → LoginPage ONLY ✅
-         (No DashboardLayout)
-
 /support → DashboardLayout
-           ├── Side Navigation ✅
-           ├── Top Bar ✅
-           └── SupportPage ✅
+           ├── Header Bar (Top) ✅
+           │   ├── Menu Toggle
+           │   ├── Page Title
+           │   ├── Theme Switcher
+           │   ├── Notifications
+           │   └── User Avatar
+           ├── Side Navigation (Left) ✅
+           │   ├── Dashboard
+           │   ├── Events
+           │   ├── Support
+           │   └── Settings
+           └── Page Content ✅
 ```
 
 ## Future Enhancements

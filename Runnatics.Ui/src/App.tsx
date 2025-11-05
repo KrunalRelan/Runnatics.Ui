@@ -2,10 +2,20 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom
 import { ThemeProvider } from "../src/main/src/theme";
 import { AuthProvider } from "../src/main/src/contexts/AuthContext";
 import DashboardLayout from "../src/main/src/components/DashboardLayout";
+import AuthLayout from "../src/main/src/components/AuthLayout";
 import LoginPage from "../src/main/src/pages/auth/LoginPage";
 import { eventsRoutes } from "./main/src/pages/admin/events/Routes";
 
-// Layout wrapper component for routes with dashboard
+// Layout wrapper for auth pages (header only, no side nav)
+const AuthLayoutWrapper = () => {
+  return (
+    <AuthLayout>
+      <Outlet />
+    </AuthLayout>
+  );
+};
+
+// Layout wrapper for protected routes (full dashboard with side nav)
 const DashboardLayoutWrapper = () => {
   return (
     <DashboardLayout>
@@ -20,13 +30,15 @@ function App() {
       <ThemeProvider>
         <BrowserRouter>
           <Routes>
-            {/* Auth routes - NO LAYOUT (Full page, no nav) */}
-            <Route path="/login" element={<LoginPage />} />
+            {/* Auth routes - WITH HEADER ONLY (no side navigation) */}
+            <Route element={<AuthLayoutWrapper />}>
+              <Route path="/login" element={<LoginPage />} />
+            </Route>
             
             {/* Redirect root to login */}
             <Route path="/" element={<Navigate to="/login" replace />} />
 
-            {/* Protected routes - WITH LAYOUT (Dashboard with nav) */}
+            {/* Protected routes - WITH FULL DASHBOARD (header + side nav) */}
             <Route element={<DashboardLayoutWrapper />}>
               {eventsRoutes.map((route, index) => (
                 <Route key={index} path={route.path} element={route.element}>
