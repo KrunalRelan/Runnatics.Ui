@@ -1,7 +1,11 @@
 // src/main/src/utils/axios.config.ts
 
-import axios from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import config from '../config/environment';
+
+// Token storage keys
+const TOKEN_KEY = 'authToken';
+const REFRESH_TOKEN_KEY = 'refreshToken';
 
 // Create axios instance with default config
 export const apiClient = axios.create({
@@ -13,12 +17,34 @@ export const apiClient = axios.create({
     timeout: 30000, // 30 seconds timeout
 });
 
-// Request interceptor
+// Helper functions for token management
+export const tokenManager = {
+    getToken: (): string | null => {
+        return localStorage.getItem(TOKEN_KEY);
+    },
+    setToken: (token: string): void => {
+        localStorage.setItem(TOKEN_KEY, token);
+    },
+    getRefreshToken: (): string | null => {
+        return localStorage.getItem(REFRESH_TOKEN_KEY);
+    },
+    setRefreshToken: (token: string): void => {
+        localStorage.setItem(REFRESH_TOKEN_KEY, token);
+    },
+    clearTokens: (): void => {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
+    },
+};
+
+// Request interceptor - Adds Bearer token to all requests
 apiClient.interceptors.request.use(
-    (config) => {
-        // Add auth token if available
-        const token = localStorage.getItem('authToken');
-        if (token) {
+    (config: InternalAxiosRequestConfig) => {
+        // Get token from localStorage
+        const token = tokenManager.getToken();
+        
+        // Add Bearer token to Authorization header if token exists
+        if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
         }
 
@@ -28,13 +54,14 @@ apiClient.interceptors.request.use(
                 method: config.method?.toUpperCase(),
                 url: config.url,
                 baseURL: config.baseURL,
+                headers: config.headers,
                 data: config.data,
             });
         }
 
         return config;
     },
-    (error) => {
+    (error: AxiosError) => {
         console.error('❌ Request Error:', error);
         return Promise.reject(error);
     }
@@ -80,9 +107,11 @@ apiClient.interceptors.response.use(
             // Handle specific status codes
             switch (error.response.status) {
                 case 401:
-                    // Unauthorized - redirect to login
-                    localStorage.removeItem('authToken');
-                    window.location.href = '/login';
+                    // Unauthorized - clear tokens and redirect to login
+                    tokenManager.clearTokens();
+                    if (!window.location.pathname.includes('/login')) {
+                        window.location.href = '/login';
+                    }
                     break;
                 case 403:
                     error.userMessage = 'You do not have permission to perform this action.';

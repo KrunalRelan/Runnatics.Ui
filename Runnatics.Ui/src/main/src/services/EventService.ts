@@ -1,110 +1,77 @@
 // src/main/src/services/EventService.ts
 
-import axios, { AxiosResponse } from 'axios';
+import { AxiosResponse } from 'axios';
 import { Event, CreateEventRequest, ServiceUrl } from '../models';
-import config from '../config/environment';
 import { SearchCriteria } from '../models/SearchCirteria';
 import { SearchReponse } from '../models/SearchReponse';
+import { apiClient } from '../utils/axios.config';
 
-const API_BASE_URL = config.apiBaseUrl;
-
-const eventApi = axios.create({
-    baseURL: `${API_BASE_URL}/events`,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-    withCredentials: false, // Set to true if you need to send cookies
-});
-
-// Add auth token interceptor
-eventApi.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
-
-// Response interceptor for error handling
-eventApi.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        // Log CORS errors
-        if (!error.response) {
-            console.error('Network Error (possibly CORS):', {
-                message: error.message,
-                config: {
-                    url: error.config?.url,
-                    method: error.config?.method,
-                    baseURL: error.config?.baseURL,
-                }
-            });
-        }
-        
-        if (error.response?.status === 401) {
-            // Handle unauthorized - redirect to login
-            localStorage.removeItem('authToken');
-            window.location.href = '/login';
-        }
-        return Promise.reject(error);
-    }
-);
+// Use the centralized apiClient with JWT interceptor
+// All requests will automatically include the Bearer token
 
 export class EventService {
     /**
      * Get all events with optional filters
+     * Note: JWT token is automatically included via interceptor
      */
     static async getAllEvents(params?: {
        searchCriteria?: SearchCriteria;
     }): Promise<SearchReponse<Event>> {
-        return axios.post<SearchReponse<Event>>(ServiceUrl.searchEventService(), params?.searchCriteria)
-            .then(response => response.data);
+        const response = await apiClient.post<SearchReponse<Event>>(
+            ServiceUrl.searchEventService(), 
+            params?.searchCriteria
+        );
+        return response.data;
     }
 
     /**
      * Get event by ID
+     * Note: JWT token is automatically included via interceptor
      */
     static async getEventById(id: string): Promise<Event> {
-        const response: AxiosResponse<Event> = await eventApi.get(`/${id}`);
+        const response: AxiosResponse<Event> = await apiClient.get(`/events/${id}`);
         return response.data;
     }
+    
     /**
      * Create new event
+     * Note: JWT token is automatically included via interceptor
      */
     static async createEvent(eventData: CreateEventRequest): Promise<Event> {
-        const response: AxiosResponse<Event> = await eventApi.post(ServiceUrl.createEvent(), eventData);
+        const response: AxiosResponse<Event> = await apiClient.post(
+            ServiceUrl.createEvent(), 
+            eventData
+        );
         return response.data;
     }
 
     /**
      * Update existing event
+     * Note: JWT token is automatically included via interceptor
      */
     static async updateEvent(id: string, eventData: Partial<CreateEventRequest>): Promise<Event> {
-        const response: AxiosResponse<Event> = await eventApi.put(`/${id}`, eventData);
+        const response: AxiosResponse<Event> = await apiClient.put(`/events/${id}`, eventData);
         return response.data;
     }
 
     /**
      * Delete event
+     * Note: JWT token is automatically included via interceptor
      */
     static async deleteEvent(id: string): Promise<void> {
-        await eventApi.delete(`/${id}`);
+        await apiClient.delete(`/events/${id}`);
     }
 
     /**
      * Upload event banner image
+     * Note: JWT token is automatically included via interceptor
      */
     static async uploadBannerImage(eventId: string, file: File): Promise<string> {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response: AxiosResponse<{ imageUrl: string }> = await eventApi.post(
-            `/${eventId}/banner`,
+        const response: AxiosResponse<{ imageUrl: string }> = await apiClient.post(
+            `/events/${eventId}/banner`,
             formData,
             {
                 headers: {
@@ -117,17 +84,19 @@ export class EventService {
 
     /**
      * Publish event (change status to published)
+     * Note: JWT token is automatically included via interceptor
      */
     static async publishEvent(id: string): Promise<Event> {
-        const response: AxiosResponse<Event> = await eventApi.post(`/${id}/publish`);
+        const response: AxiosResponse<Event> = await apiClient.post(`/events/${id}/publish`);
         return response.data;
     }
 
     /**
      * Cancel event
+     * Note: JWT token is automatically included via interceptor
      */
     static async cancelEvent(id: string): Promise<Event> {
-        const response: AxiosResponse<Event> = await eventApi.post(`/${id}/cancel`);
+        const response: AxiosResponse<Event> = await apiClient.post(`/events/${id}/cancel`);
         return response.data;
     }
 }
