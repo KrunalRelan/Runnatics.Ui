@@ -76,7 +76,7 @@ export const CreateEvent: React.FC = () => {
     });
 
   const [formData, setFormData] = useState<CreateEventRequest>({
-    organizationId: null,
+    organizationId: "",
     name: "",
     description: "",
     eventType: EventType.Marathon,
@@ -89,8 +89,8 @@ export const CreateEvent: React.FC = () => {
     state: "",
     country: "",
     zipCode: "",
-    capacity: 0, // UI only, not sent to API
-    price: 0, // UI only, not sent to API
+    capacity: undefined, // UI only, not sent to API
+    price: undefined, // UI only, not sent to API
     currency: "INR", // UI only, not sent to API
     timeZone: "Asia/Kolkata", // Default to India timezone
     smsText: "",
@@ -156,9 +156,15 @@ export const CreateEvent: React.FC = () => {
   ) => {
     const { name, value, type } = e.target;
 
+    // For number fields, allow empty values (undefined) or parse the number
+    let processedValue: any = value;
+    if (type === "number") {
+      processedValue = value === "" ? undefined : parseFloat(value);
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "number" ? parseFloat(value) || 0 : value,
+      [name]: processedValue,
     }));
 
     // Clear error for this field
@@ -176,12 +182,8 @@ export const CreateEvent: React.FC = () => {
     const { name, value } = e.target;
 
     // Special handling for organizationId
+    // Keep "N/A" as-is for display, will convert to 1 when sending to API
     let processedValue = value === "" ? null : value;
-    
-    // If organizationId is "N/A", set it to 1
-    if (name === "organizationId" && value === "N/A") {
-      processedValue = 1;
-    }
 
     setFormData((prev) => ({
       ...prev,
@@ -214,8 +216,8 @@ export const CreateEvent: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Organization validation - N/A is acceptable
-    if (formData.organizationId == null) {
+    // Organization validation - allow empty, N/A, or valid ID
+    if (!formData.organizationId || formData.organizationId === "") {
       newErrors.organizationId = "Organization is required";
     }
 
@@ -230,6 +232,13 @@ export const CreateEvent: React.FC = () => {
 
     if (!formData.startDate) {
       newErrors.startDate = "Start date is required";
+    } else {
+      // Check if the date is in the past
+      const selectedDate = new Date(formData.startDate);
+      const now = new Date();
+      if (selectedDate < now) {
+        newErrors.startDate = "Event date cannot be in the past";
+      }
     }
 
     // if (!formData.endDate) {
@@ -323,9 +332,13 @@ export const CreateEvent: React.FC = () => {
       // Exclude capacity, price, and currency (UI only fields)
       const { capacity, price, currency, ...apiData } = formData;
       
+      // Convert "N/A" organizationId to 1 for API
+      const organizationIdForApi = apiData.organizationId === "N/A" ? 1 : apiData.organizationId;
+      
       // Create the API request payload
       const requestPayload = {
         ...apiData,
+        organizationId: organizationIdForApi,
         // Map form fields to API fields if needed
         eventDate: apiData.startDate,
         venueName: apiData.location,
@@ -626,9 +639,12 @@ export const CreateEvent: React.FC = () => {
                   value={formData.startDate}
                   onChange={handleInputChange}
                   error={!!errors.startDate}
-                  helperText={errors.startDate}
+                  helperText={errors.startDate || "Event date cannot be in the past"}
                   required
                   InputLabelProps={{ shrink: true }}
+                  inputProps={{
+                    min: new Date().toISOString().slice(0, 16), // Prevent past dates
+                  }}
                 />
 
                 {/* Registration Opens
@@ -1177,7 +1193,7 @@ export const CreateEvent: React.FC = () => {
                   label="Capacity (Optional)"
                   name="capacity"
                   type="number"
-                  value={formData.capacity}
+                  value={formData.capacity || ""}
                   onChange={handleInputChange}
                   error={!!errors.capacity}
                   helperText={errors.capacity || "For UI display only"}
@@ -1214,7 +1230,7 @@ export const CreateEvent: React.FC = () => {
                   label="Registration Price (Optional)"
                   name="price"
                   type="number"
-                  value={formData.price}
+                  value={formData.price || ""}
                   onChange={handleInputChange}
                   error={!!errors.price}
                   helperText={errors.price || "For UI display only"}
