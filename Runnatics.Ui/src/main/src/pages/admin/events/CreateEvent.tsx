@@ -125,7 +125,41 @@ export const CreateEvent: React.FC = () => {
 
   // Fetch organizations on component mount
   useEffect(() => {
+    let isMounted = true;
+
+    const fetchOrganizations = async () => {
+      try {
+        setIsLoadingOrgs(true);
+        const response = await EventOrganizerService.getOrganizations();
+        
+        // Only update state if component is still mounted
+        if (isMounted) {
+          setOrganizations(response);
+        }
+      } catch (error) {
+        console.error("Error fetching organizations:", error);
+        
+        // Only update state if component is still mounted
+        if (isMounted) {
+          setErrors((prev) => ({
+            ...prev,
+            organizationId: "Failed to load organizations",
+          }));
+        }
+      } finally {
+        // Only update state if component is still mounted
+        if (isMounted) {
+          setIsLoadingOrgs(false);
+        }
+      }
+    };
+
     fetchOrganizations();
+
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Sync event settings and leaderboard settings with formData
@@ -136,22 +170,6 @@ export const CreateEvent: React.FC = () => {
       leaderBoardSettings,
     }));
   }, [eventSettings, leaderBoardSettings]);
-
-  const fetchOrganizations = async () => {
-    try {
-      setIsLoadingOrgs(true);
-      const response = await EventOrganizerService.getOrganizations();
-      setOrganizations(response);
-    } catch (error) {
-      console.error("Error fetching organizations:", error);
-      setErrors((prev) => ({
-        ...prev,
-        organizationId: "Failed to load organizations",
-      }));
-    } finally {
-      setIsLoadingOrgs(false);
-    }
-  };
 
   // Handle input changes for TextField
   const handleInputChange = (

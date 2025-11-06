@@ -212,8 +212,9 @@ const EventsList: React.FC = () => {
       <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
         <Chip
           label={published ? "Yes" : "No"}
-          color={published ? "success" : "default"}
+          color={published ? "success" : "error"}
           size="small"
+          variant={published ? "filled" : "outlined"}
         />
       </Box>
     );
