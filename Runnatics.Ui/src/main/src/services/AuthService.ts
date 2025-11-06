@@ -3,6 +3,7 @@
 import { apiClient, tokenManager } from '../utils/axios.config';
 import { LoginRequest, LoginResponse, RegisterRequest } from '../models/Auth';
 import { ServiceUrl } from '../models/ServiceUrls';
+import { encryptPassword } from '../utility/encryption';
 
 /**
  * Authentication Service
@@ -16,7 +17,13 @@ class AuthService {
      */
     async login(credentials: LoginRequest): Promise<LoginResponse> {
         try {
-            const response = await apiClient.post<LoginResponse>(ServiceUrl.login(), credentials);
+            // Encrypt password before sending to API
+            const encryptedCredentials = {
+                ...credentials,
+                password: encryptPassword(credentials.password)
+            };
+            
+            const response = await apiClient.post<LoginResponse>(ServiceUrl.login(), encryptedCredentials);
 
             // Store the JWT token in localStorage
             if (response.data.message.token) {
@@ -46,7 +53,13 @@ class AuthService {
      */
     async register(userData: RegisterRequest): Promise<LoginResponse> {
         try {
-            const response = await apiClient.post<LoginResponse>('/auth/register', userData);
+            // Encrypt password before sending to API
+            const encryptedUserData = {
+                ...userData,
+                password: encryptPassword(userData.password)
+            };
+            
+            const response = await apiClient.post<LoginResponse>('/auth/register', encryptedUserData);
             
             // Store the JWT token in localStorage
             if (response.data.message.token) {
