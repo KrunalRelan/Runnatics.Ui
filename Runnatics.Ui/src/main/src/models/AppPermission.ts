@@ -1,6 +1,6 @@
 export enum AppPermission {
     Admin = 'Admin',
-    SuperUser = 'SuperUser',
+    SuperAdmin = 'SuperAdmin',
     Ops = 'Ops',
     Support = 'Support',
     Readonly = 'Readonly'

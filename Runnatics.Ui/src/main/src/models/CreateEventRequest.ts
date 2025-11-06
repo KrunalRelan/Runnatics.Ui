@@ -16,9 +16,9 @@ export interface CreateEventRequest {
   state: string;
   country: string;
   zipCode: string;
-  capacity: number;
-  price: number;
-  currency: string;
+  capacity?: number;
+  price?: number;
+  currency?: string;
   bannerImageUrl?: string;
   timeZone: string;
   smsText?: string;

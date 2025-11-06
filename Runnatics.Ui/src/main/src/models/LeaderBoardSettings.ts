@@ -1,9 +1,9 @@
 export interface LeaderBoardSettings {
     ShowOverallResults?: boolean;
     ShowCategoryResults?: boolean;
-    OverAllResultChipTime?: boolean;
-    CategoryResultChipTime?: boolean;
-    OverallResultGunTime?: boolean;
-    CategoryResultGunTime?: boolean;
+    SortByOverallChipTime?: boolean;
+    SortByOverallGunTime?: boolean;
+    SortByCategoryChipTime?: boolean;
+    SortByCategoryGunTime?: boolean;
     NumberOfResultsToShow?: number;
 }

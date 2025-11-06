@@ -32,7 +32,9 @@ import {
   BarChart as BarChartIcon,
   Settings as SettingsIcon,
   Inbox as InboxIcon,
+  Label as LabelIcon,
   Event as EventIcon,
+  Upload as UploadIcon,
   Add as AddIcon,
   ExpandLess,
   ExpandMore,
@@ -136,40 +138,47 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
   // Navigation menu items
   const menuItems: MenuItemType[] = [
     {
-      text: "Dashboard",
+      text: "Support",
       icon: <DashboardIcon />,
-      path: "/events/events-dashboard", // ← Your default events page
+      path: "/support",
     },
+   
     {
       text: "Events",
       icon: <EventIcon />, // ← Import from @mui/icons-material
       path: "/events",
       submenu: [
-        // {
-        //   text: "Events Dashboard",
-        //   icon: <DashboardIcon />,
-        //   path: "/events/events-dashboard",
-        // },
+        {
+          text: "Events Dashboard",
+          icon: <DashboardIcon />,
+          path: "/events/events-dashboard",
+        },
         {
           text: "Create Event",
           icon: <AddIcon />,
           path: "/events/events-create",
         },
-        {
-          text: "View Event",
-          icon: <InboxIcon />,
-          path: "/events/events-detail/:eventId",
-        },
+        // {
+        //   text: "View Event",
+        //   icon: <InboxIcon />,
+        //   path: "/events/events-detail/:eventId",
+        // },
       ],
     },
     {
-      text: "Products",
-      icon: <ShoppingCartIcon />,
-      path: "/products",
-      submenu: [
-        { text: "All Products", icon: <InboxIcon />, path: "/products/all" },
-        { text: "Add Product", icon: <StarIcon />, path: "/products/add" },
-      ],
+      text: "Participants",
+      icon: <PeopleIcon />,
+      path: "/participants",
+    },
+    {
+      text: "Uploads",
+      icon: <UploadIcon />,
+      path: "/uploads",
+    },
+    {
+      text: "Tags & Readers",
+      icon: <LabelIcon />,
+      path: "/tags",
     },
     {
       text: "Users",
@@ -213,7 +222,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
       >
         {!isMinimized ? (
           <Typography variant="h6" noWrap component="div" fontWeight={700}>
-            🚀 My Dashboard
+            🚀 Runnatics
           </Typography>
         ) : (
           <Typography variant="h6" component="div" fontWeight={700}>
