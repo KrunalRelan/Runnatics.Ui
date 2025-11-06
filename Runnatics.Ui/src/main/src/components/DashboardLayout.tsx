@@ -151,6 +151,11 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
   // Navigation menu items
   const menuItems: MenuItemType[] = [
     {
+      text: "Dashboard",
+      icon: <DashboardIcon />,
+      path: "/dashboard",
+    },
+    {
       text: "Support",
       icon: <DashboardIcon />,
       path: "/support",

@@ -85,6 +85,7 @@ const EventsList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [dateError, setDateError] = useState<string>("");
   // Track if user has applied filters (to prevent auto-search)
   const [hasAppliedFilters, setHasAppliedFilters] = useState(false);
 
@@ -94,6 +95,39 @@ const EventsList: React.FC = () => {
       fetchEvents();
     }
   }, [searchCriteria, hasAppliedFilters]);
+
+  // Auto-search when user types 3+ characters
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.length >= 3) {
+        handleSearch();
+      } else if (searchQuery.length === 0 && searchCriteria.name) {
+        // Clear search when query is empty
+        handleSearch();
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Validate date range
+  const validateDateRange = (start: string, end: string): boolean => {
+    if (!start || !end) {
+      setDateError("");
+      return true;
+    }
+    
+    const startDateObj = new Date(start);
+    const endDateObj = new Date(end);
+    
+    if (endDateObj < startDateObj) {
+      setDateError("End date must be equal to or greater than start date");
+      return false;
+    }
+    
+    setDateError("");
+    return true;
+  };
 
   const fetchEvents = async () => {
     try {
@@ -119,7 +153,7 @@ const EventsList: React.FC = () => {
   };
 
   const handleCreateEvent = () => {
-    navigate("/events/create");
+    navigate("/events/events-create");
   };
 
   const handleEditEvent = (eventId: number | undefined) => {
@@ -155,6 +189,11 @@ const EventsList: React.FC = () => {
   };
 
   const handleSearch = () => {
+    // Validate date range before searching
+    if (!validateDateRange(startDate, endDate)) {
+      return; // Don't proceed with search if validation fails
+    }
+    
     const formattedStartDate = startDate ? new Date(startDate).toISOString() : undefined;
     const formattedEndDate = endDate ? new Date(endDate).toISOString() : undefined;
     
@@ -172,6 +211,7 @@ const EventsList: React.FC = () => {
     setSearchQuery("");
     setStartDate("");
     setEndDate("");
+    setDateError("");
     setSearchCriteria(defaultSearchCriteria);
     setHasAppliedFilters(true); // Trigger fetch with cleared filters
   };
@@ -181,6 +221,18 @@ const EventsList: React.FC = () => {
     if (e.key === 'Enter') {
       handleSearch();
     }
+  };
+
+  // Handle start date change with validation
+  const handleStartDateChange = (value: string) => {
+    setStartDate(value);
+    validateDateRange(value, endDate);
+  };
+
+  // Handle end date change with validation
+  const handleEndDateChange = (value: string) => {
+    setEndDate(value);
+    validateDateRange(startDate, value);
   };
 
   const formatDate = (date: Date | string | undefined | null) => {
@@ -372,7 +424,7 @@ const EventsList: React.FC = () => {
             {/* Search Bar */}
             <TextField
               variant="outlined"
-              placeholder="Search events by name..."
+              placeholder="Search events by name... (auto-search after 3 chars)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -383,6 +435,11 @@ const EventsList: React.FC = () => {
                   </InputAdornment>
                 ),
               }}
+              helperText={
+                searchQuery.length > 0 && searchQuery.length < 3
+                  ? `Type ${3 - searchQuery.length} more character${3 - searchQuery.length > 1 ? 's' : ''} to search`
+                  : ''
+              }
               sx={{ flex: { xs: 1, sm: 1 } }}
             />
 
@@ -391,7 +448,7 @@ const EventsList: React.FC = () => {
               label="Start Date"
               type="date"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(e) => handleStartDateChange(e.target.value)}
               onKeyPress={handleKeyPress}
               InputLabelProps={{
                 shrink: true,
@@ -402,8 +459,10 @@ const EventsList: React.FC = () => {
               label="End Date"
               type="date"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={(e) => handleEndDateChange(e.target.value)}
               onKeyPress={handleKeyPress}
+              error={!!dateError}
+              helperText={dateError}
               InputLabelProps={{
                 shrink: true,
               }}
@@ -471,12 +530,6 @@ const EventsList: React.FC = () => {
                   />
                 )}
               </Box>
-              {loading && (
-                <Typography variant="caption" color="info.main" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                  <CircularProgress size={12} />
-                  Fetching filtered events from server...
-                </Typography>
-              )}
             </Box>
           )}
         </Stack>
@@ -518,8 +571,37 @@ const EventsList: React.FC = () => {
             sx={{
               height: "600px",
               width: "100%",
+              position: "relative",
+              opacity: loading ? 0.6 : 1,
+              transition: "opacity 0.3s ease-in-out",
             }}
           >
+            {/* Overlay Loading Indicator */}
+            {loading && events.length > 0 && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  zIndex: 1000,
+                  backgroundColor: "background.paper",
+                  borderRadius: 2,
+                  padding: 3,
+                  boxShadow: 3,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
+                <CircularProgress size={40} thickness={4} />
+                <Typography variant="body2" color="text.secondary">
+                  Loading events...
+                </Typography>
+              </Box>
+            )}
+            
             <AgGridReact<Event>
               theme={myTheme}
               rowData={events}
