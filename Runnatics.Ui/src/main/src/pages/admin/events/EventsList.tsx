@@ -27,6 +27,7 @@ import {
   Delete as DeleteIcon,
   Add as AddIcon,
   Search as SearchIcon,
+  Clear as ClearIcon,
 } from "@mui/icons-material";
 import { AgGridReact } from "ag-grid-react";
 import {
@@ -82,25 +83,17 @@ const EventsList: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  // Track if user has applied filters (to prevent auto-search)
+  const [hasAppliedFilters, setHasAppliedFilters] = useState(false);
 
   useEffect(() => {
-    fetchEvents();
-  }, [searchCriteria]);
-
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery !== searchCriteria.name) {
-        setSearchCriteria((prev) => ({
-          ...prev,
-          name: searchQuery || undefined,
-          pageNumber: 1, // Reset to first page on search
-        }));
-      }
-    }, 500); // 500ms debounce
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, searchCriteria.name]);
+    // Only fetch if filters have been applied or it's initial load
+    if (hasAppliedFilters || !searchCriteria.name) {
+      fetchEvents();
+    }
+  }, [searchCriteria, hasAppliedFilters]);
 
   const fetchEvents = async () => {
     try {
@@ -159,6 +152,35 @@ const EventsList: React.FC = () => {
   const handleDeleteCancel = () => {
     setDeleteDialogOpen(false);
     setEventToDelete(null);
+  };
+
+  const handleSearch = () => {
+    const formattedStartDate = startDate ? new Date(startDate).toISOString() : undefined;
+    const formattedEndDate = endDate ? new Date(endDate).toISOString() : undefined;
+    
+    setSearchCriteria({
+      ...defaultSearchCriteria,
+      name: searchQuery || undefined,
+      eventDateFrom: formattedStartDate,
+      eventDateTo: formattedEndDate,
+      pageNumber: 1,
+    });
+    setHasAppliedFilters(true);
+  };
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setStartDate("");
+    setEndDate("");
+    setSearchCriteria(defaultSearchCriteria);
+    setHasAppliedFilters(true); // Trigger fetch with cleared filters
+  };
+
+  // Handle Enter key press in search field
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
   };
 
   const formatDate = (date: Date | string | undefined | null) => {
@@ -342,23 +364,123 @@ const EventsList: React.FC = () => {
         </Button>
       </Box>
 
-      {/* Search Bar */}
-      <Box sx={{ mb: 3 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Search events by name..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
+      {/* Search and Filter Bar */}
+      <Card sx={{ mb: 3, p: 2 }}>
+        <Stack spacing={2}>
+          {/* Search and Date Range Filters */}
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="stretch">
+            {/* Search Bar */}
+            <TextField
+              variant="outlined"
+              placeholder="Search events by name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={handleKeyPress}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ flex: { xs: 1, sm: 1 } }}
+            />
+
+            {/* Date Range Filters */}
+            <TextField
+              label="Start Date"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              onKeyPress={handleKeyPress}
+              InputLabelProps={{
+                shrink: true,
+              }}
+              sx={{ flex: { xs: 1, sm: 0.8 } }}
+            />
+            <TextField
+              label="End Date"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              onKeyPress={handleKeyPress}
+              InputLabelProps={{
+                shrink: true,
+              }}
+              sx={{ flex: { xs: 1, sm: 0.8 } }}
+            />
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<SearchIcon />}
+              onClick={handleSearch}
+              disabled={loading}
+              sx={{ 
+                minWidth: { xs: "100%", sm: "120px" },
+                whiteSpace: "nowrap"
+              }}
+            >
+              Search
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<ClearIcon />}
+              onClick={handleClearFilters}
+              disabled={loading}
+              sx={{ 
+                minWidth: { xs: "100%", sm: "100px" },
+                whiteSpace: "nowrap"
+              }}
+            >
+              Clear
+            </Button>
+          </Stack>
+
+          {/* Active Filters Display */}
+          {(searchQuery || startDate || endDate) && (
+            <Box>
+              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center", mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Active Filters:
+                </Typography>
+                {searchQuery && (
+                  <Chip
+                    label={`Name: ${searchQuery}`}
+                    size="small"
+                    onDelete={() => setSearchQuery("")}
+                    color="primary"
+                    variant="outlined"
+                  />
+                )}
+                {startDate && (
+                  <Chip
+                    label={`From: ${new Date(startDate).toLocaleDateString()}`}
+                    size="small"
+                    onDelete={() => setStartDate("")}
+                    color="primary"
+                    variant="outlined"
+                  />
+                )}
+                {endDate && (
+                  <Chip
+                    label={`To: ${new Date(endDate).toLocaleDateString()}`}
+                    size="small"
+                    onDelete={() => setEndDate("")}
+                    color="primary"
+                    variant="outlined"
+                  />
+                )}
+              </Box>
+              {loading && (
+                <Typography variant="caption" color="info.main" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                  <CircularProgress size={12} />
+                  Fetching filtered events from server...
+                </Typography>
+              )}
+            </Box>
+          )}
+        </Stack>
+      </Card>
 
       {/* Error Alert */}
       {error && (
