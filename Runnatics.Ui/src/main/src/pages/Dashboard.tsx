@@ -1,15 +1,30 @@
 // src/main/src/pages/Dashboard.tsx
-import { Box, Typography, Paper, Card, CardContent } from '@mui/material';
+import { Box, Typography, Paper, Card, CardContent, Button, Divider, Avatar, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import {
   Event as EventIcon,
   People as PeopleIcon,
   Assessment as AssessmentIcon,
   TrendingUp as TrendingUpIcon,
+  Logout as LogoutIcon,
+  Person as PersonIcon,
 } from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { logout, user } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Navigate to login even if logout fails
+      navigate('/login');
+    }
+  };
 
   const cards = [
     {
@@ -44,12 +59,40 @@ const Dashboard = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Dashboard
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Welcome to Runnatics! Here's an overview of your activities.
-      </Typography>
+      {/* Header with User Info and Logout */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box>
+          <Typography variant="h4" gutterBottom>
+            Dashboard
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Welcome back, {user?.firstName || user?.email || 'User'}!
+          </Typography>
+        </Box>
+        <Paper sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Avatar sx={{ bgcolor: 'primary.main' }}>
+            {user?.firstName?.[0] || user?.email?.[0] || 'U'}
+          </Avatar>
+          <Stack spacing={0}>
+            <Typography variant="body2" fontWeight="bold">
+              {user?.firstName || 'User'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {user?.email || ''}
+            </Typography>
+          </Stack>
+          <Divider orientation="vertical" flexItem />
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<LogoutIcon />}
+            onClick={handleLogout}
+            size="small"
+          >
+            Logout
+          </Button>
+        </Paper>
+      </Box>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3 }}>
         {cards.map((card, index) => (
@@ -123,7 +166,10 @@ const Dashboard = () => {
                 onClick={() => navigate('/events/events-create')}
               >
                 <CardContent>
-                  <Typography variant="body1">Create New Event</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <EventIcon color="primary" />
+                    <Typography variant="body1">Create New Event</Typography>
+                  </Box>
                 </CardContent>
               </Card>
               <Card
@@ -131,7 +177,37 @@ const Dashboard = () => {
                 onClick={() => navigate('/events/events-dashboard')}
               >
                 <CardContent>
-                  <Typography variant="body1">View All Events</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <EventIcon color="primary" />
+                    <Typography variant="body1">View All Events</Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+              <Card
+                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
+                onClick={() => navigate('/profile')}
+              >
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <PersonIcon color="action" />
+                    <Typography variant="body1">My Profile</Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+              <Divider />
+              <Card
+                sx={{ 
+                  cursor: 'pointer', 
+                  '&:hover': { bgcolor: 'error.light', color: 'error.contrastText' },
+                  transition: 'all 0.2s'
+                }}
+                onClick={handleLogout}
+              >
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LogoutIcon color="error" />
+                    <Typography variant="body1" color="error">Logout</Typography>
+                  </Box>
                 </CardContent>
               </Card>
             </Box>

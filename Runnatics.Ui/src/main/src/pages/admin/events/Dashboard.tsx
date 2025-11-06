@@ -36,9 +36,6 @@ import {
   AllCommunityModule,
   themeQuartz,
 } from "ag-grid-community";
-// Remove these old CSS imports
-// import "ag-grid-community/styles/ag-grid.css";
-// import "ag-grid-community/styles/ag-theme-material.css";
 import { EventService } from "../../../services/EventService";
 import { Event } from "../../../models/Event";
 import { EventSearchRequest } from "../../../models/EventSearchRequest";
@@ -111,14 +108,15 @@ const EventsList: React.FC = () => {
       setError(null);
 
       // Call the API with search criteria wrapped in the correct format
-      const response = await EventService.getAllEvents({
-        searchCriteria: searchCriteria,
+      const response = await EventService.getAllEvents({ 
+        searchCriteria: searchCriteria 
       });
 
       // Backend returns events directly in the message property as an array
       setEvents(response.message || []);
-      setTotalRecords(response.totalCount || 0);
+      setTotalRecords(response.message?.length || 0);
     } catch (err: any) {
+      console.error("Error fetching events:", err);
       setError(err.response?.data?.message || "Failed to fetch events");
       setEvents([]);
       setTotalRecords(0);
@@ -128,12 +126,12 @@ const EventsList: React.FC = () => {
   };
 
   const handleCreateEvent = () => {
-    navigate("/events/events-create");
+    navigate("/events/create");
   };
 
-  const handleEditEvent = (eventId: string | undefined) => {
+  const handleEditEvent = (eventId: number | undefined) => {
     if (eventId) {
-      navigate(`/events/events-edit/${eventId}`);
+      navigate(`/events/edit/${eventId}`);
     }
   };
 
@@ -153,6 +151,7 @@ const EventsList: React.FC = () => {
       fetchEvents();
       alert("Event deleted successfully!");
     } catch (err: any) {
+      console.error("Error deleting event:", err);
       alert(err.response?.data?.message || "Failed to delete event");
     }
   };
@@ -174,7 +173,7 @@ const EventsList: React.FC = () => {
   };
 
   // Actions cell renderer
-  const ActionsCellRenderer = (props: any) => {
+  const ActionsCellRenderer = useCallback((props: any) => {
     const event = props.data;
     return (
       <Stack
@@ -204,21 +203,21 @@ const EventsList: React.FC = () => {
         </Tooltip>
       </Stack>
     );
-  };
+  }, []);
 
   // Published status cell renderer
-  const PublishedCellRenderer = (props: any) => {
-    const isActive = props.value;
+  const PublishedCellRenderer = useCallback((props: any) => {
+    const published = props.value;
     return (
       <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
         <Chip
-          label={isActive ? "Yes" : "No"}
-          color={isActive ? "success" : "default"}
+          label={published ? "Yes" : "No"}
+          color={published ? "success" : "default"}
           size="small"
         />
       </Box>
     );
-  };
+  }, []);
 
   // AG Grid column definitions
   const columnDefs: ColDef<Event>[] = useMemo(
@@ -247,8 +246,7 @@ const EventsList: React.FC = () => {
         flex: 1.5,
         sortable: true,
         filter: "agDateColumnFilter",
-        valueFormatter: (params) =>
-          formatDate(params.value || params.data?.startDate),
+        valueFormatter: (params) => formatDate(params.value),
       },
       {
         field: "venueAddress",
@@ -256,8 +254,7 @@ const EventsList: React.FC = () => {
         flex: 2,
         sortable: true,
         filter: true,
-        valueGetter: (params) =>
-          params.data?.venueAddress || params.data?.location || "N/A",
+        valueGetter: (params) => params.data?.venueAddress || "N/A",
       },
       {
         field: "eventOrganizerName",
@@ -265,16 +262,15 @@ const EventsList: React.FC = () => {
         flex: 1.5,
         sortable: true,
         filter: true,
-        valueGetter: (params) =>
-          params.data?.eventOrganizerName || params.data?.organizerId || "N/A",
+        valueGetter: (params) => params.data?.eventOrganizerName || "N/A",
       },
       {
-        field: "isActive",
         headerName: "Published",
         width: 120,
         sortable: true,
         filter: true,
         cellRenderer: PublishedCellRenderer,
+        valueGetter: (params) => params.data?.eventSettings?.published || false,
       },
       {
         headerName: "Action",
@@ -289,7 +285,7 @@ const EventsList: React.FC = () => {
         },
       },
     ],
-    [searchCriteria]
+    [searchCriteria, ActionsCellRenderer, PublishedCellRenderer]
   );
 
   // Default column definitions
@@ -432,6 +428,7 @@ const EventsList: React.FC = () => {
               p: 2,
               backgroundColor: "background.paper",
               borderRadius: 1,
+              boxShadow: 1,
             }}
           >
             <Typography variant="body2" color="text.secondary">
@@ -464,8 +461,11 @@ const EventsList: React.FC = () => {
               >
                 Previous
               </Button>
-              <Typography variant="body2">
-                Page {pageNumber} of {totalPages}
+              <Typography
+                variant="body2"
+                sx={{ minWidth: "100px", textAlign: "center" }}
+              >
+                Page {pageNumber} of {totalPages || 1}
               </Typography>
               <Button
                 variant="outlined"

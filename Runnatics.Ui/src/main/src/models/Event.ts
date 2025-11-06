@@ -1,5 +1,7 @@
 import { EventStatus } from "./EventStatus";
 import { EventType } from "./EventType";
+import { EventSettings } from "./EventSettings";
+import { LeaderBoardSettings } from "./LeaderBoardSettings";
 
 export interface Event {
   id?: string;
@@ -35,6 +37,6 @@ export interface Event {
   isActive: boolean;
   createdAt?: Date | string;
   updatedAt?: Date;
-  eventSettings?: any; // API includes nested settings
-  leaderboardSettings?: any; // API includes nested leaderboard settings
+  eventSettings?: EventSettings; // Properly typed
+  leaderboardSettings?: LeaderBoardSettings; // Properly typed
 }

@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import {
   Box,
   Drawer,
@@ -57,6 +58,7 @@ const miniDrawerWidth = 64;
 function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
   const [isMinimized, setIsMinimized] = useState<boolean>(true);
   const [openSubmenu, setOpenSubmenu] = useState<Record<string, boolean>>({});
@@ -133,6 +135,17 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleProfileMenuClose = (): void => {
     setAnchorEl(null);
+  };
+
+  const handleLogout = async (): Promise<void> => {
+    try {
+      await logout();
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Navigate to login even if logout API fails
+      navigate("/login");
+    }
   };
 
   // Navigation menu items
@@ -525,10 +538,30 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
             onClose={handleProfileMenuClose}
             onClick={handleProfileMenuClose}
           >
-            <MenuItem onClick={() => navigate("/profile")}>Profile</MenuItem>
-            <MenuItem onClick={() => navigate("/settings")}>Settings</MenuItem>
+            <MenuItem onClick={() => navigate("/profile")}>
+              <ListItemIcon>
+                <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>
+                  {user?.firstName?.[0] || user?.email?.[0] || "U"}
+                </Avatar>
+              </ListItemIcon>
+              <ListItemText 
+                primary="Profile" 
+                secondary={user?.email || "View profile"}
+              />
+            </MenuItem>
+            <MenuItem onClick={() => navigate("/settings")}>
+              <ListItemIcon>
+                <SettingsIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Settings" />
+            </MenuItem>
             <Divider />
-            <MenuItem onClick={() => console.log("Logout")}>Logout</MenuItem>
+            <MenuItem onClick={handleLogout}>
+              <ListItemIcon>
+                <LogoutIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Logout" />
+            </MenuItem>
           </Menu>
         </Toolbar>
       </AppBar>
