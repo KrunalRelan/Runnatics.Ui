@@ -1,5 +1,5 @@
 import { RouteObject } from "react-router-dom";
-import Dashboard from "./Dashboard";
+import EventsList from "./EventsList";
 import { CreateEvent } from "./CreateEvent";
 import ViewEvent from "./ViewEvent";
 
@@ -9,7 +9,7 @@ export const eventsRoutes: RouteObject[] = [
     children: [
       {
         path: "events-dashboard",
-        element: <Dashboard />,
+        element: <EventsList />,
       },
       {
         path: "events-create",

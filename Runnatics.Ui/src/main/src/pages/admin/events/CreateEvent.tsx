@@ -47,14 +47,17 @@ export const CreateEvent: React.FC = () => {
 
   // Event Settings state
   const [eventSettings, setEventSettings] = useState<EventSettings>({
-    RemoveBanner: false,
-    PublishEvent: true,
-    RankOnNet: false,
-    AllowParticipantsEdit: false,
-    UseOldData: false,
-    ConfirmedEvent: false,
-    AllNameCheck: false,
-    ShowResultsSummaryForRaces: false,
+    id: undefined,
+    eventId: undefined,
+    removeBanner: false,
+    published: true,
+    rankOnNet: false,
+    showResultSummaryForRaces: false,
+    useOldData: false,
+    confirmedEvent: false,
+    allowNameCheck: false,
+    allowParticipantEdit: false,
+    createdAt: undefined,
   });
 
   // Leaderboard settings state
@@ -104,14 +107,14 @@ export const CreateEvent: React.FC = () => {
       NumberOfResultsToShow: 5,
     },
     eventSettings: {
-      RemoveBanner: false,
-      PublishEvent: true,
-      RankOnNet: false,
-      AllowParticipantsEdit: false,
-      UseOldData: false,
-      ConfirmedEvent: true,
-      AllNameCheck: true,
-      ShowResultsSummaryForRaces: false,
+      removeBanner: false,
+      published: true,
+      rankOnNet: false,
+      allowParticipantEdit: false,
+      useOldData: false,
+      confirmedEvent: true,
+      allowNameCheck: true,
+      showResultSummaryForRaces: false,
     },
   });
 
@@ -122,7 +125,41 @@ export const CreateEvent: React.FC = () => {
 
   // Fetch organizations on component mount
   useEffect(() => {
+    let isMounted = true;
+
+    const fetchOrganizations = async () => {
+      try {
+        setIsLoadingOrgs(true);
+        const response = await EventOrganizerService.getOrganizations();
+        
+        // Only update state if component is still mounted
+        if (isMounted) {
+          setOrganizations(response);
+        }
+      } catch (error) {
+        console.error("Error fetching organizations:", error);
+        
+        // Only update state if component is still mounted
+        if (isMounted) {
+          setErrors((prev) => ({
+            ...prev,
+            organizationId: "Failed to load organizations",
+          }));
+        }
+      } finally {
+        // Only update state if component is still mounted
+        if (isMounted) {
+          setIsLoadingOrgs(false);
+        }
+      }
+    };
+
     fetchOrganizations();
+
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Sync event settings and leaderboard settings with formData
@@ -133,22 +170,6 @@ export const CreateEvent: React.FC = () => {
       leaderBoardSettings,
     }));
   }, [eventSettings, leaderBoardSettings]);
-
-  const fetchOrganizations = async () => {
-    try {
-      setIsLoadingOrgs(true);
-      const response = await EventOrganizerService.getOrganizations();
-      setOrganizations(response);
-    } catch (error) {
-      console.error("Error fetching organizations:", error);
-      setErrors((prev) => ({
-        ...prev,
-        organizationId: "Failed to load organizations",
-      }));
-    } finally {
-      setIsLoadingOrgs(false);
-    }
-  };
 
   // Handle input changes for TextField
   const handleInputChange = (
@@ -350,14 +371,14 @@ export const CreateEvent: React.FC = () => {
         registrationDeadline: apiData.registrationCloseDate || apiData.startDate,
         // Transform settings to match API naming conventions
         eventSettings: {
-          removeBanner: eventSettings.RemoveBanner,
-          published: eventSettings.PublishEvent,
-          rankOnNet: eventSettings.RankOnNet,
-          showResultSummaryForRaces: eventSettings.ShowResultsSummaryForRaces,
-          useOldData: eventSettings.UseOldData,
-          confirmedEvent: eventSettings.ConfirmedEvent,
-          allowNameCheck: eventSettings.AllNameCheck,
-          allowParticipantEdit: eventSettings.AllowParticipantsEdit,
+          removeBanner: eventSettings.removeBanner,
+          published: eventSettings.published,
+          rankOnNet: eventSettings.rankOnNet,
+          showResultSummaryForRaces: eventSettings.showResultSummaryForRaces,
+          useOldData: eventSettings.useOldData,
+          confirmedEvent: eventSettings.confirmedEvent,
+          allowNameCheck: eventSettings.allowNameCheck,
+          allowParticipantEdit: eventSettings.allowParticipantEdit,
         },
         leaderboardSettings: {
           showOverallResults: leaderBoardSettings.ShowOverallResults,
@@ -844,11 +865,11 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={eventSettings.RemoveBanner}
+                          checked={eventSettings.removeBanner}
                           onChange={(e) =>
                             setEventSettings((prev) => ({
                               ...prev,
-                              RemoveBanner: e.target.checked,
+                              removeBanner: e.target.checked,
                             }))
                           }
                         />
@@ -858,11 +879,11 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={eventSettings.PublishEvent}
+                          checked={eventSettings.published}
                           onChange={(e) =>
                             setEventSettings((prev) => ({
                               ...prev,
-                              PublishEvent: e.target.checked,
+                              published: e.target.checked,
                             }))
                           }
                         />
@@ -872,11 +893,11 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={eventSettings.RankOnNet}
+                          checked={eventSettings.rankOnNet}
                           onChange={(e) =>
                             setEventSettings((prev) => ({
                               ...prev,
-                              RankOnNet: e.target.checked,
+                              rankOnNet: e.target.checked,
                             }))
                           }
                         />
@@ -886,11 +907,11 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={eventSettings.AllowParticipantsEdit}
+                          checked={eventSettings.allowParticipantEdit}
                           onChange={(e) =>
                             setEventSettings((prev) => ({
                               ...prev,
-                              AllowParticipantsEdit: e.target.checked,
+                              allowParticipantEdit: e.target.checked,
                             }))
                           }
                         />
@@ -904,11 +925,11 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={eventSettings.UseOldData}
+                          checked={eventSettings.useOldData}
                           onChange={(e) =>
                             setEventSettings((prev) => ({
                               ...prev,
-                              UseOldData: e.target.checked,
+                              useOldData: e.target.checked,
                             }))
                           }
                         />
@@ -918,11 +939,11 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={eventSettings.ConfirmedEvent}
+                          checked={eventSettings.confirmedEvent}
                           onChange={(e) =>
                             setEventSettings((prev) => ({
                               ...prev,
-                              ConfirmedEvent: e.target.checked,
+                              confirmedEvent: e.target.checked,
                             }))
                           }
                         />
@@ -932,11 +953,11 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={eventSettings.AllNameCheck}
+                          checked={eventSettings.allowNameCheck}
                           onChange={(e) =>
                             setEventSettings((prev) => ({
                               ...prev,
-                              AllNameCheck: e.target.checked,
+                              allowNameCheck: e.target.checked,
                             }))
                           }
                         />
@@ -946,11 +967,11 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={eventSettings.ShowResultsSummaryForRaces}
+                          checked={eventSettings.showResultSummaryForRaces}
                           onChange={(e) =>
                             setEventSettings((prev) => ({
                               ...prev,
-                              ShowResultsSummaryForRaces: e.target.checked,
+                              showResultSummaryForRaces: e.target.checked,
                             }))
                           }
                         />
