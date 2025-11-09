@@ -8,6 +8,6 @@ export const ServiceUrl = {
     getAppContext: () => "Sessions/app-context",
     searchEventService: () => "Events/search",
     createEvent: () => "Events/create",
-    getEventOrganizer: () => "eventorganizers/event-organizer",
+    getEventOrganizer: () => "EventOrganizer/all-event-organizers",
 };
 

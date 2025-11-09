@@ -1,4 +1,6 @@
 export interface EventOrganizer {
-    id: string;
-    name: string;
+    id: number;
+    organizationId?: number;
+    name?: string;
+    organizerName?: string;
 }
