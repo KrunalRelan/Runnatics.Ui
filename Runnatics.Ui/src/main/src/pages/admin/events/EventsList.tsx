@@ -1,5 +1,5 @@
 // src/pages/Events/EventsList.tsx
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -45,6 +45,7 @@ import {
 import { EventService } from "../../../services/EventService";
 import { Event } from "../../../models/Event";
 import { EventSearchRequest } from "../../../models/EventSearchRequest";
+import { SortDirection } from "@/main/src/models/SortDirection";
 
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -75,7 +76,7 @@ const defaultSearchCriteria: EventSearchRequest = {
   pageNumber: 1,
   pageSize: 10,
   sortFieldName: "CreatedAt",
-  sortDirection: "1",
+  sortDirection: SortDirection.Descending,
 };
 
 const EventsList: React.FC = () => {
@@ -93,6 +94,10 @@ const EventsList: React.FC = () => {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [dateError, setDateError] = useState<string>("");
+  
+  // Track the last criteria we fetched to prevent duplicate calls
+  const lastFetchedCriteriaRef = useRef<string>('');
+  
   // Snackbar for success/error messages
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -123,17 +128,30 @@ const EventsList: React.FC = () => {
     return true;
   }, []);
 
-  // Fetch events function with useCallback to prevent unnecessary re-renders
-  const fetchEvents = useCallback(async () => {
+  // Fetch events function - using searchCriteria from state directly in useEffect
+  const fetchEvents = useCallback(async (criteria: EventSearchRequest) => {
+    // Create a unique key for the criteria to prevent duplicate calls
+    const criteriaKey = JSON.stringify(criteria);
+    
+    // Skip if we just fetched with the same criteria
+    if (lastFetchedCriteriaRef.current === criteriaKey) {
+      console.log('⏭️ Skipping duplicate fetch for same criteria');
+      return;
+    }
+    
+    console.log('🔍 fetchEvents called with criteria:', criteria);
+    lastFetchedCriteriaRef.current = criteriaKey;
+    
     try {
       setLoading(true);
       setError(null);
 
       // Call the API with search criteria wrapped in the correct format
       const response = await EventService.getAllEvents({ 
-        searchCriteria: searchCriteria 
+        searchCriteria: criteria 
       });
 
+      console.log('✅ API response received:', response);
       // Backend returns events in the message property and total count in totalCount
       setEvents(response.message || []);
       setTotalRecords(response.totalCount || 0);
@@ -145,17 +163,27 @@ const EventsList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchCriteria]);
+  }, []); // No dependencies - stable function
 
   // Fetch events whenever searchCriteria changes
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    console.log('🎯 First useEffect triggered - searchCriteria changed:', searchCriteria);
+    fetchEvents(searchCriteria);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchCriteria]); // Only depend on searchCriteria, fetchEvents is stable
 
   // Auto-search when user types 3+ characters
   useEffect(() => {
+    console.log('🔎 Second useEffect triggered - search inputs:', { searchQuery, startDate, endDate });
+    // Skip if component just mounted and search is empty
+    if (searchQuery.length === 0 && startDate === "" && endDate === "") {
+      console.log('⏭️ Skipping - initial state');
+      return;
+    }
+
     const timer = setTimeout(() => {
       if (searchQuery.length >= 3) {
+        console.log('📝 Setting search criteria for query:', searchQuery);
         // Validate date range before searching
         if (!validateDateRange(startDate, endDate)) {
           return;
@@ -171,7 +199,8 @@ const EventsList: React.FC = () => {
           eventDateTo: formattedEndDate,
           pageNumber: 1,
         });
-      } else if (searchQuery.length === 0 && searchCriteria.name) {
+      } else if (searchQuery.length === 0) {
+        console.log('🧹 Clearing search criteria');
         // Clear search when query is empty
         setSearchCriteria({
           ...defaultSearchCriteria,
@@ -182,7 +211,7 @@ const EventsList: React.FC = () => {
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timer);
-  }, [searchQuery, startDate, endDate, searchCriteria.name]);
+  }, [searchQuery, startDate, endDate, validateDateRange]);
 
   const handleCreateEvent = () => {
     navigate("/events/events-create");
@@ -215,7 +244,7 @@ const EventsList: React.FC = () => {
       });
       
       // Refresh the list
-      fetchEvents();
+      fetchEvents(searchCriteria);
     } catch (err: any) {
       console.error("Error deleting event:", err);
       

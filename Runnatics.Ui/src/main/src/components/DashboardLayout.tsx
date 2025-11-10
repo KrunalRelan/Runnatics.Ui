@@ -28,11 +28,9 @@ import {
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
-  ShoppingCart as ShoppingCartIcon,
   People as PeopleIcon,
   BarChart as BarChartIcon,
   Settings as SettingsIcon,
-  Inbox as InboxIcon,
   Label as LabelIcon,
   Event as EventIcon,
   Upload as UploadIcon,

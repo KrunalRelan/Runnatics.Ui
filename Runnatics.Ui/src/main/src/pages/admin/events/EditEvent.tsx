@@ -29,7 +29,6 @@ import {
   timeZoneOptions,
   EventSettings,
   LeaderBoardSettings,
-  Event,
 } from "@/main/src/models";
 import { CreateEventRequest } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
@@ -48,6 +47,7 @@ export const EditEvent: React.FC = () => {
   const [apiError, setApiError] = useState<string>("");
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
+  const [isEventInPast, setIsEventInPast] = useState(false);
 
   // Event Settings state
   const [eventSettings, setEventSettings] = useState<EventSettings>({
@@ -134,17 +134,51 @@ export const EditEvent: React.FC = () => {
         ]);
 
         if (isMounted) {
-          // Map organizations
-          const mappedOrgs = orgsResponse.map((org) => ({
-            id: org.id,
-            organizationId: org.organizationId,
-            name: org.organizerName || org.name || "",
-            organizerName: org.organizerName,
-          }));
+          console.log('📦 Raw organizations response:', orgsResponse);
+          console.log('📦 Raw event data:', eventData);
+          
+          // Map organizations - use organizationId as the primary identifier
+          const mappedOrgs = orgsResponse.map((org) => {
+            console.log('🔍 Mapping organization:', org);
+            // Use organizationId as the ID for the dropdown value
+            const orgId = org.organizationId || org.id || 0;
+            return {
+              id: orgId,
+              organizationId: orgId,
+              name: org.organizerName || org.name || "",
+              organizerName: org.organizerName || org.name,
+            };
+          });
+          
+          console.log('🗂️ Mapped organizations:', mappedOrgs);
+          console.log('📊 Number of organizations:', mappedOrgs.length);
+          
+          // Check if event's organization is in the list
+          const eventData_any = eventData as any;
+          const eventOrgId = eventData_any.organizationId || eventData_any.organizerId || eventData_any.eventOrganizerId;
+          // Check against org.id since that's what we use in the MenuItem value
+          const orgExists = mappedOrgs.some(org => org.id === eventOrgId);
+          
+          console.log('🔍 Event organization ID:', eventOrgId);
+          console.log('✅ Organization exists in list:', orgExists);
+          console.log('📋 Available org IDs:', mappedOrgs.map(o => o.id));
+          
+          // If the event's organization is not in the list, add it as a placeholder
+          if (eventOrgId && !orgExists) {
+            console.warn('⚠️ Adding missing organization to dropdown');
+            mappedOrgs.push({
+              id: eventOrgId,
+              organizationId: eventOrgId,
+              name: `Organization ${eventOrgId} (Current)`,
+              organizerName: `Organization ${eventOrgId}`,
+            });
+            console.log('✅ Added placeholder organization. New count:', mappedOrgs.length);
+          }
+          
           setOrganizations(mappedOrgs);
 
-          // Populate form with event data
-          populateFormData(eventData);
+          // Populate form with event data AFTER organizations are loaded
+          populateFormData(eventData, mappedOrgs);
         }
       } catch (error: any) {
         console.error("Error fetching event data:", error);
@@ -178,7 +212,16 @@ export const EditEvent: React.FC = () => {
   }, [id]);
 
   // Populate form data from event object
-  const populateFormData = (event: any) => {
+  const populateFormData = (event: any, availableOrgs?: EventOrganizer[]) => {
+    console.log('📋 Populating form with event data:', event);
+    
+    // Check if event is in the past
+    if (event.eventDate) {
+      const eventDate = new Date(event.eventDate);
+      const now = new Date();
+      setIsEventInPast(eventDate < now);
+    }
+    
     // Parse city, state, country from venueAddress
     // Format: "Apollo Bandar, Colaba, Mumbai, Maharashtra 400001, India"
     let city = "";
@@ -196,14 +239,25 @@ export const EditEvent: React.FC = () => {
       }
     }
     
+    // Get organization ID - check multiple possible fields
+    const orgId = event.organizationId || event.organizerId || event.eventOrganizerId;
+    console.log('🏢 Organization ID from event:', orgId);
+    
+    // Check if this organization exists in the available organizations
+    const orgsToCheck = availableOrgs || organizations;
+    const orgExists = orgsToCheck.some(org => org.id === orgId || org.organizationId === orgId);
+    console.log('✅ Organization exists in list:', orgExists);
+    
+    if (!orgExists && orgId) {
+      console.warn('⚠️ Organization ID', orgId, 'not found in available organizations:', orgsToCheck);
+      console.warn('⚠️ This might cause the dropdown to not show the selected organization');
+      // Add a warning but continue - we'll set the value anyway
+    }
+    
     // Map event data to form fields (handle both camelCase API and PascalCase)
     const mappedFormData = {
-      // If organizationId is null/undefined, set to "N/A", otherwise convert to string
-      organizationId: event.organizationId 
-        ? event.organizationId.toString() 
-        : event.organizerId 
-        ? event.organizerId.toString() 
-        : "N/A",  // Set to N/A when null
+      // Convert to string for Select component, or empty string if null/undefined
+      organizationId: orgId ? orgId.toString() : "",
       name: event.name || "",
       description: event.description || "",
       eventType: (event.eventType as EventType) || EventType.Marathon,
@@ -268,6 +322,8 @@ export const EditEvent: React.FC = () => {
     };
     
     setFormData(mappedFormData);
+    console.log('✅ Form data set:', mappedFormData);
+    console.log('🆔 Organization ID in form:', mappedFormData.organizationId);
 
     // Set separate state for eventSettings and leaderBoardSettings
     if (event.eventSettings) {
@@ -388,11 +444,11 @@ export const EditEvent: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Organization validation - don't allow empty or N/A
+    // Organization validation - allow empty during load, but not N/A
     if (!formData.organizationId || formData.organizationId === "") {
       newErrors.organizationId = "Please select an event organizer";
     } else if (formData.organizationId === "N/A") {
-      newErrors.organizationId = "Please select an event organizer. N/A is not allowed.";
+      newErrors.organizationId = "Please select a valid event organizer. N/A is not allowed.";
     }
 
     // Required field validations
@@ -402,13 +458,6 @@ export const EditEvent: React.FC = () => {
 
     if (!formData.startDate) {
       newErrors.startDate = "Start date is required";
-    } else {
-      // Check if the date is in the past
-      const selectedDate = new Date(formData.startDate);
-      const now = new Date();
-      if (selectedDate < now) {
-        newErrors.startDate = "Event date cannot be in the past";
-      }
     }
 
     if (!formData.location.trim()) {
@@ -686,11 +735,8 @@ export const EditEvent: React.FC = () => {
                     <MenuItem value="">
                       <em>Select an event organizer</em>
                     </MenuItem>
-                    <MenuItem value="N/A" disabled>
-                      N/A (No Organizer Assigned)
-                    </MenuItem>
                     {organizations.map((org) => (
-                      <MenuItem key={org.id} value={org.id}>
+                      <MenuItem key={org.id} value={org.id.toString()}>
                         {org.name || org.organizerName || `Organization ${org.id}`}
                       </MenuItem>
                     ))}
@@ -701,9 +747,9 @@ export const EditEvent: React.FC = () => {
                   {isLoadingOrgs && (
                     <FormHelperText>Loading organizations...</FormHelperText>
                   )}
-                  {formData.organizationId === "N/A" && !errors.organizationId && (
+                  {!formData.organizationId && !errors.organizationId && !isLoadingOrgs && (
                     <FormHelperText sx={{ color: 'warning.main' }}>
-                      This event has no organizer assigned. Please select an event organizer to continue.
+                      Please select an event organizer for this event.
                     </FormHelperText>
                   )}
                 </FormControl>
@@ -787,6 +833,12 @@ export const EditEvent: React.FC = () => {
               Event Schedule
             </Typography>
 
+            {isEventInPast && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                This event is in the past. The event date and time zone cannot be modified.
+              </Alert>
+            )}
+
             <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
               <Stack spacing={3} sx={{ flex: 1 }}>
                 <TextField
@@ -797,14 +849,19 @@ export const EditEvent: React.FC = () => {
                   value={formData.startDate}
                   onChange={handleInputChange}
                   error={!!errors.startDate}
-                  helperText={errors.startDate}
+                  helperText={
+                    isEventInPast
+                      ? "Cannot modify date for past events"
+                      : errors.startDate
+                  }
                   required
+                  disabled={isEventInPast}
                   InputLabelProps={{ shrink: true }}
                 />
               </Stack>
 
               <Stack spacing={3} sx={{ flex: 1 }}>
-                <FormControl fullWidth error={!!errors.timeZone} required>
+                <FormControl fullWidth error={!!errors.timeZone} required disabled={isEventInPast}>
                   <InputLabel>Time Zone</InputLabel>
                   <Select
                     name="timeZone"
@@ -820,6 +877,9 @@ export const EditEvent: React.FC = () => {
                   </Select>
                   {errors.timeZone && (
                     <FormHelperText>{errors.timeZone}</FormHelperText>
+                  )}
+                  {isEventInPast && !errors.timeZone && (
+                    <FormHelperText>Cannot modify time zone for past events</FormHelperText>
                   )}
                 </FormControl>
               </Stack>
