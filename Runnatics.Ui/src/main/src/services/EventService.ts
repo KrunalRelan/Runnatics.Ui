@@ -6,6 +6,7 @@ import { Event, CreateEventRequest, ServiceUrl } from '../models';
 import { SearchResponse } from '../models/SearchReponse';
 import { apiClient } from '../utils/axios.config';
 import { EventSearchRequest } from '../models/EventSearchRequest';
+import { ResponseBase } from '../models/ResponseBase';
 
 // Use the centralized apiClient with JWT interceptor
 // All requests will automatically include the Bearer token
@@ -29,9 +30,12 @@ export class EventService {
      * Get event by ID
      * Note: JWT token is automatically included via interceptor
      */
-    static async getEventById(id: string): Promise<Event> {
-        const response: AxiosResponse<Event> = await apiClient.get(`/events/${id}`);
-        return response.data;
+    static async getEventById(id: string): Promise<ResponseBase<Event>> {
+        const response: AxiosResponse<any> = await apiClient.get(
+            ServiceUrl.getEventById(id)
+        );
+        // API returns data wrapped in { message: {...}, totalCount: 0 }
+        return response.data.message || response.data;
     }
     
     /**
@@ -47,20 +51,23 @@ export class EventService {
     }
 
     /**
-     * Update existing event
+     * Update existing event using edit-event endpoint
      * Note: JWT token is automatically included via interceptor
      */
-    static async updateEvent(id: string, eventData: Partial<CreateEventRequest>): Promise<Event> {
-        const response: AxiosResponse<Event> = await apiClient.put(`/events/${id}`, eventData);
+    static async updateEvent(id: string, eventData: CreateEventRequest): Promise<Event> {
+        const response: AxiosResponse<Event> = await apiClient.put(
+            ServiceUrl.editEvent(id), 
+            eventData
+        );
         return response.data;
     }
 
     /**
-     * Delete event
+     * Delete event using delete-event endpoint
      * Note: JWT token is automatically included via interceptor
      */
     static async deleteEvent(id: string): Promise<void> {
-        await apiClient.delete(`/events/${id}`);
+        await apiClient.delete(ServiceUrl.deleteEvent(id));
     }
 
     /**

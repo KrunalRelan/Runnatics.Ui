@@ -9,7 +9,7 @@ export interface SearchCriteria {
 export const deafaultSearchCriteria: SearchCriteria = {
     pageNumber: 1,
     pageSize: 10,
-    sortFieldName: "",
-    sortDirection: "asc",
+    sortFieldName: "CreatedAt",
+    sortDirection: "1",
     searchString: "",
 };

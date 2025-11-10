@@ -1,6 +1,6 @@
 // src/main/src/pages/CreateEvent.tsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   TextField,
@@ -44,6 +44,9 @@ export const CreateEvent: React.FC = () => {
   const [apiError, setApiError] = useState<string>('');
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
+  
+  // Ref to prevent double API calls in React.StrictMode
+  const hasFetchedOrgs = useRef(false);
 
   // Event Settings state
   const [eventSettings, setEventSettings] = useState<EventSettings>({
@@ -60,14 +63,7 @@ export const CreateEvent: React.FC = () => {
     createdAt: undefined,
   });
 
-  // Leaderboard settings state
-  // Logic:
-  // - ShowOverallResults and ShowCategoryResults can be toggled independently
-  // - When enabled, at least one time type (Chip or Gun) must be selected
-  // - Chip Time and Gun Time are mutually exclusive (only one can be active at a time)
-  // - Time type switches are disabled when parent result toggle is off
-  // - NumberOfResultsToShowOverall applies to Overall results
-  // - NumberOfResultsToShowCategory applies to Category results
+
   const [leaderBoardSettings, setLeaderBoardSettings] =
     useState<LeaderBoardSettings>({
       ShowOverallResults: true,
@@ -128,6 +124,10 @@ export const CreateEvent: React.FC = () => {
 
   // Fetch organizations on component mount
   useEffect(() => {
+    // Skip if already fetched (prevents double call in React.StrictMode)
+    if (hasFetchedOrgs.current) return;
+    hasFetchedOrgs.current = true;
+
     let isMounted = true;
 
     const fetchOrganizations = async () => {
@@ -527,15 +527,6 @@ export const CreateEvent: React.FC = () => {
     label: String(type),
   }));
 
-  // Currency options
-  const currencyOptions = [
-    { value: "INR", label: "INR - Indian Rupee" },
-    { value: "USD", label: "USD - US Dollar" },
-    { value: "EUR", label: "EUR - Euro" },
-    { value: "GBP", label: "GBP - British Pound" },
-    { value: "CAD", label: "CAD - Canadian Dollar" },
-    { value: "AUD", label: "AUD - Australian Dollar" },
-  ];
 
   // Generate timezone options with UTC offset
   // Common timezone options with UTC offsets

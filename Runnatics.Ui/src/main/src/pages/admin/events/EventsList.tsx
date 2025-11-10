@@ -21,6 +21,11 @@ import {
   InputAdornment,
   Stack,
   Tooltip,
+  Snackbar,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import {
   Edit as EditIcon,
@@ -69,6 +74,8 @@ const myTheme = themeQuartz.withParams({
 const defaultSearchCriteria: EventSearchRequest = {
   pageNumber: 1,
   pageSize: 10,
+  sortFieldName: "CreatedAt",
+  sortDirection: "1",
 };
 
 const EventsList: React.FC = () => {
@@ -86,32 +93,19 @@ const EventsList: React.FC = () => {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [dateError, setDateError] = useState<string>("");
-  // Track if user has applied filters (to prevent auto-search)
-  const [hasAppliedFilters, setHasAppliedFilters] = useState(false);
-
-  useEffect(() => {
-    // Only fetch if filters have been applied or it's initial load
-    if (hasAppliedFilters || !searchCriteria.name) {
-      fetchEvents();
-    }
-  }, [searchCriteria, hasAppliedFilters]);
-
-  // Auto-search when user types 3+ characters
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery.length >= 3) {
-        handleSearch();
-      } else if (searchQuery.length === 0 && searchCriteria.name) {
-        // Clear search when query is empty
-        handleSearch();
-      }
-    }, 500); // 500ms debounce
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  // Snackbar for success/error messages
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info';
+  }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
   // Validate date range
-  const validateDateRange = (start: string, end: string): boolean => {
+  const validateDateRange = useCallback((start: string, end: string): boolean => {
     if (!start || !end) {
       setDateError("");
       return true;
@@ -127,9 +121,10 @@ const EventsList: React.FC = () => {
     
     setDateError("");
     return true;
-  };
+  }, []);
 
-  const fetchEvents = async () => {
+  // Fetch events function with useCallback to prevent unnecessary re-renders
+  const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -139,9 +134,9 @@ const EventsList: React.FC = () => {
         searchCriteria: searchCriteria 
       });
 
-      // Backend returns events directly in the message property as an array
+      // Backend returns events in the message property and total count in totalCount
       setEvents(response.message || []);
-      setTotalRecords(response.message?.length || 0);
+      setTotalRecords(response.totalCount || 0);
     } catch (err: any) {
       console.error("Error fetching events:", err);
       setError(err.response?.data?.message || "Failed to fetch events");
@@ -150,7 +145,44 @@ const EventsList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchCriteria]);
+
+  // Fetch events whenever searchCriteria changes
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
+
+  // Auto-search when user types 3+ characters
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.length >= 3) {
+        // Validate date range before searching
+        if (!validateDateRange(startDate, endDate)) {
+          return;
+        }
+        
+        const formattedStartDate = startDate ? new Date(startDate).toISOString() : undefined;
+        const formattedEndDate = endDate ? new Date(endDate).toISOString() : undefined;
+        
+        setSearchCriteria({
+          ...defaultSearchCriteria,
+          name: searchQuery || undefined,
+          eventDateFrom: formattedStartDate,
+          eventDateTo: formattedEndDate,
+          pageNumber: 1,
+        });
+      } else if (searchQuery.length === 0 && searchCriteria.name) {
+        // Clear search when query is empty
+        setSearchCriteria({
+          ...defaultSearchCriteria,
+          eventDateFrom: startDate ? new Date(startDate).toISOString() : undefined,
+          eventDateTo: endDate ? new Date(endDate).toISOString() : undefined,
+        });
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, startDate, endDate, searchCriteria.name]);
 
   const handleCreateEvent = () => {
     navigate("/events/events-create");
@@ -158,7 +190,7 @@ const EventsList: React.FC = () => {
 
   const handleEditEvent = (eventId: number | undefined) => {
     if (eventId) {
-      navigate(`/events/edit/${eventId}`);
+      navigate(`/events/events-edit/${eventId}`);
     }
   };
 
@@ -174,12 +206,28 @@ const EventsList: React.FC = () => {
       await EventService.deleteEvent(eventToDelete.id);
       setDeleteDialogOpen(false);
       setEventToDelete(null);
+      
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: `Event "${eventToDelete.name}" deleted successfully!`,
+        severity: 'success',
+      });
+      
       // Refresh the list
       fetchEvents();
-      alert("Event deleted successfully!");
     } catch (err: any) {
       console.error("Error deleting event:", err);
-      alert(err.response?.data?.message || "Failed to delete event");
+      
+      // Show error message
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || "Failed to delete event. Please try again.",
+        severity: 'error',
+      });
+      
+      setDeleteDialogOpen(false);
+      setEventToDelete(null);
     }
   };
 
@@ -204,7 +252,6 @@ const EventsList: React.FC = () => {
       eventDateTo: formattedEndDate,
       pageNumber: 1,
     });
-    setHasAppliedFilters(true);
   };
 
   const handleClearFilters = () => {
@@ -213,7 +260,6 @@ const EventsList: React.FC = () => {
     setEndDate("");
     setDateError("");
     setSearchCriteria(defaultSearchCriteria);
-    setHasAppliedFilters(true); // Trigger fetch with cleared filters
   };
 
   // Handle Enter key press in search field
@@ -634,13 +680,40 @@ const EventsList: React.FC = () => {
               backgroundColor: "background.paper",
               borderRadius: 1,
               boxShadow: 1,
+              flexWrap: "wrap",
+              gap: 2,
             }}
           >
-            <Typography variant="body2" color="text.secondary">
-              Showing {events.length > 0 ? (pageNumber - 1) * pageSize + 1 : 0}{" "}
-              to {Math.min(pageNumber * pageSize, totalRecords)} of{" "}
-              {totalRecords} entries
-            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Showing {events.length > 0 ? (pageNumber - 1) * pageSize + 1 : 0}{" "}
+                to {Math.min(pageNumber * pageSize, totalRecords)} of{" "}
+                {totalRecords} entries
+              </Typography>
+              
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <InputLabel id="page-size-label">Rows per page</InputLabel>
+                <Select
+                  labelId="page-size-label"
+                  value={pageSize}
+                  label="Rows per page"
+                  onChange={(e) =>
+                    setSearchCriteria((prev) => ({
+                      ...prev,
+                      pageSize: Number(e.target.value),
+                      pageNumber: 1, // Reset to first page when changing page size
+                    }))
+                  }
+                  disabled={loading}
+                >
+                  <MenuItem value={5}>5</MenuItem>
+                  <MenuItem value={10}>10</MenuItem>
+                  <MenuItem value={25}>25</MenuItem>
+                  <MenuItem value={50}>50</MenuItem>
+                  <MenuItem value={100}>100</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
 
             <Stack direction="row" spacing={2} alignItems="center">
               <Button
@@ -731,6 +804,23 @@ const EventsList: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
