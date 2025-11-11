@@ -79,7 +79,7 @@ export const SessionContextProvider = ({
 
   const isSuperAdmin = useMemo(() => {
     return !!data?.permissions?.find(
-      (role) => role === AppPermission.SuperUser
+      (role) => role === AppPermission.SuperAdmin
     );
   }, [data?.permissions]);
 

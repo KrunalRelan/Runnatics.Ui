@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Environments } from '../utility';
 import { AppContext } from '../models/AppContext';
-import {  ServiceUrl } from '../models/ServiceUrl';
+import {  ServiceUrl } from '../models/ServiceUrls';
 
 export class SessionService {
     static getAppContext(): Promise<AppContext> {
