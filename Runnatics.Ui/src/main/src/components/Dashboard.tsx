@@ -1,13 +1,14 @@
-// src/main/src/pages/Dashboard.tsx
+// src/main/src/components/Dashboard.tsx
 import { Box, Typography, Paper, Card, CardContent, Button, Divider, Avatar, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import {
   Event as EventIcon,
   People as PeopleIcon,
   Assessment as AssessmentIcon,
-  TrendingUp as TrendingUpIcon,
+  Support as SupportIcon,
   Logout as LogoutIcon,
   Person as PersonIcon,
+  TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -28,32 +29,32 @@ const Dashboard = () => {
 
   const cards = [
     {
-      title: 'Events',
-      value: '12',
+      title: "Events",
+      value: "12",
       icon: <EventIcon sx={{ fontSize: 40 }} />,
-      color: '#1976d2',
-      path: '/events/dashboard',
+      color: "#1976d2",
+      path: "/events/dashboard",
     },
     {
-      title: 'Participants',
-      value: '248',
+      title: "Total Participants",
+      value: "248",
       icon: <PeopleIcon sx={{ fontSize: 40 }} />,
-      color: '#2e7d32',
-      path: '/participants',
+      color: "#2e7d32",
+      path: "/participants",
     },
     {
-      title: 'Reports',
-      value: '36',
+      title: "Reports",
+      value: "36",
       icon: <AssessmentIcon sx={{ fontSize: 40 }} />,
-      color: '#ed6c02',
-      path: '/reports',
+      color: "#ed6c02",
+      path: "/reports",
     },
     {
-      title: 'Growth',
-      value: '+24%',
-      icon: <TrendingUpIcon sx={{ fontSize: 40 }} />,
-      color: '#9c27b0',
-      path: '/analytics',
+      title: "Support Tickets",
+      value: "8",
+      icon: <SupportIcon sx={{ fontSize: 40 }} />,
+      color: "#9c27b0",
+      path: "/support-tickets",
     },
   ];
 

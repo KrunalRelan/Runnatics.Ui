@@ -45,7 +45,7 @@ import {
   KeyboardDoubleArrowRight as KeyboardDoubleArrowRightIcon,
 } from "@mui/icons-material";
 import {
-  DashboardLayoutProps,
+  LeftNavigationProps,
   MenuItem as MenuItemType,
 } from "../models/components";
 import ThemeSwitcher from "../theme/ThemeSwitcher";
@@ -53,7 +53,7 @@ import ThemeSwitcher from "../theme/ThemeSwitcher";
 const drawerWidth = 240;
 const miniDrawerWidth = 64;
 
-function DashboardLayout({ children }: DashboardLayoutProps) {
+function LeftNavigation({ children }: LeftNavigationProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuth();
@@ -153,12 +153,6 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: <DashboardIcon />,
       path: "/dashboard",
     },
-    {
-      text: "Support",
-      icon: <DashboardIcon />,
-      path: "/support",
-    },
-   
     {
       text: "Events",
       icon: <EventIcon />, // ← Import from @mui/icons-material
@@ -629,4 +623,4 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
   );
 }
 
-export default DashboardLayout;
+export default LeftNavigation;

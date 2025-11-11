@@ -1,10 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { ThemeProvider } from "./main/src/theme";
 import { AuthProvider } from "./main/src/contexts/AuthContext";
-import DashboardLayout from "./main/src/components/DashboardLayout";
+import LeftNavigation from "./main/src/components/LeftNavigation";
 import AuthLayout from "./main/src/components/AuthLayout";
 import LoginPage from "./main/src/pages/auth/LoginPage";
-import Dashboard from "./main/src/pages/Dashboard";
+import Dashboard from "./main/src/components/Dashboard";
 import { eventsRoutes } from "./main/src/pages/admin/events/Routes";
 
 // Layout wrapper for auth pages (header only, no side nav)
@@ -16,12 +16,12 @@ const AuthLayoutWrapper = () => {
   );
 };
 
-// Layout wrapper for protected routes (full dashboard with side nav)
-const DashboardLayoutWrapper = () => {
+// Layout wrapper for protected routes (full layout with left navigation)
+const LeftNavigationWrapper = () => {
   return (
-    <DashboardLayout>
+    <LeftNavigation>
       <Outlet />
-    </DashboardLayout>
+    </LeftNavigation>
   );
 };
 
@@ -40,7 +40,7 @@ function App() {
             <Route path="/" element={<Navigate to="/login" replace />} />
 
             {/* Protected routes - WITH FULL DASHBOARD (header + side nav) */}
-            <Route element={<DashboardLayoutWrapper />}>
+            <Route element={<LeftNavigationWrapper />}>
               {/* Dashboard home page */}
               <Route path="/dashboard" element={<Dashboard />} />
               
