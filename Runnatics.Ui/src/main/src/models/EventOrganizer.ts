@@ -1,6 +1,6 @@
 export interface EventOrganizer {
     id: number;
-    organizationId?: number;
+    tenantId?: number;
     name?: string;
     organizerName?: string;
 }

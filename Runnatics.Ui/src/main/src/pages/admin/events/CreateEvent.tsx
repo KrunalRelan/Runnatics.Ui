@@ -1,6 +1,6 @@
 // src/main/src/pages/CreateEvent.tsx
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   TextField,
@@ -20,7 +20,9 @@ import {
   Divider,
   Alert,
   AlertTitle,
+  Autocomplete,
 } from "@mui/material";
+import AddIcon from '@mui/icons-material/Add';
 import { EventService } from "../../../services/EventService";
 import {
   EventOrganizer,
@@ -45,6 +47,8 @@ export const CreateEvent: React.FC = () => {
   const [apiError, setApiError] = useState<string>('');
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
+  const [organizerSearchInput, setOrganizerSearchInput] = useState("");
+  const [selectedOrganizer, setSelectedOrganizer] = useState<EventOrganizer | null>(null);
 
   // Event Settings state
   const [eventSettings, setEventSettings] = useState<EventSettings>({
@@ -75,7 +79,7 @@ export const CreateEvent: React.FC = () => {
     });
 
   const [formData, setFormData] = useState<CreateEventRequest>({
-    organizationId: "",
+    tenantId: "",
     eventOrganizerId: 0,
     name: "",
     description: "",
@@ -121,63 +125,49 @@ export const CreateEvent: React.FC = () => {
   const userRole =
     typeof window !== "undefined" ? localStorage.getItem("userRole") || "" : "";
 
+  // Fetch organizations function (extracted for reusability)
+  const fetchOrganizations = async () => {
+    try {
+      setIsLoadingOrgs(true);
+      const response = await EventOrganizerService.getOrganizations();
+      
+      // Map API response to dropdown format
+      const mappedOrgs = response.map(org => ({ 
+        id: org.id,
+        tenantId: org.tenantId,
+        name: org.organizerName || org.name || '',
+        organizerName: org.organizerName
+      }));
+      
+      setOrganizations(mappedOrgs);
+      
+      return mappedOrgs;
+    } catch (error) {
+      console.error("Error fetching organizations:", error);
+      setErrors((prev) => ({
+        ...prev,
+        tenantId: "Failed to load organizations",
+      }));
+      return [];
+    } finally {
+      setIsLoadingOrgs(false);
+    }
+  };
+
   // Fetch organizations on component mount
   useEffect(() => {
     let isMounted = true;
 
-    const fetchOrganizations = async () => {
-      console.log('🚀 Starting to fetch organizations...');
-
-      try {
-        setIsLoadingOrgs(true);
-        const response = await EventOrganizerService.getOrganizations();
-        
-        console.log('📦 Raw organizations response:', response);
-        console.log('📊 Number of organizations fetched:', response?.length || 0);
-        
-        // Only update state if component is still mounted
-        if (isMounted) {
-          // Map API response to dropdown format
-          const mappedOrgs = response.map(org => ({ 
-            id: org.id,
-            organizationId: org.organizationId,
-            name: org.organizerName || org.name || '',
-            organizerName: org.organizerName
-          }));
-          
-          console.log('🗂️ Mapped organizations:', mappedOrgs);
-          console.log('✅ Setting organizations in state:', mappedOrgs.length);
-          
-          setOrganizations(mappedOrgs);
-          
-          console.log('💾 Organizations state updated');
-        } else {
-          console.log('⚠️ Component unmounted, skipping state update');
-        }
-      } catch (error) {
-        console.error("❌ Error fetching organizations:", error);
-        
-        // Only update state if component is still mounted
-        if (isMounted) {
-          setErrors((prev) => ({
-            ...prev,
-            organizationId: "Failed to load organizations",
-          }));
-        }
-      } finally {
-        // Only update state if component is still mounted
-        if (isMounted) {
-          setIsLoadingOrgs(false);
-          console.log('✅ Loading complete');
-        }
+    const loadOrganizations = async () => {
+      if (isMounted) {
+        await fetchOrganizations();
       }
     };
 
-    fetchOrganizations();
+    loadOrganizations();
 
     // Cleanup function to prevent state updates on unmounted component
     return () => {
-      console.log('🧹 Cleanup - component unmounting');
       isMounted = false;
     };
   }, []);
@@ -222,7 +212,7 @@ export const CreateEvent: React.FC = () => {
   const handleSelectChange = (e: SelectChangeEvent<string | number>) => {
     const { name, value } = e.target;
 
-    // Special handling for organizationId
+    // Special handling for tenantId
     // Keep "N/A" as-is for display, will convert to 1 when sending to API
     let processedValue = value === "" ? null : value;
 
@@ -253,13 +243,76 @@ export const CreateEvent: React.FC = () => {
     }
   };
 
+  // Handle organizer selection change
+  const handleOrganizerChange = (
+    _event: any,
+    newValue: EventOrganizer | null
+  ) => {
+    setSelectedOrganizer(newValue);
+    setFormData((prev) => ({
+      ...prev,
+      tenantId: newValue?.id || "",
+    }));
+
+    // Clear error for this field
+    if (errors.tenantId) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.tenantId;
+        return newErrors;
+      });
+    }
+  };
+
+  // Handle add new organizer
+  const handleAddOrganizer = async (eventOrganizerName: string) => {
+    try {
+      // Create the new organizer
+      const createdOrganizer = await EventOrganizerService.createOrganization(eventOrganizerName);
+      
+      // Check if we got valid data
+      if (createdOrganizer && createdOrganizer.id) {
+        // Map the created organizer to the same format as existing ones
+        const newOrganizer: EventOrganizer = {
+          id: createdOrganizer.id,
+          tenantId: createdOrganizer.tenantId,
+          name: createdOrganizer.organizerName || createdOrganizer.name || eventOrganizerName,
+          organizerName: createdOrganizer.organizerName || createdOrganizer.name || eventOrganizerName
+        };
+        
+        // Add the new organizer to the existing list
+        setOrganizations((prev) => [...prev, newOrganizer]);
+        
+        // Use setTimeout to ensure state updates are processed
+        setTimeout(() => {
+          // Auto-select the newly created organizer
+          setSelectedOrganizer(newOrganizer);
+          
+          setFormData((prev) => ({
+            ...prev,
+            tenantId: newOrganizer.id,
+          }));
+        }, 100);
+        
+        // Show success message
+        alert(`Organizer "${eventOrganizerName}" created successfully!`);
+      } else {
+        console.error('Created organizer is invalid:', createdOrganizer);
+        alert(`Organizer created but response was invalid. Please refresh the page.`);
+      }
+    } catch (error) {
+      console.error('Error creating organizer:', error);
+      alert(`Failed to create organizer "${eventOrganizerName}". Please try again.`);
+    }
+  };
+
   // Validate form
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
     // Organization validation - allow empty, N/A, or valid ID
-    if (!formData.organizationId || formData.organizationId === "") {
-      newErrors.organizationId = "Organization is required";
+    if (!formData.tenantId || formData.tenantId === "") {
+      newErrors.tenantId = "Organization is required";
     }
 
     // Required field validations
@@ -374,16 +427,16 @@ export const CreateEvent: React.FC = () => {
       const { capacity, price, currency, ...apiData } = formData;
       
       // Get the event organizer ID from the dropdown selection
-      // The organizationId field actually stores the event organizer's ID (not organization ID)
+      // The tenantId field actually stores the event organizer's ID (not organization ID)
       let eventOrganizerIdForApi: number;
-      if (apiData.organizationId === "N/A") {
+      if (apiData.tenantId === "N/A") {
         eventOrganizerIdForApi = 1;
-      } else if (typeof apiData.organizationId === 'string') {
-        eventOrganizerIdForApi = parseInt(apiData.organizationId, 10);
-      } else if (typeof apiData.organizationId === 'number') {
-        eventOrganizerIdForApi = apiData.organizationId;
+      } else if (typeof apiData.tenantId === 'string') {
+        eventOrganizerIdForApi = parseInt(apiData.tenantId, 10);
+      } else if (typeof apiData.tenantId === 'number') {
+        eventOrganizerIdForApi = apiData.tenantId;
       } else {
-        // Default fallback if organizationId is null/undefined
+        // Default fallback if tenantId is null/undefined
         eventOrganizerIdForApi = 1;
       }
       
@@ -601,54 +654,70 @@ export const CreateEvent: React.FC = () => {
                   required
                 />
 
-                {/* Organization Dropdown */}
-                <FormControl
+                {/* Organization Dropdown with Search */}
+                <Autocomplete
                   fullWidth
-                  error={!!errors.organizationId}
-                  required
+                  options={organizations}
+                  value={selectedOrganizer}
+                  onChange={handleOrganizerChange}
+                  inputValue={organizerSearchInput}
+                  onInputChange={(_event, newInputValue) => setOrganizerSearchInput(newInputValue)}
+                  getOptionLabel={(option) => 
+                    option.name || option.organizerName || `Organization ${option.id}`
+                  }
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  loading={isLoadingOrgs}
                   disabled={isLoadingOrgs}
-                >
-                  <InputLabel>Event Organizers</InputLabel>
-                  <Select
-                    name="organizationId"
-                    value={formData.organizationId || ""}
-                    onChange={handleSelectChange}
-                    label="Event Organizers"
-                  >
-                    <MenuItem value="">
-                      <em>Select an organization</em>
-                    </MenuItem>
-                    <MenuItem value="N/A">N/A</MenuItem>
-                    {(() => {
-                      console.log('🎨 Rendering dropdown - organizations count:', organizations.length);
-                      console.log('🎨 Organizations in render:', organizations);
-                      return organizations.map((org) => {
-                        console.log('🎯 Rendering org:', org);
-                        return (
-                          <MenuItem key={org.id} value={org.id}>
-                            {org.name || org.organizerName || `Organization ${org.id}`}
-                          </MenuItem>
-                        );
-                      });
-                    })()}
-                  </Select>
-                  {errors.organizationId && (
-                    <FormHelperText>{errors.organizationId}</FormHelperText>
+                  ListboxProps={{
+                    style: { maxHeight: '400px' }
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Event Organizers"
+                      placeholder="Search organizers..."
+                      required
+                      error={!!errors.tenantId}
+                      helperText={
+                        errors.tenantId 
+                          ? errors.tenantId
+                          : isLoadingOrgs
+                          ? "Loading organizations..."
+                          : !isLoadingOrgs && organizations.length === 0
+                          ? "No organizations available. Please add organizations first."
+                          : !isLoadingOrgs && organizations.length > 0
+                          ? `${organizations.length} organization(s) available`
+                          : undefined
+                      }
+                    />
                   )}
-                  {isLoadingOrgs && (
-                    <FormHelperText>Loading organizations...</FormHelperText>
+                  renderOption={(props, option) => (
+                    <li {...props} key={option.id}>
+                      {option.name || option.organizerName || `Organization ${option.id}`}
+                    </li>
                   )}
-                  {!isLoadingOrgs && organizations.length === 0 && (
-                    <FormHelperText sx={{ color: 'warning.main' }}>
-                      No organizations available. Please add organizations first.
-                    </FormHelperText>
-                  )}
-                  {!isLoadingOrgs && organizations.length > 0 && (
-                    <FormHelperText>
-                      {organizations.length} organization(s) available
-                    </FormHelperText>
-                  )}
-                </FormControl>
+                  noOptionsText={
+                    organizerSearchInput.trim() ? (
+                      <Box sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          No organizers found
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          startIcon={<AddIcon />}
+                          onClick={() => handleAddOrganizer(organizerSearchInput)}
+                          fullWidth
+                          size="small"
+                        >
+                          Add "{organizerSearchInput}" as new organizer
+                        </Button>
+                      </Box>
+                    ) : (
+                      "Start typing to search..."
+                    )
+                  }
+                />
 
                 {/* Event Type */}
                 <FormControl fullWidth error={!!errors.eventType} required>

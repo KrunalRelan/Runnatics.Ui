@@ -79,7 +79,7 @@ export const EditEvent: React.FC = () => {
     });
 
   const [formData, setFormData] = useState<CreateEventRequest>({
-    organizationId: "",
+    tenantId: "",
     name: "",
     description: "",
     eventType: EventType.Marathon,
@@ -138,14 +138,14 @@ export const EditEvent: React.FC = () => {
           console.log('📦 Raw organizations response:', orgsResponse);
           console.log('📦 Raw event data:', eventData);
           
-          // Map organizations - use organizationId as the primary identifier
+          // Map organizations - use tenantId as the primary identifier
           const mappedOrgs = orgsResponse.map((org) => {
             console.log('🔍 Mapping organization:', org);
-            // Use organizationId as the ID for the dropdown value
-            const orgId = org.organizationId || org.id || 0;
+            // Use tenantId as the ID for the dropdown value
+            const orgId = org.tenantId || org.id || 0;
             return {
               id: org.id,
-              organizationId: orgId,
+              tenantId: orgId,
               name: org.organizerName || org.name || "",
               organizerName: org.organizerName || org.name,
             };
@@ -156,7 +156,7 @@ export const EditEvent: React.FC = () => {
           
           // Check if event's organization is in the list
           const eventData_any = eventData as any;
-          const eventOrgId = eventData_any.organizationId || eventData_any.organizerId || eventData_any.eventOrganizerId;
+          const eventOrgId = eventData_any.tenantId || eventData_any.organizerId || eventData_any.eventOrganizerId;
           // Check against org.id since that's what we use in the MenuItem value
           const orgExists = mappedOrgs.some(org => org.id === eventOrgId);
           
@@ -169,7 +169,7 @@ export const EditEvent: React.FC = () => {
             console.warn('⚠️ Adding missing organization to dropdown');
             mappedOrgs.push({
               id: eventOrgId,
-              organizationId: eventOrgId,
+              tenantId: eventOrgId,
               name: `Organization ${eventOrgId} (Current)`,
               organizerName: `Organization ${eventOrgId}`,
             });
@@ -246,7 +246,7 @@ export const EditEvent: React.FC = () => {
     
     // Check if this organization exists in the available organizations
     const orgsToCheck = availableOrgs || organizations;
-    const orgExists = orgsToCheck.some(org => org.id === eventOrgId || org.organizationId === eventOrgId);
+    const orgExists = orgsToCheck.some(org => org.id === eventOrgId || org.tenantId === eventOrgId);
     console.log('✅ Organization exists in list:', orgExists);
     
     if (!orgExists && eventOrgId) {
@@ -258,7 +258,7 @@ export const EditEvent: React.FC = () => {
     // Map event data to form fields (handle both camelCase API and PascalCase)
     const mappedFormData = {
       // Convert to string for Select component, or empty string if null/undefined
-      organizationId: eventOrgId ? eventOrgId.toString() : "",
+      tenantId: eventOrgId ? eventOrgId.toString() : "",
       name: event.name || "",
       description: event.description || "",
       eventType: (event.eventType as EventType) || EventType.Marathon,
@@ -324,7 +324,7 @@ export const EditEvent: React.FC = () => {
     
     setFormData(mappedFormData);
     console.log('✅ Form data set:', mappedFormData);
-    console.log('🆔 Organization ID in form:', mappedFormData.organizationId);
+    console.log('🆔 Organization ID in form:', mappedFormData.tenantId);
 
     // Set separate state for eventSettings and leaderBoardSettings
     if (event.eventSettings) {
@@ -446,10 +446,10 @@ export const EditEvent: React.FC = () => {
     const newErrors: FormErrors = {};
 
     // Organization validation - allow empty during load, but not N/A
-    if (!formData.organizationId || formData.organizationId === "") {
-      newErrors.organizationId = "Please select an event organizer";
-    } else if (formData.organizationId === "N/A") {
-      newErrors.organizationId = "Please select a valid event organizer. N/A is not allowed.";
+    if (!formData.tenantId || formData.tenantId === "") {
+      newErrors.tenantId = "Please select an event organizer";
+    } else if (formData.tenantId === "N/A") {
+      newErrors.tenantId = "Please select a valid event organizer. N/A is not allowed.";
     }
 
     // Required field validations
@@ -498,12 +498,12 @@ export const EditEvent: React.FC = () => {
       const { capacity, price, currency, ...apiData } = formData;
 
       let eventOrganizerIdForApi: number;
-      if (apiData.organizationId === "N/A") {
+      if (apiData.tenantId === "N/A") {
         eventOrganizerIdForApi = 1;
-      } else if (typeof apiData.organizationId === "string") {
-        eventOrganizerIdForApi = parseInt(apiData.organizationId, 10);
-      } else if (typeof apiData.organizationId === "number") {
-        eventOrganizerIdForApi = apiData.organizationId;
+      } else if (typeof apiData.tenantId === "string") {
+        eventOrganizerIdForApi = parseInt(apiData.tenantId, 10);
+      } else if (typeof apiData.tenantId === "number") {
+        eventOrganizerIdForApi = apiData.tenantId;
       } else {
         eventOrganizerIdForApi = 1;
       }
@@ -722,14 +722,14 @@ export const EditEvent: React.FC = () => {
 
                 <FormControl
                   fullWidth
-                  error={!!errors.organizationId}
+                  error={!!errors.tenantId}
                   required
                   disabled={isLoadingOrgs}
                 >
                   <InputLabel>Event Organizers</InputLabel>
                   <Select
-                    name="organizationId"
-                    value={formData.organizationId || ""}
+                    name="tenantId"
+                    value={formData.tenantId || ""}
                     onChange={handleSelectChange}
                     label="Event Organizers"
                   >
@@ -742,13 +742,13 @@ export const EditEvent: React.FC = () => {
                       </MenuItem>
                     ))}
                   </Select>
-                  {errors.organizationId && (
-                    <FormHelperText>{errors.organizationId}</FormHelperText>
+                  {errors.tenantId && (
+                    <FormHelperText>{errors.tenantId}</FormHelperText>
                   )}
                   {isLoadingOrgs && (
                     <FormHelperText>Loading organizations...</FormHelperText>
                   )}
-                  {!formData.organizationId && !errors.organizationId && !isLoadingOrgs && (
+                  {!formData.tenantId && !errors.tenantId && !isLoadingOrgs && (
                     <FormHelperText sx={{ color: 'warning.main' }}>
                       Please select an event organizer for this event.
                     </FormHelperText>

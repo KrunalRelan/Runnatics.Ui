@@ -20,7 +20,7 @@ export interface LoginResponse {
             createdAt: string;
             lastLoginAt: string;
             isActive: boolean;
-            organizationId: number;
+            tenantId: number;
             organizationName: string;
         };
         organization: {
@@ -47,7 +47,7 @@ export interface User {
     createdAt: string;
     lastLoginAt: string;
     isActive: boolean;
-    organizationId: number;
+    tenantId: number;
     organizationName: string;
 }
 
