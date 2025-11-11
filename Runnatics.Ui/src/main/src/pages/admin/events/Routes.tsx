@@ -10,7 +10,7 @@ export const eventsRoutes: RouteObject[] = [
     path: "/events",
     children: [
       {
-        path: "events-dashboard",
+        path: "dashboard",
         element: (
           <ProtectedRoute>
             <EventsList />
@@ -18,7 +18,7 @@ export const eventsRoutes: RouteObject[] = [
         ),
       },
       {
-        path: "events-create",
+        path: "create",
         element: (
           <ProtectedRoute>
             <CreateEvent />
@@ -26,7 +26,7 @@ export const eventsRoutes: RouteObject[] = [
         ),
       },
       {
-        path: "events-edit/:id",
+        path: "edit/:id",
         element: (
           <ProtectedRoute>
             <EditEvent />
@@ -34,7 +34,7 @@ export const eventsRoutes: RouteObject[] = [
         ),
       },
       {
-        path: "events-detail/:eventId",
+        path: "detail/:eventId",
         element: (
           <ProtectedRoute>
             <ViewEvent />

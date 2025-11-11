@@ -625,7 +625,7 @@ export const EditEvent: React.FC = () => {
       }
 
       // Navigate back to events list
-      navigate("/events/events-dashboard");
+      navigate("/events/dashboard");
     } catch (error: any) {
       let errorMessage = "Failed to update event. Please try again.";
 
@@ -1356,7 +1356,7 @@ export const EditEvent: React.FC = () => {
             </Button>
             <Button
               variant="outlined"
-              onClick={() => navigate("/events/events-dashboard")}
+              onClick={() => navigate("/events/dashboard")}
               disabled={isSubmitting}
               size="large"
             >

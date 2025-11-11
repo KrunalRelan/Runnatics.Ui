@@ -483,7 +483,7 @@ export const CreateEvent: React.FC = () => {
       }
 
       // Navigate to events list or event detail page
-      navigate("/events/events-dashboard");
+      navigate("/events/dashboard");
     } catch (error: any) {
       // Extract error message
       let errorMessage = 'Failed to create event. Please try again.';

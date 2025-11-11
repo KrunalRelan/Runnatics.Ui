@@ -214,12 +214,12 @@ const EventsList: React.FC = () => {
   }, [searchQuery, startDate, endDate, validateDateRange]);
 
   const handleCreateEvent = () => {
-    navigate("/events/events-create");
+    navigate("/events/create");
   };
 
   const handleEditEvent = (eventId: number | undefined) => {
     if (eventId) {
-      navigate(`/events/events-edit/${eventId}`);
+      navigate(`/events/edit/${eventId}`);
     }
   };
 

@@ -167,12 +167,12 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
         {
           text: "Events Dashboard",
           icon: <DashboardIcon />,
-          path: "/events/events-dashboard",
+          path: "/events/dashboard",
         },
         {
           text: "Create Event",
           icon: <AddIcon />,
-          path: "/events/events-create",
+          path: "/events/create",
         },
         // {
         //   text: "View Event",
