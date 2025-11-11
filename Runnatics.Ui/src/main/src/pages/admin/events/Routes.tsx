@@ -3,6 +3,7 @@ import EventsList from "./EventsList";
 import { CreateEvent } from "./CreateEvent";
 import { EditEvent } from "./EditEvent";
 import ViewEvent from "./ViewEvent";
+import { ProtectedRoute } from "../../../components/auth/ProtectedRoute";
 
 export const eventsRoutes: RouteObject[] = [
   {
@@ -10,19 +11,35 @@ export const eventsRoutes: RouteObject[] = [
     children: [
       {
         path: "events-dashboard",
-        element: <EventsList />,
+        element: (
+          <ProtectedRoute>
+            <EventsList />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "events-create",
-        element: <CreateEvent />,
+        element: (
+          <ProtectedRoute>
+            <CreateEvent />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "events-edit/:id",
-        element: <EditEvent />,
+        element: (
+          <ProtectedRoute>
+            <EditEvent />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "events-detail/:eventId",
-        element: <ViewEvent />,
+        element: (
+          <ProtectedRoute>
+            <ViewEvent />
+          </ProtectedRoute>
+        ),
       },
     ],
   },

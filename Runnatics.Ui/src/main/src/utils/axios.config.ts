@@ -74,6 +74,25 @@ apiClient.interceptors.response.use(
             switch (error.response.status) {
                 case 401:
                     error.userMessage = 'Authentication failed. Please check your credentials or login again.';
+                    
+                    // Session expired - redirect to login with return URL
+                    // Only redirect if not already on login page
+                    if (window.location.pathname !== '/login') {
+                        const currentPath = window.location.pathname + window.location.search;
+                        
+                        // Clear tokens
+                        tokenManager.clearTokens();
+                        
+                        // Clear any user data from localStorage
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('userRole');
+                        
+                        // Save the return URL (where user was trying to go)
+                        localStorage.setItem('returnUrl', currentPath);
+                        
+                        // Redirect to login page
+                        window.location.href = '/login';
+                    }
                     break;
                 case 403:
                     error.userMessage = 'You do not have permission to perform this action.';
