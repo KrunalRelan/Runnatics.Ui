@@ -1,4 +1,4 @@
-// src/main/src/pages/Dashboard.tsx
+// src/main/src/components/Dashboard.tsx
 import { Box, Typography, Paper, Card, CardContent, Button, Divider, Avatar, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import {

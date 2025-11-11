@@ -73,7 +73,7 @@ export interface MetricProps {
     trendColor?: string;
 }
 
-// DashboardLayout Component
+// LeftNavigation Component
 export interface MenuItem {
     text: string;
     icon: ReactNode;
@@ -87,6 +87,6 @@ export interface SubMenuItem {
     path: string;
 }
 
-export interface DashboardLayoutProps {
+export interface LeftNavigationProps {
     children: ReactNode;
 }
