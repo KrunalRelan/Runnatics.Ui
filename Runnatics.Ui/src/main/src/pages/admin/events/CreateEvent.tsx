@@ -79,7 +79,7 @@ export const CreateEvent: React.FC = () => {
     });
 
   const [formData, setFormData] = useState<CreateEventRequest>({
-    organizationId: "",
+    tenantId: "",
     eventOrganizerId: 0,
     name: "",
     description: "",
@@ -134,7 +134,7 @@ export const CreateEvent: React.FC = () => {
       // Map API response to dropdown format
       const mappedOrgs = response.map(org => ({ 
         id: org.id,
-        organizationId: org.organizationId,
+        tenantId: org.tenantId,
         name: org.organizerName || org.name || '',
         organizerName: org.organizerName
       }));
@@ -146,7 +146,7 @@ export const CreateEvent: React.FC = () => {
       console.error("Error fetching organizations:", error);
       setErrors((prev) => ({
         ...prev,
-        organizationId: "Failed to load organizations",
+        tenantId: "Failed to load organizations",
       }));
       return [];
     } finally {
@@ -212,7 +212,7 @@ export const CreateEvent: React.FC = () => {
   const handleSelectChange = (e: SelectChangeEvent<string | number>) => {
     const { name, value } = e.target;
 
-    // Special handling for organizationId
+    // Special handling for tenantId
     // Keep "N/A" as-is for display, will convert to 1 when sending to API
     let processedValue = value === "" ? null : value;
 
@@ -251,14 +251,14 @@ export const CreateEvent: React.FC = () => {
     setSelectedOrganizer(newValue);
     setFormData((prev) => ({
       ...prev,
-      organizationId: newValue?.id || "",
+      tenantId: newValue?.id || "",
     }));
 
     // Clear error for this field
-    if (errors.organizationId) {
+    if (errors.tenantId) {
       setErrors((prev) => {
         const newErrors = { ...prev };
-        delete newErrors.organizationId;
+        delete newErrors.tenantId;
         return newErrors;
       });
     }
@@ -275,7 +275,7 @@ export const CreateEvent: React.FC = () => {
         // Map the created organizer to the same format as existing ones
         const newOrganizer: EventOrganizer = {
           id: createdOrganizer.id,
-          organizationId: createdOrganizer.organizationId,
+          tenantId: createdOrganizer.tenantId,
           name: createdOrganizer.organizerName || createdOrganizer.name || eventOrganizerName,
           organizerName: createdOrganizer.organizerName || createdOrganizer.name || eventOrganizerName
         };
@@ -290,7 +290,7 @@ export const CreateEvent: React.FC = () => {
           
           setFormData((prev) => ({
             ...prev,
-            organizationId: newOrganizer.id,
+            tenantId: newOrganizer.id,
           }));
         }, 100);
         
@@ -311,8 +311,8 @@ export const CreateEvent: React.FC = () => {
     const newErrors: FormErrors = {};
 
     // Organization validation - allow empty, N/A, or valid ID
-    if (!formData.organizationId || formData.organizationId === "") {
-      newErrors.organizationId = "Organization is required";
+    if (!formData.tenantId || formData.tenantId === "") {
+      newErrors.tenantId = "Organization is required";
     }
 
     // Required field validations
@@ -427,16 +427,16 @@ export const CreateEvent: React.FC = () => {
       const { capacity, price, currency, ...apiData } = formData;
       
       // Get the event organizer ID from the dropdown selection
-      // The organizationId field actually stores the event organizer's ID (not organization ID)
+      // The tenantId field actually stores the event organizer's ID (not organization ID)
       let eventOrganizerIdForApi: number;
-      if (apiData.organizationId === "N/A") {
+      if (apiData.tenantId === "N/A") {
         eventOrganizerIdForApi = 1;
-      } else if (typeof apiData.organizationId === 'string') {
-        eventOrganizerIdForApi = parseInt(apiData.organizationId, 10);
-      } else if (typeof apiData.organizationId === 'number') {
-        eventOrganizerIdForApi = apiData.organizationId;
+      } else if (typeof apiData.tenantId === 'string') {
+        eventOrganizerIdForApi = parseInt(apiData.tenantId, 10);
+      } else if (typeof apiData.tenantId === 'number') {
+        eventOrganizerIdForApi = apiData.tenantId;
       } else {
-        // Default fallback if organizationId is null/undefined
+        // Default fallback if tenantId is null/undefined
         eventOrganizerIdForApi = 1;
       }
       
@@ -677,10 +677,10 @@ export const CreateEvent: React.FC = () => {
                       label="Event Organizers"
                       placeholder="Search organizers..."
                       required
-                      error={!!errors.organizationId}
+                      error={!!errors.tenantId}
                       helperText={
-                        errors.organizationId 
-                          ? errors.organizationId
+                        errors.tenantId 
+                          ? errors.tenantId
                           : isLoadingOrgs
                           ? "Loading organizations..."
                           : !isLoadingOrgs && organizations.length === 0

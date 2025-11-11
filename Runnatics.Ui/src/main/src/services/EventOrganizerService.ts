@@ -16,8 +16,8 @@ export class EventOrganizerService {
     const response = await apiClient.post<ResponseBase<EventOrganizer>>(ServiceUrl.createEventOrganizer(), { eventOrganizerName });
     
     // Handle both response structures: 
-    // 1. Wrapped in message: { message: { id, organizationId, organizerName } }
-    // 2. Direct: { id, organizationId, organizerName }
+    // 1. Wrapped in message: { message: { id, tenantId, organizerName } }
+    // 2. Direct: { id, tenantId, organizerName }
     const organizer = response.data.message || response.data;
     
     return organizer as EventOrganizer;
