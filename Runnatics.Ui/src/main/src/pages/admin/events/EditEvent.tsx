@@ -29,6 +29,7 @@ import {
   timeZoneOptions,
   EventSettings,
   LeaderBoardSettings,
+  EventStatus,
 } from "@/main/src/models";
 import { CreateEventRequest } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
@@ -143,7 +144,7 @@ export const EditEvent: React.FC = () => {
             // Use organizationId as the ID for the dropdown value
             const orgId = org.organizationId || org.id || 0;
             return {
-              id: orgId,
+              id: org.id,
               organizationId: orgId,
               name: org.organizerName || org.name || "",
               organizerName: org.organizerName || org.name,
@@ -239,17 +240,17 @@ export const EditEvent: React.FC = () => {
       }
     }
     
-    // Get organization ID - check multiple possible fields
-    const orgId = event.organizationId || event.organizerId || event.eventOrganizerId;
-    console.log('🏢 Organization ID from event:', orgId);
+    // Get organization ID from eventOrganizerId
+    const eventOrgId = event.eventOrganizerId;
+    console.log('🏢 Event Organizer ID from event:', eventOrgId);
     
     // Check if this organization exists in the available organizations
     const orgsToCheck = availableOrgs || organizations;
-    const orgExists = orgsToCheck.some(org => org.id === orgId || org.organizationId === orgId);
+    const orgExists = orgsToCheck.some(org => org.id === eventOrgId || org.organizationId === eventOrgId);
     console.log('✅ Organization exists in list:', orgExists);
     
-    if (!orgExists && orgId) {
-      console.warn('⚠️ Organization ID', orgId, 'not found in available organizations:', orgsToCheck);
+    if (!orgExists && eventOrgId) {
+      console.warn('⚠️ Organization ID', eventOrgId, 'not found in available organizations:', orgsToCheck);
       console.warn('⚠️ This might cause the dropdown to not show the selected organization');
       // Add a warning but continue - we'll set the value anyway
     }
@@ -257,7 +258,7 @@ export const EditEvent: React.FC = () => {
     // Map event data to form fields (handle both camelCase API and PascalCase)
     const mappedFormData = {
       // Convert to string for Select component, or empty string if null/undefined
-      organizationId: orgId ? orgId.toString() : "",
+      organizationId: eventOrgId ? eventOrgId.toString() : "",
       name: event.name || "",
       description: event.description || "",
       eventType: (event.eventType as EventType) || EventType.Marathon,
@@ -519,7 +520,7 @@ export const EditEvent: React.FC = () => {
           `${apiData.city}, ${apiData.state}, ${apiData.country}` || null,
         venueLatitude: null,
         venueLongitude: null,
-        status: "Draft",
+        status: EventStatus.Draft,
         maxParticipants: 1000,
         registrationDeadline:
           apiData.registrationCloseDate || apiData.startDate || null,

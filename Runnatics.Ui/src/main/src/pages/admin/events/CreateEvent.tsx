@@ -28,6 +28,7 @@ import {
   timeZoneOptions,
   EventSettings,
   LeaderBoardSettings,
+  EventStatus,
 } from "@/main/src/models";
 import { CreateEventRequest } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
@@ -44,9 +45,6 @@ export const CreateEvent: React.FC = () => {
   const [apiError, setApiError] = useState<string>('');
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
-  
-  // Ref to prevent double API calls in React.StrictMode
-  const hasFetchedOrgs = useRef(false);
 
   // Event Settings state
   const [eventSettings, setEventSettings] = useState<EventSettings>({
@@ -78,6 +76,7 @@ export const CreateEvent: React.FC = () => {
 
   const [formData, setFormData] = useState<CreateEventRequest>({
     organizationId: "",
+    eventOrganizerId: 0,
     name: "",
     description: "",
     eventType: EventType.Marathon,
@@ -124,16 +123,17 @@ export const CreateEvent: React.FC = () => {
 
   // Fetch organizations on component mount
   useEffect(() => {
-    // Skip if already fetched (prevents double call in React.StrictMode)
-    if (hasFetchedOrgs.current) return;
-    hasFetchedOrgs.current = true;
-
     let isMounted = true;
 
     const fetchOrganizations = async () => {
+      console.log('🚀 Starting to fetch organizations...');
+
       try {
         setIsLoadingOrgs(true);
         const response = await EventOrganizerService.getOrganizations();
+        
+        console.log('📦 Raw organizations response:', response);
+        console.log('📊 Number of organizations fetched:', response?.length || 0);
         
         // Only update state if component is still mounted
         if (isMounted) {
@@ -144,10 +144,18 @@ export const CreateEvent: React.FC = () => {
             name: org.organizerName || org.name || '',
             organizerName: org.organizerName
           }));
+          
+          console.log('🗂️ Mapped organizations:', mappedOrgs);
+          console.log('✅ Setting organizations in state:', mappedOrgs.length);
+          
           setOrganizations(mappedOrgs);
+          
+          console.log('💾 Organizations state updated');
+        } else {
+          console.log('⚠️ Component unmounted, skipping state update');
         }
       } catch (error) {
-        console.error("Error fetching organizations:", error);
+        console.error("❌ Error fetching organizations:", error);
         
         // Only update state if component is still mounted
         if (isMounted) {
@@ -160,6 +168,7 @@ export const CreateEvent: React.FC = () => {
         // Only update state if component is still mounted
         if (isMounted) {
           setIsLoadingOrgs(false);
+          console.log('✅ Loading complete');
         }
       }
     };
@@ -168,6 +177,7 @@ export const CreateEvent: React.FC = () => {
 
     // Cleanup function to prevent state updates on unmounted component
     return () => {
+      console.log('🧹 Cleanup - component unmounting');
       isMounted = false;
     };
   }, []);
@@ -392,7 +402,7 @@ export const CreateEvent: React.FC = () => {
         venueAddress: `${apiData.city}, ${apiData.state}, ${apiData.country}` || null,
         venueLatitude: null, // Optional
         venueLongitude: null, // Optional
-        status: "Draft", // Default value
+        status: EventStatus.Draft, // Default value
         maxParticipants: 1000, // Optional - default value
         registrationDeadline: apiData.registrationCloseDate || apiData.startDate || null,
         
@@ -609,17 +619,34 @@ export const CreateEvent: React.FC = () => {
                       <em>Select an organization</em>
                     </MenuItem>
                     <MenuItem value="N/A">N/A</MenuItem>
-                    {organizations.map((org) => (
-                      <MenuItem key={org.id} value={org.id}>
-                        {org.name || org.organizerName || `Organization ${org.id}`}
-                      </MenuItem>
-                    ))}
+                    {(() => {
+                      console.log('🎨 Rendering dropdown - organizations count:', organizations.length);
+                      console.log('🎨 Organizations in render:', organizations);
+                      return organizations.map((org) => {
+                        console.log('🎯 Rendering org:', org);
+                        return (
+                          <MenuItem key={org.id} value={org.id}>
+                            {org.name || org.organizerName || `Organization ${org.id}`}
+                          </MenuItem>
+                        );
+                      });
+                    })()}
                   </Select>
                   {errors.organizationId && (
                     <FormHelperText>{errors.organizationId}</FormHelperText>
                   )}
                   {isLoadingOrgs && (
                     <FormHelperText>Loading organizations...</FormHelperText>
+                  )}
+                  {!isLoadingOrgs && organizations.length === 0 && (
+                    <FormHelperText sx={{ color: 'warning.main' }}>
+                      No organizations available. Please add organizations first.
+                    </FormHelperText>
+                  )}
+                  {!isLoadingOrgs && organizations.length > 0 && (
+                    <FormHelperText>
+                      {organizations.length} organization(s) available
+                    </FormHelperText>
                   )}
                 </FormControl>
 
