@@ -1,6 +1,6 @@
 // src/main/src/pages/auth/LoginPage.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Box, Button, TextField, Typography, Paper, Alert, CircularProgress } from '@mui/material';
@@ -15,6 +15,15 @@ const LoginPage: React.FC = () => {
     });
     
     const [error, setError] = useState<string>('');
+    const [sessionExpired, setSessionExpired] = useState<boolean>(false);
+
+    // Check if user was redirected due to session expiry
+    useEffect(() => {
+        const returnUrl = localStorage.getItem('returnUrl');
+        if (returnUrl) {
+            setSessionExpired(true);
+        }
+    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -34,8 +43,18 @@ const LoginPage: React.FC = () => {
             // Call login which will automatically store the JWT token
             await login(formData);
 
-            // Navigate to dashboard after successful login
-            navigate('/dashboard');
+            // Check if there's a return URL saved (from session expiry)
+            const returnUrl = localStorage.getItem('returnUrl');
+            
+            if (returnUrl) {
+                // Clear the return URL
+                localStorage.removeItem('returnUrl');
+                // Navigate back to where the user was
+                navigate(returnUrl);
+            } else {
+                // Navigate to dashboard after successful login
+                navigate('/dashboard');
+            }
         } catch (err: any) {
             setError(
                 err.response?.data?.message || 
@@ -71,6 +90,12 @@ const LoginPage: React.FC = () => {
                 <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
                     Welcome back! Please login to your account.
                 </Typography>
+
+                {sessionExpired && (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                        Your session has expired. Please login again to continue.
+                    </Alert>
+                )}
 
                 {error && (
                     <Alert severity="error" sx={{ mb: 2 }}>

@@ -28,11 +28,9 @@ import {
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
-  ShoppingCart as ShoppingCartIcon,
   People as PeopleIcon,
   BarChart as BarChartIcon,
   Settings as SettingsIcon,
-  Inbox as InboxIcon,
   Label as LabelIcon,
   Event as EventIcon,
   Upload as UploadIcon,
@@ -169,12 +167,12 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
         {
           text: "Events Dashboard",
           icon: <DashboardIcon />,
-          path: "/events/events-dashboard",
+          path: "/events/dashboard",
         },
         {
           text: "Create Event",
           icon: <AddIcon />,
-          path: "/events/events-create",
+          path: "/events/create",
         },
         // {
         //   text: "View Event",

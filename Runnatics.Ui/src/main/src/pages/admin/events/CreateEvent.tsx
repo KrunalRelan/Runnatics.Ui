@@ -1,6 +1,6 @@
 // src/main/src/pages/CreateEvent.tsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   TextField,
@@ -28,6 +28,7 @@ import {
   timeZoneOptions,
   EventSettings,
   LeaderBoardSettings,
+  EventStatus,
 } from "@/main/src/models";
 import { CreateEventRequest } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
@@ -60,13 +61,7 @@ export const CreateEvent: React.FC = () => {
     createdAt: undefined,
   });
 
-  // Leaderboard settings state
-  // Logic:
-  // - ShowOverallResults and ShowCategoryResults can be toggled independently
-  // - When enabled, at least one time type (Chip or Gun) must be selected
-  // - Chip Time and Gun Time are mutually exclusive (only one can be active at a time)
-  // - Time type switches are disabled when parent result toggle is off
-  // - NumberOfResultsToShow applies to both Overall and Category results
+
   const [leaderBoardSettings, setLeaderBoardSettings] =
     useState<LeaderBoardSettings>({
       ShowOverallResults: true,
@@ -75,11 +70,13 @@ export const CreateEvent: React.FC = () => {
       SortByOverallChipTime: true,
       SortByOverallGunTime: false,
       SortByCategoryGunTime: false,
-      NumberOfResultsToShow: 5,
+      NumberOfResultsToShowOverall: 10,
+      NumberOfResultsToShowCategory: 5,
     });
 
   const [formData, setFormData] = useState<CreateEventRequest>({
     organizationId: "",
+    eventOrganizerId: 0,
     name: "",
     description: "",
     eventType: EventType.Marathon,
@@ -104,7 +101,8 @@ export const CreateEvent: React.FC = () => {
       SortByCategoryChipTime: true,
       SortByOverallGunTime: true,
       SortByCategoryGunTime: true,
-      NumberOfResultsToShow: 5,
+      NumberOfResultsToShowOverall: 10,
+      NumberOfResultsToShowCategory: 5,
     },
     eventSettings: {
       removeBanner: false,
@@ -128,16 +126,36 @@ export const CreateEvent: React.FC = () => {
     let isMounted = true;
 
     const fetchOrganizations = async () => {
+      console.log('🚀 Starting to fetch organizations...');
+
       try {
         setIsLoadingOrgs(true);
         const response = await EventOrganizerService.getOrganizations();
         
+        console.log('📦 Raw organizations response:', response);
+        console.log('📊 Number of organizations fetched:', response?.length || 0);
+        
         // Only update state if component is still mounted
         if (isMounted) {
-          setOrganizations(response);
+          // Map API response to dropdown format
+          const mappedOrgs = response.map(org => ({ 
+            id: org.id,
+            organizationId: org.organizationId,
+            name: org.organizerName || org.name || '',
+            organizerName: org.organizerName
+          }));
+          
+          console.log('🗂️ Mapped organizations:', mappedOrgs);
+          console.log('✅ Setting organizations in state:', mappedOrgs.length);
+          
+          setOrganizations(mappedOrgs);
+          
+          console.log('💾 Organizations state updated');
+        } else {
+          console.log('⚠️ Component unmounted, skipping state update');
         }
       } catch (error) {
-        console.error("Error fetching organizations:", error);
+        console.error("❌ Error fetching organizations:", error);
         
         // Only update state if component is still mounted
         if (isMounted) {
@@ -150,6 +168,7 @@ export const CreateEvent: React.FC = () => {
         // Only update state if component is still mounted
         if (isMounted) {
           setIsLoadingOrgs(false);
+          console.log('✅ Loading complete');
         }
       }
     };
@@ -158,6 +177,7 @@ export const CreateEvent: React.FC = () => {
 
     // Cleanup function to prevent state updates on unmounted component
     return () => {
+      console.log('🧹 Cleanup - component unmounting');
       isMounted = false;
     };
   }, []);
@@ -353,38 +373,94 @@ export const CreateEvent: React.FC = () => {
       // Exclude capacity, price, and currency (UI only fields)
       const { capacity, price, currency, ...apiData } = formData;
       
-      // Convert "N/A" organizationId to 1 for API
-      const organizationIdForApi = apiData.organizationId === "N/A" ? 1 : apiData.organizationId;
+      // Get the event organizer ID from the dropdown selection
+      // The organizationId field actually stores the event organizer's ID (not organization ID)
+      let eventOrganizerIdForApi: number;
+      if (apiData.organizationId === "N/A") {
+        eventOrganizerIdForApi = 1;
+      } else if (typeof apiData.organizationId === 'string') {
+        eventOrganizerIdForApi = parseInt(apiData.organizationId, 10);
+      } else if (typeof apiData.organizationId === 'number') {
+        eventOrganizerIdForApi = apiData.organizationId;
+      } else {
+        // Default fallback if organizationId is null/undefined
+        eventOrganizerIdForApi = 1;
+      }
       
-      // Create the API request payload
+      console.log('Event Organizer ID being sent to API:', eventOrganizerIdForApi);
+      
+      // Create the API request payload to match C# EventRequest model
       const requestPayload = {
-        ...apiData,
-        organizationId: organizationIdForApi,
-        // Map form fields to API fields if needed
-        eventDate: apiData.startDate,
-        venueName: apiData.location,
-        venueAddress: `${apiData.city}, ${apiData.state}, ${apiData.country}`,
-        // Add default values for fields not in the form
-        slug: apiData.name.toLowerCase().replace(/\s+/g, '-'),
-        status: "Draft",
-        maxParticipants: 1000, // Default value
-        registrationDeadline: apiData.registrationCloseDate || apiData.startDate,
-        // Transform settings to match API naming conventions
-        eventSettings: {
-          removeBanner: eventSettings.removeBanner,
-          published: eventSettings.published,
-          rankOnNet: eventSettings.rankOnNet,
-          showResultSummaryForRaces: eventSettings.showResultSummaryForRaces,
-          useOldData: eventSettings.useOldData,
-          confirmedEvent: eventSettings.confirmedEvent,
-          allowNameCheck: eventSettings.allowNameCheck,
-          allowParticipantEdit: eventSettings.allowParticipantEdit,
+        // Map to C# property names (PascalCase)
+        eventOrganizerId: eventOrganizerIdForApi, // Required in C#
+        name: apiData.name, // Required
+        slug: apiData.name.toLowerCase().replace(/\s+/g, '-'), // Required
+        description: apiData.description || null,
+        eventDate: apiData.startDate, // Required - DateTime
+        timeZone: apiData.timeZone || "Asia/Kolkata",
+        venueName: apiData.location || null,
+        venueAddress: `${apiData.city}, ${apiData.state}, ${apiData.country}` || null,
+        venueLatitude: null, // Optional
+        venueLongitude: null, // Optional
+        status: EventStatus.Draft, // Default value
+        maxParticipants: 1000, // Optional - default value
+        registrationDeadline: apiData.registrationCloseDate || apiData.startDate || null,
+        
+        // Event Settings - nested object (matches EventSettingsRequest C# model)
+        eventSettings: eventSettings ? {
+          removeBanner: eventSettings.removeBanner || false,
+          published: eventSettings.published || false,
+          rankOnNet: eventSettings.rankOnNet !== undefined ? eventSettings.rankOnNet : true,
+          showResultSummaryForRaces: eventSettings.showResultSummaryForRaces !== undefined ? eventSettings.showResultSummaryForRaces : true,
+          useOldData: eventSettings.useOldData || false,
+          confirmedEvent: eventSettings.confirmedEvent || false,
+          allowNameCheck: eventSettings.allowNameCheck !== undefined ? eventSettings.allowNameCheck : true,
+          allowParticipantEdit: eventSettings.allowParticipantEdit !== undefined ? eventSettings.allowParticipantEdit : true,
+        } : {
+          removeBanner: false,
+          published: false,
+          rankOnNet: true,
+          showResultSummaryForRaces: true,
+          useOldData: false,
+          confirmedEvent: false,
+          allowNameCheck: true,
+          allowParticipantEdit: true,
         },
-        leaderboardSettings: {
-          showOverallResults: leaderBoardSettings.ShowOverallResults,
-          showCategoryResults: leaderBoardSettings.ShowCategoryResults,
+        
+        // Leaderboard Settings - nested object (matches LeaderboardSettingsRequest C# model)
+        leaderboardSettings: leaderBoardSettings ? {
+          showOverallResults: leaderBoardSettings.ShowOverallResults || false,
+          showCategoryResults: leaderBoardSettings.ShowCategoryResults || false,
+          showGenderResults: true, // Default to true
+          showAgeGroupResults: true, // Default to true
+          sortByOverallChipTime: leaderBoardSettings.SortByOverallChipTime || false,
+          sortByOverallGunTime: leaderBoardSettings.SortByOverallGunTime || false,
+          sortByCategoryChipTime: leaderBoardSettings.SortByCategoryChipTime || false,
+          sortByCategoryGunTime: leaderBoardSettings.SortByCategoryGunTime || false,
+          numberOfResultsToShowOverall: leaderBoardSettings.NumberOfResultsToShowOverall || 10,
+          numberOfResultsToShowCategory: leaderBoardSettings.NumberOfResultsToShowCategory || 5,
+          enableLiveLeaderboard: true, // Default to true
+          showSplitTimes: true, // Default to true
+          showPace: true, // Default to true
+          showTeamResults: false, // Default to false (as per C# model)
+          showMedalIcon: true, // Default to true
+          allowAnonymousView: true, // Default to true
+          autoRefreshIntervalSec: 30, // Default 30 seconds
+          maxDisplayedRecords: Math.max(
+            leaderBoardSettings.NumberOfResultsToShowOverall || 10,
+            leaderBoardSettings.NumberOfResultsToShowCategory || 5
+          ),
+        } : {
+          showOverallResults: false,
+          showCategoryResults: false,
           showGenderResults: true,
           showAgeGroupResults: true,
+          sortByOverallChipTime: false,
+          sortByOverallGunTime: false,
+          sortByCategoryChipTime: false,
+          sortByCategoryGunTime: false,
+          numberOfResultsToShowOverall: 10,
+          numberOfResultsToShowCategory: 5,
           enableLiveLeaderboard: true,
           showSplitTimes: true,
           showPace: true,
@@ -392,9 +468,11 @@ export const CreateEvent: React.FC = () => {
           showMedalIcon: true,
           allowAnonymousView: true,
           autoRefreshIntervalSec: 30,
-          maxDisplayedRecords: leaderBoardSettings.NumberOfResultsToShow || 100,
+          maxDisplayedRecords: 100,
         },
       };
+      
+      console.log('Full API Request Payload:', requestPayload);
       
       // Create event
       const createdEvent = await EventService.createEvent(requestPayload as any);
@@ -405,7 +483,7 @@ export const CreateEvent: React.FC = () => {
       }
 
       // Navigate to events list or event detail page
-      navigate("/events/events-dashboard");
+      navigate("/events/dashboard");
     } catch (error: any) {
       // Extract error message
       let errorMessage = 'Failed to create event. Please try again.';
@@ -459,15 +537,6 @@ export const CreateEvent: React.FC = () => {
     label: String(type),
   }));
 
-  // Currency options
-  const currencyOptions = [
-    { value: "INR", label: "INR - Indian Rupee" },
-    { value: "USD", label: "USD - US Dollar" },
-    { value: "EUR", label: "EUR - Euro" },
-    { value: "GBP", label: "GBP - British Pound" },
-    { value: "CAD", label: "CAD - Canadian Dollar" },
-    { value: "AUD", label: "AUD - Australian Dollar" },
-  ];
 
   // Generate timezone options with UTC offset
   // Common timezone options with UTC offsets
@@ -550,17 +619,34 @@ export const CreateEvent: React.FC = () => {
                       <em>Select an organization</em>
                     </MenuItem>
                     <MenuItem value="N/A">N/A</MenuItem>
-                    {organizations.map((org) => (
-                      <MenuItem key={org.id} value={org.id}>
-                        {org.name}
-                      </MenuItem>
-                    ))}
+                    {(() => {
+                      console.log('🎨 Rendering dropdown - organizations count:', organizations.length);
+                      console.log('🎨 Organizations in render:', organizations);
+                      return organizations.map((org) => {
+                        console.log('🎯 Rendering org:', org);
+                        return (
+                          <MenuItem key={org.id} value={org.id}>
+                            {org.name || org.organizerName || `Organization ${org.id}`}
+                          </MenuItem>
+                        );
+                      });
+                    })()}
                   </Select>
                   {errors.organizationId && (
                     <FormHelperText>{errors.organizationId}</FormHelperText>
                   )}
                   {isLoadingOrgs && (
                     <FormHelperText>Loading organizations...</FormHelperText>
+                  )}
+                  {!isLoadingOrgs && organizations.length === 0 && (
+                    <FormHelperText sx={{ color: 'warning.main' }}>
+                      No organizations available. Please add organizations first.
+                    </FormHelperText>
+                  )}
+                  {!isLoadingOrgs && organizations.length > 0 && (
+                    <FormHelperText>
+                      {organizations.length} organization(s) available
+                    </FormHelperText>
                   )}
                 </FormControl>
 
@@ -1167,98 +1253,57 @@ export const CreateEvent: React.FC = () => {
                   </Stack>
                 </Stack>
 
-                {/* Shared setting for number of results - centered below both columns */}
-                {(leaderBoardSettings.ShowOverallResults ||
-                  leaderBoardSettings.ShowCategoryResults) && (
-                  <Box
-                    sx={{ mt: 3, display: "flex", justifyContent: "center" }}
-                  >
-                    <TextField
-                      label="Number of Results to Show"
-                      type="number"
-                      value={leaderBoardSettings.NumberOfResultsToShow || 5}
-                      onChange={(e) =>
-                        setLeaderBoardSettings((prev) => ({
-                          ...prev,
-                          NumberOfResultsToShow: parseInt(e.target.value) || 5,
-                        }))
-                      }
-                      placeholder="Enter number of results"
-                      size="small"
-                      inputProps={{ min: 1, step: 1 }}
-                      helperText="Applies to both Overall and Category results"
-                      sx={{ width: { xs: "100%", sm: "300px" } }}
-                    />
-                  </Box>
-                )}
+                {/* Number of Results fields - positioned below each column */}
+                <Stack
+                  direction={{ xs: "column", md: "row" }}
+                  spacing={3}
+                  sx={{ mt: 3 }}
+                >
+                  {/* Overall Results Count */}
+                  {leaderBoardSettings.ShowOverallResults && (
+                    <Box sx={{ flex: 1 }}>
+                      <TextField
+                        fullWidth
+                        label="Overall Results to Show"
+                        type="number"
+                        value={leaderBoardSettings.NumberOfResultsToShowOverall || 10}
+                        onChange={(e) =>
+                          setLeaderBoardSettings((prev) => ({
+                            ...prev,
+                            NumberOfResultsToShowOverall: parseInt(e.target.value) || 10,
+                          }))
+                        }
+                        placeholder="Enter number of overall results"
+                        size="small"
+                        inputProps={{ min: 1, step: 1 }}
+                        helperText="Number of overall results to display"
+                      />
+                    </Box>
+                  )}
+
+                  {/* Category Results Count */}
+                  {leaderBoardSettings.ShowCategoryResults && (
+                    <Box sx={{ flex: 1 }}>
+                      <TextField
+                        fullWidth
+                        label="Category Results to Show"
+                        type="number"
+                        value={leaderBoardSettings.NumberOfResultsToShowCategory || 5}
+                        onChange={(e) =>
+                          setLeaderBoardSettings((prev) => ({
+                            ...prev,
+                            NumberOfResultsToShowCategory: parseInt(e.target.value) || 5,
+                          }))
+                        }
+                        placeholder="Enter number of category results"
+                        size="small"
+                        inputProps={{ min: 1, step: 1 }}
+                        helperText="Number of category results to display"
+                      />
+                    </Box>
+                  )}
+                </Stack>
               </Box>
-            </Stack>
-          </Box>
-
-          {/* Registration & Pricing */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-              Registration & Pricing
-              <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
-                (For display purposes only - not sent to API)
-              </Typography>
-            </Typography>
-
-            {/* Two Column Layout */}
-            <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
-              {/* Left Column */}
-              <Stack spacing={3} sx={{ flex: 1 }}>
-                {/* Capacity */}
-                <TextField
-                  fullWidth
-                  label="Capacity (Optional)"
-                  name="capacity"
-                  type="number"
-                  value={formData.capacity || ""}
-                  onChange={handleInputChange}
-                  error={!!errors.capacity}
-                  helperText={errors.capacity || "For UI display only"}
-                  placeholder="Maximum participants"
-                  inputProps={{ min: 1, step: 1 }}
-                />
-
-                {/* Currency */}
-                <FormControl fullWidth error={!!errors.currency}>
-                  <InputLabel>Currency (Optional)</InputLabel>
-                  <Select
-                    name="currency"
-                    value={formData.currency}
-                    onChange={handleSelectChange}
-                    label="Currency (Optional)"
-                  >
-                    {currencyOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  <FormHelperText>
-                    {errors.currency || "For UI display only"}
-                  </FormHelperText>
-                </FormControl>
-              </Stack>
-
-              {/* Right Column */}
-              <Stack spacing={3} sx={{ flex: 1 }}>
-                {/* Registration Price */}
-                <TextField
-                  fullWidth
-                  label="Registration Price (Optional)"
-                  name="price"
-                  type="number"
-                  value={formData.price || ""}
-                  onChange={handleInputChange}
-                  error={!!errors.price}
-                  helperText={errors.price || "For UI display only"}
-                  placeholder="0.00"
-                  inputProps={{ min: 0, step: 0.01 }}
-                />
-              </Stack>
             </Stack>
           </Box>
 

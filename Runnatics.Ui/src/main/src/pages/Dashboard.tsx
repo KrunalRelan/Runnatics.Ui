@@ -32,7 +32,7 @@ const Dashboard = () => {
       value: '12',
       icon: <EventIcon sx={{ fontSize: 40 }} />,
       color: '#1976d2',
-      path: '/events/events-dashboard',
+      path: '/events/dashboard',
     },
     {
       title: 'Participants',
@@ -163,7 +163,7 @@ const Dashboard = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
               <Card
                 sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                onClick={() => navigate('/events/events-create')}
+                onClick={() => navigate('/events/create')}
               >
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -174,7 +174,7 @@ const Dashboard = () => {
               </Card>
               <Card
                 sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                onClick={() => navigate('/events/events-dashboard')}
+                onClick={() => navigate('/events/dashboard')}
               >
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

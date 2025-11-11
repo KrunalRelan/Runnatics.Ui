@@ -5,5 +5,6 @@ export interface LeaderBoardSettings {
     SortByOverallGunTime?: boolean;
     SortByCategoryChipTime?: boolean;
     SortByCategoryGunTime?: boolean;
-    NumberOfResultsToShow?: number;
+    NumberOfResultsToShowOverall?: number;
+    NumberOfResultsToShowCategory?: number;
 }
