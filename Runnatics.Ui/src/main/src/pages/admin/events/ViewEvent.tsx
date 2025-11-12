@@ -63,9 +63,9 @@ const ViewEvent: React.FC = () => {
   };
 
   const handleAddRace = () => {
-    // TODO: Navigate to Add Race page or open Add Race dialog
-    console.log("Add Race clicked for event:", eventId);
-    // navigate(`/events/${eventId}/races/create`);
+    if (eventId) {
+      navigate(`/events/${eventId}/races/add`);
+    }
   };
 
   const formatDate = (date: Date | string | undefined | null) => {
