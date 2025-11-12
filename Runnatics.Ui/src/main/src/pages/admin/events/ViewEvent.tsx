@@ -7,7 +7,6 @@ import {
   CardContent,
   Container,
   Typography,
-  Grid,
   Divider,
   CircularProgress,
   Alert,
@@ -46,7 +45,7 @@ const ViewEvent: React.FC = () => {
         setLoading(true);
         setError(null);
         const response = await EventService.getEventById(eventId);
-        setEvent(response);
+        setEvent(response.message || response);
       } catch (err: any) {
         console.error("Error fetching event:", err);
         setError(err.response?.data?.message || "Failed to load event details");
@@ -179,77 +178,79 @@ const ViewEvent: React.FC = () => {
           </Typography>
           <Divider sx={{ mb: 3 }} />
 
-          <Grid container spacing={3}>
-            {/* Event Name */}
-            <Grid item xs={12} md={6}>
-              <Stack direction="row" spacing={2} alignItems="flex-start">
-                <PublicIcon color="action" sx={{ mt: 0.5 }} />
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Event Name
-                  </Typography>
-                  <Typography variant="body1" sx={{ mt: 0.5 }}>
-                    {event.name || "N/A"}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Grid>
-
-            {/* Event Date */}
-            <Grid item xs={12} md={6}>
-              <Stack direction="row" spacing={2} alignItems="flex-start">
-                <CalendarIcon color="action" sx={{ mt: 0.5 }} />
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Event Date
-                  </Typography>
-                  <Typography variant="body1" sx={{ mt: 0.5 }}>
-                    {formatDate(event.eventDate)}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Grid>
-
-            {/* Venue */}
-            <Grid item xs={12} md={6}>
-              <Stack direction="row" spacing={2} alignItems="flex-start">
-                <LocationIcon color="action" sx={{ mt: 0.5 }} />
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Venue
-                  </Typography>
-                  <Typography variant="body1" sx={{ mt: 0.5 }}>
-                    {event.venueName || "N/A"}
-                  </Typography>
-                  {event.venueAddress && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      {event.venueAddress}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Event Name and Date Row */}
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
+              <Box sx={{ flex: 1 }}>
+                <Stack direction="row" spacing={2} alignItems="flex-start">
+                  <PublicIcon color="action" sx={{ mt: 0.5 }} />
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Event Name
                     </Typography>
-                  )}
-                </Box>
-              </Stack>
-            </Grid>
+                    <Typography variant="body1" sx={{ mt: 0.5 }}>
+                      {event.name || "N/A"}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Box>
 
-            {/* Organizer */}
-            <Grid item xs={12} md={6}>
-              <Stack direction="row" spacing={2} alignItems="flex-start">
-                <BusinessIcon color="action" sx={{ mt: 0.5 }} />
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Organizer
-                  </Typography>
-                  <Typography variant="body1" sx={{ mt: 0.5 }}>
-                    {event.eventOrganizerName || "N/A"}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Grid>
+              <Box sx={{ flex: 1 }}>
+                <Stack direction="row" spacing={2} alignItems="flex-start">
+                  <CalendarIcon color="action" sx={{ mt: 0.5 }} />
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Event Date
+                    </Typography>
+                    <Typography variant="body1" sx={{ mt: 0.5 }}>
+                      {formatDate(event.eventDate)}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Box>
+            </Box>
+
+            {/* Venue and Organizer Row */}
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
+              <Box sx={{ flex: 1 }}>
+                <Stack direction="row" spacing={2} alignItems="flex-start">
+                  <LocationIcon color="action" sx={{ mt: 0.5 }} />
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Venue
+                    </Typography>
+                    <Typography variant="body1" sx={{ mt: 0.5 }}>
+                      {event.venueName || "N/A"}
+                    </Typography>
+                    {event.venueAddress && (
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        {event.venueAddress}
+                      </Typography>
+                    )}
+                  </Box>
+                </Stack>
+              </Box>
+
+              <Box sx={{ flex: 1 }}>
+                <Stack direction="row" spacing={2} alignItems="flex-start">
+                  <BusinessIcon color="action" sx={{ mt: 0.5 }} />
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Organizer
+                    </Typography>
+                    <Typography variant="body1" sx={{ mt: 0.5 }}>
+                      {event.eventOrganizerName || "N/A"}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Box>
+            </Box>
 
             {/* Description */}
             {event.description && (
-              <Grid item xs={12}>
+              <Box>
                 <Stack direction="row" spacing={2} alignItems="flex-start">
-                  <Box sx={{ minWidth: 24 }} /> {/* Spacer to align with other fields */}
+                  <Box sx={{ minWidth: 24 }} />
                   <Box sx={{ width: '100%' }}>
                     <Typography variant="subtitle2" color="text.secondary">
                       Description
@@ -259,48 +260,52 @@ const ViewEvent: React.FC = () => {
                     </Typography>
                   </Box>
                 </Stack>
-              </Grid>
+              </Box>
             )}
 
             {/* Additional Info */}
-            <Grid item xs={12}>
+            <Box>
               <Divider sx={{ my: 2 }} />
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+                gap: 2 
+              }}>
+                <Box>
                   <Typography variant="subtitle2" color="text.secondary">
                     Time Zone
                   </Typography>
                   <Typography variant="body2" sx={{ mt: 0.5 }}>
                     {event.timeZone || "N/A"}
                   </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                </Box>
+                <Box>
                   <Typography variant="subtitle2" color="text.secondary">
                     Max Participants
                   </Typography>
                   <Typography variant="body2" sx={{ mt: 0.5 }}>
                     {event.maxParticipants || "Unlimited"}
                   </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                </Box>
+                <Box>
                   <Typography variant="subtitle2" color="text.secondary">
                     Registration Deadline
                   </Typography>
                   <Typography variant="body2" sx={{ mt: 0.5 }}>
                     {formatDate(event.registrationDeadline)}
                   </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                </Box>
+                <Box>
                   <Typography variant="subtitle2" color="text.secondary">
                     Status
                   </Typography>
                   <Typography variant="body2" sx={{ mt: 0.5 }}>
                     {event.status || "N/A"}
                   </Typography>
-                </Grid>
-              </Grid>
-            </Grid>
-          </Grid>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
         </CardContent>
       </Card>
 

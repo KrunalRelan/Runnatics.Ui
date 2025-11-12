@@ -80,7 +80,7 @@ export const AddRace: React.FC = () => {
       try {
         setLoading(true);
         const response = await EventService.getEventById(eventId);
-        setEvent(response);
+        setEvent(response.message || response);
       } catch (err: any) {
         console.error("Error fetching event:", err);
         setError(err.response?.data?.message || "Failed to load event details");
