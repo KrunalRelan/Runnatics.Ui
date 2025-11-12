@@ -354,6 +354,37 @@ const EventsList: React.FC = () => {
     );
   }, []);
 
+  // Event name cell renderer with hyperlink
+  const EventNameCellRenderer = useCallback((props: any) => {
+    const event = props.data;
+    const handleClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (event?.id) {
+        navigate(`/events/events-detail/${event.id}`);
+      }
+    };
+
+    return (
+      <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+        <Typography
+          component="a"
+          href={`/events/events-detail/${event?.id}`}
+          onClick={handleClick}
+          sx={{
+            color: "primary.main",
+            textDecoration: "none",
+            cursor: "pointer",
+            "&:hover": {
+              textDecoration: "underline",
+            },
+          }}
+        >
+          {props.value || "N/A"}
+        </Typography>
+      </Box>
+    );
+  }, [navigate]);
+
   // Published status cell renderer
   const PublishedCellRenderer = useCallback((props: any) => {
     const published = props.value;
@@ -389,6 +420,7 @@ const EventsList: React.FC = () => {
         flex: 2,
         sortable: true,
         filter: true,
+        cellRenderer: EventNameCellRenderer,
       },
       {
         field: "eventDate",
@@ -435,7 +467,7 @@ const EventsList: React.FC = () => {
         },
       },
     ],
-    [searchCriteria, ActionsCellRenderer, PublishedCellRenderer]
+    [searchCriteria, ActionsCellRenderer, PublishedCellRenderer, EventNameCellRenderer]
   );
 
   // Default column definitions

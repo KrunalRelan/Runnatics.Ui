@@ -4,6 +4,7 @@ import { CreateEvent } from "./CreateEvent";
 import { EditEvent } from "./EditEvent";
 import ViewEvent from "./ViewEvent";
 import { ProtectedRoute } from "../../../components/auth/ProtectedRoute";
+import { AddRace } from "../races/AddRace";
 
 export const eventsRoutes: RouteObject[] = [
   {
@@ -38,6 +39,14 @@ export const eventsRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <ViewEvent />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: ":eventId/races/add",
+        element: (
+          <ProtectedRoute>
+            <AddRace />
           </ProtectedRoute>
         ),
       },
