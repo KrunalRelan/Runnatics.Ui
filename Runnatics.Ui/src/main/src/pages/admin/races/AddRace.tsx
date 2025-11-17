@@ -13,6 +13,7 @@ import {
   Alert,
   CircularProgress,
   Container,
+  Grid,
 } from "@mui/material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import { EventService } from "../../../services/EventService";
@@ -43,7 +44,7 @@ interface FormErrors {
 export const AddRace: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
-  
+
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -177,10 +178,10 @@ export const AddRace: React.FC = () => {
     try {
       // TODO: Implement race creation API call
       console.log("Creating race with data:", formData);
-      
+
       // After successful creation, navigate back to event details
       // navigate(`/events/events-detail/${eventId}`);
-      
+
       // For now, just show success message
       alert("Race created successfully!");
     } catch (err: any) {
@@ -439,6 +440,47 @@ export const AddRace: React.FC = () => {
                     helperText={errors.lateStartCutoff || "Seconds after start time"}
                     inputProps={{ min: 0, step: 1 }}
                   />
+                </Stack>
+              </Box>
+
+              <Box sx={{ flex: 1, pl: { xs: 0, md: 2 }, mt: { xs: 3, md: 0 } }}>
+                <Typography variant="subtitle1" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
+                  Other Settings
+                </Typography>
+                <Stack spacing={3}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.hasLoops}
+                        onChange={handleSwitchChange("hasLoops")}
+                      />
+                    }
+                    label="Has Loops"
+                  />
+                  <TextField
+                    fullWidth
+                    label="Loop Length (km)"
+                    name="loopLength"
+                    type="number"
+                    value={formData.loopLength ?? ""}
+                    onChange={handleInputChange}
+                    error={!!errors.loopLength}
+                    helperText={errors.loopLength}
+                    inputProps={{ min: 0, step: 0.01 }}
+                  />
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>Data Field Header</Typography>
+                    <TextField
+                      fullWidth
+                      label="Data Header"
+                      name="dataHeader"
+                      type="text"
+                      value={formData.dataHeader || ""}
+                      onChange={handleInputChange}
+                      error={!!errors.dataHeader}
+                      helperText={errors.dataHeader}
+                    />
+                  </Box>
                 </Stack>
               </Box>
             </Stack>

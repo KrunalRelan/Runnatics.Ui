@@ -23,6 +23,9 @@ import {
 } from "@mui/icons-material";
 import { EventService } from "../../../services/EventService";
 import { Event } from "../../../models/Event";
+import { RaceService } from '../../../services/RaceService';
+import RaceList from "../races/RaceList";
+import { Race } from "@/main/src/models/races/Race";
 
 const ViewEvent: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
@@ -31,6 +34,9 @@ const ViewEvent: React.FC = () => {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [races, setRaces] = useState<Race[]>([]);
+  const [racesLoading, setRacesLoading] = useState(false);
+  const [racesError, setRacesError] = useState<string | null>(null);
 
   // Fetch event data
   useEffect(() => {
@@ -55,6 +61,20 @@ const ViewEvent: React.FC = () => {
     };
 
     fetchEvent();
+  }, [eventId]);
+
+  // Fetch races for event
+  useEffect(() => {
+    if (!eventId) return;
+    setRacesLoading(true);
+    setRacesError(null);
+    RaceService.getAllRaces({ searchCriteria: { eventId: Number(eventId), pageNumber: 1, pageSize: 10 } })
+      .then(response => setRaces(response.message || []))
+      .catch(err => {
+        setRacesError(err?.response?.data?.message || 'Failed to load races');
+        setRaces([]);
+      })
+      .finally(() => setRacesLoading(false));
   }, [eventId]);
 
   const handleBack = () => {
@@ -309,7 +329,7 @@ const ViewEvent: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Races Section - Placeholder */}
+      {/* Races Section */}
       <Card>
         <CardContent>
           <Box
@@ -330,9 +350,15 @@ const ViewEvent: React.FC = () => {
             </Button>
           </Box>
           <Divider sx={{ mb: 3 }} />
-          <Typography variant="body2" color="text.secondary" align="center">
-            No races added yet. Click "Add Race" to create the first race for this event.
-          </Typography>
+          {racesLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : racesError ? (
+            <Alert severity="error">{racesError}</Alert>
+          ) : (
+            <RaceList races={races} />
+          )}
         </CardContent>
       </Card>
     </Container>
