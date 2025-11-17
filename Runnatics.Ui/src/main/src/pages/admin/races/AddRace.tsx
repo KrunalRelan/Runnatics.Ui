@@ -415,29 +415,35 @@ export const AddRace: React.FC = () => {
                     helperText={errors.dedupSeconds || "Seconds to deduplicate readings"}
                     inputProps={{ min: 0, step: 1 }}
                   />
-                  <TextField
-                    fullWidth
-                    label="Early Start Cutoff"
-                    name="earlyStartCutoff"
-                    type="number"
-                    value={formData.earlyStartCutoff || ""}
-                    onChange={handleInputChange}
-                    error={!!errors.earlyStartCutoff}
-                    helperText={errors.earlyStartCutoff || "Seconds before start time"}
-                    inputProps={{ min: 0, step: 1 }}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Late Start Cutoff"
-                    name="lateStartCutoff"
-                    type="number"
-                    value={formData.lateStartCutoff || ""}
-                    onChange={handleInputChange}
-                    error={!!errors.lateStartCutoff}
-                    helperText={errors.lateStartCutoff || "Seconds after start time"}
-                    inputProps={{ min: 0, step: 1 }}
-                  />
 
+                  <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
+                    <TextField
+                      fullWidth
+                      label="Early Start Cutoff"
+                      name="earlyStartCutoff"
+                      type="number"
+                      value={formData.earlyStartCutoff || ""}
+                      onChange={handleInputChange}
+                      error={!!errors.earlyStartCutoff}
+                      helperText={errors.earlyStartCutoff || "Seconds before start time"}
+                      inputProps={{ min: 0, step: 1 }}
+                    />
+                    <TextField
+                      fullWidth
+                      label="Late Start Cutoff"
+                      name="lateStartCutoff"
+                      type="number"
+                      value={formData.lateStartCutoff || ""}
+                      onChange={handleInputChange}
+                      error={!!errors.lateStartCutoff}
+                      helperText={errors.lateStartCutoff || "Seconds after start time"}
+                      inputProps={{ min: 0, step: 1 }}
+                    />
+                  </Stack>
+
+                  <Typography variant="subtitle1" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
+                    Loops
+                  </Typography>
                   <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
                     <FormControlLabel
                       control={
@@ -447,7 +453,7 @@ export const AddRace: React.FC = () => {
                         />
                       }
                       label="Has Loops"
-                      sx={{ flex: 1, minWidth: 160, maxWidth: 180 }}
+                      sx={{ flex: 1, minWidth: 250, maxWidth: 250 }}
                     />
 
                     <TextField
@@ -471,7 +477,7 @@ export const AddRace: React.FC = () => {
                     value={formData.dataHeader || ""}
                     onChange={handleInputChange}
                     error={!!errors.dataHeader}
-                    helperText={errors.dataHeader}
+                    helperText={errors.dataHeader || "Data Field Headers"}
                   />
                 </Stack>
               </Box>
