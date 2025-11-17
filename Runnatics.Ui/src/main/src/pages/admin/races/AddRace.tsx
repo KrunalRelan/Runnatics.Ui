@@ -250,7 +250,9 @@ export const AddRace: React.FC = () => {
               Basic Information
             </Typography>
 
-            <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
+            <Stack direction={{ xs: "column", md: "row" }}
+              spacing={3}
+              sx={{ mb: 3 }}>
               {/* Title */}
               <TextField
                 fullWidth
