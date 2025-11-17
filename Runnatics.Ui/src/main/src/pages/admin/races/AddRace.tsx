@@ -250,7 +250,7 @@ export const AddRace: React.FC = () => {
               Basic Information
             </Typography>
 
-            <Stack spacing={3}>
+            <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
               {/* Title */}
               <TextField
                 fullWidth
@@ -264,56 +264,51 @@ export const AddRace: React.FC = () => {
                 required
               />
 
-              {/* Two Column Layout */}
-              <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
-                {/* Distance */}
-                <TextField
-                  fullWidth
-                  label="Distance (in KMs)"
-                  name="distanceInKms"
-                  type="number"
-                  value={formData.distanceInKms || ""}
-                  onChange={handleInputChange}
-                  error={!!errors.distanceInKms}
-                  helperText={errors.distanceInKms}
-                  placeholder="e.g., 10, 21.1, 42.2"
-                  required
-                  inputProps={{ min: 0, step: 0.1 }}
-                />
+              {/* Distance */}
+              <TextField
+                fullWidth
+                label="Distance (in KMs)"
+                name="distanceInKms"
+                type="number"
+                value={formData.distanceInKms || ""}
+                onChange={handleInputChange}
+                error={!!errors.distanceInKms}
+                helperText={errors.distanceInKms}
+                placeholder="e.g., 10, 21.1, 42.2"
+                required
+                inputProps={{ min: 0, step: 0.1 }}
+              />
+            </Stack>
+            <Box sx={{ flex: 1 }} /> {/* Spacer */}
+            {/* Time Fields */}
+            <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
+              {/* Start Time */}
+              <TextField
+                fullWidth
+                label="Start Time"
+                name="startTime"
+                type="datetime-local"
+                value={formData.startTime}
+                onChange={handleInputChange}
+                error={!!errors.startTime}
+                helperText={errors.startTime}
+                required
+                InputLabelProps={{ shrink: true }}
+              />
 
-                <Box sx={{ flex: 1 }} /> {/* Spacer */}
-              </Stack>
-
-              {/* Time Fields */}
-              <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
-                {/* Start Time */}
-                <TextField
-                  fullWidth
-                  label="Start Time"
-                  name="startTime"
-                  type="datetime-local"
-                  value={formData.startTime}
-                  onChange={handleInputChange}
-                  error={!!errors.startTime}
-                  helperText={errors.startTime}
-                  required
-                  InputLabelProps={{ shrink: true }}
-                />
-
-                {/* End Time */}
-                <TextField
-                  fullWidth
-                  label="End Time"
-                  name="endTime"
-                  type="datetime-local"
-                  value={formData.endTime}
-                  onChange={handleInputChange}
-                  error={!!errors.endTime}
-                  helperText={errors.endTime}
-                  required
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Stack>
+              {/* End Time */}
+              <TextField
+                fullWidth
+                label="End Time"
+                name="endTime"
+                type="datetime-local"
+                value={formData.endTime}
+                onChange={handleInputChange}
+                error={!!errors.endTime}
+                helperText={errors.endTime}
+                required
+                InputLabelProps={{ shrink: true }}
+              />
             </Stack>
           </Box>
 
@@ -339,7 +334,7 @@ export const AddRace: React.FC = () => {
               }
             >
               {/* Left Side - General Settings */}
-              <Box sx={{ flex: 1, pr: { xs: 0, md: 2 } }}>
+              <Box sx={{ flex: 1, pr: { xs: 0, md: 1 } }}>
                 <Typography variant="subtitle1" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
                   General Settings
                 </Typography>
@@ -440,49 +435,46 @@ export const AddRace: React.FC = () => {
                     helperText={errors.lateStartCutoff || "Seconds after start time"}
                     inputProps={{ min: 0, step: 1 }}
                   />
+
+                  <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.hasLoops}
+                          onChange={handleSwitchChange("hasLoops")}
+                        />
+                      }
+                      label="Has Loops"
+                      sx={{ flex: 1, minWidth: 160, maxWidth: 180 }}
+                    />
+
+                    <TextField
+                      fullWidth
+                      label="Loop Length (km)"
+                      name="loopLength"
+                      type="number"
+                      value={formData.loopLength ?? ""}
+                      onChange={handleInputChange}
+                      error={!!errors.loopLength}
+                      helperText={errors.loopLength}
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
+                  </Stack>
+
+                  <TextField
+                    fullWidth
+                    label="Data Header"
+                    name="dataHeader"
+                    type="text"
+                    value={formData.dataHeader || ""}
+                    onChange={handleInputChange}
+                    error={!!errors.dataHeader}
+                    helperText={errors.dataHeader}
+                  />
                 </Stack>
               </Box>
 
-              <Box sx={{ flex: 1, pl: { xs: 0, md: 2 }, mt: { xs: 3, md: 0 } }}>
-                <Typography variant="subtitle1" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
-                  Other Settings
-                </Typography>
-                <Stack spacing={3}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={formData.hasLoops}
-                        onChange={handleSwitchChange("hasLoops")}
-                      />
-                    }
-                    label="Has Loops"
-                  />
-                  <TextField
-                    fullWidth
-                    label="Loop Length (km)"
-                    name="loopLength"
-                    type="number"
-                    value={formData.loopLength ?? ""}
-                    onChange={handleInputChange}
-                    error={!!errors.loopLength}
-                    helperText={errors.loopLength}
-                    inputProps={{ min: 0, step: 0.01 }}
-                  />
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>Data Field Header</Typography>
-                    <TextField
-                      fullWidth
-                      label="Data Header"
-                      name="dataHeader"
-                      type="text"
-                      value={formData.dataHeader || ""}
-                      onChange={handleInputChange}
-                      error={!!errors.dataHeader}
-                      helperText={errors.dataHeader}
-                    />
-                  </Box>
-                </Stack>
-              </Box>
+
             </Stack>
           </Box>
 
@@ -518,6 +510,6 @@ export const AddRace: React.FC = () => {
           </Box>
         </form>
       </Paper>
-    </Container>
+    </Container >
   );
 };
