@@ -241,7 +241,10 @@ export const EditRace: React.FC = () => {
                 message: `Race "${requestPayload.title}" updated successfully!`,
                 severity: "success",
             });
-            navigate(`/events/event-details/${eventId}`);
+            // Redirect after 1 second (1000 ms)
+            setTimeout(() => {
+                navigate(`/events/event-details/${eventId}`);
+            }, 1000);
         } catch (err: any) {
             setError(
                 err.response?.data?.message || "Failed to update race. Please try again."

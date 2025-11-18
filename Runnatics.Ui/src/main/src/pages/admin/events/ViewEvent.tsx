@@ -12,6 +12,7 @@ import {
   Alert,
   Stack,
   Chip,
+  Snackbar,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
@@ -37,6 +38,17 @@ const ViewEvent: React.FC = () => {
   const [races, setRaces] = useState<Race[]>([]);
   const [racesLoading, setRacesLoading] = useState(false);
   const [racesError, setRacesError] = useState<string | null>(null);
+
+  // Snackbar for success/error messages
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info';
+  }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
   // Fetch event data
   useEffect(() => {
@@ -363,13 +375,30 @@ const ViewEvent: React.FC = () => {
               pageSize={10}
               totalRecords={races.length}
               totalPages={1}
-              onPageChange={() => {}}
-              onPageSizeChange={() => {}} 
-              onEdit={() => {}}
+              onPageChange={() => { }}
+              onPageSizeChange={() => { }}
+              onEdit={() => { }}
             />
           )}
         </CardContent>
       </Card>
+
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

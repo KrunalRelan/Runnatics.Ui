@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { Box, IconButton, Tooltip, Stack, Container, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from "@mui/material";
+import { Box, IconButton, Tooltip, Stack, Container, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Typography } from "@mui/material";
 import TablePagination from "@/main/src/components/TablePagination";
 import {
     Edit as EditIcon,
@@ -113,6 +113,37 @@ export const RaceList: React.FC<RaceListProps> = ({
         setRaceToDelete(null);
     };
 
+    const RaceTitleCellRenderer = useCallback((props: any) => {
+        const race = props.data;
+        const handleClick = (e: React.MouseEvent) => {
+            e.preventDefault();
+            if (race?.id && race.eventId) {
+                navigate(`/events/event-details/${race.eventId}/race/${race.id}`);
+            }
+        };
+
+        return (
+            <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+                <Typography
+                    component="a"
+                    href={`/events/event-details/${race.eventId}/race/${race.id}`}
+                    onClick={handleClick}
+                    sx={{
+                        color: "primary.main",
+                        textDecoration: "none",
+                        cursor: "pointer",
+                        "&:hover": {
+                            textDecoration: "underline",
+                        },
+                    }}
+                >
+                    {props.value || "N/A"}
+                </Typography>
+            </Box>
+        );
+    }, [navigate]);
+
+
     // Actions cell renderer
     const ActionsCellRenderer = useCallback((props: any) => {
         const race = props.data;
@@ -147,7 +178,12 @@ export const RaceList: React.FC<RaceListProps> = ({
     }, []);
 
     const columnDefs: ColDef<Race>[] = useMemo(() => [
-        { headerName: "Title", field: "title" as keyof Race, flex: 1 },
+        {
+            headerName: "Title",
+            field: "title" as keyof Race,
+            flex: 1,
+            cellRenderer: RaceTitleCellRenderer
+        },
         {
             headerName: "Time",
             field: "startTime",
