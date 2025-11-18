@@ -83,7 +83,7 @@ const ViewEvent: React.FC = () => {
 
   const handleAddRace = () => {
     if (eventId) {
-      navigate(`/events/${eventId}/races/add`);
+      navigate(`/events/event-details/${eventId}/race/add`);
     }
   };
 

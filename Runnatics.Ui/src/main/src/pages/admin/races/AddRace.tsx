@@ -113,7 +113,7 @@ export const AddRace: React.FC = () => {
   }, [eventId]);
 
   const handleBack = () => {
-    navigate(`/events/events-detail/${eventId}`);
+    navigate(`/events/event-details/${eventId}`);
   };
 
   const handleInputChange = (
@@ -262,7 +262,7 @@ export const AddRace: React.FC = () => {
       }
 
       // After successful creation, navigate back to event details
-      navigate(`/events/events-detail/${eventId}`);
+      navigate(`/events/event-details/${eventId}`);
     } catch (err: any) {
       console.error("Error creating race:", err);
       setError(

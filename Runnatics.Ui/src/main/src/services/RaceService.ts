@@ -33,7 +33,7 @@ export class RaceService {
             ServiceUrl.getRaceById(eventId, id)
         );
         // API returns data wrapped in { message: {...}, totalCount: 0 }
-        return response.data.message || response.data;
+        return response.data;
     }
 
     /**

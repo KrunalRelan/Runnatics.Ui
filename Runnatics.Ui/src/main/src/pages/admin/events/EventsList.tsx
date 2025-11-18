@@ -360,7 +360,7 @@ const EventsList: React.FC = () => {
     const handleClick = (e: React.MouseEvent) => {
       e.preventDefault();
       if (event?.id) {
-        navigate(`/events/events-detail/${event.id}`);
+        navigate(`/events/event-details/${event.id}`);
       }
     };
 
@@ -368,7 +368,7 @@ const EventsList: React.FC = () => {
       <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
         <Typography
           component="a"
-          href={`/events/events-detail/${event?.id}`}
+          href={`/events/event-details/${event?.id}`}
           onClick={handleClick}
           sx={{
             color: "primary.main",

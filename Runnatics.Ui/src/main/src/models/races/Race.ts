@@ -6,7 +6,7 @@ export interface Race {
     eventId?: number;
     title: string;
     description: string;
-    distance?: string;
+    distance?: number;
     startTime: Date | string;
     endTime?: Date | string;
     maxParticipants?: number;
