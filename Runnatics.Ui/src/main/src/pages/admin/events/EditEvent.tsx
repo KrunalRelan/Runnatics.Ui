@@ -30,6 +30,7 @@ import {
   EventSettings,
   LeaderBoardSettings,
   EventStatus,
+  Event,
 } from "@/main/src/models";
 import { CreateEventRequest } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
@@ -79,7 +80,7 @@ export const EditEvent: React.FC = () => {
     });
 
   const [formData, setFormData] = useState<CreateEventRequest>({
-    organizationId: "",
+    tenantId: "", // Stores the selected organization's ID (for dropdown)
     name: "",
     description: "",
     eventType: EventType.Marathon,
@@ -129,56 +130,32 @@ export const EditEvent: React.FC = () => {
         setIsLoadingOrgs(true);
 
         // Fetch both event data and organizations in parallel
-        const [eventData, orgsResponse] = await Promise.all([
+        const [eventResponse, orgsResponse] = await Promise.all([
           EventService.getEventById(id!),
           EventOrganizerService.getOrganizations(),
         ]);
 
         if (isMounted) {
-          console.log('📦 Raw organizations response:', orgsResponse);
-          console.log('📦 Raw event data:', eventData);
-          
-          // Map organizations - use organizationId as the primary identifier
-          const mappedOrgs = orgsResponse.map((org) => {
-            console.log('🔍 Mapping organization:', org);
-            // Use organizationId as the ID for the dropdown value
-            const orgId = org.organizationId || org.id || 0;
-            return {
-              id: org.id,
-              organizationId: orgId,
-              name: org.organizerName || org.name || "",
-              organizerName: org.organizerName || org.name,
-            };
-          });
-          
-          console.log('🗂️ Mapped organizations:', mappedOrgs);
-          console.log('📊 Number of organizations:', mappedOrgs.length);
-          
-          // Check if event's organization is in the list
-          const eventData_any = eventData as any;
-          const eventOrgId = eventData_any.organizationId || eventData_any.organizerId || eventData_any.eventOrganizerId;
-          // Check against org.id since that's what we use in the MenuItem value
-          const orgExists = mappedOrgs.some(org => org.id === eventOrgId);
-          
-          console.log('🔍 Event organization ID:', eventOrgId);
-          console.log('✅ Organization exists in list:', orgExists);
-          console.log('📋 Available org IDs:', mappedOrgs.map(o => o.id));
-          
-          // If the event's organization is not in the list, add it as a placeholder
-          if (eventOrgId && !orgExists) {
-            console.warn('⚠️ Adding missing organization to dropdown');
-            mappedOrgs.push({
-              id: eventOrgId,
-              organizationId: eventOrgId,
-              name: `Organization ${eventOrgId} (Current)`,
-              organizerName: `Organization ${eventOrgId}`,
-            });
-            console.log('✅ Added placeholder organization. New count:', mappedOrgs.length);
-          }
-          
+          // Extract event data from ResponseBase wrapper
+          const eventData = eventResponse.message || eventResponse;
+
+          console.log("📦 Raw event response:", eventResponse);
+          console.log("📦 Raw event data:", eventData);
+          console.log("📦 Raw organizations response:", orgsResponse);
+
+          // Map organizations
+          const mappedOrgs = orgsResponse.map((org) => ({
+            id: org.id,
+            tenantId: org.tenantId,
+            name: org.name || org.organizerName || "",
+            organizerName: org.organizerName || org.name || "",
+          }));
+
+          console.log("🗂️ Mapped organizations:", mappedOrgs);
+
           setOrganizations(mappedOrgs);
 
-          // Populate form with event data AFTER organizations are loaded
+          // Populate form with event data
           populateFormData(eventData, mappedOrgs);
         }
       } catch (error: any) {
@@ -202,7 +179,7 @@ export const EditEvent: React.FC = () => {
     if (id) {
       fetchData();
     } else {
-      setApiError('No event ID provided');
+      setApiError("No event ID provided");
       setIsLoading(false);
       setIsLoadingOrgs(false);
     }
@@ -213,52 +190,91 @@ export const EditEvent: React.FC = () => {
   }, [id]);
 
   // Populate form data from event object
-  const populateFormData = (event: any, availableOrgs?: EventOrganizer[]) => {
-    console.log('📋 Populating form with event data:', event);
-    
+  const populateFormData = (event: Event, availableOrgs: EventOrganizer[]) => {
+    console.log("📋 Populating form with event data:", event);
+
     // Check if event is in the past
     if (event.eventDate) {
       const eventDate = new Date(event.eventDate);
       const now = new Date();
       setIsEventInPast(eventDate < now);
     }
-    
+
     // Parse city, state, country from venueAddress
-    // Format: "Apollo Bandar, Colaba, Mumbai, Maharashtra 400001, India"
+    // Format: "City, State, Country" or "Apollo Bandar, Colaba, Mumbai, Maharashtra 400001, India"
     let city = "";
     let state = "";
     let country = "";
-    
+
     if (event.venueAddress) {
-      const parts = event.venueAddress.split(',').map((p: string) => p.trim());
+      const parts = event.venueAddress.split(",").map((p: string) => p.trim());
       if (parts.length >= 3) {
         country = parts[parts.length - 1] || ""; // Last part is country
         // Second to last might have zip code, extract state from it
         const stateWithZip = parts[parts.length - 2] || "";
-        state = stateWithZip.replace(/\d+/g, '').trim(); // Remove numbers to get state
+        state = stateWithZip.replace(/\d+/g, "").trim(); // Remove numbers to get state
         city = parts[parts.length - 3] || ""; // Third from last is city
       }
     }
-    
-    // Get organization ID from eventOrganizerId
-    const eventOrgId = event.eventOrganizerId;
-    console.log('🏢 Event Organizer ID from event:', eventOrgId);
-    
-    // Check if this organization exists in the available organizations
-    const orgsToCheck = availableOrgs || organizations;
-    const orgExists = orgsToCheck.some(org => org.id === eventOrgId || org.organizationId === eventOrgId);
-    console.log('✅ Organization exists in list:', orgExists);
-    
-    if (!orgExists && eventOrgId) {
-      console.warn('⚠️ Organization ID', eventOrgId, 'not found in available organizations:', orgsToCheck);
-      console.warn('⚠️ This might cause the dropdown to not show the selected organization');
-      // Add a warning but continue - we'll set the value anyway
+
+    // Find the organization that matches this event's tenantId
+    // The event has a tenantId which identifies which tenant/organization it belongs to
+    let selectedOrgId = "";
+
+    if (event.tenantId) {
+      console.log("🔍 Event tenantId:", event.tenantId);
+
+      // Find organization where tenantId matches
+      const matchingOrg = availableOrgs.find(
+        (org) => org.tenantId === event.tenantId
+      );
+
+      if (matchingOrg) {
+        selectedOrgId = matchingOrg.id;
+        console.log("✅ Found matching organization:", matchingOrg);
+      } else {
+        console.warn("⚠️ No organization found with tenantId:", event.tenantId);
+        // Add a placeholder organization if not found
+        const placeholderOrg: EventOrganizer = {
+          id: event.tenantId,
+          tenantId: event.tenantId,
+          name: event.eventOrganizerName || `Organization (${event.tenantId})`,
+          organizerName: event.eventOrganizerName || "",
+        };
+        availableOrgs.push(placeholderOrg);
+        setOrganizations([...availableOrgs]);
+        selectedOrgId = placeholderOrg.id;
+        console.log("➕ Added placeholder organization:", placeholderOrg);
+      }
+    } else if (event.organizerId) {
+      // Fallback to organizerId if tenantId is not available
+      console.log("🔍 Using organizerId as fallback:", event.organizerId);
+      selectedOrgId = event.organizerId;
+
+      // Check if this org exists
+      const orgExists = availableOrgs.some(
+        (org) => org.id === event.organizerId
+      );
+      if (!orgExists) {
+        const placeholderOrg: EventOrganizer = {
+          id: event.organizerId,
+          tenantId: event.organizerId,
+          name:
+            event.eventOrganizerName || `Organization (${event.organizerId})`,
+          organizerName: event.eventOrganizerName || "",
+        };
+        availableOrgs.push(placeholderOrg);
+        setOrganizations([...availableOrgs]);
+        console.log(
+          "➕ Added placeholder organization for organizerId:",
+          placeholderOrg
+        );
+      }
     }
-    
-    // Map event data to form fields (handle both camelCase API and PascalCase)
+
+    // Map event data to form fields
     const mappedFormData = {
-      // Convert to string for Select component, or empty string if null/undefined
-      organizationId: eventOrgId ? eventOrgId.toString() : "",
+      tenantId: selectedOrgId, // Store selected organization's ID
       name: event.name || "",
       description: event.description || "",
       eventType: (event.eventType as EventType) || EventType.Marathon,
@@ -273,58 +289,73 @@ export const EditEvent: React.FC = () => {
         : "",
       registrationCloseDate: event.registrationDeadline
         ? new Date(event.registrationDeadline).toISOString().slice(0, 16)
+        : event.registrationCloseDate
+        ? new Date(event.registrationCloseDate).toISOString().slice(0, 16)
         : "",
-      location: event.venueName || "",
+      location: event.venueName || event.location || "",
       city: city || event.city || "",
       state: state || event.state || "",
       country: country || event.country || "",
       zipCode: event.zipCode || "",
-      capacity: event.maxParticipants || undefined,
-      price: undefined,
-      currency: "INR",
+      capacity: event.maxParticipants || event.capacity || undefined,
+      price: event.price || undefined,
+      currency: event.currency || "INR",
       timeZone: event.timeZone || "Asia/Kolkata",
       smsText: "",
       leaderBoardSettings: {
         ShowOverallResults:
-          event.leaderboardSettings?.showOverallResults ?? 
-          event.leaderboardSettings?.ShowOverallResults ?? true,
+          event.leaderboardSettings?.ShowOverallResults ??
+          event.leaderboardSettings?.ShowOverallResults ??
+          true,
         ShowCategoryResults:
-          event.leaderboardSettings?.showCategoryResults ?? 
-          event.leaderboardSettings?.ShowCategoryResults ?? true,
+          event.leaderboardSettings?.ShowCategoryResults ??
+          event.leaderboardSettings?.ShowCategoryResults ??
+          true,
         SortByOverallChipTime:
-          event.leaderboardSettings?.sortByOverallChipTime ?? 
-          event.leaderboardSettings?.SortByOverallChipTime ?? true,
+          event.leaderboardSettings?.SortByOverallChipTime ??
+          event.leaderboardSettings?.SortByOverallChipTime ??
+          true,
         SortByCategoryChipTime:
-          event.leaderboardSettings?.sortByCategoryChipTime ?? 
-          event.leaderboardSettings?.SortByCategoryChipTime ?? true,
+          event.leaderboardSettings?.SortByCategoryChipTime ??
+          event.leaderboardSettings?.SortByCategoryChipTime ??
+          true,
         SortByOverallGunTime:
-          event.leaderboardSettings?.sortByOverallGunTime ?? 
-          event.leaderboardSettings?.SortByOverallGunTime ?? false,
+          event.leaderboardSettings?.SortByOverallGunTime ??
+          event.leaderboardSettings?.SortByOverallGunTime ??
+          false,
         SortByCategoryGunTime:
-          event.leaderboardSettings?.sortByCategoryGunTime ?? 
-          event.leaderboardSettings?.SortByCategoryGunTime ?? false,
+          event.leaderboardSettings?.SortByCategoryGunTime ??
+          event.leaderboardSettings?.SortByCategoryGunTime ??
+          false,
         NumberOfResultsToShowOverall:
-          event.leaderboardSettings?.numberOfResultsToShowOverall ?? 
-          event.leaderboardSettings?.NumberOfResultsToShowOverall ?? 10,
+          event.leaderboardSettings?.NumberOfResultsToShowOverall ??
+          event.leaderboardSettings?.NumberOfResultsToShowOverall ??
+          10,
         NumberOfResultsToShowCategory:
-          event.leaderboardSettings?.numberOfResultsToShowCategory ?? 
-          event.leaderboardSettings?.NumberOfResultsToShowCategory ?? 5,
+          event.leaderboardSettings?.NumberOfResultsToShowCategory ??
+          event.leaderboardSettings?.NumberOfResultsToShowCategory ??
+          5,
       },
       eventSettings: {
         removeBanner: event.eventSettings?.removeBanner ?? false,
         published: event.eventSettings?.published ?? false,
         rankOnNet: event.eventSettings?.rankOnNet ?? false,
-        allowParticipantEdit: event.eventSettings?.allowParticipantEdit ?? false,
+        allowParticipantEdit:
+          event.eventSettings?.allowParticipantEdit ?? false,
         useOldData: event.eventSettings?.useOldData ?? false,
         confirmedEvent: event.eventSettings?.confirmedEvent ?? false,
         allowNameCheck: event.eventSettings?.allowNameCheck ?? false,
-        showResultSummaryForRaces: event.eventSettings?.showResultSummaryForRaces ?? false,
+        showResultSummaryForRaces:
+          event.eventSettings?.showResultSummaryForRaces ?? false,
       },
     };
-    
+
     setFormData(mappedFormData);
-    console.log('✅ Form data set:', mappedFormData);
-    console.log('🆔 Organization ID in form:', mappedFormData.organizationId);
+    console.log("✅ Form data set:", mappedFormData);
+    console.log(
+      "🆔 Selected organization ID in form:",
+      mappedFormData.tenantId
+    );
 
     // Set separate state for eventSettings and leaderBoardSettings
     if (event.eventSettings) {
@@ -334,7 +365,8 @@ export const EditEvent: React.FC = () => {
         removeBanner: event.eventSettings.removeBanner ?? false,
         published: event.eventSettings.published ?? false,
         rankOnNet: event.eventSettings.rankOnNet ?? false,
-        showResultSummaryForRaces: event.eventSettings.showResultSummaryForRaces ?? false,
+        showResultSummaryForRaces:
+          event.eventSettings.showResultSummaryForRaces ?? false,
         useOldData: event.eventSettings.useOldData ?? false,
         confirmedEvent: event.eventSettings.confirmedEvent ?? false,
         allowNameCheck: event.eventSettings.allowNameCheck ?? false,
@@ -347,29 +379,37 @@ export const EditEvent: React.FC = () => {
     if (event.leaderboardSettings) {
       const mappedLeaderboardSettings = {
         ShowOverallResults:
-          event.leaderboardSettings.showOverallResults ?? 
-          event.leaderboardSettings.ShowOverallResults ?? true,
+          event.leaderboardSettings.ShowOverallResults ??
+          event.leaderboardSettings.ShowOverallResults ??
+          true,
         ShowCategoryResults:
-          event.leaderboardSettings.showCategoryResults ?? 
-          event.leaderboardSettings.ShowCategoryResults ?? true,
+          event.leaderboardSettings.ShowCategoryResults ??
+          event.leaderboardSettings.ShowCategoryResults ??
+          true,
         SortByOverallChipTime:
-          event.leaderboardSettings.sortByOverallChipTime ?? 
-          event.leaderboardSettings.SortByOverallChipTime ?? false,
+          event.leaderboardSettings.SortByOverallChipTime ??
+          event.leaderboardSettings.SortByOverallChipTime ??
+          false,
         SortByCategoryChipTime:
-          event.leaderboardSettings.sortByCategoryChipTime ?? 
-          event.leaderboardSettings.SortByCategoryChipTime ?? false,
+          event.leaderboardSettings.SortByCategoryChipTime ??
+          event.leaderboardSettings.SortByCategoryChipTime ??
+          false,
         SortByOverallGunTime:
-          event.leaderboardSettings.sortByOverallGunTime ?? 
-          event.leaderboardSettings.SortByOverallGunTime ?? false,
+          event.leaderboardSettings.SortByOverallGunTime ??
+          event.leaderboardSettings.SortByOverallGunTime ??
+          false,
         SortByCategoryGunTime:
-          event.leaderboardSettings.sortByCategoryGunTime ?? 
-          event.leaderboardSettings.SortByCategoryGunTime ?? false,
+          event.leaderboardSettings.SortByCategoryGunTime ??
+          event.leaderboardSettings.SortByCategoryGunTime ??
+          false,
         NumberOfResultsToShowOverall:
-          event.leaderboardSettings.numberOfResultsToShowOverall ?? 
-          event.leaderboardSettings.NumberOfResultsToShowOverall ?? 10,
+          event.leaderboardSettings.NumberOfResultsToShowOverall ??
+          event.leaderboardSettings.NumberOfResultsToShowOverall ??
+          10,
         NumberOfResultsToShowCategory:
-          event.leaderboardSettings.numberOfResultsToShowCategory ?? 
-          event.leaderboardSettings.NumberOfResultsToShowCategory ?? 5,
+          event.leaderboardSettings.NumberOfResultsToShowCategory ??
+          event.leaderboardSettings.NumberOfResultsToShowCategory ??
+          5,
       };
       setLeaderBoardSettings(mappedLeaderboardSettings);
     }
@@ -445,11 +485,9 @@ export const EditEvent: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Organization validation - allow empty during load, but not N/A
-    if (!formData.organizationId || formData.organizationId === "") {
-      newErrors.organizationId = "Please select an event organizer";
-    } else if (formData.organizationId === "N/A") {
-      newErrors.organizationId = "Please select a valid event organizer. N/A is not allowed.";
+    // Organization/Tenant validation
+    if (!formData.tenantId || formData.tenantId === "") {
+      newErrors.tenantId = "Please select an event organizer";
     }
 
     // Required field validations
@@ -497,18 +535,22 @@ export const EditEvent: React.FC = () => {
     try {
       const { capacity, price, currency, ...apiData } = formData;
 
+      // Get the selected organization ID from the form
+      // This is the organization's ID (not tenantId)
+      const selectedOrgId = apiData.tenantId;
+
+      // Convert to number for API
       let eventOrganizerIdForApi: number;
-      if (apiData.organizationId === "N/A") {
-        eventOrganizerIdForApi = 1;
-      } else if (typeof apiData.organizationId === "string") {
-        eventOrganizerIdForApi = parseInt(apiData.organizationId, 10);
-      } else if (typeof apiData.organizationId === "number") {
-        eventOrganizerIdForApi = apiData.organizationId;
+      if (typeof selectedOrgId === "string") {
+        eventOrganizerIdForApi = parseInt(selectedOrgId, 10);
+      } else if (typeof selectedOrgId === "number") {
+        eventOrganizerIdForApi = selectedOrgId;
       } else {
-        eventOrganizerIdForApi = 1;
+        throw new Error("Invalid organization selection");
       }
 
       const requestPayload = {
+        // Send the organization ID as eventOrganizerId (API expects this)
         eventOrganizerId: eventOrganizerIdForApi,
         name: apiData.name,
         slug: apiData.name.toLowerCase().replace(/\s+/g, "-"),
@@ -612,7 +654,9 @@ export const EditEvent: React.FC = () => {
               maxDisplayedRecords: 100,
             },
       };
-      
+
+      console.log("📤 Submitting payload:", requestPayload);
+
       // Update event
       const updatedEvent = await EventService.updateEvent(
         id!,
@@ -722,34 +766,36 @@ export const EditEvent: React.FC = () => {
 
                 <FormControl
                   fullWidth
-                  error={!!errors.organizationId}
+                  error={!!errors.tenantId}
                   required
                   disabled={isLoadingOrgs}
                 >
-                  <InputLabel>Event Organizers</InputLabel>
+                  <InputLabel>Event Organizer</InputLabel>
                   <Select
-                    name="organizationId"
-                    value={formData.organizationId || ""}
+                    name="tenantId"
+                    value={formData.tenantId || ""}
                     onChange={handleSelectChange}
-                    label="Event Organizers"
+                    label="Event Organizer"
                   >
                     <MenuItem value="">
                       <em>Select an event organizer</em>
                     </MenuItem>
                     {organizations.map((org) => (
-                      <MenuItem key={org.id} value={org.id.toString()}>
-                        {org.name || org.organizerName || `Organization ${org.id}`}
+                      <MenuItem key={org.id} value={org.id}>
+                        {org.name ||
+                          org.organizerName ||
+                          `Organization ${org.id}`}
                       </MenuItem>
                     ))}
                   </Select>
-                  {errors.organizationId && (
-                    <FormHelperText>{errors.organizationId}</FormHelperText>
+                  {errors.tenantId && (
+                    <FormHelperText>{errors.tenantId}</FormHelperText>
                   )}
                   {isLoadingOrgs && (
                     <FormHelperText>Loading organizations...</FormHelperText>
                   )}
-                  {!formData.organizationId && !errors.organizationId && !isLoadingOrgs && (
-                    <FormHelperText sx={{ color: 'warning.main' }}>
+                  {!formData.tenantId && !errors.tenantId && !isLoadingOrgs && (
+                    <FormHelperText sx={{ color: "warning.main" }}>
                       Please select an event organizer for this event.
                     </FormHelperText>
                   )}
@@ -836,7 +882,8 @@ export const EditEvent: React.FC = () => {
 
             {isEventInPast && (
               <Alert severity="warning" sx={{ mb: 2 }}>
-                This event is in the past. The event date and time zone cannot be modified.
+                This event is in the past. The event date and time zone cannot
+                be modified.
               </Alert>
             )}
 
@@ -862,7 +909,12 @@ export const EditEvent: React.FC = () => {
               </Stack>
 
               <Stack spacing={3} sx={{ flex: 1 }}>
-                <FormControl fullWidth error={!!errors.timeZone} required disabled={isEventInPast}>
+                <FormControl
+                  fullWidth
+                  error={!!errors.timeZone}
+                  required
+                  disabled={isEventInPast}
+                >
                   <InputLabel>Time Zone</InputLabel>
                   <Select
                     name="timeZone"
@@ -880,7 +932,9 @@ export const EditEvent: React.FC = () => {
                     <FormHelperText>{errors.timeZone}</FormHelperText>
                   )}
                   {isEventInPast && !errors.timeZone && (
-                    <FormHelperText>Cannot modify time zone for past events</FormHelperText>
+                    <FormHelperText>
+                      Cannot modify time zone for past events
+                    </FormHelperText>
                   )}
                 </FormControl>
               </Stack>
@@ -1302,11 +1356,14 @@ export const EditEvent: React.FC = () => {
                         fullWidth
                         label="Overall Results to Show"
                         type="number"
-                        value={leaderBoardSettings.NumberOfResultsToShowOverall || 10}
+                        value={
+                          leaderBoardSettings.NumberOfResultsToShowOverall || 10
+                        }
                         onChange={(e) =>
                           setLeaderBoardSettings((prev) => ({
                             ...prev,
-                            NumberOfResultsToShowOverall: parseInt(e.target.value) || 10,
+                            NumberOfResultsToShowOverall:
+                              parseInt(e.target.value) || 10,
                           }))
                         }
                         placeholder="Enter number of overall results"
@@ -1324,11 +1381,14 @@ export const EditEvent: React.FC = () => {
                         fullWidth
                         label="Category Results to Show"
                         type="number"
-                        value={leaderBoardSettings.NumberOfResultsToShowCategory || 5}
+                        value={
+                          leaderBoardSettings.NumberOfResultsToShowCategory || 5
+                        }
                         onChange={(e) =>
                           setLeaderBoardSettings((prev) => ({
                             ...prev,
-                            NumberOfResultsToShowCategory: parseInt(e.target.value) || 5,
+                            NumberOfResultsToShowCategory:
+                              parseInt(e.target.value) || 5,
                           }))
                         }
                         placeholder="Enter number of category results"
