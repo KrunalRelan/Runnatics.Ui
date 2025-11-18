@@ -30,7 +30,7 @@ import { Race } from "@/main/src/models/races/Race";
 const ViewEvent: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
-  
+
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ const ViewEvent: React.FC = () => {
     if (!eventId) return;
     setRacesLoading(true);
     setRacesError(null);
-    RaceService.getAllRaces({ searchCriteria: { eventId: Number(eventId), pageNumber: 1, pageSize: 10 } })
+    RaceService.getAllRaces({ eventId: eventId, searchCriteria: { pageNumber: 1, pageSize: 10 } })
       .then(response => setRaces(response.message || []))
       .catch(err => {
         setRacesError(err?.response?.data?.message || 'Failed to load races');
@@ -286,10 +286,10 @@ const ViewEvent: React.FC = () => {
             {/* Additional Info */}
             <Box>
               <Divider sx={{ my: 2 }} />
-              <Box sx={{ 
-                display: 'grid', 
+              <Box sx={{
+                display: 'grid',
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
-                gap: 2 
+                gap: 2
               }}>
                 <Box>
                   <Typography variant="subtitle2" color="text.secondary">

@@ -1,5 +1,3 @@
-import { create } from "domain";
-
 export const ServiceUrl = {
     login: () => "authentication/login",
     register: () => "authentication/register",
@@ -16,10 +14,10 @@ export const ServiceUrl = {
     getEventOrganizer: () => "EventOrganizer/all-event-organizers",
 
     //races
-    searchRaceService: () => "Races/search",
-    getRaceById: (id: string) => `Races/${id}/race-details`,
-    createRace: () => "Races/create",
-    editRace: (id: string) => `Races/${id}/edit-race`,
-    deleteRace: (id: string) => `Races/${id}/delete-race`,
+    searchRaceService: (eventId: string) => `Races/${eventId}/search`,
+    getRaceById: (eventId:string, id: string) => `Races/${eventId}/${id}/race-details`,
+    createRace: (eventId: number) => `Races/${eventId}/create`,
+    editRace: (eventId: string, id: string) => `Races/${eventId}/${id}/edit-race`,
+    deleteRace: (eventId: number, id: string) => `Races/${eventId}/${id}/delete-race`,
 };
 

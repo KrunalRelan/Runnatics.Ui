@@ -14,10 +14,11 @@ export class RaceService {
      * Note: JWT token is automatically included via interceptor
      */
     static async getAllRaces(params?: {
+        eventId: string;
         searchCriteria?: RaceSearchRequest;
     }): Promise<SearchResponse<Race>> {
         const response = await apiClient.post<SearchResponse<Race>>(
-            ServiceUrl.searchRaceService(),
+            ServiceUrl.searchRaceService(params?.eventId!),
             params?.searchCriteria
         );
         return response.data;
@@ -27,9 +28,9 @@ export class RaceService {
          * Get race by ID
          * Note: JWT token is automatically included via interceptor
          */
-    static async getRaceById(id: string): Promise<ResponseBase<Race>> {
+    static async getRaceById(eventId: string, id: string): Promise<ResponseBase<Race>> {
         const response: AxiosResponse<any> = await apiClient.get(
-            ServiceUrl.getRaceById(id)
+            ServiceUrl.getRaceById(eventId, id)
         );
         // API returns data wrapped in { message: {...}, totalCount: 0 }
         return response.data.message || response.data;
@@ -39,9 +40,9 @@ export class RaceService {
          * Create new race
          * Note: JWT token is automatically included via interceptor
          */
-    static async createRace(raceData: CreateRaceRequest): Promise<Race> {
+    static async createRace(eventId: number, raceData: CreateRaceRequest): Promise<Race> {
         const response: AxiosResponse<Race> = await apiClient.post(
-            ServiceUrl.createRace(),
+            ServiceUrl.createRace(eventId),
             raceData
         );
         return response.data;
@@ -51,7 +52,7 @@ export class RaceService {
          * Delete event using delete-event endpoint
          * Note: JWT token is automatically included via interceptor
          */
-    static async deleteRace(id: string): Promise<void> {
-        await apiClient.delete(ServiceUrl.deleteRace(id));
+    static async deleteRace(eventId: number, id: string): Promise<void> {
+        await apiClient.delete(ServiceUrl.deleteRace(eventId, id));
     }
 }

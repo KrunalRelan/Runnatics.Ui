@@ -13,29 +13,13 @@ import {
   Alert,
   CircularProgress,
   Container,
-  Grid,
+  Snackbar,
 } from "@mui/material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import { EventService } from "../../../services/EventService";
+import { RaceService } from "../../../services/RaceService";
 import { Event } from "../../../models/Event";
-
-interface RaceFormData {
-  title: string;
-  distanceInKms: number | undefined;
-  startTime: string;
-  endTime: string;
-  // Settings - Section 1
-  published: boolean;
-  sendSms: boolean;
-  checkValidation: boolean;
-  showLeaderboard: boolean;
-  showResultTable: boolean;
-  isTimed: boolean;
-  // Settings - Section 2
-  dedupSeconds: number | undefined;
-  earlyStartCutoff: number | undefined;
-  lateStartCutoff: number | undefined;
-}
+import { CreateRaceRequest } from "@/main/src/models/races/CreateRaceRequest";
 
 interface FormErrors {
   [key: string]: string;
@@ -51,24 +35,41 @@ export const AddRace: React.FC = () => {
   const [error, setError] = useState<string>("");
   const [errors, setErrors] = useState<FormErrors>({});
 
-  const [formData, setFormData] = useState<RaceFormData>({
-    title: "",
-    distanceInKms: undefined,
-    startTime: "",
-    endTime: "",
-    // Settings - Section 1
-    published: false,
-    sendSms: false,
-    checkValidation: true,
-    showLeaderboard: true,
-    showResultTable: true,
-    isTimed: true,
-    // Settings - Section 2
-    dedupSeconds: 0,
-    earlyStartCutoff: 0,
-    lateStartCutoff: 0,
+  // Snackbar for success/error messages
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info';
+  }>({
+    open: false,
+    message: '',
+    severity: 'success',
   });
 
+  const [formData, setFormData] = useState<CreateRaceRequest>({
+    title: "",
+    distance: 0,
+    description: "",
+    startTime: "",
+    endTime: "",
+    raceSettings: {
+      published: false,
+      sendSms: false,
+      checkValidation: false,
+      showLeaderboard: true,
+      showResultTable: true,
+      isTimed: false,
+      publichDnf: false,
+      dedUpSeconds: 0,
+      earlyStartCutOff: 300,
+      lateStartCutOff: 1200,
+      hasLoops: false,
+      loopLength: 0,
+      dataHeaders: "",
+    }
+  });
+
+  // Fetch event data 
   // Fetch event data to display event name
   useEffect(() => {
     const fetchEvent = async () => {
@@ -81,7 +82,25 @@ export const AddRace: React.FC = () => {
       try {
         setLoading(true);
         const response = await EventService.getEventById(eventId);
-        setEvent(response.message || response);
+        const eventData = response.message || response;
+        setEvent(eventData);
+
+        // Set default date from event date (if available)
+        if (eventData?.eventDate) {
+          const eventDate = new Date(eventData.eventDate);
+          const dateStr = eventDate.toISOString().split('T')[0]; // Get YYYY-MM-DD format
+
+          // Set default start time to event date at 06:00 AM
+          const defaultStartTime = `${dateStr}T06:00`;
+          // Set default end time to event date at 18:00 (6:00 PM)
+          const defaultEndTime = `${dateStr}T18:00`;
+
+          setFormData((prev) => ({
+            ...prev,
+            startTime: defaultStartTime,
+            endTime: defaultEndTime,
+          }));
+        }
       } catch (err: any) {
         console.error("Error fetching event:", err);
         setError(err.response?.data?.message || "Failed to load event details");
@@ -107,10 +126,26 @@ export const AddRace: React.FC = () => {
       processedValue = value === "" ? undefined : parseFloat(value);
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: processedValue,
-    }));
+    // Check if this field belongs to raceSettings
+    const raceSettingsFields = [
+      'dedUpSeconds', 'earlyStartCutOff', 'lateStartCutOff',
+      'loopLength', 'dataHeaders'
+    ];
+
+    if (raceSettingsFields.includes(name)) {
+      setFormData((prev) => ({
+        ...prev,
+        raceSettings: {
+          ...prev.raceSettings,
+          [name]: processedValue,
+        } as CreateRaceRequest['raceSettings'],
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: processedValue,
+      }));
+    }
 
     // Clear error for this field
     if (errors[name]) {
@@ -122,13 +157,25 @@ export const AddRace: React.FC = () => {
     }
   };
 
-  const handleSwitchChange = (name: keyof RaceFormData) => (
+  const handleRaceSettingsSwitchChange = (name: string) => (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: e.target.checked,
-    }));
+    setFormData((prev) => {
+      const updates: any = { [name]: e.target.checked };
+
+      // Clear loopLength when hasLoops is turned off
+      if (name === 'hasLoops' && !e.target.checked) {
+        updates.loopLength = 0;
+      }
+
+      return {
+        ...prev,
+        raceSettings: {
+          ...prev.raceSettings,
+          ...updates,
+        } as CreateRaceRequest['raceSettings'],
+      };
+    });
   };
 
   const validateForm = (): boolean => {
@@ -138,8 +185,8 @@ export const AddRace: React.FC = () => {
       newErrors.title = "Title is required";
     }
 
-    if (!formData.distanceInKms || formData.distanceInKms <= 0) {
-      newErrors.distanceInKms = "Distance must be greater than 0";
+    if (!formData.distance || formData.distance <= 0) {
+      newErrors.distance = "Distance must be greater than 0";
     }
 
     if (!formData.startTime) {
@@ -176,14 +223,46 @@ export const AddRace: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // TODO: Implement race creation API call
-      console.log("Creating race with data:", formData);
+      // Create the request payload
+      const requestPayload: CreateRaceRequest = {
+        title: formData.title,
+        distance: formData.distance,
+        description: formData.description || "",
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        raceSettings: {
+          published: formData.raceSettings?.published ?? false,
+          sendSms: formData.raceSettings?.sendSms ?? false,
+          checkValidation: formData.raceSettings?.checkValidation ?? false,
+          showLeaderboard: formData.raceSettings?.showLeaderboard ?? true,
+          showResultTable: formData.raceSettings?.showResultTable ?? true,
+          isTimed: formData.raceSettings?.isTimed ?? false,
+          publichDnf: formData.raceSettings?.publichDnf ?? false,
+          dedUpSeconds: formData.raceSettings?.dedUpSeconds ?? 0,
+          earlyStartCutOff: formData.raceSettings?.earlyStartCutOff ?? 0,
+          lateStartCutOff: formData.raceSettings?.lateStartCutOff ?? 0,
+          hasLoops: formData.raceSettings?.hasLoops ?? false,
+          loopLength: formData.raceSettings?.loopLength ?? 0,
+          dataHeaders: formData.raceSettings?.dataHeaders ?? "",
+        }
+      };
+
+      console.log("Creating race with data:", requestPayload);
+
+      // Call the API
+      const createdRace = await RaceService.createRace(Number(eventId!), requestPayload);
+
+      if (createdRace) {
+        // Show success message
+        setSnackbar({
+          open: true,
+          message: `Race "${requestPayload.title}" created successfully!`,
+          severity: 'success',
+        });
+      }
 
       // After successful creation, navigate back to event details
-      // navigate(`/events/events-detail/${eventId}`);
-
-      // For now, just show success message
-      alert("Race created successfully!");
+      navigate(`/events/events-detail/${eventId}`);
     } catch (err: any) {
       console.error("Error creating race:", err);
       setError(
@@ -270,12 +349,12 @@ export const AddRace: React.FC = () => {
               <TextField
                 fullWidth
                 label="Distance (in KMs)"
-                name="distanceInKms"
+                name="distance"
                 type="number"
-                value={formData.distanceInKms || ""}
+                value={formData.distance || ""}
                 onChange={handleInputChange}
-                error={!!errors.distanceInKms}
-                helperText={errors.distanceInKms}
+                error={!!errors.distance}
+                helperText={errors.distance}
                 placeholder="e.g., 10, 21.1, 42.2"
                 required
                 inputProps={{ min: 0, step: 0.1 }}
@@ -344,8 +423,8 @@ export const AddRace: React.FC = () => {
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formData.published}
-                        onChange={handleSwitchChange("published")}
+                        checked={formData.raceSettings?.published}
+                        onChange={handleRaceSettingsSwitchChange("published")}
                       />
                     }
                     label="Published"
@@ -353,8 +432,8 @@ export const AddRace: React.FC = () => {
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formData.sendSms}
-                        onChange={handleSwitchChange("sendSms")}
+                        checked={formData.raceSettings?.sendSms}
+                        onChange={handleRaceSettingsSwitchChange("sendSms")}
                       />
                     }
                     label="Send SMS"
@@ -362,8 +441,8 @@ export const AddRace: React.FC = () => {
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formData.checkValidation}
-                        onChange={handleSwitchChange("checkValidation")}
+                        checked={formData.raceSettings?.checkValidation}
+                        onChange={handleRaceSettingsSwitchChange("checkValidation")}
                       />
                     }
                     label="Check Validation"
@@ -371,8 +450,8 @@ export const AddRace: React.FC = () => {
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formData.showLeaderboard}
-                        onChange={handleSwitchChange("showLeaderboard")}
+                        checked={formData.raceSettings?.showLeaderboard}
+                        onChange={handleRaceSettingsSwitchChange("showLeaderboard")}
                       />
                     }
                     label="Show Leaderboard"
@@ -380,8 +459,8 @@ export const AddRace: React.FC = () => {
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formData.showResultTable}
-                        onChange={handleSwitchChange("showResultTable")}
+                        checked={formData.raceSettings?.showResultTable}
+                        onChange={handleRaceSettingsSwitchChange("showResultTable")}
                       />
                     }
                     label="Show Result Table"
@@ -389,11 +468,20 @@ export const AddRace: React.FC = () => {
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formData.isTimed}
-                        onChange={handleSwitchChange("isTimed")}
+                        checked={formData.raceSettings?.isTimed}
+                        onChange={handleRaceSettingsSwitchChange("isTimed")}
                       />
                     }
                     label="Is Timed"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.raceSettings?.publichDnf}
+                        onChange={handleRaceSettingsSwitchChange("publichDnf")}
+                      />
+                    }
+                    label="Publish DNF"
                   />
                 </Stack>
               </Box>
@@ -407,12 +495,12 @@ export const AddRace: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Dedup Seconds"
-                    name="dedupSeconds"
+                    name="dedUpSeconds"
                     type="number"
-                    value={formData.dedupSeconds || ""}
+                    value={formData.raceSettings?.dedUpSeconds || ""}
                     onChange={handleInputChange}
-                    error={!!errors.dedupSeconds}
-                    helperText={errors.dedupSeconds || "Seconds to deduplicate readings"}
+                    error={!!errors.dedUpSeconds}
+                    helperText={errors.dedUpSeconds || "Seconds to deduplicate readings"}
                     inputProps={{ min: 0, step: 1 }}
                   />
 
@@ -420,23 +508,23 @@ export const AddRace: React.FC = () => {
                     <TextField
                       fullWidth
                       label="Early Start Cutoff"
-                      name="earlyStartCutoff"
+                      name="earlyStartCutOff"
                       type="number"
-                      value={formData.earlyStartCutoff || ""}
+                      value={formData.raceSettings?.earlyStartCutOff || ""}
                       onChange={handleInputChange}
-                      error={!!errors.earlyStartCutoff}
-                      helperText={errors.earlyStartCutoff || "Seconds before start time"}
+                      error={!!errors.earlyStartCutOff}
+                      helperText={errors.earlyStartCutOff || "Seconds before start time"}
                       inputProps={{ min: 0, step: 1 }}
                     />
                     <TextField
                       fullWidth
                       label="Late Start Cutoff"
-                      name="lateStartCutoff"
+                      name="lateStartCutOff"
                       type="number"
-                      value={formData.lateStartCutoff || ""}
+                      value={formData.raceSettings?.lateStartCutOff || ""}
                       onChange={handleInputChange}
-                      error={!!errors.lateStartCutoff}
-                      helperText={errors.lateStartCutoff || "Seconds after start time"}
+                      error={!!errors.lateStartCutOff}
+                      helperText={errors.lateStartCutOff || "Seconds after start time"}
                       inputProps={{ min: 0, step: 1 }}
                     />
                   </Stack>
@@ -448,8 +536,8 @@ export const AddRace: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={formData.hasLoops}
-                          onChange={handleSwitchChange("hasLoops")}
+                          checked={formData.raceSettings?.hasLoops}
+                          onChange={handleRaceSettingsSwitchChange("hasLoops")}
                         />
                       }
                       label="Has Loops"
@@ -461,28 +549,27 @@ export const AddRace: React.FC = () => {
                       label="Loop Length (km)"
                       name="loopLength"
                       type="number"
-                      value={formData.loopLength ?? ""}
+                      value={formData.raceSettings?.loopLength ?? ""}
                       onChange={handleInputChange}
                       error={!!errors.loopLength}
                       helperText={errors.loopLength}
                       inputProps={{ min: 0, step: 0.01 }}
+                      disabled={!formData.raceSettings?.hasLoops}
                     />
                   </Stack>
 
                   <TextField
                     fullWidth
-                    label="Data Header"
-                    name="dataHeader"
+                    label="Data Headers"
+                    name="dataHeaders"
                     type="text"
-                    value={formData.dataHeader || ""}
+                    value={formData.raceSettings?.dataHeaders || ""}
                     onChange={handleInputChange}
-                    error={!!errors.dataHeader}
-                    helperText={errors.dataHeader || "Data Field Headers"}
+                    error={!!errors.dataHeaders}
+                    helperText={errors.dataHeaders || "Data Field Headers"}
                   />
                 </Stack>
               </Box>
-
-
             </Stack>
           </Box>
 
@@ -518,6 +605,23 @@ export const AddRace: React.FC = () => {
           </Box>
         </form>
       </Paper>
-    </Container >
+
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
   );
 };

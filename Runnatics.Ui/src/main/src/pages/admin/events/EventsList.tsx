@@ -94,10 +94,10 @@ const EventsList: React.FC = () => {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [dateError, setDateError] = useState<string>("");
-  
+
   // Track the last criteria we fetched to prevent duplicate calls
   const lastFetchedCriteriaRef = useRef<string>('');
-  
+
   // Snackbar for success/error messages
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -115,15 +115,15 @@ const EventsList: React.FC = () => {
       setDateError("");
       return true;
     }
-    
+
     const startDateObj = new Date(start);
     const endDateObj = new Date(end);
-    
+
     if (endDateObj < startDateObj) {
       setDateError("End date must be equal to or greater than start date");
       return false;
     }
-    
+
     setDateError("");
     return true;
   }, []);
@@ -132,23 +132,23 @@ const EventsList: React.FC = () => {
   const fetchEvents = useCallback(async (criteria: EventSearchRequest) => {
     // Create a unique key for the criteria to prevent duplicate calls
     const criteriaKey = JSON.stringify(criteria);
-    
+
     // Skip if we just fetched with the same criteria
     if (lastFetchedCriteriaRef.current === criteriaKey) {
       console.log('⏭️ Skipping duplicate fetch for same criteria');
       return;
     }
-    
+
     console.log('🔍 fetchEvents called with criteria:', criteria);
     lastFetchedCriteriaRef.current = criteriaKey;
-    
+
     try {
       setLoading(true);
       setError(null);
 
       // Call the API with search criteria wrapped in the correct format
-      const response = await EventService.getAllEvents({ 
-        searchCriteria: criteria 
+      const response = await EventService.getAllEvents({
+        searchCriteria: criteria
       });
 
       console.log('✅ API response received:', response);
@@ -188,10 +188,10 @@ const EventsList: React.FC = () => {
         if (!validateDateRange(startDate, endDate)) {
           return;
         }
-        
+
         const formattedStartDate = startDate ? new Date(startDate).toISOString() : undefined;
         const formattedEndDate = endDate ? new Date(endDate).toISOString() : undefined;
-        
+
         setSearchCriteria({
           ...defaultSearchCriteria,
           name: searchQuery || undefined,
@@ -235,26 +235,26 @@ const EventsList: React.FC = () => {
       await EventService.deleteEvent(eventToDelete.id);
       setDeleteDialogOpen(false);
       setEventToDelete(null);
-      
+
       // Show success message
       setSnackbar({
         open: true,
         message: `Event "${eventToDelete.name}" deleted successfully!`,
         severity: 'success',
       });
-      
+
       // Refresh the list
       fetchEvents(searchCriteria);
     } catch (err: any) {
       console.error("Error deleting event:", err);
-      
+
       // Show error message
       setSnackbar({
         open: true,
         message: err.response?.data?.message || "Failed to delete event. Please try again.",
         severity: 'error',
       });
-      
+
       setDeleteDialogOpen(false);
       setEventToDelete(null);
     }
@@ -270,10 +270,10 @@ const EventsList: React.FC = () => {
     if (!validateDateRange(startDate, endDate)) {
       return; // Don't proceed with search if validation fails
     }
-    
+
     const formattedStartDate = startDate ? new Date(startDate).toISOString() : undefined;
     const formattedEndDate = endDate ? new Date(endDate).toISOString() : undefined;
-    
+
     setSearchCriteria({
       ...defaultSearchCriteria,
       name: searchQuery || undefined,
@@ -581,7 +581,7 @@ const EventsList: React.FC = () => {
               startIcon={<SearchIcon />}
               onClick={handleSearch}
               disabled={loading}
-              sx={{ 
+              sx={{
                 minWidth: { xs: "100%", sm: "120px" },
                 whiteSpace: "nowrap"
               }}
@@ -593,7 +593,7 @@ const EventsList: React.FC = () => {
               startIcon={<ClearIcon />}
               onClick={handleClearFilters}
               disabled={loading}
-              sx={{ 
+              sx={{
                 minWidth: { xs: "100%", sm: "100px" },
                 whiteSpace: "nowrap"
               }}
@@ -708,7 +708,7 @@ const EventsList: React.FC = () => {
                 </Typography>
               </Box>
             )}
-            
+
             <AgGridReact<Event>
               theme={myTheme}
               rowData={events}
@@ -751,7 +751,7 @@ const EventsList: React.FC = () => {
                 to {Math.min(pageNumber * pageSize, totalRecords)} of{" "}
                 {totalRecords} entries
               </Typography>
-              
+
               <FormControl size="small" sx={{ minWidth: 120 }}>
                 <InputLabel id="page-size-label">Rows per page</InputLabel>
                 <Select

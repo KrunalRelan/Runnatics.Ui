@@ -7,11 +7,12 @@ export interface RaceSettings {
     showLeaderboard: boolean;
     showResultTable: boolean;
     isTimed: boolean;
-    dedUpSeconds: number;
-    earlyStartCutOff: number;
-    lateStartCutOff: number;
+    publichDnf: boolean;
+    dedUpSeconds?: number;
+    earlyStartCutOff?: number;
+    lateStartCutOff?: number;
     hasLoops: boolean;
-    loopLength: number;
+    loopLength?: number;
     dataHeaders?: string;
     createdAt?: string;
 }

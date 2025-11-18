@@ -1,7 +1,7 @@
 import { SearchCriteria } from "../SearchCriteria";
 
 export interface RaceSearchRequest extends SearchCriteria {
-    eventId: number;
+    // eventId: number;
     title?: string;
     description?: string; 
     distance?: string; 
