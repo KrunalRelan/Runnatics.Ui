@@ -1,5 +1,3 @@
-// src/main/src/pages/CreateEvent.tsx
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -95,7 +93,7 @@ export const CreateEvent: React.FC = () => {
 
   const [formData, setFormData] = useState<CreateEventRequest>({
     tenantId: "",
-    eventOrganizerId: 0,
+    eventOrganizerId: "",
     name: "",
     description: "",
     eventType: EventType.Marathon,
@@ -149,12 +147,6 @@ export const CreateEvent: React.FC = () => {
         setIsLoadingOrgs(true);
         const response = await EventOrganizerService.getOrganizations();
 
-        console.log("📦 Raw organizations response:", response);
-        console.log(
-          "📊 Number of organizations fetched:",
-          response?.length || 0
-        );
-
         if (isMounted) {
           // Map API response to dropdown format
           const mappedOrgs = response.map((org) => ({
@@ -164,18 +156,9 @@ export const CreateEvent: React.FC = () => {
             organizerName: org.organizerName || org.name || "",
           }));
 
-          console.log("🗂️ Mapped organizations:", mappedOrgs);
-          console.log("✅ Setting organizations in state:", mappedOrgs.length);
-
           setOrganizations(mappedOrgs);
-
-          console.log("💾 Organizations state updated");
-        } else {
-          console.log("⚠️ Component unmounted, skipping state update");
         }
       } catch (error) {
-        console.error("❌ Error fetching organizations:", error);
-
         if (isMounted) {
           setErrors((prev) => ({
             ...prev,
@@ -185,7 +168,6 @@ export const CreateEvent: React.FC = () => {
       } finally {
         if (isMounted) {
           setIsLoadingOrgs(false);
-          console.log("✅ Loading complete");
         }
       }
     };
@@ -252,7 +234,7 @@ export const CreateEvent: React.FC = () => {
     }
   };
 
-  // Handle organization selection
+  // Handle organization selection - UPDATED
   const handleOrganizationChange = (
     event: any,
     newValue: EventOrganizer | null
@@ -262,7 +244,8 @@ export const CreateEvent: React.FC = () => {
     // Update formData with selected organization's ID
     setFormData((prev) => ({
       ...prev,
-      tenantId: newValue?.id || "",
+      tenantId: newValue?.tenantId || "",
+      eventOrganizerId: newValue?.id || "",
     }));
 
     // Clear error
@@ -282,7 +265,7 @@ export const CreateEvent: React.FC = () => {
     setOrgError("");
   };
 
-  // Handle creating new organization
+  // Handle creating new organization - UPDATED
   const handleCreateOrganization = async () => {
     if (!newOrgName.trim()) {
       setOrgError("Organization name is required");
@@ -297,12 +280,7 @@ export const CreateEvent: React.FC = () => {
         EventOrganizerName: newOrgName.trim(),
       };
 
-      console.log("📤 Creating new organization:", request);
-
       const response = await EventOrganizerService.createOrganization(request);
-
-      console.log("✅ Organization created:", response);
-
       // Map the response to EventOrganizer format
       const newOrg: EventOrganizer = {
         id: response.id,
@@ -316,19 +294,25 @@ export const CreateEvent: React.FC = () => {
 
       // Set the newly created organization as selected
       setSelectedOrganization(newOrg);
+
+      // Update formData with the new organization's ID - UPDATED
       setFormData((prev) => ({
         ...prev,
-        tenantId: newOrg.id,
+        tenantId: newOrg.tenantId,
+        eventOrganizerId: newOrg.id,
       }));
+
+      // IMPORTANT: Clear the error for tenantId field
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.tenantId;
+        return newErrors;
+      });
 
       // Close dialog and reset
       setOpenAddOrgDialog(false);
       setNewOrgName("");
-
-      console.log("✅ Organization added to state and selected");
     } catch (error: any) {
-      console.error("❌ Error creating organization:", error);
-
       const errorMessage =
         error.response?.data?.message ||
         error.message ||
@@ -352,12 +336,12 @@ export const CreateEvent: React.FC = () => {
     }
   };
 
-  // Validate form
+  // Validate form - UPDATED
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Tenant validation
-    if (!formData.tenantId || formData.tenantId === "") {
+    // Tenant validation - UPDATED to check eventOrganizerId
+    if (!formData.eventOrganizerId || formData.eventOrganizerId === "") {
       newErrors.tenantId = "Event organizer is required";
     }
 
@@ -396,13 +380,12 @@ export const CreateEvent: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle form submission
+  // Handle form submission - UPDATED
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     setApiError("");
     setErrors({});
-
     const isValid = validateForm();
 
     if (!isValid) {
@@ -415,13 +398,10 @@ export const CreateEvent: React.FC = () => {
     try {
       const { capacity, price, currency, ...apiData } = formData;
 
-      // Get the event organizer ID from the selected organization
-      let eventOrganizerIdForApi: number;
-      if (typeof apiData.tenantId === "string") {
-        eventOrganizerIdForApi = parseInt(apiData.tenantId, 10);
-      } else if (typeof apiData.tenantId === "number") {
-        eventOrganizerIdForApi = apiData.tenantId;
-      } else {
+      // Use the eventOrganizerId directly - SIMPLIFIED
+      const eventOrganizerIdForApi = formData.eventOrganizerId;
+
+      if (!eventOrganizerIdForApi || eventOrganizerIdForApi === "") {
         throw new Error("Invalid organization selection");
       }
 
@@ -1397,6 +1377,9 @@ export const CreateEvent: React.FC = () => {
             onClick={handleCreateOrganization}
             variant="contained"
             disabled={isCreatingOrg || !newOrgName.trim()}
+            startIcon={
+              isCreatingOrg ? <CircularProgress size={20} /> : undefined
+            }
           >
             {isCreatingOrg ? "Creating..." : "Create"}
           </Button>
