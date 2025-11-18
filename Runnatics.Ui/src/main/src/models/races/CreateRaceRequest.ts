@@ -1,4 +1,4 @@
-import { RaceSettings } from "./raceSettings";
+import { RaceSettings } from "./RaceSettings";
 
 export interface CreateRaceRequest {
   title: string;

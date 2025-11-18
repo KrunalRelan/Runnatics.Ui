@@ -357,7 +357,16 @@ const ViewEvent: React.FC = () => {
           ) : racesError ? (
             <Alert severity="error">{racesError}</Alert>
           ) : (
-            <RaceList races={races} />
+            <RaceList
+              races={races}
+              pageNumber={1}
+              pageSize={10}
+              totalRecords={races.length}
+              totalPages={1}
+              onPageChange={() => {}}
+              onPageSizeChange={() => {}} 
+              onEdit={() => {}}
+            />
           )}
         </CardContent>
       </Card>

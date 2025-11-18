@@ -49,6 +49,17 @@ export class RaceService {
     }
 
     /**
+         * Update existing race using edit-race endpoint
+         */
+    static async updateRace(eventId: string, id: string, raceData: CreateRaceRequest): Promise<Race> {
+        const response: AxiosResponse<Race> = await apiClient.put(
+            ServiceUrl.editRace(eventId, id),
+            raceData
+        );
+        return response.data;
+    }
+
+    /**
          * Delete event using delete-event endpoint
          * Note: JWT token is automatically included via interceptor
          */

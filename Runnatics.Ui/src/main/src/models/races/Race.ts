@@ -1,4 +1,5 @@
-import { RaceSettings } from "./raceSettings";
+
+import { RaceSettings } from './RaceSettings'; // Adjust the path as needed
 
 export interface Race {
     id: string;

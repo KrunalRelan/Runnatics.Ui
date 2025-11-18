@@ -67,7 +67,7 @@ export const RaceList: React.FC<RaceListProps> = ({
 
     const handleEditClick = (eventId: number | undefined, raceId: number | undefined) => {
         if (eventId) {
-            navigate(`/races/${eventId}race-edit/${raceId}`);
+            navigate(`/races/${eventId}/race-edit/${raceId}`);
         }
     };
 
