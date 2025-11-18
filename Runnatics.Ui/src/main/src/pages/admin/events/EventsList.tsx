@@ -101,9 +101,6 @@ const EventsList: React.FC = () => {
   const [endDate, setEndDate] = useState<string>("");
   const [dateError, setDateError] = useState<string>("");
 
-  // Add refresh trigger to force re-fetch
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
   // Track the last criteria we fetched to prevent duplicate calls
   const lastFetchedCriteriaRef = useRef<string>("");
 
@@ -140,60 +137,59 @@ const EventsList: React.FC = () => {
     []
   );
 
-  // Fetch events function
-  const fetchEvents = useCallback(async (criteria: EventSearchRequest) => {
-    const criteriaKey = JSON.stringify(criteria);
+  // Fetch events function (with optional force flag)
+  const fetchEvents = useCallback(
+    async (criteria: EventSearchRequest, force: boolean = false) => {
+      const criteriaKey = JSON.stringify(criteria);
 
-    // Skip if we just fetched with the same criteria
-    if (lastFetchedCriteriaRef.current === criteriaKey) {
-      console.log("⏭️ Skipping duplicate fetch for same criteria");
-      return;
-    }
+      // Skip if we just fetched with the same criteria and not forcing
+      if (!force && lastFetchedCriteriaRef.current === criteriaKey) {
+        console.log("⏭️ Skipping duplicate fetch for same criteria");
+        return;
+      }
 
-    console.log("🔍 fetchEvents called with criteria:", criteria);
-    lastFetchedCriteriaRef.current = criteriaKey;
+      console.log("🔍 fetchEvents called with criteria:", criteria);
+      lastFetchedCriteriaRef.current = criteriaKey;
 
-    try {
-      setLoading(true);
-      setError(null);
+      try {
+        setLoading(true);
+        setError(null);
 
-      // Call the API with search criteria wrapped in the correct format
-      const response = await EventService.getAllEvents({
-        searchCriteria: criteria,
-      });
+        // Call the API with search criteria wrapped in the correct format
+        const response = await EventService.getAllEvents({
+          searchCriteria: criteria,
+        });
 
-      console.log("✅ API response received:", response);
-      // Backend returns events in the message property and total count in totalCount
-      setEvents(response.message || []);
-      setTotalRecords(response.totalCount || 0);
-    } catch (err: any) {
-      console.error("Error fetching events:", err);
-      setError(err.response?.data?.message || "Failed to fetch events");
-      setEvents([]);
-      setTotalRecords(0);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+        console.log("✅ API response received:", response);
+        // Backend returns events in the message property and total count in totalCount
+        setEvents(response.message || []);
+        setTotalRecords(response.totalCount || 0);
+      } catch (err: any) {
+        console.error("Error fetching events:", err);
+        setError(err.response?.data?.message || "Failed to fetch events");
+        setEvents([]);
+        setTotalRecords(0);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
-  // Fetch events whenever searchCriteria OR refreshTrigger changes
+  // Fetch events whenever searchCriteria changes
   useEffect(() => {
-    console.log("🎯 useEffect triggered - searchCriteria or refresh:", {
-      searchCriteria,
-      refreshTrigger,
-    });
-    // Reset the duplicate check when refresh is triggered
-    lastFetchedCriteriaRef.current = "";
+    console.log("🎯 useEffect triggered - searchCriteria:", searchCriteria);
     fetchEvents(searchCriteria);
-  }, [searchCriteria, refreshTrigger, fetchEvents]);
+  }, [searchCriteria, fetchEvents]);
 
-  // Auto-search when user types 3+ characters
+  // Auto-search when user types 3+ characters or changes date range
   useEffect(() => {
     console.log("🔎 Second useEffect triggered - search inputs:", {
       searchQuery,
       startDate,
       endDate,
     });
+
     // Skip if component just mounted and search is empty
     if (searchQuery.length === 0 && startDate === "" && endDate === "") {
       console.log("⏭️ Skipping - initial state");
@@ -201,19 +197,20 @@ const EventsList: React.FC = () => {
     }
 
     const timer = setTimeout(() => {
-      if (searchQuery.length >= 3) {
-        console.log("📝 Setting search criteria for query:", searchQuery);
-        // Validate date range before searching
-        if (!validateDateRange(startDate, endDate)) {
-          return;
-        }
+      // Validate date range before searching
+      if (!validateDateRange(startDate, endDate)) {
+        return;
+      }
 
-        const formattedStartDate = startDate
-          ? new Date(startDate).toISOString()
-          : undefined;
-        const formattedEndDate = endDate
-          ? new Date(endDate).toISOString()
-          : undefined;
+      const formattedStartDate = startDate
+        ? new Date(startDate).toISOString()
+        : undefined;
+      const formattedEndDate = endDate
+        ? new Date(endDate).toISOString()
+        : undefined;
+
+      if (searchQuery.length >= 3) {
+        console.log("📝 Auto-setting search criteria for query:", searchQuery);
 
         setSearchCriteria({
           ...defaultSearchCriteria,
@@ -223,14 +220,12 @@ const EventsList: React.FC = () => {
           pageNumber: 1,
         });
       } else if (searchQuery.length === 0) {
-        console.log("🧹 Clearing search criteria");
-        // Clear search when query is empty
+        console.log("🧹 Auto-clearing search criteria with date filters");
+
         setSearchCriteria({
           ...defaultSearchCriteria,
-          eventDateFrom: startDate
-            ? new Date(startDate).toISOString()
-            : undefined,
-          eventDateTo: endDate ? new Date(endDate).toISOString() : undefined,
+          eventDateFrom: formattedStartDate,
+          eventDateTo: formattedEndDate,
         });
       }
     }, 500); // 500ms debounce
@@ -268,8 +263,8 @@ const EventsList: React.FC = () => {
         severity: "success",
       });
 
-      // Trigger refresh by incrementing the counter
-      setRefreshTrigger((prev) => prev + 1);
+      // Explicitly re-fetch with current criteria (force = true)
+      await fetchEvents(searchCriteria, true);
     } catch (err: any) {
       console.error("Error deleting event:", err);
 
@@ -304,6 +299,8 @@ const EventsList: React.FC = () => {
     const formattedEndDate = endDate
       ? new Date(endDate).toISOString()
       : undefined;
+
+    console.log("🔍 Manual search triggered with query:", searchQuery);
 
     setSearchCriteria({
       ...defaultSearchCriteria,

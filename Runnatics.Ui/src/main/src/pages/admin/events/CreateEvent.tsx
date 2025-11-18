@@ -12,7 +12,6 @@ import {
   Typography,
   Paper,
   Stack,
-  SelectChangeEvent,
   FormControlLabel,
   Switch,
   Divider,
@@ -25,6 +24,10 @@ import {
   DialogActions,
   CircularProgress,
 } from "@mui/material";
+// If your project requires it, you can instead do:
+// import { SelectChangeEvent } from "@mui/material/Select";
+import { SelectChangeEvent } from "@mui/material/Select";
+
 import { EventService } from "../../../services/EventService";
 import {
   EventOrganizer,
@@ -33,8 +36,8 @@ import {
   EventSettings,
   LeaderBoardSettings,
   EventStatus,
+  CreateEventRequest,
 } from "@/main/src/models";
-import { CreateEventRequest } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
 
 interface FormErrors {
@@ -218,7 +221,7 @@ export const CreateEvent: React.FC = () => {
   const handleSelectChange = (e: SelectChangeEvent<string | number>) => {
     const { name, value } = e.target;
 
-    let processedValue = value === "" ? null : value;
+    const processedValue = value === "" ? null : value;
 
     setFormData((prev) => ({
       ...prev,
@@ -234,21 +237,19 @@ export const CreateEvent: React.FC = () => {
     }
   };
 
-  // Handle organization selection - UPDATED
+  // Handle organization selection
   const handleOrganizationChange = (
     event: any,
     newValue: EventOrganizer | null
   ) => {
     setSelectedOrganization(newValue);
 
-    // Update formData with selected organization's ID
     setFormData((prev) => ({
       ...prev,
       tenantId: newValue?.tenantId || "",
       eventOrganizerId: newValue?.id || "",
     }));
 
-    // Clear error
     if (errors.tenantId) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -265,7 +266,7 @@ export const CreateEvent: React.FC = () => {
     setOrgError("");
   };
 
-  // Handle creating new organization - UPDATED
+  // Handle creating new organization
   const handleCreateOrganization = async () => {
     if (!newOrgName.trim()) {
       setOrgError("Organization name is required");
@@ -281,7 +282,7 @@ export const CreateEvent: React.FC = () => {
       };
 
       const response = await EventOrganizerService.createOrganization(request);
-      // Map the response to EventOrganizer format
+
       const newOrg: EventOrganizer = {
         id: response.id,
         tenantId: response.tenantId,
@@ -289,33 +290,27 @@ export const CreateEvent: React.FC = () => {
         organizerName: response.organizerName || newOrgName.trim(),
       };
 
-      // Update organizations state by adding the new organization
       setOrganizations((prev) => [...prev, newOrg]);
-
-      // Set the newly created organization as selected
       setSelectedOrganization(newOrg);
 
-      // Update formData with the new organization's ID - UPDATED
       setFormData((prev) => ({
         ...prev,
         tenantId: newOrg.tenantId,
         eventOrganizerId: newOrg.id,
       }));
 
-      // IMPORTANT: Clear the error for tenantId field
       setErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors.tenantId;
         return newErrors;
       });
 
-      // Close dialog and reset
       setOpenAddOrgDialog(false);
       setNewOrgName("");
     } catch (error: any) {
       const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
+        error?.response?.data?.message ||
+        error?.message ||
         "Failed to create organization. Please try again.";
 
       setOrgError(errorMessage);
@@ -336,16 +331,14 @@ export const CreateEvent: React.FC = () => {
     }
   };
 
-  // Validate form - UPDATED
+  // Validate form
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Tenant validation - UPDATED to check eventOrganizerId
     if (!formData.eventOrganizerId || formData.eventOrganizerId === "") {
       newErrors.tenantId = "Event organizer is required";
     }
 
-    // Required field validations
     if (!formData.name.trim()) {
       newErrors.name = "Event name is required";
     }
@@ -380,7 +373,7 @@ export const CreateEvent: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle form submission - UPDATED
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -398,7 +391,6 @@ export const CreateEvent: React.FC = () => {
     try {
       const { capacity, price, currency, ...apiData } = formData;
 
-      // Use the eventOrganizerId directly - SIMPLIFIED
       const eventOrganizerIdForApi = formData.eventOrganizerId;
 
       if (!eventOrganizerIdForApi || eventOrganizerIdForApi === "") {
@@ -701,26 +693,34 @@ export const CreateEvent: React.FC = () => {
                       }}
                     />
                   )}
-                  renderOption={(props, option) => {
+                  renderOption={(rawProps, option) => {
+                    // Fix: don't spread key from props
+                    const { key, ...props } = rawProps as any;
+
                     if (option.id === "add-new") {
                       return (
                         <li
+                          key={key}
                           {...props}
                           style={{
                             backgroundColor: "#f0f0f0",
                             fontWeight: "bold",
                             color: "#1976d2",
                           }}
-                          onClick={() =>
-                            handleAddNewOrganization(option.organizerName || "")
-                          }
+                          onClick={(e) => {
+                            props.onClick?.(e);
+                            handleAddNewOrganization(
+                              option.organizerName || ""
+                            );
+                          }}
                         >
                           + {option.name}
                         </li>
                       );
                     }
+
                     return (
-                      <li {...props}>
+                      <li key={key} {...props}>
                         {option.name ||
                           option.organizerName ||
                           `Organization ${option.id}`}
@@ -1270,7 +1270,7 @@ export const CreateEvent: React.FC = () => {
                           setLeaderBoardSettings((prev) => ({
                             ...prev,
                             NumberOfResultsToShowOverall:
-                              parseInt(e.target.value) || 10,
+                              parseInt(e.target.value, 10) || 10,
                           }))
                         }
                         placeholder="Enter number of overall results"
@@ -1294,7 +1294,7 @@ export const CreateEvent: React.FC = () => {
                           setLeaderBoardSettings((prev) => ({
                             ...prev,
                             NumberOfResultsToShowCategory:
-                              parseInt(e.target.value) || 5,
+                              parseInt(e.target.value, 10) || 5,
                           }))
                         }
                         placeholder="Enter number of category results"

@@ -1,6 +1,6 @@
 // src/main/src/pages/admin/events/EditEvent.tsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   TextField,
@@ -42,6 +42,7 @@ interface FormErrors {
 export const EditEvent: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
@@ -50,6 +51,9 @@ export const EditEvent: React.FC = () => {
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
   const [isEventInPast, setIsEventInPast] = useState(false);
+
+  // Guard to prevent duplicate fetches (React 18 StrictMode)
+  const hasFetchedRef = useRef(false);
 
   // Event Settings state
   const [eventSettings, setEventSettings] = useState<EventSettings>({
@@ -120,73 +124,63 @@ export const EditEvent: React.FC = () => {
     },
   });
 
-  // Fetch event data and organizations on component mount
+  // -------- FETCH EVENT + ORGS (with StrictMode-safe guard) ----------
   useEffect(() => {
-    let isMounted = true;
+    if (!id) {
+      setApiError("No event ID provided");
+      setIsLoading(false);
+      setIsLoadingOrgs(false);
+      return;
+    }
+
+    // Prevent duplicate fetches in React 18 StrictMode
+    if (hasFetchedRef.current) {
+      console.log("⏭️ Skipping duplicate fetch for event id:", id);
+      return;
+    }
+    hasFetchedRef.current = true;
 
     const fetchData = async () => {
       try {
         setIsLoading(true);
         setIsLoadingOrgs(true);
 
-        // Fetch both event data and organizations in parallel
         const [eventResponse, orgsResponse] = await Promise.all([
-          EventService.getEventById(id!),
+          EventService.getEventById(id),
           EventOrganizerService.getOrganizations(),
         ]);
 
-        if (isMounted) {
-          // Extract event data from ResponseBase wrapper
-          const eventData = eventResponse.message || eventResponse;
+        const eventData: Event = eventResponse.message || eventResponse;
 
-          console.log("📦 Raw event response:", eventResponse);
-          console.log("📦 Raw event data:", eventData);
-          console.log("📦 Raw organizations response:", orgsResponse);
+        console.log("📦 Raw event response:", eventResponse);
+        console.log("📦 Raw event data:", eventData);
+        console.log("📦 Raw organizations response:", orgsResponse);
 
-          // Map organizations
-          const mappedOrgs = orgsResponse.map((org) => ({
-            id: org.id,
-            tenantId: org.tenantId,
-            name: org.name || org.organizerName || "",
-            organizerName: org.organizerName || org.name || "",
-          }));
+        const mappedOrgs = orgsResponse.map((org: EventOrganizer) => ({
+          id: org.id,
+          tenantId: org.tenantId,
+          name: org.name || org.organizerName || "",
+          organizerName: org.organizerName || org.name || "",
+        }));
 
-          console.log("🗂️ Mapped organizations:", mappedOrgs);
+        console.log("🗂️ Mapped organizations:", mappedOrgs);
 
-          setOrganizations(mappedOrgs);
-
-          // Populate form with event data
-          populateFormData(eventData, mappedOrgs);
-        }
+        setOrganizations(mappedOrgs);
+        populateFormData(eventData, mappedOrgs);
       } catch (error: any) {
         console.error("Error fetching event data:", error);
-
-        if (isMounted) {
-          const errorMessage =
-            error.response?.data?.message ||
-            error.message ||
-            "Failed to load event data. Please try again.";
-          setApiError(errorMessage);
-        }
+        const errorMessage =
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to load event data. Please try again.";
+        setApiError(errorMessage);
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-          setIsLoadingOrgs(false);
-        }
+        setIsLoading(false);
+        setIsLoadingOrgs(false);
       }
     };
 
-    if (id) {
-      fetchData();
-    } else {
-      setApiError("No event ID provided");
-      setIsLoading(false);
-      setIsLoadingOrgs(false);
-    }
-
-    return () => {
-      isMounted = false;
-    };
+    fetchData();
   }, [id]);
 
   // Populate form data from event object
@@ -201,7 +195,6 @@ export const EditEvent: React.FC = () => {
     }
 
     // Parse city, state, country from venueAddress
-    // Format: "City, State, Country" or "Apollo Bandar, Colaba, Mumbai, Maharashtra 400001, India"
     let city = "";
     let state = "";
     let country = "";
@@ -210,21 +203,18 @@ export const EditEvent: React.FC = () => {
       const parts = event.venueAddress.split(",").map((p: string) => p.trim());
       if (parts.length >= 3) {
         country = parts[parts.length - 1] || ""; // Last part is country
-        // Second to last might have zip code, extract state from it
         const stateWithZip = parts[parts.length - 2] || "";
-        state = stateWithZip.replace(/\d+/g, "").trim(); // Remove numbers to get state
+        state = stateWithZip.replace(/\d+/g, "").trim(); // Remove numbers
         city = parts[parts.length - 3] || ""; // Third from last is city
       }
     }
 
-    // Find the organization that matches this event's tenantId
-    // The event has a tenantId which identifies which tenant/organization it belongs to
+    // Find matching organization
     let selectedOrgId = "";
 
     if (event.tenantId) {
       console.log("🔍 Event tenantId:", event.tenantId);
 
-      // Find organization where tenantId matches
       const matchingOrg = availableOrgs.find(
         (org) => org.tenantId === event.tenantId
       );
@@ -234,7 +224,6 @@ export const EditEvent: React.FC = () => {
         console.log("✅ Found matching organization:", matchingOrg);
       } else {
         console.warn("⚠️ No organization found with tenantId:", event.tenantId);
-        // Add a placeholder organization if not found
         const placeholderOrg: EventOrganizer = {
           id: event.tenantId,
           tenantId: event.tenantId,
@@ -247,11 +236,8 @@ export const EditEvent: React.FC = () => {
         console.log("➕ Added placeholder organization:", placeholderOrg);
       }
     } else if (event.organizerId) {
-      // Fallback to organizerId if tenantId is not available
       console.log("🔍 Using organizerId as fallback:", event.organizerId);
       selectedOrgId = event.organizerId;
-
-      // Check if this org exists
       const orgExists = availableOrgs.some(
         (org) => org.id === event.organizerId
       );
@@ -272,9 +258,8 @@ export const EditEvent: React.FC = () => {
       }
     }
 
-    // Map event data to form fields
-    const mappedFormData = {
-      tenantId: selectedOrgId, // Store selected organization's ID
+    const mappedFormData: CreateEventRequest = {
+      tenantId: selectedOrgId,
       name: event.name || "",
       description: event.description || "",
       eventType: (event.eventType as EventType) || EventType.Marathon,
@@ -304,37 +289,21 @@ export const EditEvent: React.FC = () => {
       smsText: "",
       leaderBoardSettings: {
         ShowOverallResults:
-          event.leaderboardSettings?.ShowOverallResults ??
-          event.leaderboardSettings?.ShowOverallResults ??
-          true,
+          event.leaderboardSettings?.ShowOverallResults ?? true,
         ShowCategoryResults:
-          event.leaderboardSettings?.ShowCategoryResults ??
-          event.leaderboardSettings?.ShowCategoryResults ??
-          true,
+          event.leaderboardSettings?.ShowCategoryResults ?? true,
         SortByOverallChipTime:
-          event.leaderboardSettings?.SortByOverallChipTime ??
-          event.leaderboardSettings?.SortByOverallChipTime ??
-          true,
+          event.leaderboardSettings?.SortByOverallChipTime ?? true,
         SortByCategoryChipTime:
-          event.leaderboardSettings?.SortByCategoryChipTime ??
-          event.leaderboardSettings?.SortByCategoryChipTime ??
-          true,
+          event.leaderboardSettings?.SortByCategoryChipTime ?? true,
         SortByOverallGunTime:
-          event.leaderboardSettings?.SortByOverallGunTime ??
-          event.leaderboardSettings?.SortByOverallGunTime ??
-          false,
+          event.leaderboardSettings?.SortByOverallGunTime ?? false,
         SortByCategoryGunTime:
-          event.leaderboardSettings?.SortByCategoryGunTime ??
-          event.leaderboardSettings?.SortByCategoryGunTime ??
-          false,
+          event.leaderboardSettings?.SortByCategoryGunTime ?? false,
         NumberOfResultsToShowOverall:
-          event.leaderboardSettings?.NumberOfResultsToShowOverall ??
-          event.leaderboardSettings?.NumberOfResultsToShowOverall ??
-          10,
+          event.leaderboardSettings?.NumberOfResultsToShowOverall ?? 10,
         NumberOfResultsToShowCategory:
-          event.leaderboardSettings?.NumberOfResultsToShowCategory ??
-          event.leaderboardSettings?.NumberOfResultsToShowCategory ??
-          5,
+          event.leaderboardSettings?.NumberOfResultsToShowCategory ?? 5,
       },
       eventSettings: {
         removeBanner: event.eventSettings?.removeBanner ?? false,
@@ -357,9 +326,8 @@ export const EditEvent: React.FC = () => {
       mappedFormData.tenantId
     );
 
-    // Set separate state for eventSettings and leaderBoardSettings
     if (event.eventSettings) {
-      const mappedEventSettings = {
+      const mappedEventSettings: EventSettings = {
         id: event.eventSettings.id,
         eventId: event.eventSettings.eventId,
         removeBanner: event.eventSettings.removeBanner ?? false,
@@ -377,39 +345,23 @@ export const EditEvent: React.FC = () => {
     }
 
     if (event.leaderboardSettings) {
-      const mappedLeaderboardSettings = {
+      const mappedLeaderboardSettings: LeaderBoardSettings = {
         ShowOverallResults:
-          event.leaderboardSettings.ShowOverallResults ??
-          event.leaderboardSettings.ShowOverallResults ??
-          true,
+          event.leaderboardSettings.ShowOverallResults ?? true,
         ShowCategoryResults:
-          event.leaderboardSettings.ShowCategoryResults ??
-          event.leaderboardSettings.ShowCategoryResults ??
-          true,
+          event.leaderboardSettings.ShowCategoryResults ?? true,
         SortByOverallChipTime:
-          event.leaderboardSettings.SortByOverallChipTime ??
-          event.leaderboardSettings.SortByOverallChipTime ??
-          false,
+          event.leaderboardSettings.SortByOverallChipTime ?? false,
         SortByCategoryChipTime:
-          event.leaderboardSettings.SortByCategoryChipTime ??
-          event.leaderboardSettings.SortByCategoryChipTime ??
-          false,
+          event.leaderboardSettings.SortByCategoryChipTime ?? false,
         SortByOverallGunTime:
-          event.leaderboardSettings.SortByOverallGunTime ??
-          event.leaderboardSettings.SortByOverallGunTime ??
-          false,
+          event.leaderboardSettings.SortByOverallGunTime ?? false,
         SortByCategoryGunTime:
-          event.leaderboardSettings.SortByCategoryGunTime ??
-          event.leaderboardSettings.SortByCategoryGunTime ??
-          false,
+          event.leaderboardSettings.SortByCategoryGunTime ?? false,
         NumberOfResultsToShowOverall:
-          event.leaderboardSettings.NumberOfResultsToShowOverall ??
-          event.leaderboardSettings.NumberOfResultsToShowOverall ??
-          10,
+          event.leaderboardSettings.NumberOfResultsToShowOverall ?? 10,
         NumberOfResultsToShowCategory:
-          event.leaderboardSettings.NumberOfResultsToShowCategory ??
-          event.leaderboardSettings.NumberOfResultsToShowCategory ??
-          5,
+          event.leaderboardSettings.NumberOfResultsToShowCategory ?? 5,
       };
       setLeaderBoardSettings(mappedLeaderboardSettings);
     }
@@ -452,8 +404,7 @@ export const EditEvent: React.FC = () => {
   // Handle Select changes
   const handleSelectChange = (e: SelectChangeEvent<string | number>) => {
     const { name, value } = e.target;
-
-    let processedValue = value === "" ? null : value;
+    const processedValue = value === "" ? null : value;
 
     setFormData((prev) => ({
       ...prev,
@@ -485,32 +436,24 @@ export const EditEvent: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Organization/Tenant validation
     if (!formData.tenantId || formData.tenantId === "") {
       newErrors.tenantId = "Please select an event organizer";
     }
-
-    // Required field validations
     if (!formData.name.trim()) {
       newErrors.name = "Event name is required";
     }
-
     if (!formData.startDate) {
       newErrors.startDate = "Start date is required";
     }
-
     if (!formData.location.trim()) {
       newErrors.location = "Location is required";
     }
-
     if (!formData.city.trim()) {
       newErrors.city = "City is required";
     }
-
     if (!formData.country.trim()) {
       newErrors.country = "Country is required";
     }
-
     if (!formData.timeZone) {
       newErrors.timeZone = "Time zone is required";
     }
@@ -535,12 +478,9 @@ export const EditEvent: React.FC = () => {
     try {
       const { capacity, price, currency, ...apiData } = formData;
 
-      // Get the selected organization ID from the form
-      // This is the organization's ID (not tenantId)
       const selectedOrgId = apiData.tenantId;
-
-      // Convert to number for API
       let eventOrganizerIdForApi: number;
+
       if (typeof selectedOrgId === "string") {
         eventOrganizerIdForApi = parseInt(selectedOrgId, 10);
       } else if (typeof selectedOrgId === "number") {
@@ -550,7 +490,6 @@ export const EditEvent: React.FC = () => {
       }
 
       const requestPayload = {
-        // Send the organization ID as eventOrganizerId (API expects this)
         eventOrganizerId: eventOrganizerIdForApi,
         name: apiData.name,
         slug: apiData.name.toLowerCase().replace(/\s+/g, "-"),
@@ -566,7 +505,6 @@ export const EditEvent: React.FC = () => {
         maxParticipants: 1000,
         registrationDeadline:
           apiData.registrationCloseDate || apiData.startDate || null,
-
         eventSettings: eventSettings
           ? {
               removeBanner: eventSettings.removeBanner || false,
@@ -600,7 +538,6 @@ export const EditEvent: React.FC = () => {
               allowNameCheck: true,
               allowParticipantEdit: true,
             },
-
         leaderboardSettings: leaderBoardSettings
           ? {
               showOverallResults:
@@ -657,18 +594,15 @@ export const EditEvent: React.FC = () => {
 
       console.log("📤 Submitting payload:", requestPayload);
 
-      // Update event
       const updatedEvent = await EventService.updateEvent(
         id!,
         requestPayload as any
       );
 
-      // Upload banner image if provided
       if (bannerFile && updatedEvent.id) {
         await EventService.uploadBannerImage(updatedEvent.id, bannerFile);
       }
 
-      // Navigate back to events list
       navigate("/events/events-dashboard");
     } catch (error: any) {
       let errorMessage = "Failed to update event. Please try again.";
@@ -748,7 +682,6 @@ export const EditEvent: React.FC = () => {
               Basic Information
             </Typography>
 
-            {/* Two Column Layout */}
             <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
               {/* Left Column */}
               <Stack spacing={3} sx={{ flex: 1 }}>
@@ -1163,9 +1096,8 @@ export const EditEvent: React.FC = () => {
                 <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
                   Leaderboard Settings
                 </Typography>
-                {/* Two Sub-columns for Leaderboard Settings */}
                 <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                  {/* Left Sub-column - Overall Results */}
+                  {/* Overall Results */}
                   <Stack spacing={1.5} sx={{ flex: 1 }}>
                     <Typography
                       variant="body2"
@@ -1180,7 +1112,6 @@ export const EditEvent: React.FC = () => {
                           onChange={(e) => {
                             const isChecked = e.target.checked;
                             setLeaderBoardSettings((prev) => {
-                              // When enabling, ensure at least one time type is selected
                               if (
                                 isChecked &&
                                 !prev.SortByOverallChipTime &&
@@ -1252,7 +1183,7 @@ export const EditEvent: React.FC = () => {
                     />
                   </Stack>
 
-                  {/* Right Sub-column - Category Results */}
+                  {/* Category Results */}
                   <Stack spacing={1.5} sx={{ flex: 1 }}>
                     <Typography
                       variant="body2"
@@ -1267,7 +1198,6 @@ export const EditEvent: React.FC = () => {
                           onChange={(e) => {
                             const isChecked = e.target.checked;
                             setLeaderBoardSettings((prev) => {
-                              // When enabling, ensure at least one time type is selected
                               if (
                                 isChecked &&
                                 !prev.SortByCategoryChipTime &&
@@ -1343,13 +1273,11 @@ export const EditEvent: React.FC = () => {
                   </Stack>
                 </Stack>
 
-                {/* Number of Results fields - positioned below each column */}
                 <Stack
                   direction={{ xs: "column", md: "row" }}
                   spacing={3}
                   sx={{ mt: 3 }}
                 >
-                  {/* Overall Results Count */}
                   {leaderBoardSettings.ShowOverallResults && (
                     <Box sx={{ flex: 1 }}>
                       <TextField
@@ -1374,7 +1302,6 @@ export const EditEvent: React.FC = () => {
                     </Box>
                   )}
 
-                  {/* Category Results Count */}
                   {leaderBoardSettings.ShowCategoryResults && (
                     <Box sx={{ flex: 1 }}>
                       <TextField
