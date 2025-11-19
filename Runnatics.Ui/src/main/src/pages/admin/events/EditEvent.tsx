@@ -177,20 +177,6 @@ export const EditEvent: React.FC = () => {
       setIsEventInPast(eventDate < now);
     }
 
-    // Parse city, state, country from venueAddress
-    let city = "";
-    let state = "";
-    let country = "";
-
-    if (event.venueAddress) {
-      const parts = event.venueAddress.split(",").map((p: string) => p.trim());
-      if (parts.length >= 3) {
-        country = parts[parts.length - 1] || ""; // Last part is country
-        const stateWithZip = parts[parts.length - 2] || "";
-        state = stateWithZip.replace(/\d+/g, "").trim(); // Remove numbers
-        city = parts[parts.length - 3] || ""; // Third from last is city
-      }
-    }
 
     // Find matching organization
     let selectedOrgId = "";
@@ -241,9 +227,9 @@ export const EditEvent: React.FC = () => {
       timeZone: event.timeZone || "Asia/Kolkata",
       venueName: event.venueName || "",
       venueAddress: event.venueAddress || "",
-      city: city,
-      state: state,
-      country: country,
+      city: event.city,
+      state: event.state,
+      country: event.country,
       zipCode: event.zipCode || "",
       bannerImageUrl: event.bannerImageUrl || "",
       
