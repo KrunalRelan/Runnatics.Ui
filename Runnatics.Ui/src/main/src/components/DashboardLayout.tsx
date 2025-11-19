@@ -177,7 +177,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
         // {
         //   text: "View Event",
         //   icon: <InboxIcon />,
-        //   path: "/events/events-detail/:eventId",
+        //   path: "/events/event-details/:eventId",
         // },
       ],
     },

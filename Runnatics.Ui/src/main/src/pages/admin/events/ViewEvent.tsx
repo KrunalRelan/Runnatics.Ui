@@ -12,6 +12,7 @@ import {
   Alert,
   Stack,
   Chip,
+  Snackbar,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
@@ -23,14 +24,31 @@ import {
 } from "@mui/icons-material";
 import { EventService } from "../../../services/EventService";
 import { Event } from "../../../models/Event";
+import { RaceService } from '../../../services/RaceService';
+import RaceList from "../races/RaceList";
+import { Race } from "@/main/src/models/races/Race";
 
 const ViewEvent: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
-  
+
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [races, setRaces] = useState<Race[]>([]);
+  const [racesLoading, setRacesLoading] = useState(false);
+  const [racesError, setRacesError] = useState<string | null>(null);
+
+  // Snackbar for success/error messages
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info';
+  }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
   // Fetch event data
   useEffect(() => {
@@ -57,13 +75,27 @@ const ViewEvent: React.FC = () => {
     fetchEvent();
   }, [eventId]);
 
+  // Fetch races for event
+  useEffect(() => {
+    if (!eventId) return;
+    setRacesLoading(true);
+    setRacesError(null);
+    RaceService.getAllRaces({ eventId: eventId, searchCriteria: { pageNumber: 1, pageSize: 10 } })
+      .then(response => setRaces(response.message || []))
+      .catch(err => {
+        setRacesError(err?.response?.data?.message || 'Failed to load races');
+        setRaces([]);
+      })
+      .finally(() => setRacesLoading(false));
+  }, [eventId]);
+
   const handleBack = () => {
     navigate("/events/events-dashboard");
   };
 
   const handleAddRace = () => {
     if (eventId) {
-      navigate(`/events/${eventId}/races/add`);
+      navigate(`/events/event-details/${eventId}/race/add`);
     }
   };
 
@@ -266,10 +298,10 @@ const ViewEvent: React.FC = () => {
             {/* Additional Info */}
             <Box>
               <Divider sx={{ my: 2 }} />
-              <Box sx={{ 
-                display: 'grid', 
+              <Box sx={{
+                display: 'grid',
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
-                gap: 2 
+                gap: 2
               }}>
                 <Box>
                   <Typography variant="subtitle2" color="text.secondary">
@@ -309,7 +341,7 @@ const ViewEvent: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Races Section - Placeholder */}
+      {/* Races Section */}
       <Card>
         <CardContent>
           <Box
@@ -330,11 +362,43 @@ const ViewEvent: React.FC = () => {
             </Button>
           </Box>
           <Divider sx={{ mb: 3 }} />
-          <Typography variant="body2" color="text.secondary" align="center">
-            No races added yet. Click "Add Race" to create the first race for this event.
-          </Typography>
+          {racesLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : racesError ? (
+            <Alert severity="error">{racesError}</Alert>
+          ) : (
+            <RaceList
+              races={races}
+              pageNumber={1}
+              pageSize={10}
+              totalRecords={races.length}
+              totalPages={1}
+              onPageChange={() => { }}
+              onPageSizeChange={() => { }}
+              onEdit={() => { }}
+            />
+          )}
         </CardContent>
       </Card>
+
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
