@@ -143,6 +143,32 @@ export const RaceList: React.FC<RaceListProps> = ({
         );
     }, [navigate]);
 
+    const TimeCellRenderer = useCallback((props: any) => {
+        const start = formatTimeOnly(props.data.startTime);
+        const end = formatTimeOnly(props.data.endTime);
+        return (
+            <Box sx={{
+                display: "flex",
+                alignItems: "center",
+                fontWeight: 600,
+                fontSize: "1.15rem",
+                color: "#1976d2",
+                letterSpacing: "0.03em",
+                fontFamily: "'Inter', 'Segoe UI', 'Roboto', 'Arial', sans-serif"
+            }}>
+                <Typography component="span" sx={{ mr: 1 }}>
+                    {start}
+                </Typography>
+                <Typography component="span" sx={{ mx: 0.5, color: "#888" }}>
+                    —
+                </Typography>
+                <Typography component="span">
+                    {end}
+                </Typography>
+            </Box>
+        );
+    }, []);
+
 
     // Actions cell renderer
     const ActionsCellRenderer = useCallback((props: any) => {
@@ -187,12 +213,9 @@ export const RaceList: React.FC<RaceListProps> = ({
         {
             headerName: "Time",
             field: "startTime",
-            flex: 1,
-            valueGetter: (params: any) => {
-                const start = formatTimeOnly(params.data.startTime);
-                const end = formatTimeOnly(params.data.endTime);
-                return start && end ? `${start} - ${end}` : start || end || "";
-            },
+            width: 220,
+            flex: 1.5,
+            cellRenderer: TimeCellRenderer
         },
         { headerName: "Participants", field: "participants" as keyof Race, flex: 1 },
         { headerName: "Not Encoded", field: "notEncoded" as keyof Race, flex: 1 },
@@ -218,7 +241,7 @@ export const RaceList: React.FC<RaceListProps> = ({
         },
         {
             headerName: "Action",
-            width: 140,
+            width: 90, // Decreased width
             sortable: false,
             filter: false,
             cellRenderer: ActionsCellRenderer,
@@ -241,17 +264,77 @@ export const RaceList: React.FC<RaceListProps> = ({
 
     return (
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-            <Box sx={{ width: "100%" }}>
-                <div className="ag-theme-material" style={{ height: 400, width: "100%" }}>
+            <Box
+                sx={{
+                    width: "100%",
+                    background: "#fff",
+                    borderRadius: 3,
+                    boxShadow: 3,
+                    p: 2,
+                    mb: 3,
+                    border: "1px solid #e0e0e0",
+                }}
+            >
+                <div
+                    className="ag-theme-material"
+                    style={{
+                        height: 400,
+                        width: "100%",
+                        borderRadius: "12px",
+                        overflow: "hidden",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                        background: "#f9f9fb",
+                    }}
+                >
                     <AgGridReact
                         rowData={races}
                         columnDefs={columnDefs}
-                        defaultColDef={defaultColDef}
+                        defaultColDef={{
+                            ...defaultColDef,
+                            cellStyle: {
+                                fontSize: "1rem",
+                                padding: "12px 8px",
+                                borderBottom: "1px solid #ececec",
+                            },
+                            headerClass: "ag-custom-header",
+                        }}
                         domLayout="autoHeight"
                         suppressRowClickSelection
                         pagination={false}
+                        rowHeight={48}
+                        getRowStyle={() => ({
+                            background: "#fff",
+                            borderRadius: "8px",
+                            transition: "background 0.2s",
+                        })}
                     />
                 </div>
+                <style>
+                    {`
+  .ag-theme-material .ag-header {
+    min-height: 56px !important;
+    height: 56px !important;
+    font-size: 1.15rem;
+    background: #f5f7fa !important; /* Restores header color */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    border-bottom: 2px solid #e0e0e0;
+  }
+  .ag-theme-material .ag-header-cell {
+    padding: 18px 12px !important;
+    border-right: 1px solid #e0e0e0;
+    background: #f5f7fa !important; /* Ensures each cell has header color */
+  }
+  .ag-theme-material .ag-header-cell:last-child {
+    border-right: none;
+  }
+  .ag-theme-material .ag-cell {
+    border-right: 1px solid #f0f0f0;
+  }
+  .ag-theme-material .ag-cell:last-child {
+    border-right: none;
+  }
+`}
+                </style>
                 <TablePagination
                     pageNumber={pageNumber}
                     pageSize={pageSize}
