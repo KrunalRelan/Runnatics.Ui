@@ -259,10 +259,11 @@ export const AddRace: React.FC = () => {
           message: `Race "${requestPayload.title}" created successfully!`,
           severity: 'success',
         });
-      }
 
-      // After successful creation, navigate back to event details
-      navigate(`/events/event-details/${eventId}`);
+        setTimeout(() => {
+          navigate(`/events/event-details/${eventId}`);
+        }, 1000);
+      }
     } catch (err: any) {
       console.error("Error creating race:", err);
       setError(
