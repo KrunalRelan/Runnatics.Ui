@@ -5,7 +5,7 @@ import { LeaderBoardSettings } from "./LeaderBoardSettings";
 
 export interface Event {
   id?: string;
-  organizationId?: number;
+  tenantId?: string;
   name: string;
   slug?: string;
   description: string;

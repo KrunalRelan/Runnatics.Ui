@@ -1,6 +1,6 @@
 // src/main/src/pages/admin/events/EditEvent.tsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   TextField,
@@ -29,10 +29,11 @@ import {
   timeZoneOptions,
   EventSettings,
   LeaderBoardSettings,
-  EventStatus,
+  Event,
 } from "@/main/src/models";
 import { CreateEventRequest } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
+import { EventRequest } from "@/main/src/models/EventRequest";
 
 interface FormErrors {
   [key: string]: string;
@@ -41,6 +42,7 @@ interface FormErrors {
 export const EditEvent: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
@@ -49,6 +51,9 @@ export const EditEvent: React.FC = () => {
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
   const [isEventInPast, setIsEventInPast] = useState(false);
+
+  // Guard to prevent duplicate fetches (React 18 StrictMode)
+  const hasFetchedRef = useRef(false);
 
   // Event Settings state
   const [eventSettings, setEventSettings] = useState<EventSettings>({
@@ -78,23 +83,19 @@ export const EditEvent: React.FC = () => {
       NumberOfResultsToShowCategory: 5,
     });
 
-  const [formData, setFormData] = useState<CreateEventRequest>({
-    organizationId: "",
+  const [formData, setFormData] = useState<EventRequest>({
+      eventOrganizerId: "",
     name: "",
     description: "",
     eventType: EventType.Marathon,
-    startDate: "",
-    endDate: "",
-    registrationOpenDate: "",
-    registrationCloseDate: "",
-    location: "",
+    eventDate: "",
+    bannerImageUrl: "",
+    venueName: "",
+    venueAddress: "",
     city: "",
     state: "",
     country: "",
     zipCode: "",
-    capacity: undefined,
-    price: undefined,
-    currency: "INR",
     timeZone: "Asia/Kolkata",
     smsText: "",
     leaderBoardSettings: {
@@ -119,222 +120,176 @@ export const EditEvent: React.FC = () => {
     },
   });
 
-  // Fetch event data and organizations on component mount
+  // -------- FETCH EVENT + ORGS (with StrictMode-safe guard) ----------
   useEffect(() => {
-    let isMounted = true;
+    if (!id) {
+      setApiError("No event ID provided");
+      setIsLoading(false);
+      setIsLoadingOrgs(false);
+      return;
+    }
+
+    // Prevent duplicate fetches in React 18 StrictMode
+    if (hasFetchedRef.current) {
+      return;
+    }
+    hasFetchedRef.current = true;
 
     const fetchData = async () => {
       try {
         setIsLoading(true);
         setIsLoadingOrgs(true);
 
-        // Fetch both event data and organizations in parallel
-        const [eventData, orgsResponse] = await Promise.all([
-          EventService.getEventById(id!),
+        const [eventResponse, orgsResponse] = await Promise.all([
+          EventService.getEventById(id),
           EventOrganizerService.getOrganizations(),
         ]);
 
-        if (isMounted) {
-          console.log('📦 Raw organizations response:', orgsResponse);
-          console.log('📦 Raw event data:', eventData);
-          
-          // Map organizations - use organizationId as the primary identifier
-          const mappedOrgs = orgsResponse.map((org) => {
-            console.log('🔍 Mapping organization:', org);
-            // Use organizationId as the ID for the dropdown value
-            const orgId = org.organizationId || org.id || 0;
-            return {
-              id: org.id,
-              organizationId: orgId,
-              name: org.organizerName || org.name || "",
-              organizerName: org.organizerName || org.name,
-            };
-          });
-          
-          console.log('🗂️ Mapped organizations:', mappedOrgs);
-          console.log('📊 Number of organizations:', mappedOrgs.length);
-          
-          // Check if event's organization is in the list
-          const eventData_any = eventData as any;
-          const eventOrgId = eventData_any.organizationId || eventData_any.organizerId || eventData_any.eventOrganizerId;
-          // Check against org.id since that's what we use in the MenuItem value
-          const orgExists = mappedOrgs.some(org => org.id === eventOrgId);
-          
-          console.log('🔍 Event organization ID:', eventOrgId);
-          console.log('✅ Organization exists in list:', orgExists);
-          console.log('📋 Available org IDs:', mappedOrgs.map(o => o.id));
-          
-          // If the event's organization is not in the list, add it as a placeholder
-          if (eventOrgId && !orgExists) {
-            console.warn('⚠️ Adding missing organization to dropdown');
-            mappedOrgs.push({
-              id: eventOrgId,
-              organizationId: eventOrgId,
-              name: `Organization ${eventOrgId} (Current)`,
-              organizerName: `Organization ${eventOrgId}`,
-            });
-            console.log('✅ Added placeholder organization. New count:', mappedOrgs.length);
-          }
-          
-          setOrganizations(mappedOrgs);
+        const eventData: Event = eventResponse.message || eventResponse;
 
-          // Populate form with event data AFTER organizations are loaded
-          populateFormData(eventData, mappedOrgs);
-        }
+        const mappedOrgs = orgsResponse.map((org: EventOrganizer) => ({
+          id: org.id,
+          tenantId: org.tenantId,
+          name: org.name || org.organizerName || "",
+          organizerName: org.organizerName || org.name || "",
+        }));
+
+        setOrganizations(mappedOrgs);
+        populateFormData(eventData, mappedOrgs);
       } catch (error: any) {
-        console.error("Error fetching event data:", error);
-
-        if (isMounted) {
-          const errorMessage =
-            error.response?.data?.message ||
-            error.message ||
-            "Failed to load event data. Please try again.";
-          setApiError(errorMessage);
-        }
+        let errorMessage = "Failed to fetch event data. Please try again.";
+        setApiError(errorMessage);
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-          setIsLoadingOrgs(false);
-        }
+        setIsLoading(false);
+        setIsLoadingOrgs(false);
       }
     };
 
-    if (id) {
-      fetchData();
-    } else {
-      setApiError('No event ID provided');
-      setIsLoading(false);
-      setIsLoadingOrgs(false);
-    }
-
-    return () => {
-      isMounted = false;
-    };
+    fetchData();
   }, [id]);
 
   // Populate form data from event object
-  const populateFormData = (event: any, availableOrgs?: EventOrganizer[]) => {
-    console.log('📋 Populating form with event data:', event);
-    
+  const populateFormData = (event: Event, availableOrgs: EventOrganizer[]) => {
     // Check if event is in the past
     if (event.eventDate) {
       const eventDate = new Date(event.eventDate);
       const now = new Date();
       setIsEventInPast(eventDate < now);
     }
-    
+
     // Parse city, state, country from venueAddress
-    // Format: "Apollo Bandar, Colaba, Mumbai, Maharashtra 400001, India"
     let city = "";
     let state = "";
     let country = "";
-    
+
     if (event.venueAddress) {
-      const parts = event.venueAddress.split(',').map((p: string) => p.trim());
+      const parts = event.venueAddress.split(",").map((p: string) => p.trim());
       if (parts.length >= 3) {
         country = parts[parts.length - 1] || ""; // Last part is country
-        // Second to last might have zip code, extract state from it
         const stateWithZip = parts[parts.length - 2] || "";
-        state = stateWithZip.replace(/\d+/g, '').trim(); // Remove numbers to get state
+        state = stateWithZip.replace(/\d+/g, "").trim(); // Remove numbers
         city = parts[parts.length - 3] || ""; // Third from last is city
       }
     }
-    
-    // Get organization ID from eventOrganizerId
-    const eventOrgId = event.eventOrganizerId;
-    console.log('🏢 Event Organizer ID from event:', eventOrgId);
-    
-    // Check if this organization exists in the available organizations
-    const orgsToCheck = availableOrgs || organizations;
-    const orgExists = orgsToCheck.some(org => org.id === eventOrgId || org.organizationId === eventOrgId);
-    console.log('✅ Organization exists in list:', orgExists);
-    
-    if (!orgExists && eventOrgId) {
-      console.warn('⚠️ Organization ID', eventOrgId, 'not found in available organizations:', orgsToCheck);
-      console.warn('⚠️ This might cause the dropdown to not show the selected organization');
-      // Add a warning but continue - we'll set the value anyway
+
+    // Find matching organization
+    let selectedOrgId = "";
+
+    if (event.tenantId) {
+      const matchingOrg = availableOrgs.find(
+        (org) => org.id === event.organizerId
+      );
+
+      if (matchingOrg) {
+        selectedOrgId = matchingOrg.id;
+      } else {
+        const placeholderOrg: EventOrganizer = {
+          id: event.tenantId,
+          tenantId: event.tenantId,
+          name: event.eventOrganizerName || `Organization (${event.tenantId})`,
+          organizerName: event.eventOrganizerName || "",
+        };
+        availableOrgs.push(placeholderOrg);
+        setOrganizations([...availableOrgs]);
+        selectedOrgId = placeholderOrg.id;
+      }
+    } else if (event.organizerId) {
+      selectedOrgId = event.organizerId;
+      const orgExists = availableOrgs.some(
+        (org) => org.id === event.organizerId
+      );
+      if (!orgExists) {
+        const placeholderOrg: EventOrganizer = {
+          id: event.organizerId,
+          tenantId: event.organizerId,
+          name:
+            event.eventOrganizerName || `Organization (${event.organizerId})`,
+          organizerName: event.eventOrganizerName || "",
+        };
+        availableOrgs.push(placeholderOrg);
+        setOrganizations([...availableOrgs]);
+      }
     }
-    
-    // Map event data to form fields (handle both camelCase API and PascalCase)
-    const mappedFormData = {
-      // Convert to string for Select component, or empty string if null/undefined
-      organizationId: eventOrgId ? eventOrgId.toString() : "",
+
+    const mappedFormData: EventRequest = {
+      
+      eventOrganizerId: selectedOrgId,
       name: event.name || "",
       description: event.description || "",
       eventType: (event.eventType as EventType) || EventType.Marathon,
-      startDate: event.eventDate
-        ? new Date(event.eventDate).toISOString().slice(0, 16)
-        : "",
-      endDate: event.endDate
-        ? new Date(event.endDate).toISOString().slice(0, 16)
-        : "",
-      registrationOpenDate: event.registrationOpenDate
-        ? new Date(event.registrationOpenDate).toISOString().slice(0, 16)
-        : "",
-      registrationCloseDate: event.registrationDeadline
-        ? new Date(event.registrationDeadline).toISOString().slice(0, 16)
-        : "",
-      location: event.venueName || "",
-      city: city || event.city || "",
-      state: state || event.state || "",
-      country: country || event.country || "",
-      zipCode: event.zipCode || "",
-      capacity: event.maxParticipants || undefined,
-      price: undefined,
-      currency: "INR",
+      eventDate: event.eventDate || "",
       timeZone: event.timeZone || "Asia/Kolkata",
-      smsText: "",
+      venueName: event.venueName || "",
+      venueAddress: event.venueAddress || "",
+      city: city,
+      state: state,
+      country: country,
+      zipCode: event.zipCode || "",
+      bannerImageUrl: event.bannerImageUrl || "",
+      
       leaderBoardSettings: {
         ShowOverallResults:
-          event.leaderboardSettings?.showOverallResults ?? 
           event.leaderboardSettings?.ShowOverallResults ?? true,
         ShowCategoryResults:
-          event.leaderboardSettings?.showCategoryResults ?? 
           event.leaderboardSettings?.ShowCategoryResults ?? true,
         SortByOverallChipTime:
-          event.leaderboardSettings?.sortByOverallChipTime ?? 
           event.leaderboardSettings?.SortByOverallChipTime ?? true,
         SortByCategoryChipTime:
-          event.leaderboardSettings?.sortByCategoryChipTime ?? 
           event.leaderboardSettings?.SortByCategoryChipTime ?? true,
         SortByOverallGunTime:
-          event.leaderboardSettings?.sortByOverallGunTime ?? 
           event.leaderboardSettings?.SortByOverallGunTime ?? false,
         SortByCategoryGunTime:
-          event.leaderboardSettings?.sortByCategoryGunTime ?? 
           event.leaderboardSettings?.SortByCategoryGunTime ?? false,
         NumberOfResultsToShowOverall:
-          event.leaderboardSettings?.numberOfResultsToShowOverall ?? 
           event.leaderboardSettings?.NumberOfResultsToShowOverall ?? 10,
         NumberOfResultsToShowCategory:
-          event.leaderboardSettings?.numberOfResultsToShowCategory ?? 
           event.leaderboardSettings?.NumberOfResultsToShowCategory ?? 5,
       },
       eventSettings: {
         removeBanner: event.eventSettings?.removeBanner ?? false,
         published: event.eventSettings?.published ?? false,
         rankOnNet: event.eventSettings?.rankOnNet ?? false,
-        allowParticipantEdit: event.eventSettings?.allowParticipantEdit ?? false,
+        allowParticipantEdit:
+          event.eventSettings?.allowParticipantEdit ?? false,
         useOldData: event.eventSettings?.useOldData ?? false,
         confirmedEvent: event.eventSettings?.confirmedEvent ?? false,
         allowNameCheck: event.eventSettings?.allowNameCheck ?? false,
-        showResultSummaryForRaces: event.eventSettings?.showResultSummaryForRaces ?? false,
+        showResultSummaryForRaces:
+          event.eventSettings?.showResultSummaryForRaces ?? false,
       },
     };
-    
-    setFormData(mappedFormData);
-    console.log('✅ Form data set:', mappedFormData);
-    console.log('🆔 Organization ID in form:', mappedFormData.organizationId);
 
-    // Set separate state for eventSettings and leaderBoardSettings
+    setFormData(mappedFormData);
+
     if (event.eventSettings) {
-      const mappedEventSettings = {
+      const mappedEventSettings: EventSettings = {
         id: event.eventSettings.id,
         eventId: event.eventSettings.eventId,
         removeBanner: event.eventSettings.removeBanner ?? false,
         published: event.eventSettings.published ?? false,
         rankOnNet: event.eventSettings.rankOnNet ?? false,
-        showResultSummaryForRaces: event.eventSettings.showResultSummaryForRaces ?? false,
+        showResultSummaryForRaces:
+          event.eventSettings.showResultSummaryForRaces ?? false,
         useOldData: event.eventSettings.useOldData ?? false,
         confirmedEvent: event.eventSettings.confirmedEvent ?? false,
         allowNameCheck: event.eventSettings.allowNameCheck ?? false,
@@ -345,30 +300,22 @@ export const EditEvent: React.FC = () => {
     }
 
     if (event.leaderboardSettings) {
-      const mappedLeaderboardSettings = {
+      const mappedLeaderboardSettings: LeaderBoardSettings = {
         ShowOverallResults:
-          event.leaderboardSettings.showOverallResults ?? 
           event.leaderboardSettings.ShowOverallResults ?? true,
         ShowCategoryResults:
-          event.leaderboardSettings.showCategoryResults ?? 
           event.leaderboardSettings.ShowCategoryResults ?? true,
         SortByOverallChipTime:
-          event.leaderboardSettings.sortByOverallChipTime ?? 
           event.leaderboardSettings.SortByOverallChipTime ?? false,
         SortByCategoryChipTime:
-          event.leaderboardSettings.sortByCategoryChipTime ?? 
           event.leaderboardSettings.SortByCategoryChipTime ?? false,
         SortByOverallGunTime:
-          event.leaderboardSettings.sortByOverallGunTime ?? 
           event.leaderboardSettings.SortByOverallGunTime ?? false,
         SortByCategoryGunTime:
-          event.leaderboardSettings.sortByCategoryGunTime ?? 
           event.leaderboardSettings.SortByCategoryGunTime ?? false,
         NumberOfResultsToShowOverall:
-          event.leaderboardSettings.numberOfResultsToShowOverall ?? 
           event.leaderboardSettings.NumberOfResultsToShowOverall ?? 10,
         NumberOfResultsToShowCategory:
-          event.leaderboardSettings.numberOfResultsToShowCategory ?? 
           event.leaderboardSettings.NumberOfResultsToShowCategory ?? 5,
       };
       setLeaderBoardSettings(mappedLeaderboardSettings);
@@ -412,8 +359,7 @@ export const EditEvent: React.FC = () => {
   // Handle Select changes
   const handleSelectChange = (e: SelectChangeEvent<string | number>) => {
     const { name, value } = e.target;
-
-    let processedValue = value === "" ? null : value;
+    const processedValue = value === "" ? null : value;
 
     setFormData((prev) => ({
       ...prev,
@@ -445,34 +391,30 @@ export const EditEvent: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Organization validation - allow empty during load, but not N/A
-    if (!formData.organizationId || formData.organizationId === "") {
-      newErrors.organizationId = "Please select an event organizer";
-    } else if (formData.organizationId === "N/A") {
-      newErrors.organizationId = "Please select a valid event organizer. N/A is not allowed.";
+    if (!formData.eventOrganizerId || formData.eventOrganizerId === "") {
+      newErrors.eventOrganizerId = "Please select an event organizer";
     }
-
-    // Required field validations
     if (!formData.name.trim()) {
       newErrors.name = "Event name is required";
     }
-
-    if (!formData.startDate) {
-      newErrors.startDate = "Start date is required";
+      if (!formData.eventDate) {
+        newErrors.eventDate = "Event date is required";
+      }
+      if (!(formData.venueName ?? "").trim()) {
+        newErrors.venueName = "Venue name is required";
+      }
+      if (!(formData.venueAddress ?? "").trim()) {
+        newErrors.venueAddress = "Venue address is required";
+      }
+      if (!(formData.city ?? "").trim()) {
+        newErrors.city = "City is required";
+      }
+      if (!(formData.state ?? "").trim()) {
+        newErrors.state = "State is required";
+      }
+      if (!(formData.country ?? "").trim()) {
+        newErrors.country = "Country is required";
     }
-
-    if (!formData.location.trim()) {
-      newErrors.location = "Location is required";
-    }
-
-    if (!formData.city.trim()) {
-      newErrors.city = "City is required";
-    }
-
-    if (!formData.country.trim()) {
-      newErrors.country = "Country is required";
-    }
-
     if (!formData.timeZone) {
       newErrors.timeZone = "Time zone is required";
     }
@@ -495,136 +437,43 @@ export const EditEvent: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const { capacity, price, currency, ...apiData } = formData;
+      const { ...apiData } = formData;
 
-      let eventOrganizerIdForApi: number;
-      if (apiData.organizationId === "N/A") {
-        eventOrganizerIdForApi = 1;
-      } else if (typeof apiData.organizationId === "string") {
-        eventOrganizerIdForApi = parseInt(apiData.organizationId, 10);
-      } else if (typeof apiData.organizationId === "number") {
-        eventOrganizerIdForApi = apiData.organizationId;
+      const selectedOrgId = apiData.eventOrganizerId;
+      let eventOrganizerIdForApi: string;
+
+      if (typeof selectedOrgId === "string") {
+        eventOrganizerIdForApi = selectedOrgId;
       } else {
-        eventOrganizerIdForApi = 1;
+        throw new Error("Invalid organization selection");
       }
 
-      const requestPayload = {
+      const requestPayload: EventRequest = {
         eventOrganizerId: eventOrganizerIdForApi,
         name: apiData.name,
-        slug: apiData.name.toLowerCase().replace(/\s+/g, "-"),
-        description: apiData.description || null,
-        eventDate: apiData.startDate,
+        description: apiData.description || "",
+        eventDate: apiData.eventDate,
         timeZone: apiData.timeZone || "Asia/Kolkata",
-        venueName: apiData.location || null,
-        venueAddress:
-          `${apiData.city}, ${apiData.state}, ${apiData.country}` || null,
-        venueLatitude: null,
-        venueLongitude: null,
-        status: EventStatus.Draft,
-        maxParticipants: 1000,
-        registrationDeadline:
-          apiData.registrationCloseDate || apiData.startDate || null,
+        smsText: apiData.smsText || "",
+        leaderBoardSettings: leaderBoardSettings,
+        eventSettings: eventSettings,
+        eventType: apiData.eventType,
+        venueName: apiData.venueName || "",
+        venueAddress: `${apiData.city}, ${apiData.state}, ${apiData.country}, ${apiData.zipCode}` || "",
+        city: apiData.city || "",
+        state: apiData.state || "",
+        country: apiData.country || "",
+        zipCode: apiData.zipCode || "",
+        bannerImageUrl: apiData.bannerImageUrl || "",
 
-        eventSettings: eventSettings
-          ? {
-              removeBanner: eventSettings.removeBanner || false,
-              published: eventSettings.published || false,
-              rankOnNet:
-                eventSettings.rankOnNet !== undefined
-                  ? eventSettings.rankOnNet
-                  : true,
-              showResultSummaryForRaces:
-                eventSettings.showResultSummaryForRaces !== undefined
-                  ? eventSettings.showResultSummaryForRaces
-                  : true,
-              useOldData: eventSettings.useOldData || false,
-              confirmedEvent: eventSettings.confirmedEvent || false,
-              allowNameCheck:
-                eventSettings.allowNameCheck !== undefined
-                  ? eventSettings.allowNameCheck
-                  : true,
-              allowParticipantEdit:
-                eventSettings.allowParticipantEdit !== undefined
-                  ? eventSettings.allowParticipantEdit
-                  : true,
-            }
-          : {
-              removeBanner: false,
-              published: false,
-              rankOnNet: true,
-              showResultSummaryForRaces: true,
-              useOldData: false,
-              confirmedEvent: false,
-              allowNameCheck: true,
-              allowParticipantEdit: true,
-            },
-
-        leaderboardSettings: leaderBoardSettings
-          ? {
-              showOverallResults:
-                leaderBoardSettings.ShowOverallResults || false,
-              showCategoryResults:
-                leaderBoardSettings.ShowCategoryResults || false,
-              showGenderResults: true,
-              showAgeGroupResults: true,
-              sortByOverallChipTime:
-                leaderBoardSettings.SortByOverallChipTime || false,
-              sortByOverallGunTime:
-                leaderBoardSettings.SortByOverallGunTime || false,
-              sortByCategoryChipTime:
-                leaderBoardSettings.SortByCategoryChipTime || false,
-              sortByCategoryGunTime:
-                leaderBoardSettings.SortByCategoryGunTime || false,
-              numberOfResultsToShowOverall:
-                leaderBoardSettings.NumberOfResultsToShowOverall || 10,
-              numberOfResultsToShowCategory:
-                leaderBoardSettings.NumberOfResultsToShowCategory || 5,
-              enableLiveLeaderboard: true,
-              showSplitTimes: true,
-              showPace: true,
-              showTeamResults: false,
-              showMedalIcon: true,
-              allowAnonymousView: true,
-              autoRefreshIntervalSec: 30,
-              maxDisplayedRecords: Math.max(
-                leaderBoardSettings.NumberOfResultsToShowOverall || 10,
-                leaderBoardSettings.NumberOfResultsToShowCategory || 5
-              ),
-            }
-          : {
-              showOverallResults: false,
-              showCategoryResults: false,
-              showGenderResults: true,
-              showAgeGroupResults: true,
-              sortByOverallChipTime: false,
-              sortByOverallGunTime: false,
-              sortByCategoryChipTime: false,
-              sortByCategoryGunTime: false,
-              numberOfResultsToShowOverall: 10,
-              numberOfResultsToShowCategory: 5,
-              enableLiveLeaderboard: true,
-              showSplitTimes: true,
-              showPace: true,
-              showTeamResults: false,
-              showMedalIcon: true,
-              allowAnonymousView: true,
-              autoRefreshIntervalSec: 30,
-              maxDisplayedRecords: 100,
-            },
       };
       
-      // Update event
-      const updatedEvent = await EventService.updateEvent(
-        id!,
-        requestPayload as any
-      );
+      const updatedEvent = await EventService.updateEvent(id!, requestPayload);
 
-      // Upload banner image if provided
       if (bannerFile && updatedEvent.id) {
         await EventService.uploadBannerImage(updatedEvent.id, bannerFile);
       }
 
-      // Navigate back to events list
       navigate("/events/events-dashboard");
     } catch (error: any) {
       let errorMessage = "Failed to update event. Please try again.";
@@ -704,7 +553,6 @@ export const EditEvent: React.FC = () => {
               Basic Information
             </Typography>
 
-            {/* Two Column Layout */}
             <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
               {/* Left Column */}
               <Stack spacing={3} sx={{ flex: 1 }}>
@@ -722,37 +570,42 @@ export const EditEvent: React.FC = () => {
 
                 <FormControl
                   fullWidth
-                  error={!!errors.organizationId}
+                  error={!!errors.eventOrganizerId}
                   required
                   disabled={isLoadingOrgs}
                 >
-                  <InputLabel>Event Organizers</InputLabel>
+                  <InputLabel>Event Organizer</InputLabel>
                   <Select
-                    name="organizationId"
-                    value={formData.organizationId || ""}
+                    name="eventOrganizerId" // <-- key name
+                    value={formData.eventOrganizerId || ""} // <-- bind to eventOrganizerId
                     onChange={handleSelectChange}
-                    label="Event Organizers"
+                    label="Event Organizer"
                   >
                     <MenuItem value="">
                       <em>Select an event organizer</em>
                     </MenuItem>
                     {organizations.map((org) => (
-                      <MenuItem key={org.id} value={org.id.toString()}>
-                        {org.name || org.organizerName || `Organization ${org.id}`}
+                      <MenuItem key={org.id} value={org.id}>
+                        {org.name ||
+                          org.organizerName ||
+                          `Organization ${org.id}`}
                       </MenuItem>
                     ))}
                   </Select>
-                  {errors.organizationId && (
-                    <FormHelperText>{errors.organizationId}</FormHelperText>
+
+                  {errors.eventOrganizerId && (
+                    <FormHelperText>{errors.eventOrganizerId}</FormHelperText>
                   )}
                   {isLoadingOrgs && (
                     <FormHelperText>Loading organizations...</FormHelperText>
                   )}
-                  {!formData.organizationId && !errors.organizationId && !isLoadingOrgs && (
-                    <FormHelperText sx={{ color: 'warning.main' }}>
-                      Please select an event organizer for this event.
-                    </FormHelperText>
-                  )}
+                  {!formData.eventOrganizerId &&
+                    !errors.eventOrganizerId &&
+                    !isLoadingOrgs && (
+                      <FormHelperText sx={{ color: "warning.main" }}>
+                        Please select an event organizer for this event.
+                      </FormHelperText>
+                    )}
                 </FormControl>
 
                 {/* Event Type */}
@@ -836,7 +689,8 @@ export const EditEvent: React.FC = () => {
 
             {isEventInPast && (
               <Alert severity="warning" sx={{ mb: 2 }}>
-                This event is in the past. The event date and time zone cannot be modified.
+                This event is in the past. The event date and time zone cannot
+                be modified.
               </Alert>
             )}
 
@@ -845,15 +699,15 @@ export const EditEvent: React.FC = () => {
                 <TextField
                   fullWidth
                   label="Event Date & Time"
-                  name="startDate"
+                  name="eventDate"
                   type="datetime-local"
-                  value={formData.startDate}
+                  value={formData.eventDate}
                   onChange={handleInputChange}
-                  error={!!errors.startDate}
+                  error={!!errors.eventDate}
                   helperText={
                     isEventInPast
                       ? "Cannot modify date for past events"
-                      : errors.startDate
+                      : errors.eventDate
                   }
                   required
                   disabled={isEventInPast}
@@ -862,7 +716,12 @@ export const EditEvent: React.FC = () => {
               </Stack>
 
               <Stack spacing={3} sx={{ flex: 1 }}>
-                <FormControl fullWidth error={!!errors.timeZone} required disabled={isEventInPast}>
+                <FormControl
+                  fullWidth
+                  error={!!errors.timeZone}
+                  required
+                  disabled={isEventInPast}
+                >
                   <InputLabel>Time Zone</InputLabel>
                   <Select
                     name="timeZone"
@@ -880,7 +739,9 @@ export const EditEvent: React.FC = () => {
                     <FormHelperText>{errors.timeZone}</FormHelperText>
                   )}
                   {isEventInPast && !errors.timeZone && (
-                    <FormHelperText>Cannot modify time zone for past events</FormHelperText>
+                    <FormHelperText>
+                      Cannot modify time zone for past events
+                    </FormHelperText>
                   )}
                 </FormControl>
               </Stack>
@@ -902,11 +763,11 @@ export const EditEvent: React.FC = () => {
                 <TextField
                   fullWidth
                   label="Venue/Location"
-                  name="location"
-                  value={formData.location}
+                  name="venueAddress"
+                  value={formData.venueAddress}
                   onChange={handleInputChange}
-                  error={!!errors.location}
-                  helperText={errors.location}
+                  error={!!errors.venueAddress}
+                  helperText={errors.venueAddress}
                   placeholder="Enter venue or starting location"
                   required
                 />
@@ -1109,9 +970,8 @@ export const EditEvent: React.FC = () => {
                 <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
                   Leaderboard Settings
                 </Typography>
-                {/* Two Sub-columns for Leaderboard Settings */}
                 <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                  {/* Left Sub-column - Overall Results */}
+                  {/* Overall Results */}
                   <Stack spacing={1.5} sx={{ flex: 1 }}>
                     <Typography
                       variant="body2"
@@ -1126,7 +986,6 @@ export const EditEvent: React.FC = () => {
                           onChange={(e) => {
                             const isChecked = e.target.checked;
                             setLeaderBoardSettings((prev) => {
-                              // When enabling, ensure at least one time type is selected
                               if (
                                 isChecked &&
                                 !prev.SortByOverallChipTime &&
@@ -1198,7 +1057,7 @@ export const EditEvent: React.FC = () => {
                     />
                   </Stack>
 
-                  {/* Right Sub-column - Category Results */}
+                  {/* Category Results */}
                   <Stack spacing={1.5} sx={{ flex: 1 }}>
                     <Typography
                       variant="body2"
@@ -1213,7 +1072,6 @@ export const EditEvent: React.FC = () => {
                           onChange={(e) => {
                             const isChecked = e.target.checked;
                             setLeaderBoardSettings((prev) => {
-                              // When enabling, ensure at least one time type is selected
                               if (
                                 isChecked &&
                                 !prev.SortByCategoryChipTime &&
@@ -1289,24 +1147,25 @@ export const EditEvent: React.FC = () => {
                   </Stack>
                 </Stack>
 
-                {/* Number of Results fields - positioned below each column */}
                 <Stack
                   direction={{ xs: "column", md: "row" }}
                   spacing={3}
                   sx={{ mt: 3 }}
                 >
-                  {/* Overall Results Count */}
                   {leaderBoardSettings.ShowOverallResults && (
                     <Box sx={{ flex: 1 }}>
                       <TextField
                         fullWidth
                         label="Overall Results to Show"
                         type="number"
-                        value={leaderBoardSettings.NumberOfResultsToShowOverall || 10}
+                        value={
+                          leaderBoardSettings.NumberOfResultsToShowOverall || 10
+                        }
                         onChange={(e) =>
                           setLeaderBoardSettings((prev) => ({
                             ...prev,
-                            NumberOfResultsToShowOverall: parseInt(e.target.value) || 10,
+                            NumberOfResultsToShowOverall:
+                              parseInt(e.target.value) || 10,
                           }))
                         }
                         placeholder="Enter number of overall results"
@@ -1317,18 +1176,20 @@ export const EditEvent: React.FC = () => {
                     </Box>
                   )}
 
-                  {/* Category Results Count */}
                   {leaderBoardSettings.ShowCategoryResults && (
                     <Box sx={{ flex: 1 }}>
                       <TextField
                         fullWidth
                         label="Category Results to Show"
                         type="number"
-                        value={leaderBoardSettings.NumberOfResultsToShowCategory || 5}
+                        value={
+                          leaderBoardSettings.NumberOfResultsToShowCategory || 5
+                        }
                         onChange={(e) =>
                           setLeaderBoardSettings((prev) => ({
                             ...prev,
-                            NumberOfResultsToShowCategory: parseInt(e.target.value) || 5,
+                            NumberOfResultsToShowCategory:
+                              parseInt(e.target.value) || 5,
                           }))
                         }
                         placeholder="Enter number of category results"

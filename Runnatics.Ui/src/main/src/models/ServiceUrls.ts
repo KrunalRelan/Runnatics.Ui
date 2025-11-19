@@ -12,5 +12,6 @@ export const ServiceUrl = {
     getEventById: (id: string) => `Events/${id}/event-details`,
     deleteEvent: (id: string) => `Events/${id}/delete-event`,
     getEventOrganizer: () => "EventOrganizer/all-event-organizers",
+    createEventOrganizer: () => "EventOrganizer/create-event-organizer",
 };
 

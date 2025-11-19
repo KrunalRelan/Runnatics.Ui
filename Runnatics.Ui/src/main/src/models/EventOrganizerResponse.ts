@@ -1,6 +1,5 @@
-export interface EventOrganizer {
+export interface EventOrganizerResponse {
     id: string;
     tenantId?: string;
-    name?: string;
     organizerName?: string;
 }
