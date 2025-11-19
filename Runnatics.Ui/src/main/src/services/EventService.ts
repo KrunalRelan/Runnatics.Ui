@@ -7,6 +7,7 @@ import { SearchResponse } from '../models/SearchReponse';
 import { apiClient } from '../utils/axios.config';
 import { EventSearchRequest } from '../models/EventSearchRequest';
 import { ResponseBase } from '../models/ResponseBase';
+import { EventRequest } from '../models/EventRequest';
 
 // Use the centralized apiClient with JWT interceptor
 // All requests will automatically include the Bearer token
@@ -54,7 +55,7 @@ export class EventService {
      * Update existing event using edit-event endpoint
      * Note: JWT token is automatically included via interceptor
      */
-    static async updateEvent(id: string, eventData: CreateEventRequest): Promise<Event> {
+    static async updateEvent(id: string, eventData: EventRequest): Promise<Event> {
         const response: AxiosResponse<Event> = await apiClient.put(
             ServiceUrl.editEvent(id), 
             eventData

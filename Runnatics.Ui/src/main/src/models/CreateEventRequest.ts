@@ -3,8 +3,8 @@ import { EventType } from "./EventType";
 import { LeaderBoardSettings } from "./LeaderBoardSettings";
 
 export interface CreateEventRequest {
-  organizationId?: string | number | null;
-  eventOrganizerId?: number | null;
+  tenantId?: string | number | null;
+  eventOrganizerId?: string | null;
   name: string;
   description: string;
   eventType: EventType;

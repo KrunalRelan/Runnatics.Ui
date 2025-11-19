@@ -1,5 +1,11 @@
 // src/pages/Events/EventsList.tsx
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -96,101 +102,115 @@ const EventsList: React.FC = () => {
   const [dateError, setDateError] = useState<string>("");
 
   // Track the last criteria we fetched to prevent duplicate calls
-  const lastFetchedCriteriaRef = useRef<string>('');
+  const lastFetchedCriteriaRef = useRef<string>("");
 
   // Snackbar for success/error messages
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
-    severity: 'success' | 'error' | 'info';
+    severity: "success" | "error" | "info";
   }>({
     open: false,
-    message: '',
-    severity: 'success',
+    message: "",
+    severity: "success",
   });
 
   // Validate date range
-  const validateDateRange = useCallback((start: string, end: string): boolean => {
-    if (!start || !end) {
+  const validateDateRange = useCallback(
+    (start: string, end: string): boolean => {
+      if (!start || !end) {
+        setDateError("");
+        return true;
+      }
+
+      const startDateObj = new Date(start);
+      const endDateObj = new Date(end);
+
+      if (endDateObj < startDateObj) {
+        setDateError("End date must be equal to or greater than start date");
+        return false;
+      }
+
       setDateError("");
       return true;
-    }
+    },
+    []
+  );
 
-    const startDateObj = new Date(start);
-    const endDateObj = new Date(end);
+  // Fetch events function (with optional force flag)
+  const fetchEvents = useCallback(
+    async (criteria: EventSearchRequest, force: boolean = false) => {
+      const criteriaKey = JSON.stringify(criteria);
 
-    if (endDateObj < startDateObj) {
-      setDateError("End date must be equal to or greater than start date");
-      return false;
-    }
+      // Skip if we just fetched with the same criteria and not forcing
+      if (!force && lastFetchedCriteriaRef.current === criteriaKey) {
+        console.log("⏭️ Skipping duplicate fetch for same criteria");
+        return;
+      }
 
-    setDateError("");
-    return true;
-  }, []);
+      console.log("🔍 fetchEvents called with criteria:", criteria);
+      lastFetchedCriteriaRef.current = criteriaKey;
 
-  // Fetch events function - using searchCriteria from state directly in useEffect
-  const fetchEvents = useCallback(async (criteria: EventSearchRequest) => {
-    // Create a unique key for the criteria to prevent duplicate calls
-    const criteriaKey = JSON.stringify(criteria);
+      try {
+        setLoading(true);
+        setError(null);
 
-    // Skip if we just fetched with the same criteria
-    if (lastFetchedCriteriaRef.current === criteriaKey) {
-      console.log('⏭️ Skipping duplicate fetch for same criteria');
-      return;
-    }
+        // Call the API with search criteria wrapped in the correct format
+        const response = await EventService.getAllEvents({
+          searchCriteria: criteria,
+        });
 
-    console.log('🔍 fetchEvents called with criteria:', criteria);
-    lastFetchedCriteriaRef.current = criteriaKey;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Call the API with search criteria wrapped in the correct format
-      const response = await EventService.getAllEvents({
-        searchCriteria: criteria
-      });
-
-      console.log('✅ API response received:', response);
-      // Backend returns events in the message property and total count in totalCount
-      setEvents(response.message || []);
-      setTotalRecords(response.totalCount || 0);
-    } catch (err: any) {
-      console.error("Error fetching events:", err);
-      setError(err.response?.data?.message || "Failed to fetch events");
-      setEvents([]);
-      setTotalRecords(0);
-    } finally {
-      setLoading(false);
-    }
-  }, []); // No dependencies - stable function
+        console.log("✅ API response received:", response);
+        // Backend returns events in the message property and total count in totalCount
+        setEvents(response.message || []);
+        setTotalRecords(response.totalCount || 0);
+      } catch (err: any) {
+        console.error("Error fetching events:", err);
+        setError(err.response?.data?.message || "Failed to fetch events");
+        setEvents([]);
+        setTotalRecords(0);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   // Fetch events whenever searchCriteria changes
   useEffect(() => {
-    console.log('🎯 First useEffect triggered - searchCriteria changed:', searchCriteria);
+    console.log("🎯 useEffect triggered - searchCriteria:", searchCriteria);
     fetchEvents(searchCriteria);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchCriteria]); // Only depend on searchCriteria, fetchEvents is stable
+  }, [searchCriteria, fetchEvents]);
 
-  // Auto-search when user types 3+ characters
+  // Auto-search when user types 3+ characters or changes date range
   useEffect(() => {
-    console.log('🔎 Second useEffect triggered - search inputs:', { searchQuery, startDate, endDate });
+    console.log("🔎 Second useEffect triggered - search inputs:", {
+      searchQuery,
+      startDate,
+      endDate,
+    });
+
     // Skip if component just mounted and search is empty
     if (searchQuery.length === 0 && startDate === "" && endDate === "") {
-      console.log('⏭️ Skipping - initial state');
+      console.log("⏭️ Skipping - initial state");
       return;
     }
 
     const timer = setTimeout(() => {
-      if (searchQuery.length >= 3) {
-        console.log('📝 Setting search criteria for query:', searchQuery);
-        // Validate date range before searching
-        if (!validateDateRange(startDate, endDate)) {
-          return;
-        }
+      // Validate date range before searching
+      if (!validateDateRange(startDate, endDate)) {
+        return;
+      }
 
-        const formattedStartDate = startDate ? new Date(startDate).toISOString() : undefined;
-        const formattedEndDate = endDate ? new Date(endDate).toISOString() : undefined;
+      const formattedStartDate = startDate
+        ? new Date(startDate).toISOString()
+        : undefined;
+      const formattedEndDate = endDate
+        ? new Date(endDate).toISOString()
+        : undefined;
+
+      if (searchQuery.length >= 3) {
+        console.log("📝 Auto-setting search criteria for query:", searchQuery);
 
         setSearchCriteria({
           ...defaultSearchCriteria,
@@ -200,12 +220,12 @@ const EventsList: React.FC = () => {
           pageNumber: 1,
         });
       } else if (searchQuery.length === 0) {
-        console.log('🧹 Clearing search criteria');
-        // Clear search when query is empty
+        console.log("🧹 Auto-clearing search criteria with date filters");
+
         setSearchCriteria({
           ...defaultSearchCriteria,
-          eventDateFrom: startDate ? new Date(startDate).toISOString() : undefined,
-          eventDateTo: endDate ? new Date(endDate).toISOString() : undefined,
+          eventDateFrom: formattedStartDate,
+          eventDateTo: formattedEndDate,
         });
       }
     }, 500); // 500ms debounce
@@ -240,19 +260,21 @@ const EventsList: React.FC = () => {
       setSnackbar({
         open: true,
         message: `Event "${eventToDelete.name}" deleted successfully!`,
-        severity: 'success',
+        severity: "success",
       });
 
-      // Refresh the list
-      fetchEvents(searchCriteria);
+      // Explicitly re-fetch with current criteria (force = true)
+      await fetchEvents(searchCriteria, true);
     } catch (err: any) {
       console.error("Error deleting event:", err);
 
       // Show error message
       setSnackbar({
         open: true,
-        message: err.response?.data?.message || "Failed to delete event. Please try again.",
-        severity: 'error',
+        message:
+          err.response?.data?.message ||
+          "Failed to delete event. Please try again.",
+        severity: "error",
       });
 
       setDeleteDialogOpen(false);
@@ -271,8 +293,14 @@ const EventsList: React.FC = () => {
       return; // Don't proceed with search if validation fails
     }
 
-    const formattedStartDate = startDate ? new Date(startDate).toISOString() : undefined;
-    const formattedEndDate = endDate ? new Date(endDate).toISOString() : undefined;
+    const formattedStartDate = startDate
+      ? new Date(startDate).toISOString()
+      : undefined;
+    const formattedEndDate = endDate
+      ? new Date(endDate).toISOString()
+      : undefined;
+
+    console.log("🔍 Manual search triggered with query:", searchQuery);
 
     setSearchCriteria({
       ...defaultSearchCriteria,
@@ -293,7 +321,7 @@ const EventsList: React.FC = () => {
 
   // Handle Enter key press in search field
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSearch();
     }
   };
@@ -355,35 +383,38 @@ const EventsList: React.FC = () => {
   }, []);
 
   // Event name cell renderer with hyperlink
-  const EventNameCellRenderer = useCallback((props: any) => {
-    const event = props.data;
-    const handleClick = (e: React.MouseEvent) => {
-      e.preventDefault();
-      if (event?.id) {
-        navigate(`/events/event-details/${event.id}`);
-      }
-    };
+  const EventNameCellRenderer = useCallback(
+    (props: any) => {
+      const event = props.data;
+      const handleClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (event?.id) {
+          navigate(`/events/events-detail/${event.id}`);
+        }
+      };
 
-    return (
-      <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
-        <Typography
-          component="a"
-          href={`/events/event-details/${event?.id}`}
-          onClick={handleClick}
-          sx={{
-            color: "primary.main",
-            textDecoration: "none",
-            cursor: "pointer",
-            "&:hover": {
-              textDecoration: "underline",
-            },
-          }}
-        >
-          {props.value || "N/A"}
-        </Typography>
-      </Box>
-    );
-  }, [navigate]);
+      return (
+        <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+          <Typography
+            component="a"
+            href={`/events/events-detail/${event?.id}`}
+            onClick={handleClick}
+            sx={{
+              color: "primary.main",
+              textDecoration: "none",
+              cursor: "pointer",
+              "&:hover": {
+                textDecoration: "underline",
+              },
+            }}
+          >
+            {props.value || "N/A"}
+          </Typography>
+        </Box>
+      );
+    },
+    [navigate]
+  );
 
   // Published status cell renderer
   const PublishedCellRenderer = useCallback((props: any) => {
@@ -467,7 +498,12 @@ const EventsList: React.FC = () => {
         },
       },
     ],
-    [searchCriteria, ActionsCellRenderer, PublishedCellRenderer, EventNameCellRenderer]
+    [
+      searchCriteria,
+      ActionsCellRenderer,
+      PublishedCellRenderer,
+      EventNameCellRenderer,
+    ]
   );
 
   // Default column definitions
@@ -527,7 +563,11 @@ const EventsList: React.FC = () => {
       <Card sx={{ mb: 3, p: 2 }}>
         <Stack spacing={2}>
           {/* Search and Date Range Filters */}
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="stretch">
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={2}
+            alignItems="stretch"
+          >
             {/* Search Bar */}
             <TextField
               variant="outlined"
@@ -544,8 +584,10 @@ const EventsList: React.FC = () => {
               }}
               helperText={
                 searchQuery.length > 0 && searchQuery.length < 3
-                  ? `Type ${3 - searchQuery.length} more character${3 - searchQuery.length > 1 ? 's' : ''} to search`
-                  : ''
+                  ? `Type ${3 - searchQuery.length} more character${
+                      3 - searchQuery.length > 1 ? "s" : ""
+                    } to search`
+                  : ""
               }
               sx={{ flex: { xs: 1, sm: 1 } }}
             />
@@ -583,7 +625,7 @@ const EventsList: React.FC = () => {
               disabled={loading}
               sx={{
                 minWidth: { xs: "100%", sm: "120px" },
-                whiteSpace: "nowrap"
+                whiteSpace: "nowrap",
               }}
             >
               Search
@@ -595,7 +637,7 @@ const EventsList: React.FC = () => {
               disabled={loading}
               sx={{
                 minWidth: { xs: "100%", sm: "100px" },
-                whiteSpace: "nowrap"
+                whiteSpace: "nowrap",
               }}
             >
               Clear
@@ -605,7 +647,15 @@ const EventsList: React.FC = () => {
           {/* Active Filters Display */}
           {(searchQuery || startDate || endDate) && (
             <Box>
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center", mb: 1 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 1,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
                 <Typography variant="body2" color="text.secondary">
                   Active Filters:
                 </Typography>
@@ -747,8 +797,9 @@ const EventsList: React.FC = () => {
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
               <Typography variant="body2" color="text.secondary">
-                Showing {events.length > 0 ? (pageNumber - 1) * pageSize + 1 : 0}{" "}
-                to {Math.min(pageNumber * pageSize, totalRecords)} of{" "}
+                Showing{" "}
+                {events.length > 0 ? (pageNumber - 1) * pageSize + 1 : 0} to{" "}
+                {Math.min(pageNumber * pageSize, totalRecords)} of{" "}
                 {totalRecords} entries
               </Typography>
 
@@ -870,14 +921,14 @@ const EventsList: React.FC = () => {
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
           severity={snackbar.severity}
           variant="filled"
-          sx={{ width: '100%' }}
+          sx={{ width: "100%" }}
         >
           {snackbar.message}
         </Alert>

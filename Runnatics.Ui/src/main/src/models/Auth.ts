@@ -20,11 +20,11 @@ export interface LoginResponse {
             createdAt: string;
             lastLoginAt: string;
             isActive: boolean;
-            organizationId: number;
+            tenantId: string;
             organizationName: string;
         };
         organization: {
-            id: number;
+            id: string;
             name: string;
             website: string;
             logoUrl: string;
@@ -38,7 +38,7 @@ export interface LoginResponse {
   }
 
 export interface User {
-    id: number;
+    id: string;
     firstName: string;
     lastName: string;
     email: string;
@@ -47,7 +47,7 @@ export interface User {
     createdAt: string;
     lastLoginAt: string;
     isActive: boolean;
-    organizationId: number;
+    tenantId: string;
     organizationName: string;
 }
 

@@ -4,6 +4,6 @@ export interface User{
     email: string;
     permissions: Array<string>;
     id: string;
-    organizationId: number;
+    tenantId?: string;
     
 }

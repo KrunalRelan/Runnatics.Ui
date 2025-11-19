@@ -1,6 +1,6 @@
 export interface EventSettings {
-  id?: number;
-  eventId?: number;
+  id?: string;
+  eventId?: string;
   removeBanner: boolean;
   published: boolean;  // This is the field from the API response
   rankOnNet: boolean;

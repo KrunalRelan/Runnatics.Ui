@@ -1,5 +1,3 @@
-// src/main/src/pages/CreateEvent.tsx
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -14,13 +12,22 @@ import {
   Typography,
   Paper,
   Stack,
-  SelectChangeEvent,
   FormControlLabel,
   Switch,
   Divider,
   Alert,
   AlertTitle,
+  Autocomplete,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
 } from "@mui/material";
+// If your project requires it, you can instead do:
+// import { SelectChangeEvent } from "@mui/material/Select";
+import { SelectChangeEvent } from "@mui/material/Select";
+
 import { EventService } from "../../../services/EventService";
 import {
   EventOrganizer,
@@ -29,12 +36,16 @@ import {
   EventSettings,
   LeaderBoardSettings,
   EventStatus,
+  CreateEventRequest,
 } from "@/main/src/models";
-import { CreateEventRequest } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
 
 interface FormErrors {
   [key: string]: string;
+}
+
+interface EventOrganizerRequest {
+  EventOrganizerName: string;
 }
 
 export const CreateEvent: React.FC = () => {
@@ -42,9 +53,19 @@ export const CreateEvent: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [apiError, setApiError] = useState<string>('');
+  const [apiError, setApiError] = useState<string>("");
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
+
+  // Selected organization state
+  const [selectedOrganization, setSelectedOrganization] =
+    useState<EventOrganizer | null>(null);
+
+  // Add New Organization Dialog state
+  const [openAddOrgDialog, setOpenAddOrgDialog] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
+  const [isCreatingOrg, setIsCreatingOrg] = useState(false);
+  const [orgError, setOrgError] = useState("");
 
   // Event Settings state
   const [eventSettings, setEventSettings] = useState<EventSettings>({
@@ -61,7 +82,6 @@ export const CreateEvent: React.FC = () => {
     createdAt: undefined,
   });
 
-
   const [leaderBoardSettings, setLeaderBoardSettings] =
     useState<LeaderBoardSettings>({
       ShowOverallResults: true,
@@ -75,8 +95,8 @@ export const CreateEvent: React.FC = () => {
     });
 
   const [formData, setFormData] = useState<CreateEventRequest>({
-    organizationId: "",
-    eventOrganizerId: 0,
+    tenantId: "",
+    eventOrganizerId: "",
     name: "",
     description: "",
     eventType: EventType.Marathon,
@@ -89,10 +109,10 @@ export const CreateEvent: React.FC = () => {
     state: "",
     country: "",
     zipCode: "",
-    capacity: undefined, // UI only, not sent to API
-    price: undefined, // UI only, not sent to API
-    currency: "INR", // UI only, not sent to API
-    timeZone: "Asia/Kolkata", // Default to India timezone
+    capacity: undefined,
+    price: undefined,
+    currency: "INR",
+    timeZone: "Asia/Kolkata",
     smsText: "",
     leaderBoardSettings: {
       ShowOverallResults: true,
@@ -116,8 +136,6 @@ export const CreateEvent: React.FC = () => {
     },
   });
 
-  // derive user role from localStorage (fallback to empty string if not set)
-  //TODO: I want to take this from context later. when i integrate auth.
   const userRole =
     typeof window !== "undefined" ? localStorage.getItem("userRole") || "" : "";
 
@@ -126,58 +144,41 @@ export const CreateEvent: React.FC = () => {
     let isMounted = true;
 
     const fetchOrganizations = async () => {
-      console.log('🚀 Starting to fetch organizations...');
+      console.log("🚀 Starting to fetch organizations...");
 
       try {
         setIsLoadingOrgs(true);
         const response = await EventOrganizerService.getOrganizations();
-        
-        console.log('📦 Raw organizations response:', response);
-        console.log('📊 Number of organizations fetched:', response?.length || 0);
-        
-        // Only update state if component is still mounted
+
         if (isMounted) {
           // Map API response to dropdown format
-          const mappedOrgs = response.map(org => ({ 
+          const mappedOrgs = response.map((org) => ({
             id: org.id,
-            organizationId: org.organizationId,
-            name: org.organizerName || org.name || '',
-            organizerName: org.organizerName
+            tenantId: org.tenantId,
+            name: org.organizerName || org.name || "",
+            organizerName: org.organizerName || org.name || "",
           }));
-          
-          console.log('🗂️ Mapped organizations:', mappedOrgs);
-          console.log('✅ Setting organizations in state:', mappedOrgs.length);
-          
+
           setOrganizations(mappedOrgs);
-          
-          console.log('💾 Organizations state updated');
-        } else {
-          console.log('⚠️ Component unmounted, skipping state update');
         }
       } catch (error) {
-        console.error("❌ Error fetching organizations:", error);
-        
-        // Only update state if component is still mounted
         if (isMounted) {
           setErrors((prev) => ({
             ...prev,
-            organizationId: "Failed to load organizations",
+            tenantId: "Failed to load organizations",
           }));
         }
       } finally {
-        // Only update state if component is still mounted
         if (isMounted) {
           setIsLoadingOrgs(false);
-          console.log('✅ Loading complete');
         }
       }
     };
 
     fetchOrganizations();
 
-    // Cleanup function to prevent state updates on unmounted component
     return () => {
-      console.log('🧹 Cleanup - component unmounting');
+      console.log("🧹 Cleanup - component unmounting");
       isMounted = false;
     };
   }, []);
@@ -197,7 +198,6 @@ export const CreateEvent: React.FC = () => {
   ) => {
     const { name, value, type } = e.target;
 
-    // For number fields, allow empty values (undefined) or parse the number
     let processedValue: any = value;
     if (type === "number") {
       processedValue = value === "" ? undefined : parseFloat(value);
@@ -208,7 +208,6 @@ export const CreateEvent: React.FC = () => {
       [name]: processedValue,
     }));
 
-    // Clear error for this field
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -222,22 +221,101 @@ export const CreateEvent: React.FC = () => {
   const handleSelectChange = (e: SelectChangeEvent<string | number>) => {
     const { name, value } = e.target;
 
-    // Special handling for organizationId
-    // Keep "N/A" as-is for display, will convert to 1 when sending to API
-    let processedValue = value === "" ? null : value;
+    const processedValue = value === "" ? null : value;
 
     setFormData((prev) => ({
       ...prev,
       [name as string]: processedValue,
     }));
 
-    // Clear error for this field
     if (name && errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[name];
         return newErrors;
       });
+    }
+  };
+
+  // Handle organization selection
+  const handleOrganizationChange = (
+    event: any,
+    newValue: EventOrganizer | null
+  ) => {
+    setSelectedOrganization(newValue);
+
+    setFormData((prev) => ({
+      ...prev,
+      tenantId: newValue?.tenantId || "",
+      eventOrganizerId: newValue?.id || "",
+    }));
+
+    if (errors.tenantId) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.tenantId;
+        return newErrors;
+      });
+    }
+  };
+
+  // Handle "Add New Organization" button click
+  const handleAddNewOrganization = (searchValue: string) => {
+    setNewOrgName(searchValue || "");
+    setOpenAddOrgDialog(true);
+    setOrgError("");
+  };
+
+  // Handle creating new organization
+  const handleCreateOrganization = async () => {
+    if (!newOrgName.trim()) {
+      setOrgError("Organization name is required");
+      return;
+    }
+
+    setIsCreatingOrg(true);
+    setOrgError("");
+
+    try {
+      const request: EventOrganizerRequest = {
+        EventOrganizerName: newOrgName.trim(),
+      };
+
+      const response = await EventOrganizerService.createOrganization(request);
+
+      const newOrg: EventOrganizer = {
+        id: response.id,
+        tenantId: response.tenantId,
+        name: response.organizerName || newOrgName.trim(),
+        organizerName: response.organizerName || newOrgName.trim(),
+      };
+
+      setOrganizations((prev) => [...prev, newOrg]);
+      setSelectedOrganization(newOrg);
+
+      setFormData((prev) => ({
+        ...prev,
+        tenantId: newOrg.tenantId,
+        eventOrganizerId: newOrg.id,
+      }));
+
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.tenantId;
+        return newErrors;
+      });
+
+      setOpenAddOrgDialog(false);
+      setNewOrgName("");
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to create organization. Please try again.";
+
+      setOrgError(errorMessage);
+    } finally {
+      setIsCreatingOrg(false);
     }
   };
 
@@ -257,41 +335,23 @@ export const CreateEvent: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Organization validation - allow empty, N/A, or valid ID
-    if (!formData.organizationId || formData.organizationId === "") {
-      newErrors.organizationId = "Organization is required";
+    if (!formData.eventOrganizerId || formData.eventOrganizerId === "") {
+      newErrors.tenantId = "Event organizer is required";
     }
 
-    // Required field validations
     if (!formData.name.trim()) {
       newErrors.name = "Event name is required";
     }
 
-    // if (!formData.description.trim()) {
-    //   newErrors.description = "Description is required";
-    // }
-
     if (!formData.startDate) {
       newErrors.startDate = "Start date is required";
-    } else {
-      // Check if the date is in the past
-      const selectedDate = new Date(formData.startDate);
-      const now = new Date();
-      if (selectedDate < now) {
-        newErrors.startDate = "Event date cannot be in the past";
-      }
     }
-
-    // if (!formData.endDate) {
-    //   newErrors.endDate = "End date is required";
-    // }
-
-    // if (!formData.registrationOpenDate) {
-    //   newErrors.registrationOpenDate = "Registration open date is required";
-    // }
-
-    // if (!formData.registrationCloseDate) {
-    //   newErrors.registrationCloseDate = "Registration close date is required";
+    // else {
+    //   const selectedDate = new Date(formData.startDate);
+    //   const now = new Date();
+    //   if (selectedDate < now) {
+    //     newErrors.startDate = "Event date cannot be in the past";
+    //   }
     // }
 
     if (!formData.location.trim()) {
@@ -306,45 +366,9 @@ export const CreateEvent: React.FC = () => {
       newErrors.country = "Country is required";
     }
 
-    // Capacity, price, and currency are UI-only fields (optional)
-    // No validation needed as they're not sent to the API
-
     if (!formData.timeZone) {
       newErrors.timeZone = "Time zone is required";
     }
-
-    // Date and time validations
-    // // if (formData.startDate && formData.endDate) {
-    // //   const start = new Date(formData.startDate);
-    // //   const end = new Date(formData.endDate);
-
-    // //   // Compare timestamps to include both date and time
-    // //   if (end.getTime() <= start.getTime()) {
-    // //     newErrors.endDate = "End date and time must be after start date and time";
-    // //   }
-    // }
-
-    // if (formData.registrationOpenDate && formData.registrationCloseDate) {
-    //   const regOpen = new Date(formData.registrationOpenDate);
-    //   const regClose = new Date(formData.registrationCloseDate);
-
-    //   // Compare timestamps to include both date and time
-    //   if (regClose.getTime() <= regOpen.getTime()) {
-    //     newErrors.registrationCloseDate =
-    //       "Registration close date and time must be after open date and time";
-    //   }
-    // }
-
-    // if (formData.registrationCloseDate && formData.startDate) {
-    //   const regClose = new Date(formData.registrationCloseDate);
-    //   const eventStart = new Date(formData.startDate);
-
-    //   // Compare timestamps to include both date and time
-    //   if (regClose.getTime() > eventStart.getTime()) {
-    //     newErrors.registrationCloseDate =
-    //       "Registration must close before event starts";
-    //   }
-    // }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -354,171 +378,180 @@ export const CreateEvent: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Clear previous errors
-    setApiError('');
+    setApiError("");
     setErrors({});
-
     const isValid = validateForm();
 
     if (!isValid) {
-      // Scroll to first error
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
-      // Transform the form data to match the API structure
-      // Exclude capacity, price, and currency (UI only fields)
       const { capacity, price, currency, ...apiData } = formData;
-      
-      // Get the event organizer ID from the dropdown selection
-      // The organizationId field actually stores the event organizer's ID (not organization ID)
-      let eventOrganizerIdForApi: number;
-      if (apiData.organizationId === "N/A") {
-        eventOrganizerIdForApi = 1;
-      } else if (typeof apiData.organizationId === 'string') {
-        eventOrganizerIdForApi = parseInt(apiData.organizationId, 10);
-      } else if (typeof apiData.organizationId === 'number') {
-        eventOrganizerIdForApi = apiData.organizationId;
-      } else {
-        // Default fallback if organizationId is null/undefined
-        eventOrganizerIdForApi = 1;
+
+      const eventOrganizerIdForApi = formData.eventOrganizerId;
+
+      if (!eventOrganizerIdForApi || eventOrganizerIdForApi === "") {
+        throw new Error("Invalid organization selection");
       }
-      
-      console.log('Event Organizer ID being sent to API:', eventOrganizerIdForApi);
-      
-      // Create the API request payload to match C# EventRequest model
+
+      console.log(
+        "Event Organizer ID being sent to API:",
+        eventOrganizerIdForApi
+      );
+
       const requestPayload = {
-        // Map to C# property names (PascalCase)
-        eventOrganizerId: eventOrganizerIdForApi, // Required in C#
-        name: apiData.name, // Required
-        slug: apiData.name.toLowerCase().replace(/\s+/g, '-'), // Required
+        eventOrganizerId: eventOrganizerIdForApi,
+        name: apiData.name,
+        slug: apiData.name.toLowerCase().replace(/\s+/g, "-"),
         description: apiData.description || null,
-        eventDate: apiData.startDate, // Required - DateTime
+        eventDate: apiData.startDate,
         timeZone: apiData.timeZone || "Asia/Kolkata",
         venueName: apiData.location || null,
-        venueAddress: `${apiData.city}, ${apiData.state}, ${apiData.country}` || null,
-        venueLatitude: null, // Optional
-        venueLongitude: null, // Optional
-        status: EventStatus.Draft, // Default value
-        maxParticipants: 1000, // Optional - default value
-        registrationDeadline: apiData.registrationCloseDate || apiData.startDate || null,
-        
-        // Event Settings - nested object (matches EventSettingsRequest C# model)
-        eventSettings: eventSettings ? {
-          removeBanner: eventSettings.removeBanner || false,
-          published: eventSettings.published || false,
-          rankOnNet: eventSettings.rankOnNet !== undefined ? eventSettings.rankOnNet : true,
-          showResultSummaryForRaces: eventSettings.showResultSummaryForRaces !== undefined ? eventSettings.showResultSummaryForRaces : true,
-          useOldData: eventSettings.useOldData || false,
-          confirmedEvent: eventSettings.confirmedEvent || false,
-          allowNameCheck: eventSettings.allowNameCheck !== undefined ? eventSettings.allowNameCheck : true,
-          allowParticipantEdit: eventSettings.allowParticipantEdit !== undefined ? eventSettings.allowParticipantEdit : true,
-        } : {
-          removeBanner: false,
-          published: false,
-          rankOnNet: true,
-          showResultSummaryForRaces: true,
-          useOldData: false,
-          confirmedEvent: false,
-          allowNameCheck: true,
-          allowParticipantEdit: true,
-        },
-        
-        // Leaderboard Settings - nested object (matches LeaderboardSettingsRequest C# model)
-        leaderboardSettings: leaderBoardSettings ? {
-          showOverallResults: leaderBoardSettings.ShowOverallResults || false,
-          showCategoryResults: leaderBoardSettings.ShowCategoryResults || false,
-          showGenderResults: true, // Default to true
-          showAgeGroupResults: true, // Default to true
-          sortByOverallChipTime: leaderBoardSettings.SortByOverallChipTime || false,
-          sortByOverallGunTime: leaderBoardSettings.SortByOverallGunTime || false,
-          sortByCategoryChipTime: leaderBoardSettings.SortByCategoryChipTime || false,
-          sortByCategoryGunTime: leaderBoardSettings.SortByCategoryGunTime || false,
-          numberOfResultsToShowOverall: leaderBoardSettings.NumberOfResultsToShowOverall || 10,
-          numberOfResultsToShowCategory: leaderBoardSettings.NumberOfResultsToShowCategory || 5,
-          enableLiveLeaderboard: true, // Default to true
-          showSplitTimes: true, // Default to true
-          showPace: true, // Default to true
-          showTeamResults: false, // Default to false (as per C# model)
-          showMedalIcon: true, // Default to true
-          allowAnonymousView: true, // Default to true
-          autoRefreshIntervalSec: 30, // Default 30 seconds
-          maxDisplayedRecords: Math.max(
-            leaderBoardSettings.NumberOfResultsToShowOverall || 10,
-            leaderBoardSettings.NumberOfResultsToShowCategory || 5
-          ),
-        } : {
-          showOverallResults: false,
-          showCategoryResults: false,
-          showGenderResults: true,
-          showAgeGroupResults: true,
-          sortByOverallChipTime: false,
-          sortByOverallGunTime: false,
-          sortByCategoryChipTime: false,
-          sortByCategoryGunTime: false,
-          numberOfResultsToShowOverall: 10,
-          numberOfResultsToShowCategory: 5,
-          enableLiveLeaderboard: true,
-          showSplitTimes: true,
-          showPace: true,
-          showTeamResults: false,
-          showMedalIcon: true,
-          allowAnonymousView: true,
-          autoRefreshIntervalSec: 30,
-          maxDisplayedRecords: 100,
-        },
-      };
-      
-      console.log('Full API Request Payload:', requestPayload);
-      
-      // Create event
-      const createdEvent = await EventService.createEvent(requestPayload as any);
+        venueAddress:
+          `${apiData.city}, ${apiData.state}, ${apiData.country}, ${apiData.zipCode}` || null,
+        city: apiData.city || null,
+        state: apiData.state || null,
+        country: apiData.country || null,
+        zipCode: apiData.zipCode || null,
+        venueLatitude: null,
+        venueLongitude: null,
+        status: EventStatus.Draft,
+        maxParticipants: 1000,
+        registrationDeadline:
+          apiData.registrationCloseDate || apiData.startDate || null,
 
-      // Upload banner image if provided
+        eventSettings: eventSettings
+          ? {
+              removeBanner: eventSettings.removeBanner || false,
+              published: eventSettings.published || false,
+              rankOnNet:
+                eventSettings.rankOnNet !== undefined
+                  ? eventSettings.rankOnNet
+                  : true,
+              showResultSummaryForRaces:
+                eventSettings.showResultSummaryForRaces !== undefined
+                  ? eventSettings.showResultSummaryForRaces
+                  : true,
+              useOldData: eventSettings.useOldData || false,
+              confirmedEvent: eventSettings.confirmedEvent || false,
+              allowNameCheck:
+                eventSettings.allowNameCheck !== undefined
+                  ? eventSettings.allowNameCheck
+                  : true,
+              allowParticipantEdit:
+                eventSettings.allowParticipantEdit !== undefined
+                  ? eventSettings.allowParticipantEdit
+                  : true,
+            }
+          : {
+              removeBanner: false,
+              published: false,
+              rankOnNet: true,
+              showResultSummaryForRaces: true,
+              useOldData: false,
+              confirmedEvent: false,
+              allowNameCheck: true,
+              allowParticipantEdit: true,
+            },
+
+        leaderboardSettings: leaderBoardSettings
+          ? {
+              showOverallResults:
+                leaderBoardSettings.ShowOverallResults || false,
+              showCategoryResults:
+                leaderBoardSettings.ShowCategoryResults || false,
+              showGenderResults: true,
+              showAgeGroupResults: true,
+              sortByOverallChipTime:
+                leaderBoardSettings.SortByOverallChipTime || false,
+              sortByOverallGunTime:
+                leaderBoardSettings.SortByOverallGunTime || false,
+              sortByCategoryChipTime:
+                leaderBoardSettings.SortByCategoryChipTime || false,
+              sortByCategoryGunTime:
+                leaderBoardSettings.SortByCategoryGunTime || false,
+              numberOfResultsToShowOverall:
+                leaderBoardSettings.NumberOfResultsToShowOverall || 10,
+              numberOfResultsToShowCategory:
+                leaderBoardSettings.NumberOfResultsToShowCategory || 5,
+              enableLiveLeaderboard: true,
+              showSplitTimes: true,
+              showPace: true,
+              showTeamResults: false,
+              showMedalIcon: true,
+              allowAnonymousView: true,
+              autoRefreshIntervalSec: 30,
+              maxDisplayedRecords: Math.max(
+                leaderBoardSettings.NumberOfResultsToShowOverall || 10,
+                leaderBoardSettings.NumberOfResultsToShowCategory || 5
+              ),
+            }
+          : {
+              showOverallResults: false,
+              showCategoryResults: false,
+              showGenderResults: true,
+              showAgeGroupResults: true,
+              sortByOverallChipTime: false,
+              sortByOverallGunTime: false,
+              sortByCategoryChipTime: false,
+              sortByCategoryGunTime: false,
+              numberOfResultsToShowOverall: 10,
+              numberOfResultsToShowCategory: 5,
+              enableLiveLeaderboard: true,
+              showSplitTimes: true,
+              showPace: true,
+              showTeamResults: false,
+              showMedalIcon: true,
+              allowAnonymousView: true,
+              autoRefreshIntervalSec: 30,
+              maxDisplayedRecords: 100,
+            },
+      };
+
+      console.log("Full API Request Payload:", requestPayload);
+
+      const createdEvent = await EventService.createEvent(
+        requestPayload as any
+      );
+
       if (bannerFile && createdEvent.id) {
         await EventService.uploadBannerImage(createdEvent.id, bannerFile);
       }
 
-      // Navigate to events list or event detail page
       navigate("/events/events-dashboard");
     } catch (error: any) {
-      // Extract error message
-      let errorMessage = 'Failed to create event. Please try again.';
-      
+      let errorMessage = "Failed to create event. Please try again.";
+
       if (error.response) {
-        // Server responded with error
         if (error.response.data?.errors) {
-          // Validation errors
           setErrors(error.response.data.errors);
-          errorMessage = 'Please fix the validation errors below.';
+          errorMessage = "Please fix the validation errors below.";
         } else if (error.response.data?.message) {
           errorMessage = error.response.data.message;
         } else if (error.response.status === 401) {
-          errorMessage = 'Authentication failed. Please check if you are logged in and your token is valid.';
+          errorMessage =
+            "Authentication failed. Please check if you are logged in and your token is valid.";
         } else if (error.response.status === 403) {
-          errorMessage = 'You do not have permission to create events.';
+          errorMessage = "You do not have permission to create events.";
         }
       } else if (error.request) {
-        // Request made but no response
-        errorMessage = 'No response from server. Please check if the backend is running.';
+        errorMessage =
+          "No response from server. Please check if the backend is running.";
       } else {
-        // Error in request setup
         errorMessage = error.message || errorMessage;
       }
-      
+
       setApiError(errorMessage);
-      
-      // Scroll to top to show error
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Handle cancel
   const handleCancel = () => {
     if (
       window.confirm(
@@ -529,17 +562,12 @@ export const CreateEvent: React.FC = () => {
     }
   };
 
-  // Event type options
   const eventTypeOptions = (
     Object.values(EventType) as Array<string | number>
   ).map((type) => ({
     value: type as string | number,
     label: String(type),
   }));
-
-
-  // Generate timezone options with UTC offset
-  // Common timezone options with UTC offsets
 
   return (
     <Box sx={{ maxWidth: 1200, mx: "auto", p: 3 }}>
@@ -556,7 +584,11 @@ export const CreateEvent: React.FC = () => {
         <form onSubmit={handleSubmit}>
           {/* API Error Alert */}
           {apiError && (
-            <Alert severity="error" sx={{ mb: 3 }} onClose={() => setApiError('')}>
+            <Alert
+              severity="error"
+              sx={{ mb: 3 }}
+              onClose={() => setApiError("")}
+            >
               <AlertTitle>Error</AlertTitle>
               {apiError}
             </Alert>
@@ -580,7 +612,6 @@ export const CreateEvent: React.FC = () => {
               Basic Information
             </Typography>
 
-            {/* Two Column Layout */}
             <Stack
               direction={{ xs: "column", md: "row" }}
               spacing={3}
@@ -601,54 +632,108 @@ export const CreateEvent: React.FC = () => {
                   required
                 />
 
-                {/* Organization Dropdown */}
-                <FormControl
+                {/* Organization Autocomplete with Add New */}
+                <Autocomplete
                   fullWidth
-                  error={!!errors.organizationId}
-                  required
+                  options={organizations}
+                  getOptionLabel={(option) =>
+                    option.name || option.organizerName || ""
+                  }
+                  value={selectedOrganization}
+                  onChange={handleOrganizationChange}
+                  loading={isLoadingOrgs}
                   disabled={isLoadingOrgs}
-                >
-                  <InputLabel>Event Organizers</InputLabel>
-                  <Select
-                    name="organizationId"
-                    value={formData.organizationId || ""}
-                    onChange={handleSelectChange}
-                    label="Event Organizers"
-                  >
-                    <MenuItem value="">
-                      <em>Select an organization</em>
-                    </MenuItem>
-                    <MenuItem value="N/A">N/A</MenuItem>
-                    {(() => {
-                      console.log('🎨 Rendering dropdown - organizations count:', organizations.length);
-                      console.log('🎨 Organizations in render:', organizations);
-                      return organizations.map((org) => {
-                        console.log('🎯 Rendering org:', org);
-                        return (
-                          <MenuItem key={org.id} value={org.id}>
-                            {org.name || org.organizerName || `Organization ${org.id}`}
-                          </MenuItem>
-                        );
-                      });
-                    })()}
-                  </Select>
-                  {errors.organizationId && (
-                    <FormHelperText>{errors.organizationId}</FormHelperText>
+                  filterOptions={(options, params) => {
+                    const filtered = options.filter((option) =>
+                      (option.name || option.organizerName || "")
+                        .toLowerCase()
+                        .includes(params.inputValue.toLowerCase())
+                    );
+
+                    // Show "Add New" option if no exact match found
+                    if (
+                      params.inputValue !== "" &&
+                      !filtered.some(
+                        (option) =>
+                          (
+                            option.name ||
+                            option.organizerName ||
+                            ""
+                          ).toLowerCase() === params.inputValue.toLowerCase()
+                      )
+                    ) {
+                      filtered.push({
+                        id: "add-new",
+                        name: `Add "${params.inputValue}"`,
+                        organizerName: params.inputValue,
+                        tenantId: "",
+                      } as EventOrganizer);
+                    }
+
+                    return filtered;
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Event Organizer"
+                      placeholder="Search or add new organizer"
+                      required
+                      error={!!errors.tenantId}
+                      helperText={
+                        errors.tenantId ||
+                        (isLoadingOrgs
+                          ? "Loading organizations..."
+                          : `${organizations.length} organization(s) available`)
+                      }
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {isLoadingOrgs ? (
+                              <CircularProgress color="inherit" size={20} />
+                            ) : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
                   )}
-                  {isLoadingOrgs && (
-                    <FormHelperText>Loading organizations...</FormHelperText>
-                  )}
-                  {!isLoadingOrgs && organizations.length === 0 && (
-                    <FormHelperText sx={{ color: 'warning.main' }}>
-                      No organizations available. Please add organizations first.
-                    </FormHelperText>
-                  )}
-                  {!isLoadingOrgs && organizations.length > 0 && (
-                    <FormHelperText>
-                      {organizations.length} organization(s) available
-                    </FormHelperText>
-                  )}
-                </FormControl>
+                  renderOption={(rawProps, option) => {
+                    // Fix: don't spread key from props
+                    const { key, ...props } = rawProps as any;
+
+                    if (option.id === "add-new") {
+                      return (
+                        <li
+                          key={key}
+                          {...props}
+                          style={{
+                            backgroundColor: "#f0f0f0",
+                            fontWeight: "bold",
+                            color: "#1976d2",
+                          }}
+                          onClick={(e) => {
+                            props.onClick?.(e);
+                            handleAddNewOrganization(
+                              option.organizerName || ""
+                            );
+                          }}
+                        >
+                          + {option.name}
+                        </li>
+                      );
+                    }
+
+                    return (
+                      <li key={key} {...props}>
+                        {option.name ||
+                          option.organizerName ||
+                          `Organization ${option.id}`}
+                      </li>
+                    );
+                  }}
+                  noOptionsText="Type to search or add new organizer"
+                />
 
                 {/* Event Type */}
                 <FormControl fullWidth error={!!errors.eventType} required>
@@ -673,7 +758,6 @@ export const CreateEvent: React.FC = () => {
 
               {/* Right Column */}
               <Stack spacing={3} sx={{ flex: 1 }}>
-                {/* Description */}
                 <TextField
                   fullWidth
                   label="Description"
@@ -683,11 +767,10 @@ export const CreateEvent: React.FC = () => {
                   error={!!errors.description}
                   helperText={errors.description}
                   placeholder="Describe your event"
-                  // required
                   multiline
                   rows={1}
                 />
-                {/* SMS Text*/}
+
                 <TextField
                   fullWidth
                   label="SMS Text"
@@ -702,7 +785,7 @@ export const CreateEvent: React.FC = () => {
                   disabled={userRole !== "superadmin"}
                   rows={1}
                 />
-                {/* Banner Upload */}
+
                 <Button
                   variant="outlined"
                   component="label"
@@ -733,11 +816,8 @@ export const CreateEvent: React.FC = () => {
               Event Schedule
             </Typography>
 
-            {/* Two Column Layout */}
             <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
-              {/* Left Column */}
               <Stack spacing={3} sx={{ flex: 1 }}>
-                {/* Start Date & Time */}
                 <TextField
                   fullWidth
                   label="Event Date & Time"
@@ -746,64 +826,18 @@ export const CreateEvent: React.FC = () => {
                   value={formData.startDate}
                   onChange={handleInputChange}
                   error={!!errors.startDate}
-                  helperText={errors.startDate || "Event date cannot be in the past"}
+                  helperText={
+                    errors.startDate || "Event date cannot be in the past"
+                  }
                   required
                   InputLabelProps={{ shrink: true }}
                   inputProps={{
-                    min: new Date().toISOString().slice(0, 16), // Prevent past dates
+                    min: new Date().toISOString().slice(0, 16),
                   }}
                 />
-
-                {/* Registration Opens
-                <TextField
-                  fullWidth
-                  label="Registration Opens"
-                  name="registrationOpenDate"
-                  type="datetime-local"
-                  value={formData.registrationOpenDate}
-                  onChange={handleInputChange}
-                  error={!!errors.registrationOpenDate}
-                  helperText={errors.registrationOpenDate}
-                  required
-                  InputLabelProps={{ shrink: true }}
-                /> */}
-
-                {/* Time Zone */}
-                {/* <FormControl fullWidth error={!!errors.timeZone} required>
-                  <InputLabel>Time Zone</InputLabel>
-                  <Select
-                    name="timeZone"
-                    value={formData.timeZone}
-                    onChange={handleSelectChange}
-                    label="Time Zone"
-                  >
-                    {timeZoneOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {errors.timeZone && (
-                    <FormHelperText>{errors.timeZone}</FormHelperText>
-                  )}
-                </FormControl> */}
               </Stack>
 
-              {/* Right Column */}
               <Stack spacing={3} sx={{ flex: 1 }}>
-                {/* End Date & Time */}
-                {/* <TextField
-                  fullWidth
-                  label="End Date & Time"
-                  name="endDate"
-                  type="datetime-local"
-                  value={formData.endDate}
-                  onChange={handleInputChange}
-                  error={!!errors.endDate}
-                  helperText={errors.endDate}
-                  required
-                  InputLabelProps={{ shrink: true }}
-                /> */}
                 <FormControl fullWidth error={!!errors.timeZone} required>
                   <InputLabel>Time Zone</InputLabel>
                   <Select
@@ -822,20 +856,6 @@ export const CreateEvent: React.FC = () => {
                     <FormHelperText>{errors.timeZone}</FormHelperText>
                   )}
                 </FormControl>
-
-                {/* Registration Closes
-                <TextField
-                  fullWidth
-                  label="Registration Closes"
-                  name="registrationCloseDate"
-                  type="datetime-local"
-                  value={formData.registrationCloseDate}
-                  onChange={handleInputChange}
-                  error={!!errors.registrationCloseDate}
-                  helperText={errors.registrationCloseDate}
-                  required
-                  InputLabelProps={{ shrink: true }}
-                /> */}
               </Stack>
             </Stack>
           </Box>
@@ -846,15 +866,12 @@ export const CreateEvent: React.FC = () => {
               Location Details
             </Typography>
 
-            {/* Two Column Layout */}
             <Stack
               direction={{ xs: "column", md: "row" }}
               spacing={3}
               sx={{ mb: 3 }}
             >
-              {/* Left Column */}
               <Stack spacing={3} sx={{ flex: 1 }}>
-                {/* Venue/Location */}
                 <TextField
                   fullWidth
                   label="Venue/Location"
@@ -867,7 +884,6 @@ export const CreateEvent: React.FC = () => {
                   required
                 />
 
-                {/* City */}
                 <TextField
                   fullWidth
                   label="City"
@@ -880,7 +896,6 @@ export const CreateEvent: React.FC = () => {
                   required
                 />
 
-                {/* Country */}
                 <TextField
                   fullWidth
                   label="Country"
@@ -894,9 +909,7 @@ export const CreateEvent: React.FC = () => {
                 />
               </Stack>
 
-              {/* Right Column */}
               <Stack spacing={3} sx={{ flex: 1 }}>
-                {/* State/Province */}
                 <TextField
                   fullWidth
                   label="State/Province"
@@ -908,7 +921,6 @@ export const CreateEvent: React.FC = () => {
                   placeholder="Enter state or province"
                 />
 
-                {/* Zip/Postal Code */}
                 <TextField
                   fullWidth
                   label="Zip/Postal Code"
@@ -925,7 +937,6 @@ export const CreateEvent: React.FC = () => {
 
           {/* Event Settings & Leaderboard Settings */}
           <Box sx={{ mb: 4 }}>
-            {/* Two Column Layout with Dividers */}
             <Stack
               direction={{ xs: "column", md: "row" }}
               spacing={0}
@@ -940,13 +951,12 @@ export const CreateEvent: React.FC = () => {
                 />
               }
             >
-              {/* Left Side - Event Settings */}
+              {/* Event Settings */}
               <Box sx={{ flex: 1, pr: { xs: 0, md: 2 } }}>
                 <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
                   Event Settings
                 </Typography>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={3}>
-                  {/* Left Sub-column */}
                   <Stack spacing={2} sx={{ flex: 1 }}>
                     <FormControlLabel
                       control={
@@ -1002,11 +1012,10 @@ export const CreateEvent: React.FC = () => {
                           }
                         />
                       }
-                      label="All Participants Edit"
+                      label="Allow Participant Edit"
                     />
                   </Stack>
 
-                  {/* Right Sub-column */}
                   <Stack spacing={2} sx={{ flex: 1 }}>
                     <FormControlLabel
                       control={
@@ -1048,7 +1057,7 @@ export const CreateEvent: React.FC = () => {
                           }
                         />
                       }
-                      label="All Name Check"
+                      label="Allow Name Check"
                     />
                     <FormControlLabel
                       control={
@@ -1062,20 +1071,18 @@ export const CreateEvent: React.FC = () => {
                           }
                         />
                       }
-                      label="Show Results Summary For Races"
+                      label="Show Result Summary"
                     />
                   </Stack>
                 </Stack>
               </Box>
 
-              {/* Right Side - Leaderboard Settings */}
+              {/* Leaderboard Settings */}
               <Box sx={{ flex: 1, pl: { xs: 0, md: 2 } }}>
                 <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
                   Leaderboard Settings
                 </Typography>
-                {/* Two Sub-columns for Leaderboard Settings */}
                 <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                  {/* Left Sub-column */}
                   <Stack spacing={1.5} sx={{ flex: 1 }}>
                     <Typography
                       variant="body2"
@@ -1090,7 +1097,6 @@ export const CreateEvent: React.FC = () => {
                           onChange={(e) => {
                             const isChecked = e.target.checked;
                             setLeaderBoardSettings((prev) => {
-                              // When enabling, ensure at least one time type is selected
                               if (
                                 isChecked &&
                                 !prev.SortByOverallChipTime &&
@@ -1162,7 +1168,6 @@ export const CreateEvent: React.FC = () => {
                     />
                   </Stack>
 
-                  {/* Right Sub-column */}
                   <Stack spacing={1.5} sx={{ flex: 1 }}>
                     <Typography
                       variant="body2"
@@ -1177,7 +1182,6 @@ export const CreateEvent: React.FC = () => {
                           onChange={(e) => {
                             const isChecked = e.target.checked;
                             setLeaderBoardSettings((prev) => {
-                              // When enabling, ensure at least one time type is selected
                               if (
                                 isChecked &&
                                 !prev.SortByCategoryChipTime &&
@@ -1253,24 +1257,25 @@ export const CreateEvent: React.FC = () => {
                   </Stack>
                 </Stack>
 
-                {/* Number of Results fields - positioned below each column */}
                 <Stack
                   direction={{ xs: "column", md: "row" }}
                   spacing={3}
                   sx={{ mt: 3 }}
                 >
-                  {/* Overall Results Count */}
                   {leaderBoardSettings.ShowOverallResults && (
                     <Box sx={{ flex: 1 }}>
                       <TextField
                         fullWidth
                         label="Overall Results to Show"
                         type="number"
-                        value={leaderBoardSettings.NumberOfResultsToShowOverall || 10}
+                        value={
+                          leaderBoardSettings.NumberOfResultsToShowOverall || 10
+                        }
                         onChange={(e) =>
                           setLeaderBoardSettings((prev) => ({
                             ...prev,
-                            NumberOfResultsToShowOverall: parseInt(e.target.value) || 10,
+                            NumberOfResultsToShowOverall:
+                              parseInt(e.target.value, 10) || 10,
                           }))
                         }
                         placeholder="Enter number of overall results"
@@ -1281,18 +1286,20 @@ export const CreateEvent: React.FC = () => {
                     </Box>
                   )}
 
-                  {/* Category Results Count */}
                   {leaderBoardSettings.ShowCategoryResults && (
                     <Box sx={{ flex: 1 }}>
                       <TextField
                         fullWidth
                         label="Category Results to Show"
                         type="number"
-                        value={leaderBoardSettings.NumberOfResultsToShowCategory || 5}
+                        value={
+                          leaderBoardSettings.NumberOfResultsToShowCategory || 5
+                        }
                         onChange={(e) =>
                           setLeaderBoardSettings((prev) => ({
                             ...prev,
-                            NumberOfResultsToShowCategory: parseInt(e.target.value) || 5,
+                            NumberOfResultsToShowCategory:
+                              parseInt(e.target.value, 10) || 5,
                           }))
                         }
                         placeholder="Enter number of category results"
@@ -1339,6 +1346,50 @@ export const CreateEvent: React.FC = () => {
           </Box>
         </form>
       </Paper>
+
+      {/* Add New Organization Dialog */}
+      <Dialog
+        open={openAddOrgDialog}
+        onClose={() => !isCreatingOrg && setOpenAddOrgDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Add New Organization</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Organization Name"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newOrgName}
+            onChange={(e) => setNewOrgName(e.target.value)}
+            error={!!orgError}
+            helperText={orgError}
+            disabled={isCreatingOrg}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setOpenAddOrgDialog(false)}
+            disabled={isCreatingOrg}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreateOrganization}
+            variant="contained"
+            disabled={isCreatingOrg || !newOrgName.trim()}
+            startIcon={
+              isCreatingOrg ? <CircularProgress size={20} /> : undefined
+            }
+          >
+            {isCreatingOrg ? "Creating..." : "Create"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
