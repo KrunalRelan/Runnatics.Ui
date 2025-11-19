@@ -29,11 +29,11 @@ import {
   timeZoneOptions,
   EventSettings,
   LeaderBoardSettings,
-  EventStatus,
   Event,
 } from "@/main/src/models";
 import { CreateEventRequest } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
+import { EventRequest } from "@/main/src/models/EventRequest";
 
 interface FormErrors {
   [key: string]: string;
@@ -83,23 +83,19 @@ export const EditEvent: React.FC = () => {
       NumberOfResultsToShowCategory: 5,
     });
 
-  const [formData, setFormData] = useState<CreateEventRequest>({
-    tenantId: "", // Stores the selected organization's ID (for dropdown)
+  const [formData, setFormData] = useState<EventRequest>({
+      eventOrganizerId: "",
     name: "",
     description: "",
     eventType: EventType.Marathon,
-    startDate: "",
-    endDate: "",
-    registrationOpenDate: "",
-    registrationCloseDate: "",
-    location: "",
+    eventDate: "",
+    bannerImageUrl: "",
+    venueName: "",
+    venueAddress: "",
     city: "",
     state: "",
     country: "",
     zipCode: "",
-    capacity: undefined,
-    price: undefined,
-    currency: "INR",
     timeZone: "Asia/Kolkata",
     smsText: "",
     leaderBoardSettings: {
@@ -135,7 +131,6 @@ export const EditEvent: React.FC = () => {
 
     // Prevent duplicate fetches in React 18 StrictMode
     if (hasFetchedRef.current) {
-      
       return;
     }
     hasFetchedRef.current = true;
@@ -175,7 +170,6 @@ export const EditEvent: React.FC = () => {
 
   // Populate form data from event object
   const populateFormData = (event: Event, availableOrgs: EventOrganizer[]) => {
-
     // Check if event is in the past
     if (event.eventDate) {
       const eventDate = new Date(event.eventDate);
@@ -237,35 +231,22 @@ export const EditEvent: React.FC = () => {
       }
     }
 
-    const mappedFormData: CreateEventRequest = {
-      tenantId: selectedOrgId,
+    const mappedFormData: EventRequest = {
+      
+      eventOrganizerId: selectedOrgId,
       name: event.name || "",
       description: event.description || "",
       eventType: (event.eventType as EventType) || EventType.Marathon,
-      startDate: event.eventDate
-        ? new Date(event.eventDate).toISOString().slice(0, 16)
-        : "",
-      endDate: event.endDate
-        ? new Date(event.endDate).toISOString().slice(0, 16)
-        : "",
-      registrationOpenDate: event.registrationOpenDate
-        ? new Date(event.registrationOpenDate).toISOString().slice(0, 16)
-        : "",
-      registrationCloseDate: event.registrationDeadline
-        ? new Date(event.registrationDeadline).toISOString().slice(0, 16)
-        : event.registrationCloseDate
-        ? new Date(event.registrationCloseDate).toISOString().slice(0, 16)
-        : "",
-      location: event.venueName || event.location || "",
-      city: city || event.city || "",
-      state: state || event.state || "",
-      country: country || event.country || "",
-      zipCode: event.zipCode || "",
-      capacity: event.maxParticipants || event.capacity || undefined,
-      price: event.price || undefined,
-      currency: event.currency || "INR",
+      eventDate: event.eventDate || "",
       timeZone: event.timeZone || "Asia/Kolkata",
-      smsText: "",
+      venueName: event.venueName || "",
+      venueAddress: event.venueAddress || "",
+      city: city,
+      state: state,
+      country: country,
+      zipCode: event.zipCode || "",
+      bannerImageUrl: event.bannerImageUrl || "",
+      
       leaderBoardSettings: {
         ShowOverallResults:
           event.leaderboardSettings?.ShowOverallResults ?? true,
@@ -410,23 +391,29 @@ export const EditEvent: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    if (!formData.tenantId || formData.tenantId === "") {
-      newErrors.tenantId = "Please select an event organizer";
+    if (!formData.eventOrganizerId || formData.eventOrganizerId === "") {
+      newErrors.eventOrganizerId = "Please select an event organizer";
     }
     if (!formData.name.trim()) {
       newErrors.name = "Event name is required";
     }
-    if (!formData.startDate) {
-      newErrors.startDate = "Start date is required";
-    }
-    if (!formData.location.trim()) {
-      newErrors.location = "Location is required";
-    }
-    if (!formData.city.trim()) {
-      newErrors.city = "City is required";
-    }
-    if (!formData.country.trim()) {
-      newErrors.country = "Country is required";
+      if (!formData.eventDate) {
+        newErrors.eventDate = "Event date is required";
+      }
+      if (!(formData.venueName ?? "").trim()) {
+        newErrors.venueName = "Venue name is required";
+      }
+      if (!(formData.venueAddress ?? "").trim()) {
+        newErrors.venueAddress = "Venue address is required";
+      }
+      if (!(formData.city ?? "").trim()) {
+        newErrors.city = "City is required";
+      }
+      if (!(formData.state ?? "").trim()) {
+        newErrors.state = "State is required";
+      }
+      if (!(formData.country ?? "").trim()) {
+        newErrors.country = "Country is required";
     }
     if (!formData.timeZone) {
       newErrors.timeZone = "Time zone is required";
@@ -450,125 +437,30 @@ export const EditEvent: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const { capacity, price, currency, ...apiData } = formData;
+      const { ...apiData } = formData;
 
-      const selectedOrgId = apiData.tenantId;
-      let eventOrganizerIdForApi: number;
+      const selectedOrgId = apiData.eventOrganizerId;
+      let eventOrganizerIdForApi: string;
 
       if (typeof selectedOrgId === "string") {
-        eventOrganizerIdForApi = parseInt(selectedOrgId, 10);
-      } else if (typeof selectedOrgId === "number") {
         eventOrganizerIdForApi = selectedOrgId;
       } else {
         throw new Error("Invalid organization selection");
       }
 
-      const requestPayload = {
+      const requestPayload: EventRequest = {
         eventOrganizerId: eventOrganizerIdForApi,
         name: apiData.name,
-        slug: apiData.name.toLowerCase().replace(/\s+/g, "-"),
-        description: apiData.description || null,
-        eventDate: apiData.startDate,
+        description: apiData.description || "",
+        eventDate: apiData.eventDate,
         timeZone: apiData.timeZone || "Asia/Kolkata",
-        venueName: apiData.location || null,
-        venueAddress:
-          `${apiData.city}, ${apiData.state}, ${apiData.country}` || null,
-        venueLatitude: null,
-        venueLongitude: null,
-        status: EventStatus.Draft,
-        maxParticipants: 1000,
-        registrationDeadline:
-          apiData.registrationCloseDate || apiData.startDate || null,
-        eventSettings: eventSettings
-          ? {
-              removeBanner: eventSettings.removeBanner || false,
-              published: eventSettings.published || false,
-              rankOnNet:
-                eventSettings.rankOnNet !== undefined
-                  ? eventSettings.rankOnNet
-                  : true,
-              showResultSummaryForRaces:
-                eventSettings.showResultSummaryForRaces !== undefined
-                  ? eventSettings.showResultSummaryForRaces
-                  : true,
-              useOldData: eventSettings.useOldData || false,
-              confirmedEvent: eventSettings.confirmedEvent || false,
-              allowNameCheck:
-                eventSettings.allowNameCheck !== undefined
-                  ? eventSettings.allowNameCheck
-                  : true,
-              allowParticipantEdit:
-                eventSettings.allowParticipantEdit !== undefined
-                  ? eventSettings.allowParticipantEdit
-                  : true,
-            }
-          : {
-              removeBanner: false,
-              published: false,
-              rankOnNet: true,
-              showResultSummaryForRaces: true,
-              useOldData: false,
-              confirmedEvent: false,
-              allowNameCheck: true,
-              allowParticipantEdit: true,
-            },
-        leaderboardSettings: leaderBoardSettings
-          ? {
-              showOverallResults:
-                leaderBoardSettings.ShowOverallResults || false,
-              showCategoryResults:
-                leaderBoardSettings.ShowCategoryResults || false,
-              showGenderResults: true,
-              showAgeGroupResults: true,
-              sortByOverallChipTime:
-                leaderBoardSettings.SortByOverallChipTime || false,
-              sortByOverallGunTime:
-                leaderBoardSettings.SortByOverallGunTime || false,
-              sortByCategoryChipTime:
-                leaderBoardSettings.SortByCategoryChipTime || false,
-              sortByCategoryGunTime:
-                leaderBoardSettings.SortByCategoryGunTime || false,
-              numberOfResultsToShowOverall:
-                leaderBoardSettings.NumberOfResultsToShowOverall || 10,
-              numberOfResultsToShowCategory:
-                leaderBoardSettings.NumberOfResultsToShowCategory || 5,
-              enableLiveLeaderboard: true,
-              showSplitTimes: true,
-              showPace: true,
-              showTeamResults: false,
-              showMedalIcon: true,
-              allowAnonymousView: true,
-              autoRefreshIntervalSec: 30,
-              maxDisplayedRecords: Math.max(
-                leaderBoardSettings.NumberOfResultsToShowOverall || 10,
-                leaderBoardSettings.NumberOfResultsToShowCategory || 5
-              ),
-            }
-          : {
-              showOverallResults: false,
-              showCategoryResults: false,
-              showGenderResults: true,
-              showAgeGroupResults: true,
-              sortByOverallChipTime: false,
-              sortByOverallGunTime: false,
-              sortByCategoryChipTime: false,
-              sortByCategoryGunTime: false,
-              numberOfResultsToShowOverall: 10,
-              numberOfResultsToShowCategory: 5,
-              enableLiveLeaderboard: true,
-              showSplitTimes: true,
-              showPace: true,
-              showTeamResults: false,
-              showMedalIcon: true,
-              allowAnonymousView: true,
-              autoRefreshIntervalSec: 30,
-              maxDisplayedRecords: 100,
-            },
+        smsText: apiData.smsText || "",
+        leaderBoardSettings: leaderBoardSettings,
+        eventSettings: eventSettings,
+        eventType: apiData.eventType
       };
-      const updatedEvent = await EventService.updateEvent(
-        id!,
-        requestPayload as any
-      );
+      
+      const updatedEvent = await EventService.updateEvent(id!, requestPayload);
 
       if (bannerFile && updatedEvent.id) {
         await EventService.uploadBannerImage(updatedEvent.id, bannerFile);
@@ -670,14 +562,14 @@ export const EditEvent: React.FC = () => {
 
                 <FormControl
                   fullWidth
-                  error={!!errors.tenantId}
+                  error={!!errors.eventOrganizerId}
                   required
                   disabled={isLoadingOrgs}
                 >
                   <InputLabel>Event Organizer</InputLabel>
                   <Select
-                    name="tenantId"
-                    value={formData.tenantId || ""}
+                    name="eventOrganizerId" // <-- key name
+                    value={formData.eventOrganizerId || ""} // <-- bind to eventOrganizerId
                     onChange={handleSelectChange}
                     label="Event Organizer"
                   >
@@ -692,17 +584,20 @@ export const EditEvent: React.FC = () => {
                       </MenuItem>
                     ))}
                   </Select>
-                  {errors.tenantId && (
-                    <FormHelperText>{errors.tenantId}</FormHelperText>
+
+                  {errors.eventOrganizerId && (
+                    <FormHelperText>{errors.eventOrganizerId}</FormHelperText>
                   )}
                   {isLoadingOrgs && (
                     <FormHelperText>Loading organizations...</FormHelperText>
                   )}
-                  {!formData.tenantId && !errors.tenantId && !isLoadingOrgs && (
-                    <FormHelperText sx={{ color: "warning.main" }}>
-                      Please select an event organizer for this event.
-                    </FormHelperText>
-                  )}
+                  {!formData.eventOrganizerId &&
+                    !errors.eventOrganizerId &&
+                    !isLoadingOrgs && (
+                      <FormHelperText sx={{ color: "warning.main" }}>
+                        Please select an event organizer for this event.
+                      </FormHelperText>
+                    )}
                 </FormControl>
 
                 {/* Event Type */}
@@ -796,15 +691,15 @@ export const EditEvent: React.FC = () => {
                 <TextField
                   fullWidth
                   label="Event Date & Time"
-                  name="startDate"
+                  name="eventDate"
                   type="datetime-local"
-                  value={formData.startDate}
+                  value={formData.eventDate}
                   onChange={handleInputChange}
-                  error={!!errors.startDate}
+                  error={!!errors.eventDate}
                   helperText={
                     isEventInPast
                       ? "Cannot modify date for past events"
-                      : errors.startDate
+                      : errors.eventDate
                   }
                   required
                   disabled={isEventInPast}
@@ -860,11 +755,11 @@ export const EditEvent: React.FC = () => {
                 <TextField
                   fullWidth
                   label="Venue/Location"
-                  name="location"
-                  value={formData.location}
+                  name="venueAddress"
+                  value={formData.venueAddress}
                   onChange={handleInputChange}
-                  error={!!errors.location}
-                  helperText={errors.location}
+                  error={!!errors.venueAddress}
+                  helperText={errors.venueAddress}
                   placeholder="Enter venue or starting location"
                   required
                 />

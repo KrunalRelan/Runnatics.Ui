@@ -345,13 +345,14 @@ export const CreateEvent: React.FC = () => {
 
     if (!formData.startDate) {
       newErrors.startDate = "Start date is required";
-    } else {
-      const selectedDate = new Date(formData.startDate);
-      const now = new Date();
-      if (selectedDate < now) {
-        newErrors.startDate = "Event date cannot be in the past";
-      }
     }
+    // else {
+    //   const selectedDate = new Date(formData.startDate);
+    //   const now = new Date();
+    //   if (selectedDate < now) {
+    //     newErrors.startDate = "Event date cannot be in the past";
+    //   }
+    // }
 
     if (!formData.location.trim()) {
       newErrors.location = "Location is required";
@@ -411,7 +412,11 @@ export const CreateEvent: React.FC = () => {
         timeZone: apiData.timeZone || "Asia/Kolkata",
         venueName: apiData.location || null,
         venueAddress:
-          `${apiData.city}, ${apiData.state}, ${apiData.country}` || null,
+          `${apiData.city}, ${apiData.state}, ${apiData.country}, ${apiData.zipCode}` || null,
+        city: apiData.city || null,
+        state: apiData.state || null,
+        country: apiData.country || null,
+        zipCode: apiData.zipCode || null,
         venueLatitude: null,
         venueLongitude: null,
         status: EventStatus.Draft,
