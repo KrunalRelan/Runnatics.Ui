@@ -250,7 +250,7 @@ export const AddRace: React.FC = () => {
       console.log("Creating race with data:", requestPayload);
 
       // Call the API
-      const createdRace = await RaceService.createRace(Number(eventId!), requestPayload);
+      const createdRace = await RaceService.createRace(eventId!, requestPayload);
 
       if (createdRace) {
         // Show success message
@@ -358,7 +358,7 @@ export const AddRace: React.FC = () => {
                 helperText={errors.distance}
                 placeholder="e.g., 10, 21.1, 42.2"
                 required
-                inputProps={{ min: 0, step: 0.1 }}
+                inputProps={{ min: 0, step: "any" }} // <-- use step: "any"
               />
             </Stack>
             <Box sx={{ flex: 1 }} /> {/* Spacer */}

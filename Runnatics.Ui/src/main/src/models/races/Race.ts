@@ -3,7 +3,7 @@ import { RaceSettings } from './RaceSettings'; // Adjust the path as needed
 
 export interface Race {
     id: string;
-    eventId?: number;
+    eventId?: string;
     title: string;
     description: string;
     distance?: number;

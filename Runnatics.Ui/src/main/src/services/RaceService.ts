@@ -40,7 +40,7 @@ export class RaceService {
          * Create new race
          * Note: JWT token is automatically included via interceptor
          */
-    static async createRace(eventId: number, raceData: CreateRaceRequest): Promise<Race> {
+    static async createRace(eventId: string, raceData: CreateRaceRequest): Promise<Race> {
         const response: AxiosResponse<Race> = await apiClient.post(
             ServiceUrl.createRace(eventId),
             raceData
@@ -63,7 +63,7 @@ export class RaceService {
          * Delete event using delete-event endpoint
          * Note: JWT token is automatically included via interceptor
          */
-    static async deleteRace(eventId: number, id: string): Promise<void> {
+    static async deleteRace(eventId: string, id: string): Promise<void> {
         await apiClient.delete(ServiceUrl.deleteRace(eventId, id));
     }
 }

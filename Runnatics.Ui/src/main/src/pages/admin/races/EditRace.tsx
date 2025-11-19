@@ -326,7 +326,7 @@ export const EditRace: React.FC = () => {
                                 helperText={errors.distance}
                                 placeholder="e.g., 10, 21.1, 42.2"
                                 required
-                                inputProps={{ min: 0, step: 0.1 }}
+                                inputProps={{ min: 0, step: "any" }} // <-- use step: "any"
                             />
                         </Stack>
                         <Box sx={{ flex: 1 }} />

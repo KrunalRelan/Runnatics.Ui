@@ -17,8 +17,8 @@ export const ServiceUrl = {
     //races
     searchRaceService: (eventId: string) => `Races/${eventId}/search`,
     getRaceById: (eventId:string, id: string) => `Races/${eventId}/${id}/race-details`,
-    createRace: (eventId: number) => `Races/${eventId}/create`,
+    createRace: (eventId: string) => `Races/${eventId}/create`,
     editRace: (eventId: string, id: string) => `Races/${eventId}/${id}/edit-race`,
-    deleteRace: (eventId: number, id: string) => `Races/${eventId}/${id}/delete-race`,
+    deleteRace: (eventId: string, id: string) => `Races/${eventId}/${id}/delete-race`,
 };
 
