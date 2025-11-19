@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from "react";
+import React, { useMemo, useCallback, useState, useEffect } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { Box, IconButton, Tooltip, Stack, Container, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Typography } from "@mui/material";
 import TablePagination from "@/main/src/components/TablePagination";
@@ -51,8 +51,14 @@ export const RaceList: React.FC<RaceListProps> = ({
 }) => {
 
     const navigate = useNavigate();
+    const [localRaces, setLocalRaces] = useState<Race[]>(races);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [raceToDelete, setRaceToDelete] = useState<Race | null>(null);
+
+    // Sync localRaces with races prop when races change
+    useEffect(() => {
+        setLocalRaces(races);
+    }, [races]);
 
     // Snackbar for success/error messages
     const [snackbar, setSnackbar] = useState<{
@@ -91,8 +97,8 @@ export const RaceList: React.FC<RaceListProps> = ({
                 severity: 'success',
             });
 
-            // Refresh the list
-            // fetchEvents(searchCriteria);
+            // Remove the deleted race from localRaces
+            setLocalRaces((prev) => prev.filter((race) => race.id !== raceToDelete.id));
         } catch (err: any) {
             console.error("Error deleting event:", err);
 
@@ -244,7 +250,7 @@ export const RaceList: React.FC<RaceListProps> = ({
             <Box sx={{ width: "100%" }}>
                 <div className="ag-theme-material" style={{ height: 400, width: "100%" }}>
                     <AgGridReact
-                        rowData={races}
+                        rowData={localRaces}
                         columnDefs={columnDefs}
                         defaultColDef={defaultColDef}
                         domLayout="autoHeight"
