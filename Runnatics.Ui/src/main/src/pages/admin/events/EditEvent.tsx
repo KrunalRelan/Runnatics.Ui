@@ -457,7 +457,15 @@ export const EditEvent: React.FC = () => {
         smsText: apiData.smsText || "",
         leaderBoardSettings: leaderBoardSettings,
         eventSettings: eventSettings,
-        eventType: apiData.eventType
+        eventType: apiData.eventType,
+        venueName: apiData.venueName || "",
+        venueAddress: `${apiData.city}, ${apiData.state}, ${apiData.country}, ${apiData.zipCode}` || "",
+        city: apiData.city || "",
+        state: apiData.state || "",
+        country: apiData.country || "",
+        zipCode: apiData.zipCode || "",
+        bannerImageUrl: apiData.bannerImageUrl || "",
+
       };
       
       const updatedEvent = await EventService.updateEvent(id!, requestPayload);
