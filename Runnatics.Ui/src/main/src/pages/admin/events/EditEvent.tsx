@@ -135,7 +135,7 @@ export const EditEvent: React.FC = () => {
 
     // Prevent duplicate fetches in React 18 StrictMode
     if (hasFetchedRef.current) {
-      console.log("⏭️ Skipping duplicate fetch for event id:", id);
+      
       return;
     }
     hasFetchedRef.current = true;
@@ -152,10 +152,6 @@ export const EditEvent: React.FC = () => {
 
         const eventData: Event = eventResponse.message || eventResponse;
 
-        console.log("📦 Raw event response:", eventResponse);
-        console.log("📦 Raw event data:", eventData);
-        console.log("📦 Raw organizations response:", orgsResponse);
-
         const mappedOrgs = orgsResponse.map((org: EventOrganizer) => ({
           id: org.id,
           tenantId: org.tenantId,
@@ -163,16 +159,10 @@ export const EditEvent: React.FC = () => {
           organizerName: org.organizerName || org.name || "",
         }));
 
-        console.log("🗂️ Mapped organizations:", mappedOrgs);
-
         setOrganizations(mappedOrgs);
         populateFormData(eventData, mappedOrgs);
       } catch (error: any) {
-        console.error("Error fetching event data:", error);
-        const errorMessage =
-          error.response?.data?.message ||
-          error.message ||
-          "Failed to load event data. Please try again.";
+        let errorMessage = "Failed to fetch event data. Please try again.";
         setApiError(errorMessage);
       } finally {
         setIsLoading(false);
@@ -185,7 +175,6 @@ export const EditEvent: React.FC = () => {
 
   // Populate form data from event object
   const populateFormData = (event: Event, availableOrgs: EventOrganizer[]) => {
-    console.log("📋 Populating form with event data:", event);
 
     // Check if event is in the past
     if (event.eventDate) {
@@ -213,17 +202,13 @@ export const EditEvent: React.FC = () => {
     let selectedOrgId = "";
 
     if (event.tenantId) {
-      console.log("🔍 Event tenantId:", event.tenantId);
-
       const matchingOrg = availableOrgs.find(
-        (org) => org.tenantId === event.tenantId
+        (org) => org.id === event.organizerId
       );
 
       if (matchingOrg) {
         selectedOrgId = matchingOrg.id;
-        console.log("✅ Found matching organization:", matchingOrg);
       } else {
-        console.warn("⚠️ No organization found with tenantId:", event.tenantId);
         const placeholderOrg: EventOrganizer = {
           id: event.tenantId,
           tenantId: event.tenantId,
@@ -233,10 +218,8 @@ export const EditEvent: React.FC = () => {
         availableOrgs.push(placeholderOrg);
         setOrganizations([...availableOrgs]);
         selectedOrgId = placeholderOrg.id;
-        console.log("➕ Added placeholder organization:", placeholderOrg);
       }
     } else if (event.organizerId) {
-      console.log("🔍 Using organizerId as fallback:", event.organizerId);
       selectedOrgId = event.organizerId;
       const orgExists = availableOrgs.some(
         (org) => org.id === event.organizerId
@@ -251,10 +234,6 @@ export const EditEvent: React.FC = () => {
         };
         availableOrgs.push(placeholderOrg);
         setOrganizations([...availableOrgs]);
-        console.log(
-          "➕ Added placeholder organization for organizerId:",
-          placeholderOrg
-        );
       }
     }
 
@@ -320,11 +299,6 @@ export const EditEvent: React.FC = () => {
     };
 
     setFormData(mappedFormData);
-    console.log("✅ Form data set:", mappedFormData);
-    console.log(
-      "🆔 Selected organization ID in form:",
-      mappedFormData.tenantId
-    );
 
     if (event.eventSettings) {
       const mappedEventSettings: EventSettings = {
@@ -591,9 +565,6 @@ export const EditEvent: React.FC = () => {
               maxDisplayedRecords: 100,
             },
       };
-
-      console.log("📤 Submitting payload:", requestPayload);
-
       const updatedEvent = await EventService.updateEvent(
         id!,
         requestPayload as any
