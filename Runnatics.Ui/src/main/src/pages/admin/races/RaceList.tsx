@@ -1,7 +1,5 @@
 import React, { useMemo, useCallback, useState } from "react";
-import { AgGridReact } from "ag-grid-react";
-import { Box, IconButton, Tooltip, Stack, Container, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Typography } from "@mui/material";
-import TablePagination from "@/main/src/components/TablePagination";
+import { Box, IconButton, Tooltip, Stack, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Typography, Container } from "@mui/material";
 import {
     Edit as EditIcon,
     Delete as DeleteIcon,
@@ -9,8 +7,12 @@ import {
     CheckCircle as CheckCircleIcon,
     Cancel as CancelIcon,
 } from "@mui/icons-material";
-import "ag-grid-community/styles/ag-grid.css";
-import "ag-grid-community/styles/ag-theme-material.css";
+import { useNavigate } from "react-router-dom";
+import type { ColDef } from "ag-grid-community";
+import { Race } from "@/main/src/models/races/Race";
+import { RaceService } from "@/main/src/services/RaceService";
+import DataGrid from "@/main/src/components/DataGrid";
+import TablePagination from "@/main/src/components/TablePagination";
 
 interface RaceListProps {
     races: Race[];
@@ -24,11 +26,6 @@ interface RaceListProps {
     onEdit?: (raceId: string) => void;
     onDelete?: (raceId: string) => void;
 }
-
-import type { ColDef } from "ag-grid-community";
-import { Race } from "@/main/src/models/races/Race";
-import { useNavigate } from "react-router-dom";
-import { RaceService } from "@/main/src/services/RaceService";
 
 function formatTimeOnly(dateStr: string) {
     if (!dateStr) return "";
@@ -84,25 +81,18 @@ export const RaceList: React.FC<RaceListProps> = ({
             setDeleteDialogOpen(false);
             setRaceToDelete(null);
 
-            // Show success message
             setSnackbar({
                 open: true,
                 message: `Race "${raceToDelete.title}" deleted successfully!`,
                 severity: 'success',
             });
-
-            // Refresh the list
-            // fetchEvents(searchCriteria);
         } catch (err: any) {
-            console.error("Error deleting event:", err);
-
-            // Show error message
+            console.error("Error deleting race:", err);
             setSnackbar({
                 open: true,
                 message: err.response?.data?.message || "Failed to delete race. Please try again.",
                 severity: 'error',
             });
-
             setDeleteDialogOpen(false);
             setRaceToDelete(null);
         }
@@ -113,6 +103,7 @@ export const RaceList: React.FC<RaceListProps> = ({
         setRaceToDelete(null);
     };
 
+    // Race Title Cell Renderer
     const RaceTitleCellRenderer = useCallback((props: any) => {
         const race = props.data;
         const handleClick = (e: React.MouseEvent) => {
@@ -132,6 +123,7 @@ export const RaceList: React.FC<RaceListProps> = ({
                         color: "primary.main",
                         textDecoration: "none",
                         cursor: "pointer",
+                        fontWeight: 500,
                         "&:hover": {
                             textDecoration: "underline",
                         },
@@ -143,6 +135,7 @@ export const RaceList: React.FC<RaceListProps> = ({
         );
     }, [navigate]);
 
+    // Time Cell Renderer
     const TimeCellRenderer = useCallback((props: any) => {
         const start = formatTimeOnly(props.data.startTime);
         const end = formatTimeOnly(props.data.endTime);
@@ -150,11 +143,8 @@ export const RaceList: React.FC<RaceListProps> = ({
             <Box sx={{
                 display: "flex",
                 alignItems: "center",
-                fontWeight: 600,
-                fontSize: "1.15rem",
-                color: "#1976d2",
-                letterSpacing: "0.03em",
-                fontFamily: "'Inter', 'Segoe UI', 'Roboto', 'Arial', sans-serif"
+                justifyContent: "center",
+                mt: 1,
             }}>
                 <Typography component="span" sx={{ mr: 1 }}>
                     {start}
@@ -169,8 +159,7 @@ export const RaceList: React.FC<RaceListProps> = ({
         );
     }, []);
 
-
-    // Actions cell renderer
+    // Actions Cell Renderer
     const ActionsCellRenderer = useCallback((props: any) => {
         const race = props.data;
         return (
@@ -203,61 +192,97 @@ export const RaceList: React.FC<RaceListProps> = ({
         );
     }, []);
 
-    const columnDefs: ColDef<Race>[] = useMemo(() => [
-        {
-            headerName: "Title",
-            field: "title" as keyof Race,
-            flex: 1,
-            cellRenderer: RaceTitleCellRenderer
-        },
-        {
-            headerName: "Time",
-            field: "startTime",
-            width: 220,
-            flex: 1.5,
-            cellRenderer: TimeCellRenderer
-        },
-        { headerName: "Participants", field: "participants" as keyof Race, flex: 1 },
-        { headerName: "Not Encoded", field: "notEncoded" as keyof Race, flex: 1 },
-        {
-            headerName: "SMS",
-            field: "sms" as keyof Race,
-            flex: 1,
-            cellRenderer: (params: any) => (
-                <Tooltip title={params.value ? "SMS Sent" : "No SMS"}>
-                    {params.value ? <SmsIcon color="success" fontSize="small" /> : <CancelIcon color="disabled" fontSize="small" />}
-                </Tooltip>
-            ),
-        },
-        {
-            headerName: "CheckPoints",
-            field: "checkPoints" as keyof Race,
-            flex: 1,
-            cellRenderer: (params: any) => (
-                <Tooltip title={params.value ? `${params.value} CheckPoints` : "No CheckPoints"}>
-                    {params.value > 0 ? <CheckCircleIcon color="primary" fontSize="small" /> : <CancelIcon color="disabled" fontSize="small" />}
-                </Tooltip>
-            ),
-        },
-        {
-            headerName: "Action",
-            width: 90, // Decreased width
-            sortable: false,
-            filter: false,
-            cellRenderer: ActionsCellRenderer,
-            cellStyle: {
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+    // Column Definitions - Updated with proper typing
+    const columnDefs: ColDef<Race>[] = useMemo(
+        () => [
+            {
+                field: "title",
+                headerName: "Title",
+                flex: 2,
+                sortable: true,
+                filter: true,
+                cellRenderer: RaceTitleCellRenderer,
             },
-        },
-    ], [ActionsCellRenderer, onEdit, onDelete]);
+            {
+                field: "startTime",
+                headerName: "Time",
+                flex: 2,
+                width: 220,
+                sortable: true,
+                filter: "agDateColumnFilter",
+                cellRenderer: TimeCellRenderer,
+            },
+            {
+                headerName: "Participants",
+                field: "maxParticipants", //todo
+                width: 150,
+                sortable: true,
+                filter: false,
+            },
+            {
+                headerName: "Not Encoded",
+                width: 150,
+                sortable: true,
+                filter: false,
+            },
+            {
+                headerName: "SMS",
+                field: "smsEnabled",
+                width: 100,
+                cellRenderer: (params: any) => (
+                    <Tooltip title={params.value ? "SMS Sent" : "No SMS"}>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                            {params.value ? (
+                                <SmsIcon color="success" fontSize="small" />
+                            ) : (
+                                <CancelIcon color="disabled" fontSize="small" />
+                            )}
+                        </Box>
+                    </Tooltip>
+                ),
+                sortable: true,
+                filter: false,
+            },
+            {
+                headerName: "CheckPoints",
+                field: "checkPoints",
+                width: 130,
+                cellRenderer: (params: any) => (
+                    <Tooltip title={params.value > 0 ? `${params.value} CheckPoints` : "No CheckPoints"}>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                            {params.value > 0 ? (
+                                <CheckCircleIcon color="primary" fontSize="small" />
+                            ) : (
+                                <CancelIcon color="disabled" fontSize="small" />
+                            )}
+                        </Box>
+                    </Tooltip>
+                ),
+                sortable: true,
+                filter: false,
+            },
+            {
+                headerName: "Actions",
+                width: 120,
+                sortable: false,
+                filter: false,
+                cellRenderer: ActionsCellRenderer,
+                cellStyle: {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                },
+            },
+        ],
+        [RaceTitleCellRenderer, TimeCellRenderer, ActionsCellRenderer]
+    );
 
+    // Default Column Definition
     const defaultColDef = useMemo<ColDef>(
         () => ({
-            resizable: true,
             sortable: true,
             filter: true,
+            resizable: true,
         }),
         []
     );
@@ -267,131 +292,81 @@ export const RaceList: React.FC<RaceListProps> = ({
             <Box
                 sx={{
                     width: "100%",
-                    background: "#fff",
-                    borderRadius: 3,
-                    boxShadow: 3,
-                    p: 2,
-                    mb: 3,
-                    border: "1px solid #e0e0e0",
+                    position: "relative",
+                    opacity: loading ? 0.6 : 1,
+                    transition: "opacity 0.3s ease-in-out",
                 }}
             >
-                <div
-                    className="ag-theme-material"
-                    style={{
-                        height: 400,
-                        width: "100%",
-                        borderRadius: "12px",
-                        overflow: "hidden",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                        background: "#f9f9fb",
-                    }}
-                >
-                    <AgGridReact
-                        rowData={races}
-                        columnDefs={columnDefs}
-                        defaultColDef={{
-                            ...defaultColDef,
-                            cellStyle: {
-                                fontSize: "1rem",
-                                padding: "12px 8px",
-                                borderBottom: "1px solid #ececec",
-                            },
-                            headerClass: "ag-custom-header",
-                        }}
-                        domLayout="autoHeight"
-                        suppressRowClickSelection
-                        pagination={false}
-                        rowHeight={48}
-                        getRowStyle={() => ({
-                            background: "#fff",
-                            borderRadius: "8px",
-                            transition: "background 0.2s",
-                        })}
-                    />
-                </div>
-                <style>
-                    {`
-  .ag-theme-material .ag-header {
-    min-height: 56px !important;
-    height: 56px !important;
-    font-size: 1.15rem;
-    background: #f5f7fa !important; /* Restores header color */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-    border-bottom: 2px solid #e0e0e0;
-  }
-  .ag-theme-material .ag-header-cell {
-    padding: 18px 12px !important;
-    border-right: 1px solid #e0e0e0;
-    background: #f5f7fa !important; /* Ensures each cell has header color */
-  }
-  .ag-theme-material .ag-header-cell:last-child {
-    border-right: none;
-  }
-  .ag-theme-material .ag-cell {
-    border-right: 1px solid #f0f0f0;
-  }
-  .ag-theme-material .ag-cell:last-child {
-    border-right: none;
-  }
-`}
-                </style>
-                <TablePagination
-                    pageNumber={pageNumber}
-                    pageSize={pageSize}
-                    totalRecords={totalRecords}
-                    totalPages={totalPages}
+
+                <DataGrid<Race>
+                    rowData={races}
+                    columnDefs={columnDefs}
+                    defaultColDef={defaultColDef}
+                    domLayout="normal"
+                    height={400}
+                    pagination={false}
+                    animateRows={true}
+                    rowHeight={50}
+                    headerHeight={50}
                     loading={loading}
-                    onPageChange={onPageChange}
-                    onPageSizeChange={onPageSizeChange}
+                    overlayLoadingTemplate='<span class="ag-overlay-loading-center">Loading events...</span>'
+                    overlayNoRowsTemplate='<span class="ag-overlay-no-rows-center">No events to display</span>'
                 />
-            </Box>
 
-            {/* Delete Confirmation Dialog */}
-            <Dialog
-                open={deleteDialogOpen}
-                onClose={handleDeleteCancel}
-                aria-labelledby="alert-dialog-title"
-                aria-describedby="alert-dialog-description"
-            >
-                <DialogTitle id="alert-dialog-title">Confirm Delete</DialogTitle>
-                <DialogContent>
-                    <DialogContentText id="alert-dialog-description">
-                        Are you sure you want to delete the race "{raceToDelete?.title}"?
-                        This action cannot be undone.
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleDeleteCancel} color="primary">
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleDeleteConfirm}
-                        color="error"
-                        variant="contained"
-                        autoFocus
-                    >
-                        Delete
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                {/* Custom Pagination */}
+                <Box sx={{ mt: 0 }}>
+                    <TablePagination
+                        pageNumber={pageNumber}
+                        pageSize={pageSize}
+                        totalRecords={totalRecords}
+                        totalPages={totalPages}
+                        loading={loading}
+                        onPageChange={onPageChange}
+                        onPageSizeChange={onPageSizeChange}
+                    />
+                </Box>
 
-            {/* Success/Error Snackbar */}
-            <Snackbar
-                open={snackbar.open}
-                autoHideDuration={6000}
-                onClose={() => setSnackbar({ ...snackbar, open: false })}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            >
-                <Alert
-                    onClose={() => setSnackbar({ ...snackbar, open: false })}
-                    severity={snackbar.severity}
-                    variant="filled"
-                    sx={{ width: '100%' }}
+                {/* Delete Confirmation Dialog */}
+                <Dialog
+                    open={deleteDialogOpen}
+                    onClose={handleDeleteCancel}
+                    aria-labelledby="alert-dialog-title"
+                    aria-describedby="alert-dialog-description"
                 >
-                    {snackbar.message}
-                </Alert>
-            </Snackbar>
+                    <DialogTitle id="alert-dialog-title">Confirm Delete</DialogTitle>
+                    <DialogContent>
+                        <DialogContentText id="alert-dialog-description">
+                            Are you sure you want to delete the race "{raceToDelete?.title}"? This action cannot
+                            be undone.
+                        </DialogContentText>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleDeleteCancel} color="primary">
+                            Cancel
+                        </Button>
+                        <Button onClick={handleDeleteConfirm} color="error" variant="contained" autoFocus>
+                            Delete
+                        </Button>
+                    </DialogActions>
+                </Dialog>
 
+                {/* Success/Error Snackbar */}
+                <Snackbar
+                    open={snackbar.open}
+                    autoHideDuration={6000}
+                    onClose={() => setSnackbar({ ...snackbar, open: false })}
+                    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                >
+                    <Alert
+                        onClose={() => setSnackbar({ ...snackbar, open: false })}
+                        severity={snackbar.severity}
+                        variant="filled"
+                        sx={{ width: "100%" }}
+                    >
+                        {snackbar.message}
+                    </Alert>
+                </Snackbar>
+            </Box>
         </Container>
     );
 };
