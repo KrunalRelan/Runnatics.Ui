@@ -1,5 +1,6 @@
-import React, { useMemo, useCallback, useState } from "react";
+import React, { useMemo, useCallback, useState, useEffect } from "react";
 import { Box, IconButton, Tooltip, Stack, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Typography, Container } from "@mui/material";
+import TablePagination from "@/main/src/components/TablePagination";
 import {
     Edit as EditIcon,
     Delete as DeleteIcon,
@@ -12,7 +13,6 @@ import type { ColDef } from "ag-grid-community";
 import { Race } from "@/main/src/models/races/Race";
 import { RaceService } from "@/main/src/services/RaceService";
 import DataGrid from "@/main/src/components/DataGrid";
-import TablePagination from "@/main/src/components/TablePagination";
 
 interface RaceListProps {
     races: Race[];
@@ -48,8 +48,14 @@ export const RaceList: React.FC<RaceListProps> = ({
 }) => {
 
     const navigate = useNavigate();
+    const [localRaces, setLocalRaces] = useState<Race[]>(races);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [raceToDelete, setRaceToDelete] = useState<Race | null>(null);
+
+    // Sync localRaces with races prop when races change
+    useEffect(() => {
+        setLocalRaces(races);
+    }, [races]);
 
     // Snackbar for success/error messages
     const [snackbar, setSnackbar] = useState<{
@@ -86,6 +92,9 @@ export const RaceList: React.FC<RaceListProps> = ({
                 message: `Race "${raceToDelete.title}" deleted successfully!`,
                 severity: 'success',
             });
+
+            // Remove the deleted race from localRaces
+            setLocalRaces((prev) => prev.filter((race) => race.id !== raceToDelete.id));
         } catch (err: any) {
             console.error("Error deleting race:", err);
             setSnackbar({
@@ -299,7 +308,7 @@ export const RaceList: React.FC<RaceListProps> = ({
             >
 
                 <DataGrid<Race>
-                    rowData={races}
+                    rowData={localRaces}
                     columnDefs={columnDefs}
                     defaultColDef={defaultColDef}
                     domLayout="normal"
