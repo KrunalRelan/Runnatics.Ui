@@ -31,7 +31,6 @@ import {
   LeaderBoardSettings,
   Event,
 } from "@/main/src/models";
-import { CreateEventRequest } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
 import { EventRequest } from "@/main/src/models/EventRequest";
 

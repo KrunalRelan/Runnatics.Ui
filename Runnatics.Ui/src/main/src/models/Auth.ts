@@ -11,7 +11,7 @@ export interface LoginResponse {
         refreshToken: string;
         expiresAt: string;
         user: {
-            id: number;
+            id: string;
             firstName: string;
             lastName: string;
             email: string;
