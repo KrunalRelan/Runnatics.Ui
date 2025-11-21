@@ -52,30 +52,10 @@ import { EventService } from "../../../services/EventService";
 import { Event } from "../../../models/Event";
 import { EventSearchRequest } from "../../../models/EventSearchRequest";
 import { SortDirection } from "@/main/src/models/SortDirection";
+import DataGrid from "@/main/src/components/DataGrid";
 
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule]);
-
-// Create custom theme based on Quartz
-const myTheme = themeQuartz.withParams({
-  accentColor: "#1976d2",
-  backgroundColor: "#ffffff",
-  borderColor: "#e0e0e0",
-  borderRadius: 4,
-  browserColorScheme: "light",
-  chromeBackgroundColor: "#f5f5f5",
-  columnBorder: true,
-  fontFamily: "Roboto, sans-serif",
-  fontSize: 14,
-  foregroundColor: "#000000",
-  headerBackgroundColor: "#f5f5f5",
-  headerFontSize: 14,
-  headerFontWeight: 600,
-  headerTextColor: "#000000",
-  oddRowBackgroundColor: "#fafafa",
-  rowBorder: true,
-  spacing: 8,
-});
 
 // Default search criteria with required pagination values
 const defaultSearchCriteria: EventSearchRequest = {
@@ -584,9 +564,8 @@ const EventsList: React.FC = () => {
               }}
               helperText={
                 searchQuery.length > 0 && searchQuery.length < 3
-                  ? `Type ${3 - searchQuery.length} more character${
-                      3 - searchQuery.length > 1 ? "s" : ""
-                    } to search`
+                  ? `Type ${3 - searchQuery.length} more character${3 - searchQuery.length > 1 ? "s" : ""
+                  } to search`
                   : ""
               }
               sx={{ flex: { xs: 1, sm: 1 } }}
@@ -759,24 +738,19 @@ const EventsList: React.FC = () => {
               </Box>
             )}
 
-            <AgGridReact<Event>
-              theme={myTheme}
+            <DataGrid
               rowData={events}
               columnDefs={columnDefs}
               defaultColDef={defaultColDef}
-              onGridReady={onGridReady}
-              pagination={false}
               domLayout="normal"
+              height={600}
+              pagination={false}
               animateRows={true}
               rowHeight={60}
               headerHeight={50}
               loading={loading}
-              overlayLoadingTemplate={
-                '<span class="ag-overlay-loading-center">Loading events...</span>'
-              }
-              overlayNoRowsTemplate={
-                '<span class="ag-overlay-no-rows-center">No events to display</span>'
-              }
+              overlayLoadingTemplate='<span class="ag-overlay-loading-center">Loading events...</span>'
+              overlayNoRowsTemplate='<span class="ag-overlay-no-rows-center">No events to display</span>'
             />
           </Box>
 

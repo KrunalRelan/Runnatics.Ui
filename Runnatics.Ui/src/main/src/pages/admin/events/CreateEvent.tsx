@@ -422,8 +422,8 @@ export const CreateEvent: React.FC = () => {
         status: EventStatus.Draft,
         maxParticipants: 1000,
         registrationDeadline:
-          apiData.registrationCloseDate || apiData.startDate || null,
-
+        apiData.registrationCloseDate || apiData.startDate || null,
+        eventType: apiData.eventType,
         eventSettings: eventSettings
           ? {
               removeBanner: eventSettings.removeBanner || false,
@@ -511,9 +511,6 @@ export const CreateEvent: React.FC = () => {
               maxDisplayedRecords: 100,
             },
       };
-
-      console.log("Full API Request Payload:", requestPayload);
-
       const createdEvent = await EventService.createEvent(
         requestPayload as any
       );

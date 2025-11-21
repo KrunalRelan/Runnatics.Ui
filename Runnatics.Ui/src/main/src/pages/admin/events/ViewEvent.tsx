@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   Box,
   Button,
@@ -23,71 +24,91 @@ import {
   Public as PublicIcon,
 } from "@mui/icons-material";
 import { EventService } from "../../../services/EventService";
-import { Event } from "../../../models/Event";
-import { RaceService } from '../../../services/RaceService';
+import { RaceService } from "../../../services/RaceService";
 import RaceList from "../races/RaceList";
-import { Race } from "@/main/src/models/races/Race";
+import {
+  SearchCriteria,
+  deafaultSearchCriteria,
+} from "@/main/src/models/SearchCriteria";
 
 const ViewEvent: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
 
-  const [event, setEvent] = useState<Event | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [races, setRaces] = useState<Race[]>([]);
-  const [racesLoading, setRacesLoading] = useState(false);
-  const [racesError, setRacesError] = useState<string | null>(null);
+  // Search criteria state
+  const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>(
+    deafaultSearchCriteria
+  );
 
   // Snackbar for success/error messages
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
-    severity: 'success' | 'error' | 'info';
+    severity: "success" | "error" | "info";
   }>({
     open: false,
-    message: '',
-    severity: 'success',
+    message: "",
+    severity: "success",
   });
 
-  // Fetch event data
-  useEffect(() => {
-    const fetchEvent = async () => {
+  // ✅ Fetch event data using React Query
+  const {
+    data: event,
+    isLoading: loading,
+    error: eventError,
+  } = useQuery({
+    queryKey: ["event", eventId],
+    queryFn: async () => {
       if (!eventId) {
-        setError("Event ID is missing");
-        setLoading(false);
-        return;
+        throw new Error("Event ID is missing");
       }
+      const response = await EventService.getEventById(eventId);
+      return response.message || response;
+    },
+    enabled: !!eventId,
+    retry: 1,
+  });
 
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await EventService.getEventById(eventId);
-        setEvent(response.message || response);
-      } catch (err: any) {
-        console.error("Error fetching event:", err);
-        setError(err.response?.data?.message || "Failed to load event details");
-      } finally {
-        setLoading(false);
+  // ✅ Fetch races using React Query
+  const {
+    data: racesData,
+    isLoading: racesLoading,
+    error: racesErrorObj,
+  } = useQuery({
+    queryKey: ["races", eventId, searchCriteria],
+    queryFn: async () => {
+      if (!eventId) {
+        throw new Error("Event ID is missing");
       }
-    };
+      const response = await RaceService.getAllRaces({
+        eventId: eventId,
+        searchCriteria: searchCriteria,
+      });
+      return {
+        races: response.message || [],
+        totalCount: response.totalCount || 0,
+      };
+    },
+    enabled: !!eventId,
+    retry: 1,
+  });
 
-    fetchEvent();
-  }, [eventId]);
+  // Extract races and totalCount
+  const races = racesData?.races || [];
+  const totalCount = racesData?.totalCount || 0;
 
-  // Fetch races for event
-  useEffect(() => {
-    if (!eventId) return;
-    setRacesLoading(true);
-    setRacesError(null);
-    RaceService.getAllRaces({ eventId: eventId, searchCriteria: { pageNumber: 1, pageSize: 10 } })
-      .then(response => setRaces(response.message || []))
-      .catch(err => {
-        setRacesError(err?.response?.data?.message || 'Failed to load races');
-        setRaces([]);
-      })
-      .finally(() => setRacesLoading(false));
-  }, [eventId]);
+  // Format errors
+  const error = eventError
+    ? (eventError as any)?.response?.data?.message ||
+      eventError.message ||
+      "Failed to load event details"
+    : null;
+
+  const racesError = racesErrorObj
+    ? (racesErrorObj as any)?.response?.data?.message ||
+      racesErrorObj.message ||
+      "Failed to load races"
+    : null;
 
   const handleBack = () => {
     navigate("/events/events-dashboard");
@@ -97,6 +118,16 @@ const ViewEvent: React.FC = () => {
     if (eventId) {
       navigate(`/events/event-details/${eventId}/race/add`);
     }
+  };
+
+  const handleEditRace = (raceId: string) => {
+    if (eventId) {
+      navigate(`/events/event-details/${eventId}/race/${raceId}/edit`);
+    }
+  };
+
+  const handleSearchCriteriaChange = (criteria: SearchCriteria) => {
+    setSearchCriteria(criteria);
   };
 
   const formatDate = (date: Date | string | undefined | null) => {
@@ -114,7 +145,10 @@ const ViewEvent: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, display: "flex", justifyContent: "center" }}>
+      <Container
+        maxWidth="lg"
+        sx={{ mt: 4, display: "flex", justifyContent: "center" }}
+      >
         <CircularProgress />
       </Container>
     );
@@ -210,9 +244,15 @@ const ViewEvent: React.FC = () => {
           </Typography>
           <Divider sx={{ mb: 3 }} />
 
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {/* Event Name and Date Row */}
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", md: "row" },
+                gap: 3,
+              }}
+            >
               <Box sx={{ flex: 1 }}>
                 <Stack direction="row" spacing={2} alignItems="flex-start">
                   <PublicIcon color="action" sx={{ mt: 0.5 }} />
@@ -243,7 +283,13 @@ const ViewEvent: React.FC = () => {
             </Box>
 
             {/* Venue and Organizer Row */}
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", md: "row" },
+                gap: 3,
+              }}
+            >
               <Box sx={{ flex: 1 }}>
                 <Stack direction="row" spacing={2} alignItems="flex-start">
                   <LocationIcon color="action" sx={{ mt: 0.5 }} />
@@ -255,7 +301,11 @@ const ViewEvent: React.FC = () => {
                       {event.venueName || "N/A"}
                     </Typography>
                     {event.venueAddress && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 0.5 }}
+                      >
                         {event.venueAddress}
                       </Typography>
                     )}
@@ -283,7 +333,7 @@ const ViewEvent: React.FC = () => {
               <Box>
                 <Stack direction="row" spacing={2} alignItems="flex-start">
                   <Box sx={{ minWidth: 24 }} />
-                  <Box sx={{ width: '100%' }}>
+                  <Box sx={{ width: "100%" }}>
                     <Typography variant="subtitle2" color="text.secondary">
                       Description
                     </Typography>
@@ -298,11 +348,17 @@ const ViewEvent: React.FC = () => {
             {/* Additional Info */}
             <Box>
               <Divider sx={{ my: 2 }} />
-              <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
-                gap: 2
-              }}>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm: "repeat(2, 1fr)",
+                    md: "repeat(4, 1fr)",
+                  },
+                  gap: 2,
+                }}
+              >
                 <Box>
                   <Typography variant="subtitle2" color="text.secondary">
                     Time Zone
@@ -363,7 +419,7 @@ const ViewEvent: React.FC = () => {
           </Box>
           <Divider sx={{ mb: 3 }} />
           {racesLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
               <CircularProgress />
             </Box>
           ) : racesError ? (
@@ -371,13 +427,11 @@ const ViewEvent: React.FC = () => {
           ) : (
             <RaceList
               races={races}
-              pageNumber={1}
-              pageSize={10}
-              totalRecords={races.length}
-              totalPages={1}
-              onPageChange={() => { }}
-              onPageSizeChange={() => { }}
-              onEdit={() => { }}
+              searchCriteria={searchCriteria}
+              totalCount={totalCount}
+              loading={racesLoading}
+              onSearchCriteriaChange={handleSearchCriteriaChange}
+              onEdit={handleEditRace}
             />
           )}
         </CardContent>
@@ -388,13 +442,13 @@ const ViewEvent: React.FC = () => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity={snackbar.severity}
           variant="filled"
-          sx={{ width: '100%' }}
+          sx={{ width: "100%" }}
         >
           {snackbar.message}
         </Alert>
@@ -403,34 +457,4 @@ const ViewEvent: React.FC = () => {
   );
 };
 
-/**
- * ViewEvent
- *
- * Top-level admin events view page component.
- *
- * Renders a detailed view for a specific event, including all relevant
- * information such as event details, participants, and any other
- * pertinent data.
- *
- * Responsibilities:
- * - Orchestrates data loading and handles loading / error states.
- * - Exposes UI for filtering, paging, and sorting event collections.
- * - Delegates detailed rendering to child components (charts, tables, forms).
- * - Integrates with navigation and authorization guards provided by the app.
- *
- * Usage:
- * - This component is intended to be used as the default export for the
- *   admin/events dashboard route, e.g. <Route path="/admin/events" element={<Dashboard />} />.
- *
- * Accessibility:
- * - Ensure interactive child components provide appropriate ARIA attributes
- *   (labels, roles, keyboard focus management) for assistive technologies.
- *
- * Notes:
- * - Keep side effects (data fetching, subscriptions) contained and cleaned up
- *   to avoid memory leaks when navigating away from the page.
- *
- * @returns JSX.Element - The rendered admin events view page.
- */
 export default ViewEvent;
-
