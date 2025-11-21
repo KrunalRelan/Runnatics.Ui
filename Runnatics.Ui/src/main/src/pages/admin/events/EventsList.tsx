@@ -40,19 +40,18 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon,
 } from "@mui/icons-material";
-import { AgGridReact } from "ag-grid-react";
 import {
   ColDef,
   GridReadyEvent,
   ModuleRegistry,
-  AllCommunityModule,
-  themeQuartz,
+  AllCommunityModule
 } from "ag-grid-community";
 import { EventService } from "../../../services/EventService";
 import { Event } from "../../../models/Event";
 import { EventSearchRequest } from "../../../models/EventSearchRequest";
 import { SortDirection } from "@/main/src/models/SortDirection";
 import DataGrid from "@/main/src/components/DataGrid";
+import TablePagination from "@/main/src/components/TablePagination";
 
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -504,6 +503,22 @@ const EventsList: React.FC = () => {
   const pageNumber = searchCriteria.pageNumber || 1;
   const totalPages = Math.ceil(totalRecords / pageSize);
 
+  
+  const handlePageChange = (page: number) => {
+    setSearchCriteria({
+      ...searchCriteria,
+      pageNumber: page,
+    });
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setSearchCriteria({
+      ...searchCriteria,
+      pageNumber: 1,
+      pageSize: size,
+    });
+  };
+
   if (loading && events.length === 0) {
     return (
       <Container
@@ -564,8 +579,9 @@ const EventsList: React.FC = () => {
               }}
               helperText={
                 searchQuery.length > 0 && searchQuery.length < 3
-                  ? `Type ${3 - searchQuery.length} more character${3 - searchQuery.length > 1 ? "s" : ""
-                  } to search`
+                  ? `Type ${3 - searchQuery.length} more character${
+                      3 - searchQuery.length > 1 ? "s" : ""
+                    } to search`
                   : ""
               }
               sx={{ flex: { xs: 1, sm: 1 } }}
@@ -755,109 +771,16 @@ const EventsList: React.FC = () => {
           </Box>
 
           {/* Custom Pagination */}
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mt: 3,
-              p: 2,
-              backgroundColor: "background.paper",
-              borderRadius: 1,
-              boxShadow: 1,
-              flexWrap: "wrap",
-              gap: 2,
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                Showing{" "}
-                {events.length > 0 ? (pageNumber - 1) * pageSize + 1 : 0} to{" "}
-                {Math.min(pageNumber * pageSize, totalRecords)} of{" "}
-                {totalRecords} entries
-              </Typography>
-
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <InputLabel id="page-size-label">Rows per page</InputLabel>
-                <Select
-                  labelId="page-size-label"
-                  value={pageSize}
-                  label="Rows per page"
-                  onChange={(e) =>
-                    setSearchCriteria((prev) => ({
-                      ...prev,
-                      pageSize: Number(e.target.value),
-                      pageNumber: 1, // Reset to first page when changing page size
-                    }))
-                  }
-                  disabled={loading}
-                >
-                  <MenuItem value={5}>5</MenuItem>
-                  <MenuItem value={10}>10</MenuItem>
-                  <MenuItem value={25}>25</MenuItem>
-                  <MenuItem value={50}>50</MenuItem>
-                  <MenuItem value={100}>100</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-
-            <Stack direction="row" spacing={2} alignItems="center">
-              <Button
-                variant="outlined"
-                size="small"
-                disabled={pageNumber === 1 || loading}
-                onClick={() =>
-                  setSearchCriteria((prev) => ({ ...prev, pageNumber: 1 }))
-                }
-              >
-                First
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                disabled={pageNumber === 1 || loading}
-                onClick={() =>
-                  setSearchCriteria((prev) => ({
-                    ...prev,
-                    pageNumber: pageNumber - 1,
-                  }))
-                }
-              >
-                Previous
-              </Button>
-              <Typography
-                variant="body2"
-                sx={{ minWidth: "100px", textAlign: "center" }}
-              >
-                Page {pageNumber} of {totalPages || 1}
-              </Typography>
-              <Button
-                variant="outlined"
-                size="small"
-                disabled={pageNumber >= totalPages || loading}
-                onClick={() =>
-                  setSearchCriteria((prev) => ({
-                    ...prev,
-                    pageNumber: pageNumber + 1,
-                  }))
-                }
-              >
-                Next
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                disabled={pageNumber >= totalPages || loading}
-                onClick={() =>
-                  setSearchCriteria((prev) => ({
-                    ...prev,
-                    pageNumber: totalPages,
-                  }))
-                }
-              >
-                Last
-              </Button>
-            </Stack>
+          <Box sx={{ mt: 0 }}>
+            <TablePagination
+              pageNumber={searchCriteria.pageNumber}
+              pageSize={searchCriteria.pageSize}
+              totalRecords={totalRecords} // ✅ Pass totalCount as totalRecords
+              totalPages={totalPages} // ✅ Calculated on the fly
+              loading={loading}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
           </Box>
         </>
       )}
