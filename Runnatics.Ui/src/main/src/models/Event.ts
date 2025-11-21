@@ -1,15 +1,15 @@
 import { EventStatus } from "./EventStatus";
-import { EventType } from "./EventType";
 import { EventSettings } from "./EventSettings";
 import { LeaderBoardSettings } from "./LeaderBoardSettings";
 
 export interface Event {
+  smsText: string;
   id?: string;
   tenantId?: string;
   name: string;
   slug?: string;
   description: string;
-  eventType?: EventType;
+  eventType?: string;
   eventDate: Date | string; // API returns this field
   startDate?: Date; // Legacy field for backwards compatibility
   endDate?: Date;

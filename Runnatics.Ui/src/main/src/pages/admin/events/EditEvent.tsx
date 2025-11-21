@@ -83,7 +83,7 @@ export const EditEvent: React.FC = () => {
     });
 
   const [formData, setFormData] = useState<EventRequest>({
-      eventOrganizerId: "",
+    eventOrganizerId: "",
     name: "",
     description: "",
     eventType: EventType.Marathon,
@@ -167,28 +167,13 @@ export const EditEvent: React.FC = () => {
     fetchData();
   }, [id]);
 
-  // Populate form data from event object
+  // ✅ Populate form data from event object - use value if exists, otherwise keep blank
   const populateFormData = (event: Event, availableOrgs: EventOrganizer[]) => {
     // Check if event is in the past
     if (event.eventDate) {
       const eventDate = new Date(event.eventDate);
       const now = new Date();
       setIsEventInPast(eventDate < now);
-    }
-
-    // Parse city, state, country from venueAddress
-    let city = "";
-    let state = "";
-    let country = "";
-
-    if (event.venueAddress) {
-      const parts = event.venueAddress.split(",").map((p: string) => p.trim());
-      if (parts.length >= 3) {
-        country = parts[parts.length - 1] || ""; // Last part is country
-        const stateWithZip = parts[parts.length - 2] || "";
-        state = stateWithZip.replace(/\d+/g, "").trim(); // Remove numbers
-        city = parts[parts.length - 3] || ""; // Third from last is city
-      }
     }
 
     // Find matching organization
@@ -230,22 +215,22 @@ export const EditEvent: React.FC = () => {
       }
     }
 
+    // ✅ Map event data - if value exists use it, otherwise empty string
     const mappedFormData: EventRequest = {
-      
-      eventOrganizerId: selectedOrgId,
-      name: event.name || "",
-      description: event.description || "",
+      eventOrganizerId: selectedOrgId || "",
+      name: event.name ?? "",
+      description: event.description ?? "",
       eventType: (event.eventType as EventType) || EventType.Marathon,
-      eventDate: event.eventDate || "",
-      timeZone: event.timeZone || "Asia/Kolkata",
-      venueName: event.venueName || "",
-      venueAddress: event.venueAddress || "",
-      city: city,
-      state: state,
-      country: country,
-      zipCode: event.zipCode || "",
-      bannerImageUrl: event.bannerImageUrl || "",
-      
+      eventDate: event.eventDate ?? "",
+      timeZone: event.timeZone ?? "Asia/Kolkata",
+      venueName: event.venueName ?? "",
+      venueAddress: event.venueAddress ?? "",
+      city: event.city ?? "",
+      state: event.state ?? "",
+      country: event.country ?? "",
+      zipCode: event.zipCode ?? "",
+      bannerImageUrl: event.bannerImageUrl ?? "",
+      smsText: event.smsText ?? "",
       leaderBoardSettings: {
         ShowOverallResults:
           event.leaderboardSettings?.ShowOverallResults ?? true,
@@ -280,10 +265,11 @@ export const EditEvent: React.FC = () => {
 
     setFormData(mappedFormData);
 
+    // ✅ Set event settings - use value if exists, otherwise default
     if (event.eventSettings) {
       const mappedEventSettings: EventSettings = {
-        id: event.eventSettings.id,
-        eventId: event.eventSettings.eventId,
+        id: event.eventSettings.id ?? undefined,
+        eventId: event.eventSettings.eventId ?? undefined,
         removeBanner: event.eventSettings.removeBanner ?? false,
         published: event.eventSettings.published ?? false,
         rankOnNet: event.eventSettings.rankOnNet ?? false,
@@ -293,11 +279,12 @@ export const EditEvent: React.FC = () => {
         confirmedEvent: event.eventSettings.confirmedEvent ?? false,
         allowNameCheck: event.eventSettings.allowNameCheck ?? false,
         allowParticipantEdit: event.eventSettings.allowParticipantEdit ?? false,
-        createdAt: event.eventSettings.createdAt,
+        createdAt: event.eventSettings.createdAt ?? undefined,
       };
       setEventSettings(mappedEventSettings);
     }
 
+    // ✅ Set leaderboard settings - use value if exists, otherwise default
     if (event.leaderboardSettings) {
       const mappedLeaderboardSettings: LeaderBoardSettings = {
         ShowOverallResults:
@@ -396,23 +383,23 @@ export const EditEvent: React.FC = () => {
     if (!formData.name.trim()) {
       newErrors.name = "Event name is required";
     }
-      if (!formData.eventDate) {
-        newErrors.eventDate = "Event date is required";
-      }
-      if (!(formData.venueName ?? "").trim()) {
-        newErrors.venueName = "Venue name is required";
-      }
-      if (!(formData.venueAddress ?? "").trim()) {
-        newErrors.venueAddress = "Venue address is required";
-      }
-      if (!(formData.city ?? "").trim()) {
-        newErrors.city = "City is required";
-      }
-      if (!(formData.state ?? "").trim()) {
-        newErrors.state = "State is required";
-      }
-      if (!(formData.country ?? "").trim()) {
-        newErrors.country = "Country is required";
+    if (!formData.eventDate) {
+      newErrors.eventDate = "Event date is required";
+    }
+    if (!(formData.venueName ?? "").trim()) {
+      newErrors.venueName = "Venue name is required";
+    }
+    if (!(formData.venueAddress ?? "").trim()) {
+      newErrors.venueAddress = "Venue address is required";
+    }
+    if (!(formData.city ?? "").trim()) {
+      newErrors.city = "City is required";
+    }
+    if (!(formData.state ?? "").trim()) {
+      newErrors.state = "State is required";
+    }
+    if (!(formData.country ?? "").trim()) {
+      newErrors.country = "Country is required";
     }
     if (!formData.timeZone) {
       newErrors.timeZone = "Time zone is required";
@@ -458,15 +445,16 @@ export const EditEvent: React.FC = () => {
         eventSettings: eventSettings,
         eventType: apiData.eventType,
         venueName: apiData.venueName || "",
-        venueAddress: `${apiData.city}, ${apiData.state}, ${apiData.country}, ${apiData.zipCode}` || "",
+        venueAddress:
+          `${apiData.city}, ${apiData.state}, ${apiData.country}, ${apiData.zipCode}` ||
+          "",
         city: apiData.city || "",
         state: apiData.state || "",
         country: apiData.country || "",
         zipCode: apiData.zipCode || "",
         bannerImageUrl: apiData.bannerImageUrl || "",
-
       };
-      
+
       const updatedEvent = await EventService.updateEvent(id!, requestPayload);
 
       if (bannerFile && updatedEvent.id) {
@@ -575,8 +563,8 @@ export const EditEvent: React.FC = () => {
                 >
                   <InputLabel>Event Organizer</InputLabel>
                   <Select
-                    name="eventOrganizerId" // <-- key name
-                    value={formData.eventOrganizerId || ""} // <-- bind to eventOrganizerId
+                    name="eventOrganizerId"
+                    value={formData.eventOrganizerId || ""}
                     onChange={handleSelectChange}
                     label="Event Organizer"
                   >
@@ -759,6 +747,18 @@ export const EditEvent: React.FC = () => {
               sx={{ mb: 3 }}
             >
               <Stack spacing={3} sx={{ flex: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Venue Name"
+                  name="venueName"
+                  value={formData.venueName}
+                  onChange={handleInputChange}
+                  error={!!errors.venueName}
+                  helperText={errors.venueName}
+                  placeholder="Enter venue name"
+                  required
+                />
+
                 <TextField
                   fullWidth
                   label="Venue/Location"
