@@ -22,6 +22,12 @@ import {
   CircularProgress,
   Alert,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -68,6 +74,18 @@ const ViewRaces: React.FC = () => {
   );
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [totalRecords, setTotalRecords] = useState<number>(0);
+
+  // Add Participant Dialog State
+  const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
+  const [newParticipant, setNewParticipant] = useState<Participant>({
+    bib: "",
+    name: "",
+    gender: "Male",
+    category: "Open",
+    status: "Registered",
+    checkIn: false,
+    chipId: "",
+  });
 
   // Fetch all races for the event on mount (only once)
   useEffect(() => {
@@ -286,6 +304,58 @@ const ViewRaces: React.FC = () => {
   const handleDeleteParticipant = (participant: Participant) => {
     console.log("Delete participant:", participant);
     // Show confirmation dialog and delete
+  };
+
+  const handleOpenAddDialog = () => {
+    setOpenAddDialog(true);
+  };
+
+  const handleCloseAddDialog = () => {
+    setOpenAddDialog(false);
+    // Reset form
+    setNewParticipant({
+      bib: "",
+      name: "",
+      gender: "Male",
+      category: "Open",
+      status: "Registered",
+      checkIn: false,
+      chipId: "",
+    });
+  };
+
+  const handleParticipantFormChange = (
+    field: keyof Participant,
+    value: string | boolean
+  ) => {
+    setNewParticipant((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddParticipant = () => {
+    // Validate required fields
+    if (!newParticipant.bib || !newParticipant.name || !newParticipant.chipId) {
+      alert("Please fill in all required fields (Bib, Name, and Chip ID)");
+      return;
+    }
+
+    // TODO: Call API to add participant
+    // For now, add to local state
+    const participantToAdd: Participant = {
+      ...newParticipant,
+      raceId: selectedRaceId,
+      eventId: eventId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setParticipants((prev) => [...prev, participantToAdd]);
+    setTotalRecords((prev) => prev + 1);
+
+    // Close dialog and reset form
+    handleCloseAddDialog();
+
+    console.log("Added participant:", participantToAdd);
+    // Show success message
   };
 
   // Loading state
@@ -543,6 +613,7 @@ const ViewRaces: React.FC = () => {
               variant="contained"
               startIcon={<Add />}
               sx={{ textTransform: "none", fontWeight: 500 }}
+              onClick={handleOpenAddDialog}
             >
               Add Participant
             </Button>
@@ -694,6 +765,118 @@ const ViewRaces: React.FC = () => {
           />
         </CardContent>
       </Card>
+
+      {/* Add Participant Dialog */}
+      <Dialog
+        open={openAddDialog}
+        onClose={handleCloseAddDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Add New Participant</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 2 }}>
+            <Stack direction="row" spacing={2}>
+              <TextField
+                label="Bib Number"
+                value={newParticipant.bib}
+                onChange={(e) =>
+                  handleParticipantFormChange("bib", e.target.value)
+                }
+                fullWidth
+                required
+                size="small"
+              />
+              <TextField
+                label="Chip ID"
+                value={newParticipant.chipId}
+                onChange={(e) =>
+                  handleParticipantFormChange("chipId", e.target.value)
+                }
+                fullWidth
+                required
+                size="small"
+              />
+            </Stack>
+            <TextField
+              label="Name"
+              value={newParticipant.name}
+              onChange={(e) =>
+                handleParticipantFormChange("name", e.target.value)
+              }
+              fullWidth
+              required
+              size="small"
+            />
+            <Stack direction="row" spacing={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Gender</InputLabel>
+                <Select
+                  value={newParticipant.gender}
+                  label="Gender"
+                  onChange={(e: SelectChangeEvent) =>
+                    handleParticipantFormChange("gender", e.target.value)
+                  }
+                >
+                  <MenuItem value="Male">Male</MenuItem>
+                  <MenuItem value="Female">Female</MenuItem>
+                  <MenuItem value="Other">Other</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl fullWidth size="small">
+                <InputLabel>Category</InputLabel>
+                <Select
+                  value={newParticipant.category}
+                  label="Category"
+                  onChange={(e: SelectChangeEvent) =>
+                    handleParticipantFormChange("category", e.target.value)
+                  }
+                >
+                  <MenuItem value="Open">Open</MenuItem>
+                  <MenuItem value="Veteran">Veteran</MenuItem>
+                  <MenuItem value="Junior">Junior</MenuItem>
+                </Select>
+              </FormControl>
+            </Stack>
+            <Stack direction="row" spacing={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={newParticipant.status}
+                  label="Status"
+                  onChange={(e: SelectChangeEvent) =>
+                    handleParticipantFormChange("status", e.target.value)
+                  }
+                >
+                  <MenuItem value="Registered">Registered</MenuItem>
+                  <MenuItem value="Pending">Pending</MenuItem>
+                  <MenuItem value="Cancelled">Cancelled</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={newParticipant.checkIn}
+                    onChange={(e) =>
+                      handleParticipantFormChange("checkIn", e.target.checked)
+                    }
+                  />
+                }
+                label="Check In"
+                sx={{ width: "100%" }}
+              />
+            </Stack>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCloseAddDialog} variant="outlined">
+            Cancel
+          </Button>
+          <Button onClick={handleAddParticipant} variant="contained">
+            Add Participant
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
