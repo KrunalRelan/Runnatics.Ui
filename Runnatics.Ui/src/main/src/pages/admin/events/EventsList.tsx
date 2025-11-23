@@ -51,7 +51,6 @@ import { Event } from "../../../models/Event";
 import { EventSearchRequest } from "../../../models/EventSearchRequest";
 import { SortDirection } from "@/main/src/models/SortDirection";
 import DataGrid from "@/main/src/components/DataGrid";
-import TablePagination from "@/main/src/components/TablePagination";
 
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -718,11 +717,9 @@ const EventsList: React.FC = () => {
         </Card>
       ) : (
         <>
-          {/* AG Grid Table */}
+          {/* AG Grid Table with Integrated Pagination */}
           <Box
             sx={{
-              height: "600px",
-              width: "100%",
               position: "relative",
               opacity: loading ? 0.6 : 1,
               transition: "opacity 0.3s ease-in-out",
@@ -761,23 +758,18 @@ const EventsList: React.FC = () => {
               domLayout="normal"
               height={600}
               pagination={false}
+              suppressPaginationPanel={true}
               animateRows={true}
               rowHeight={60}
               headerHeight={50}
               loading={loading}
               overlayLoadingTemplate='<span class="ag-overlay-loading-center">Loading events...</span>'
               overlayNoRowsTemplate='<span class="ag-overlay-no-rows-center">No events to display</span>'
-            />
-          </Box>
-
-          {/* Custom Pagination */}
-          <Box sx={{ mt: 0 }}>
-            <TablePagination
-              pageNumber={searchCriteria.pageNumber}
-              pageSize={searchCriteria.pageSize}
-              totalRecords={totalRecords} // ✅ Pass totalCount as totalRecords
-              totalPages={totalPages} // ✅ Calculated on the fly
-              loading={loading}
+              useCustomPagination={true}
+              pageNumber={pageNumber}
+              paginationPageSize={pageSize}
+              totalRecords={totalRecords}
+              totalPages={totalPages}
               onPageChange={handlePageChange}
               onPageSizeChange={handlePageSizeChange}
             />

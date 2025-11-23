@@ -1,5 +1,6 @@
-
-import { RaceSettings } from './RaceSettings'; // Adjust the path as needed
+import { RaceSettings } from './RaceSettings';
+import { Event } from '../Event';
+import { Participant } from './Participant';
 
 export interface Race {
     id: string;
@@ -15,7 +16,8 @@ export interface Race {
     createdAt?: Date | string;
     updatedAt?: Date | string;
     isActive: boolean;
-    raceSettings?: RaceSettings; // Properly typed
-    event?: Event; // Properly typed
+    raceSettings?: RaceSettings;
+    event?: Event;
+    participants?: Participant[];
 }
 

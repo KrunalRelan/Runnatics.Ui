@@ -15,7 +15,6 @@ import {
   Typography,
   Container,
 } from "@mui/material";
-import TablePagination from "@/main/src/components/TablePagination";
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -402,6 +401,7 @@ export const RaceList: React.FC<RaceListProps> = ({
           domLayout="normal"
           height={400}
           pagination={false}
+          suppressPaginationPanel={true}
           animateRows={true}
           rowHeight={50}
           headerHeight={50}
@@ -409,20 +409,14 @@ export const RaceList: React.FC<RaceListProps> = ({
           onSortChanged={handleSortChanged}
           overlayLoadingTemplate='<span class="ag-overlay-loading-center">Loading races...</span>'
           overlayNoRowsTemplate='<span class="ag-overlay-no-rows-center">No races to display</span>'
+          useCustomPagination={true}
+          pageNumber={searchCriteria.pageNumber}
+          paginationPageSize={searchCriteria.pageSize}
+          totalRecords={totalCount}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
         />
-
-        {/* Custom Pagination */}
-        <Box sx={{ mt: 0 }}>
-          <TablePagination
-            pageNumber={searchCriteria.pageNumber}
-            pageSize={searchCriteria.pageSize}
-            totalRecords={totalCount} // ✅ Pass totalCount as totalRecords
-            totalPages={totalPages} // ✅ Calculated on the fly
-            loading={loading}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-          />
-        </Box>
 
         {/* Delete Confirmation Dialog */}
         <Dialog
