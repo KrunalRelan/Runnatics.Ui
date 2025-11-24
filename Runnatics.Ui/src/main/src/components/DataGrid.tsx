@@ -10,76 +10,19 @@ import {
   MenuItem,
   Button,
   Stack,
+  useTheme as useMuiTheme,
 } from "@mui/material";
 import type {
   ColDef,
   GridOptions,
-  GridReadyEvent,
   SortChangedEvent,
 } from "ag-grid-community";
-import {
-  ModuleRegistry,
-  AllCommunityModule,
-  themeQuartz,
-} from "ag-grid-community";
+import { ModuleRegistry, AllCommunityModule } from "ag-grid-community";
+import { DataGridProps } from "@/main/src/models/dataGrid";
+import { lightTheme, darkTheme } from "@/main/src/styles/dataGrid";
 
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule]);
-
-// Create custom theme based on Quartz
-const defaultTheme = themeQuartz.withParams({
-  accentColor: "#1976d2",
-  backgroundColor: "#ffffff",
-  borderColor: "#e0e0e0",
-  borderRadius: 4,
-  browserColorScheme: "light",
-  chromeBackgroundColor: "#f5f5f5",
-  columnBorder: true,
-  fontFamily: "Roboto, sans-serif",
-  fontSize: 14,
-  foregroundColor: "#000000",
-  headerBackgroundColor: "#f5f5f5",
-  headerFontSize: 14,
-  headerFontWeight: 600,
-  headerTextColor: "#000000",
-  oddRowBackgroundColor: "#fafafa",
-  rowBorder: true,
-  spacing: 8,
-});
-
-export interface DataGridProps<T = any> {
-  rowData: T[];
-  columnDefs: ColDef<T>[] | ColDef[];
-  defaultColDef?: ColDef;
-  pagination?: boolean;
-  paginationPageSize?: number;
-  domLayout?: "normal" | "autoHeight" | "print";
-  onRowClicked?: (event: any) => void;
-  onCellClicked?: (event: any) => void;
-  onGridReady?: (event: GridReadyEvent) => void;
-  onSortChanged?: (sortFieldName?: string, sortDirection?: number) => void;
-  gridOptions?: GridOptions;
-  height?: number | string;
-  enableSorting?: boolean;
-  enableFiltering?: boolean;
-  enableColumnMenu?: boolean;
-  suppressPaginationPanel?: boolean;
-  rowSelection?: "single" | "multiple";
-  animateRows?: boolean;
-  rowHeight?: number;
-  headerHeight?: number;
-  loading?: boolean;
-  theme?: any;
-  overlayLoadingTemplate?: string;
-  overlayNoRowsTemplate?: string;
-  // Custom pagination props
-  useCustomPagination?: boolean;
-  pageNumber?: number;
-  totalRecords?: number;
-  totalPages?: number;
-  onPageChange?: (page: number) => void;
-  onPageSizeChange?: (size: number) => void;
-}
 
 /**
  * DataGrid Component - Modern AG Grid v32+ with Quartz Theme
@@ -115,10 +58,10 @@ export const DataGrid = <T extends any>({
   suppressPaginationPanel = false,
   rowSelection,
   animateRows = true,
-  rowHeight = 60,
-  headerHeight = 50,
+  rowHeight = 52,
+  headerHeight = 48,
   loading = false,
-  theme = defaultTheme,
+  theme,
   overlayLoadingTemplate = '<span class="ag-overlay-loading-center">Loading...</span>',
   overlayNoRowsTemplate = '<span class="ag-overlay-no-rows-center">No data to display</span>',
   // Custom pagination props
@@ -129,6 +72,12 @@ export const DataGrid = <T extends any>({
   onPageChange,
   onPageSizeChange,
 }: DataGridProps<T>) => {
+  // Get MUI theme to determine dark/light mode
+  const muiTheme = useMuiTheme();
+  const isDarkMode = muiTheme.palette.mode === "dark";
+
+  // Use the provided theme or select based on MUI theme mode
+  const agGridTheme = theme || (isDarkMode ? darkTheme : lightTheme);
   const defaultColumnDef = useMemo<ColDef>(
     () => ({
       sortable: enableSorting,
@@ -176,7 +125,7 @@ export const DataGrid = <T extends any>({
       <Paper
         elevation={0}
         sx={{
-          border: "1px solid #e0e0e0",
+          border: (theme) => `1px solid ${theme.palette.divider}`,
           borderRadius: 2,
           overflow: "hidden",
         }}
@@ -191,7 +140,7 @@ export const DataGrid = <T extends any>({
           }}
         >
           <AgGridReact<T>
-            theme={theme}
+            theme={agGridTheme}
             rowData={rowData}
             columnDefs={columnDefs}
             defaultColDef={defaultColumnDef}
@@ -220,7 +169,7 @@ export const DataGrid = <T extends any>({
               mt: 0,
               p: 2,
               backgroundColor: "background.paper",
-              borderTop: "1px solid #e0e0e0",
+              borderTop: (theme) => `1px solid ${theme.palette.divider}`,
               flexWrap: "wrap",
               gap: 2,
             }}
@@ -292,3 +241,4 @@ export const DataGrid = <T extends any>({
 };
 
 export default DataGrid;
+export type { DataGridProps };

@@ -302,7 +302,7 @@ export const DataTable = <T extends Record<string, any>>({
         component={Paper}
         elevation={elevation}
         sx={{
-          border: '1px solid #e0e0e0',
+          border: (theme) => `1px solid ${theme.palette.divider}`,
           borderRadius: 2,
           maxHeight: maxHeight,
           ...(stickyHeader && {
@@ -312,7 +312,7 @@ export const DataTable = <T extends Record<string, any>>({
       >
         <Table stickyHeader={stickyHeader}>
           {/* Table Header */}
-          <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+          <TableHead>
             <TableRow>
               {columns.map((column) => {
                 const isSortable = column.sortable !== false;
@@ -325,10 +325,8 @@ export const DataTable = <T extends Record<string, any>>({
                     sx={{
                       fontWeight: 600,
                       fontSize: '0.875rem',
-                      color: '#333',
                       width: column.width,
                       ...(stickyHeader && {
-                        bgcolor: '#f5f5f5',
                         top: 0,
                         zIndex: 2,
                       }),
@@ -341,17 +339,6 @@ export const DataTable = <T extends Record<string, any>>({
                         active={isCurrentSort}
                         direction={isCurrentSort && sortDirection ? sortDirection : 'asc'}
                         onClick={() => handleSort(column.id)}
-                        sx={{
-                          '&.MuiTableSortLabel-root': {
-                            color: '#333',
-                          },
-                          '&.MuiTableSortLabel-root:hover': {
-                            color: '#1976d2',
-                          },
-                          '&.Mui-active': {
-                            color: '#1976d2',
-                          },
-                        }}
                       >
                         {column.label}
                       </TableSortLabel>
@@ -365,7 +352,7 @@ export const DataTable = <T extends Record<string, any>>({
 
             {/* Filter Row */}
             {showFilters && showFilterRow && (
-              <TableRow sx={{ bgcolor: '#fafafa' }}>
+              <TableRow>
                 {columns.map((column) => {
                   const isFilterable = column.filterable !== false;
                   const filterValue = filters[column.id] || '';
@@ -377,7 +364,6 @@ export const DataTable = <T extends Record<string, any>>({
                       sx={{
                         py: 1,
                         ...(stickyHeader && {
-                          bgcolor: '#fafafa',
                           top: 56,
                           zIndex: 1,
                         }),
@@ -404,7 +390,7 @@ export const DataTable = <T extends Record<string, any>>({
                             InputProps={{
                               startAdornment: (
                                 <InputAdornment position="start">
-                                  <SearchIcon fontSize="small" sx={{ color: '#999' }} />
+                                  <SearchIcon fontSize="small" color="action" />
                                 </InputAdornment>
                               ),
                               endAdornment: filterValue && (
@@ -421,7 +407,7 @@ export const DataTable = <T extends Record<string, any>>({
                             }}
                             sx={{
                               '& .MuiOutlinedInput-root': {
-                                bgcolor: 'white',
+                                // bgcolor removed to support theme
                               },
                             }}
                           />
@@ -465,7 +451,11 @@ export const DataTable = <T extends Record<string, any>>({
                   key={getRowKey(row, index)}
                   onClick={() => onRowClick?.(row, index)}
                   sx={{
-                    '&:hover': { bgcolor: '#fafafa' },
+                    '&:hover': {
+                      bgcolor: (theme) => theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.08)'
+                        : 'rgba(0, 0, 0, 0.04)'
+                    },
                     '&:last-child td': { border: 0 },
                     cursor: onRowClick ? 'pointer' : 'default',
                   }}
@@ -494,8 +484,7 @@ export const DataTable = <T extends Record<string, any>>({
             justifyContent: 'space-between',
             alignItems: 'center',
             p: 2,
-            borderTop: '1px solid #e0e0e0',
-            bgcolor: 'white',
+            borderTop: (theme) => `1px solid ${theme.palette.divider}`,
           }}
         >
           <Typography variant="body2" color="text.secondary">

@@ -38,10 +38,8 @@ import {
   Timer,
   EmojiEvents,
 } from "@mui/icons-material";
-import DataTable, {
-  DataTableColumn,
-  DataTableUtils,
-} from "@/main/src/components/DataTable";
+import DataGrid from "@/main/src/components/DataGrid";
+import type { ColDef } from "ag-grid-community";
 import { Race } from "@/main/src/models/races/Race";
 import { Participant } from "@/main/src/models/races/Participant";
 import {
@@ -53,7 +51,7 @@ import AddParticipant from "@/main/src/pages/admin/participants/AddParticipant";
 import BulkUploadParticipants from "@/main/src/pages/admin/participants/BulkUploadParticipants";
 
 const ViewRaces: React.FC = () => {
-  const { eventId, id: raceId } = useParams<{ eventId: string; id: string }>();
+  const { eventId, raceId } = useParams<{ eventId: string; raceId: string }>();
   const navigate = useNavigate();
 
   // State
@@ -378,70 +376,114 @@ const ViewRaces: React.FC = () => {
 
   const totalPages = Math.ceil(totalRecords / filters.pageSize);
 
-  // Define table columns using the shared DataTable component
-  const columns: DataTableColumn<Participant>[] = [
+  // Define grid columns using AG Grid column definitions
+  const columnDefs: ColDef<Participant>[] = [
     {
-      id: "bib",
-      label: "Bib",
       field: "bib",
-      width: 100,
+      headerName: "Bib",
+      flex: 0.8,
+      minWidth: 80,
+      sortable: true,
+      filter: true,
     },
     {
-      id: "name",
-      label: "Name",
       field: "name",
-      width: 200,
+      headerName: "Name",
+      flex: 1.5,
+      minWidth: 150,
+      sortable: true,
+      filter: true,
     },
     {
-      id: "gender",
-      label: "Gender",
       field: "gender",
-      width: 120,
+      headerName: "Gender",
+      flex: 1,
+      minWidth: 100,
+      sortable: true,
+      filter: true,
     },
     {
-      id: "category",
-      label: "Category",
       field: "category",
-      width: 120,
+      headerName: "Category",
+      flex: 1,
+      minWidth: 100,
+      sortable: true,
+      filter: true,
     },
     {
-      id: "status",
-      label: "Status",
-      width: 130,
-      render: (row) => DataTableUtils.renderStatusChip(row.status),
+      field: "status",
+      headerName: "Status",
+      flex: 1,
+      minWidth: 120,
+      sortable: true,
+      filter: true,
+      cellRenderer: (params: any) => {
+        const statusColors: Record<string, "success" | "warning" | "error"> = {
+          Registered: "success",
+          Pending: "warning",
+          Cancelled: "error",
+        };
+        const color = statusColors[params.value] || "default";
+        return (
+          <Chip
+            label={params.value}
+            color={color}
+            size="small"
+            sx={{ fontWeight: 500 }}
+          />
+        );
+      },
     },
     {
-      id: "checkIn",
-      label: "Check In",
-      width: 100,
-      render: (row) => DataTableUtils.renderBoolean(row.checkIn),
+      field: "checkIn",
+      headerName: "Check In",
+      flex: 0.8,
+      minWidth: 90,
+      sortable: true,
+      filter: true,
+      cellRenderer: (params: any) => (params.value ? "Yes" : "No"),
     },
     {
-      id: "chipId",
-      label: "Chip ID",
       field: "chipId",
-      width: 120,
+      headerName: "Chip ID",
+      flex: 1,
+      minWidth: 100,
+      sortable: true,
+      filter: true,
     },
     {
-      id: "actions",
-      label: "Actions",
-      width: 120,
-      align: "center",
-      render: (row) =>
-        DataTableUtils.renderActions([
-          {
-            icon: <Edit fontSize="small" />,
-            onClick: () => handleEditParticipant(row),
-            tooltip: "Edit",
-            color: "primary",
-          },
-          {
-            icon: <Delete fontSize="small" />,
-            onClick: () => handleDeleteParticipant(row),
-            tooltip: "Delete",
-            color: "error",
-          },
-        ]),
+      headerName: "Actions",
+      flex: 0.8,
+      minWidth: 100,
+      maxWidth: 120,
+      cellRenderer: (params: any) => (
+        <Stack direction="row" spacing={0.5} justifyContent="center" sx={{ height: "100%", alignItems: "center" }}>
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditParticipant(params.data);
+            }}
+            title="Edit"
+          >
+            <Edit fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            color="error"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteParticipant(params.data);
+            }}
+            title="Delete"
+          >
+            <Delete fontSize="small" />
+          </IconButton>
+        </Stack>
+      ),
+      sortable: false,
+      filter: false,
     },
   ];
 
@@ -468,14 +510,7 @@ const ViewRaces: React.FC = () => {
 
         {/* Race Selector - Only show if multiple races */}
         {races.length > 0 && (
-          <Paper
-            sx={{
-              bgcolor: "#fafafa",
-              border: "1px solid #e0e0e0",
-              p: 2.5,
-              mb: 2,
-            }}
-          >
+          <Card sx={{ p: 2.5, mb: 2 }}>
             <Typography
               variant="caption"
               sx={{
@@ -507,14 +542,12 @@ const ViewRaces: React.FC = () => {
                     height: "40px",
                     "&:hover": {
                       borderColor: "primary.main",
-                      bgcolor:
-                        selectedRaceId === raceItem.id ? undefined : "#f0f7ff",
                     },
                   }}
                 />
               ))}
             </Stack>
-          </Paper>
+          </Card>
         )}
 
         {/* Current Race Title */}
@@ -573,7 +606,7 @@ const ViewRaces: React.FC = () => {
 
       {/* Content Area */}
       <Card>
-        <CardContent sx={{ p: 3 }}>
+        <CardContent sx={{ p: 3, pb: 0, '&:last-child': { pb: 0 } }}>
           {/* Action Buttons */}
           <Stack
             direction="row"
@@ -611,14 +644,7 @@ const ViewRaces: React.FC = () => {
           </Stack>
 
           {/* Filters Section */}
-          <Paper
-            sx={{
-              bgcolor: "#fafafa",
-              border: "1px solid #e0e0e0",
-              p: 3,
-              mb: 3,
-            }}
-          >
+          <Card sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
               Filters
             </Typography>
@@ -630,11 +656,11 @@ const ViewRaces: React.FC = () => {
                 onChange={(e) =>
                   handleFilterChange("nameOrBib", e.target.value)
                 }
-                sx={{ flex: 1, minWidth: 200, bgcolor: "white" }}
+                sx={{ flex: 1, minWidth: 200 }}
                 size="small"
               />
               <FormControl
-                sx={{ flex: 1, minWidth: 200, bgcolor: "white" }}
+                sx={{ flex: 1, minWidth: 200 }}
                 size="small"
               >
                 <InputLabel>Status</InputLabel>
@@ -652,7 +678,7 @@ const ViewRaces: React.FC = () => {
                 </Select>
               </FormControl>
               <FormControl
-                sx={{ flex: 1, minWidth: 200, bgcolor: "white" }}
+                sx={{ flex: 1, minWidth: 200 }}
                 size="small"
               >
                 <InputLabel>Gender</InputLabel>
@@ -670,7 +696,7 @@ const ViewRaces: React.FC = () => {
                 </Select>
               </FormControl>
               <FormControl
-                sx={{ flex: 1, minWidth: 200, bgcolor: "white" }}
+                sx={{ flex: 1, minWidth: 200 }}
                 size="small"
               >
                 <InputLabel>Category</InputLabel>
@@ -688,7 +714,7 @@ const ViewRaces: React.FC = () => {
                 </Select>
               </FormControl>
               <FormControl
-                sx={{ flex: 1, minWidth: 200, bgcolor: "white" }}
+                sx={{ flex: 1, minWidth: 200 }}
                 size="small"
               >
                 <InputLabel>Per Page</InputLabel>
@@ -718,24 +744,30 @@ const ViewRaces: React.FC = () => {
                 Reset
               </Button>
             </Stack>
-          </Paper>
+          </Card>
 
-          <Divider sx={{ mb: 3 }} />
+          <Divider sx={{ mb: 0 }} />
 
-          {/* Shared DataTable Component */}
-          <DataTable<Participant>
-            columns={columns}
-            data={participants}
-            pagination={{
-              page: filters.pageNumber,
-              pageSize: filters.pageSize,
-              totalRecords: totalRecords,
-              totalPages: totalPages,
-              onPageChange: handlePageChange,
-            }}
-            rowKey="bib"
-            emptyMessage="No participants found"
-          />
+          {/* DataGrid Component */}
+          <Box sx={{ mt: 0 }}>
+            <DataGrid<Participant>
+              rowData={participants}
+              columnDefs={columnDefs}
+              pagination={false}
+              domLayout="autoHeight"
+              enableSorting={true}
+              enableFiltering={true}
+              animateRows={true}
+              loading={loading}
+              useCustomPagination={true}
+              pageNumber={filters.pageNumber}
+              totalRecords={totalRecords}
+              totalPages={totalPages}
+              paginationPageSize={filters.pageSize}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          </Box>
         </CardContent>
       </Card>
 
