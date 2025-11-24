@@ -30,30 +30,33 @@ export const lightTheme = themeQuartz.withParams({
 });
 
 /**
- * AG Grid Dark Theme - Using MUI theme colors
+ * AG Grid Dark Theme - Modern Professional Design
  *
- * Matches the application's dark theme color scheme from theme.ts
- * - Primary Blue: #3399FF (muiBlue[400])
- * - Background: #001E3C (MUI dark paper)
- * - Dark grey palette with blue tints
+ * Inspired by LinkedIn, GitHub, and modern dark themes
+ * - Soft backgrounds with good contrast
+ * - Subtle borders for better visual hierarchy
+ * - Clean, professional appearance
  */
 export const darkTheme = themeQuartz.withParams({
-  accentColor: "#3399FF", // muiBlue[400]
-  backgroundColor: "#001E3C", // Paper background from MUI theme
-  borderColor: "rgba(194, 224, 255, 0.08)", // Divider color from MUI theme
-  borderRadius: 4,
+  accentColor: "#0A66C2", // LinkedIn blue - professional and recognizable
+  backgroundColor: "#1B1F23", // Rich dark gray (similar to GitHub)
+  borderColor: "#2D333B", // Subtle borders for depth
+  borderRadius: 6,
   browserColorScheme: "dark",
-  chromeBackgroundColor: "#0A1929", // Paper background from MUI theme
+  chromeBackgroundColor: "#161A1E", // Darker header background
   columnBorder: true,
   fontFamily: '"IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   fontSize: 14,
-  foregroundColor: "#ffffff",
-  headerBackgroundColor: "#0A1929",
+  foregroundColor: "#E6EDF3", // Soft white for better readability
+  headerBackgroundColor: "#161A1E", // Darker header for contrast
   headerFontSize: 14,
   headerFontWeight: 600,
-  headerTextColor: "#ffffff",
-  oddRowBackgroundColor: "hsl(210, 14%, 9%)", // Slightly lighter than default background
+  headerTextColor: "#E6EDF3", // Match text color
+  oddRowBackgroundColor: "#22272E", // Subtle zebra striping
   rowBorder: true,
   spacing: 4,
   cellHorizontalPaddingScale: 0.5,
+  // Additional modern dark theme enhancements
+  rowHoverColor: "#2D333B", // Subtle hover effect
+  selectedRowBackgroundColor: "#0D419D", // LinkedIn blue with opacity
 });

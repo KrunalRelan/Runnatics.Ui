@@ -266,15 +266,15 @@ const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
           {/* File Upload Area */}
           <Box
             sx={{
-              border: "2px dashed #ccc",
+              border: (theme) => `2px dashed ${theme.palette.divider}`,
               borderRadius: 2,
               p: 3,
               textAlign: "center",
-              bgcolor: "#fafafa",
+              bgcolor: "action.hover",
               cursor: "pointer",
               "&:hover": {
                 borderColor: "primary.main",
-                bgcolor: "#f5f5f5",
+                bgcolor: "action.selected",
               },
             }}
             onClick={() => fileInputRef.current?.click()}
@@ -301,7 +301,7 @@ const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
               sx={{
                 mt: 2,
                 p: 2,
-                bgcolor: "#f0f7ff",
+                bgcolor: "primary.light",
                 borderRadius: 1,
                 display: "flex",
                 alignItems: "center",
@@ -309,14 +309,14 @@ const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
               }}
             >
               <Box>
-                <Typography variant="body2" fontWeight={500}>
+                <Typography variant="body2" fontWeight={500} color="primary.contrastText">
                   {selectedFile.name}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{ color: "primary.contrastText", opacity: 0.8 }}>
                   {(selectedFile.size / 1024).toFixed(2)} KB
                 </Typography>
               </Box>
-              <IconButton onClick={handleRemoveFile} size="small">
+              <IconButton onClick={handleRemoveFile} size="small" sx={{ color: "primary.contrastText" }}>
                 <Close />
               </IconButton>
             </Box>

@@ -220,7 +220,7 @@ const ViewRaces: React.FC = () => {
         navigate("/events/events-dashboard");
         break;
       case 1: // Event Details
-        navigate(`/events/event-details/${eventId}`);
+        navigate(`/events/events-edit/${eventId}`);
         break;
       case 2: // Participants (current page)
         // Already on this page, no navigation needed
