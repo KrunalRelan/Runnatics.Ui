@@ -318,14 +318,30 @@ const ViewRaces: React.FC = () => {
     setOpenBulkUploadDialog(false);
   };
 
-  const handleBulkUpload = (uploadedParticipants: Participant[]) => {
-    // TODO: Call API to bulk upload participants
-    // For now, add to local state
-    setParticipants((prev) => [...prev, ...uploadedParticipants]);
-    setTotalRecords((prev) => prev + uploadedParticipants.length);
+  const handleBulkUploadComplete = () => {
+    // Refresh participants list after successful import
+    // The second useEffect will automatically re-fetch race details
+    // when selectedRaceId changes or we can force a re-fetch
+    if (eventId && selectedRaceId) {
+      // Re-fetch race details to get updated participant list
+      const fetchRaceDetails = async () => {
+        try {
+          const response = await RaceService.getRaceById(eventId, selectedRaceId);
+          const fetchedRace = response.message as Race;
+          setRace(fetchedRace);
 
-    console.log(`Bulk uploaded ${uploadedParticipants.length} participants`);
-    // Show success message
+          if (fetchedRace.participants && fetchedRace.participants.length > 0) {
+            setParticipants(fetchedRace.participants);
+            setTotalRecords(fetchedRace.participants.length);
+          }
+        } catch (err: any) {
+          console.error("Error refreshing participants:", err);
+        }
+      };
+
+      fetchRaceDetails();
+    }
+    handleCloseBulkUploadDialog();
   };
 
   // Loading state
@@ -781,13 +797,15 @@ const ViewRaces: React.FC = () => {
       />
 
       {/* Bulk Upload Participants Dialog */}
-      <BulkUploadParticipants
-        open={openBulkUploadDialog}
-        onClose={handleCloseBulkUploadDialog}
-        onUpload={handleBulkUpload}
-        eventId={eventId}
-        raceId={selectedRaceId}
-      />
+      {eventId && (
+        <BulkUploadParticipants
+          open={openBulkUploadDialog}
+          onClose={handleCloseBulkUploadDialog}
+          onComplete={handleBulkUploadComplete}
+          eventId={eventId}
+          raceId={selectedRaceId ? parseInt(selectedRaceId, 10) : undefined}
+        />
+      )}
     </Container>
   );
 };
