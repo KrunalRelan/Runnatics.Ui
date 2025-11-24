@@ -49,6 +49,19 @@ function formatTimeOnly(dateStr: string) {
   });
 }
 
+function formatDateTime(dateStr: string) {
+  if (!dateStr) return "N/A";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "Invalid Date";
+  return date.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export const RaceList: React.FC<RaceListProps> = ({
   races,
   searchCriteria,
@@ -197,26 +210,36 @@ export const RaceList: React.FC<RaceListProps> = ({
     [navigate]
   );
 
-  // Time Cell Renderer
-  const TimeCellRenderer = useCallback((props: any) => {
-    const start = formatTimeOnly(props.data.startTime);
-    const end = formatTimeOnly(props.data.endTime);
+  // Start DateTime Cell Renderer
+  const StartDateTimeCellRenderer = useCallback((props: any) => {
     return (
       <Box
         sx={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
-          mt: 1,
+          height: "100%",
         }}
       >
-        <Typography component="span" sx={{ mr: 1 }}>
-          {start}
+        <Typography variant="body2">
+          {formatDateTime(props.data.startTime)}
         </Typography>
-        <Typography component="span" sx={{ mx: 0.5, color: "#888" }}>
-          —
+      </Box>
+    );
+  }, []);
+
+  // End DateTime Cell Renderer
+  const EndDateTimeCellRenderer = useCallback((props: any) => {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          height: "100%",
+        }}
+      >
+        <Typography variant="body2">
+          {formatDateTime(props.data.endTime)}
         </Typography>
-        <Typography component="span">{end}</Typography>
       </Box>
     );
   }, []);
@@ -275,37 +298,51 @@ export const RaceList: React.FC<RaceListProps> = ({
       {
         field: "title",
         headerName: "Title",
-        flex: 2,
+        flex: 1.5,
+        minWidth: 150,
         sortable: true,
         filter: true,
         cellRenderer: RaceTitleCellRenderer,
       },
       {
         field: "startTime",
-        headerName: "Time",
-        flex: 2,
-        width: 220,
+        headerName: "Start Date Time",
+        flex: 1.5,
+        minWidth: 180,
         sortable: true,
         filter: "agDateColumnFilter",
-        cellRenderer: TimeCellRenderer,
+        cellRenderer: StartDateTimeCellRenderer,
+      },
+      {
+        field: "endTime",
+        headerName: "End Date Time",
+        flex: 1.5,
+        minWidth: 180,
+        sortable: true,
+        filter: "agDateColumnFilter",
+        cellRenderer: EndDateTimeCellRenderer,
       },
       {
         headerName: "Participants",
         field: "maxParticipants",
-        width: 150,
+        flex: 1,
+        minWidth: 120,
         sortable: true,
         filter: false,
       },
       {
         headerName: "Not Encoded",
-        width: 150,
+        flex: 1,
+        minWidth: 120,
         sortable: true,
         filter: false,
       },
       {
         headerName: "SMS",
         field: "smsEnabled",
-        width: 100,
+        flex: 0.6,
+        minWidth: 80,
+        maxWidth: 100,
         cellRenderer: (params: any) => (
           <Tooltip title={params.value ? "SMS Sent" : "No SMS"}>
             <Box
@@ -330,7 +367,9 @@ export const RaceList: React.FC<RaceListProps> = ({
       {
         headerName: "CheckPoints",
         field: "checkPoints",
-        width: 130,
+        flex: 1,
+        minWidth: 120,
+        maxWidth: 140,
         cellRenderer: (params: any) => (
           <Tooltip
             title={
@@ -360,7 +399,9 @@ export const RaceList: React.FC<RaceListProps> = ({
       },
       {
         headerName: "Actions",
-        width: 120,
+        flex: 0.8,
+        minWidth: 100,
+        maxWidth: 120,
         sortable: false,
         filter: false,
         cellRenderer: ActionsCellRenderer,
@@ -371,7 +412,7 @@ export const RaceList: React.FC<RaceListProps> = ({
         },
       },
     ],
-    [RaceTitleCellRenderer, TimeCellRenderer, ActionsCellRenderer]
+    [RaceTitleCellRenderer, StartDateTimeCellRenderer, EndDateTimeCellRenderer, ActionsCellRenderer]
   );
 
   // Default Column Definition
