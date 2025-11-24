@@ -104,7 +104,9 @@ export const EditRace: React.FC = () => {
           });
         }
       } catch (err: any) {
-        setError(err.response?.data?.message || "Failed to load race details");
+        setError(
+          err.response?.data?.message || "Failed to load race details"
+        );
       } finally {
         setLoading(false);
       }
@@ -156,23 +158,24 @@ export const EditRace: React.FC = () => {
     }
   };
 
-  const handleRaceSettingsSwitchChange =
-    (name: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-      setFormData((prev) => {
-        const updates: any = { [name]: e.target.checked };
-        // Clear loopLength when hasLoops is turned off
-        if (name === "hasLoops" && !e.target.checked) {
-          updates.loopLength = 0;
-        }
-        return {
-          ...prev,
-          raceSettings: {
-            ...prev.raceSettings,
-            ...updates,
-          } as CreateRaceRequest["raceSettings"],
-        };
-      });
-    };
+  const handleRaceSettingsSwitchChange = (name: string) => (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setFormData((prev) => {
+      const updates: any = { [name]: e.target.checked };
+      // Clear loopLength when hasLoops is turned off
+      if (name === "hasLoops" && !e.target.checked) {
+        updates.loopLength = 0;
+      }
+      return {
+        ...prev,
+        raceSettings: {
+          ...prev.raceSettings,
+          ...updates,
+        } as CreateRaceRequest["raceSettings"],
+      };
+    });
+  };
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -244,8 +247,7 @@ export const EditRace: React.FC = () => {
       }, 1000);
     } catch (err: any) {
       setError(
-        err.response?.data?.message ||
-          "Failed to update race. Please try again."
+        err.response?.data?.message || "Failed to update race. Please try again."
       );
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
@@ -255,10 +257,7 @@ export const EditRace: React.FC = () => {
 
   if (loading) {
     return (
-      <Container
-        maxWidth="lg"
-        sx={{ mt: 4, display: "flex", justifyContent: "center" }}
-      >
+      <Container maxWidth="lg" sx={{ mt: 4, display: "flex", justifyContent: "center" }}>
         <CircularProgress />
       </Container>
     );
@@ -270,11 +269,7 @@ export const EditRace: React.FC = () => {
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBackIcon />}
-          onClick={handleBack}
-        >
+        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={handleBack}>
           Back to Event
         </Button>
       </Container>
@@ -308,11 +303,7 @@ export const EditRace: React.FC = () => {
             <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
               Basic Information
             </Typography>
-            <Stack
-              direction={{ xs: "column", md: "row" }}
-              spacing={3}
-              sx={{ mb: 3 }}
-            >
+            <Stack direction={{ xs: "column", md: "row" }} spacing={3} sx={{ mb: 3 }}>
               <TextField
                 fullWidth
                 label="Race Title"
@@ -335,7 +326,7 @@ export const EditRace: React.FC = () => {
                 helperText={errors.distance}
                 placeholder="e.g., 10, 21.1, 42.2"
                 required
-                inputProps={{ min: 0, step: "any" }}
+                inputProps={{ min: 0, step: "any" }} // <-- use step: "any"
               />
             </Stack>
             <Box sx={{ flex: 1 }} />
@@ -388,11 +379,7 @@ export const EditRace: React.FC = () => {
             >
               {/* General Settings */}
               <Box sx={{ flex: 1, pr: { xs: 0, md: 1 } }}>
-                <Typography
-                  variant="subtitle1"
-                  gutterBottom
-                  sx={{ mb: 2, fontWeight: 600 }}
-                >
+                <Typography variant="subtitle1" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
                   General Settings
                 </Typography>
                 <Stack spacing={2}>
@@ -418,9 +405,7 @@ export const EditRace: React.FC = () => {
                     control={
                       <Switch
                         checked={formData.raceSettings?.checkValidation}
-                        onChange={handleRaceSettingsSwitchChange(
-                          "checkValidation"
-                        )}
+                        onChange={handleRaceSettingsSwitchChange("checkValidation")}
                       />
                     }
                     label="Check Validation"
@@ -429,9 +414,7 @@ export const EditRace: React.FC = () => {
                     control={
                       <Switch
                         checked={formData.raceSettings?.showLeaderboard}
-                        onChange={handleRaceSettingsSwitchChange(
-                          "showLeaderboard"
-                        )}
+                        onChange={handleRaceSettingsSwitchChange("showLeaderboard")}
                       />
                     }
                     label="Show Leaderboard"
@@ -440,9 +423,7 @@ export const EditRace: React.FC = () => {
                     control={
                       <Switch
                         checked={formData.raceSettings?.showResultTable}
-                        onChange={handleRaceSettingsSwitchChange(
-                          "showResultTable"
-                        )}
+                        onChange={handleRaceSettingsSwitchChange("showResultTable")}
                       />
                     }
                     label="Show Result Table"
@@ -470,11 +451,7 @@ export const EditRace: React.FC = () => {
 
               {/* Timing Settings */}
               <Box sx={{ flex: 1, pl: { xs: 0, md: 2 }, mt: { xs: 3, md: 0 } }}>
-                <Typography
-                  variant="subtitle1"
-                  gutterBottom
-                  sx={{ mb: 2, fontWeight: 600 }}
-                >
+                <Typography variant="subtitle1" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
                   Timing Settings
                 </Typography>
                 <Stack spacing={3}>
@@ -486,9 +463,7 @@ export const EditRace: React.FC = () => {
                     value={formData.raceSettings?.dedUpSeconds || ""}
                     onChange={handleInputChange}
                     error={!!errors.dedUpSeconds}
-                    helperText={
-                      errors.dedUpSeconds || "Seconds to deduplicate readings"
-                    }
+                    helperText={errors.dedUpSeconds || "Seconds to deduplicate readings"}
                     inputProps={{ min: 0, step: 1 }}
                   />
                   <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
@@ -500,9 +475,7 @@ export const EditRace: React.FC = () => {
                       value={formData.raceSettings?.earlyStartCutOff || ""}
                       onChange={handleInputChange}
                       error={!!errors.earlyStartCutOff}
-                      helperText={
-                        errors.earlyStartCutOff || "Seconds before start time"
-                      }
+                      helperText={errors.earlyStartCutOff || "Seconds before start time"}
                       inputProps={{ min: 0, step: 1 }}
                     />
                     <TextField
@@ -513,17 +486,11 @@ export const EditRace: React.FC = () => {
                       value={formData.raceSettings?.lateStartCutOff || ""}
                       onChange={handleInputChange}
                       error={!!errors.lateStartCutOff}
-                      helperText={
-                        errors.lateStartCutOff || "Seconds after start time"
-                      }
+                      helperText={errors.lateStartCutOff || "Seconds after start time"}
                       inputProps={{ min: 0, step: 1 }}
                     />
                   </Stack>
-                  <Typography
-                    variant="subtitle1"
-                    gutterBottom
-                    sx={{ mb: 2, fontWeight: 600 }}
-                  >
+                  <Typography variant="subtitle1" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
                     Loops
                   </Typography>
                   <Stack direction={{ xs: "column", md: "row" }} spacing={3}>

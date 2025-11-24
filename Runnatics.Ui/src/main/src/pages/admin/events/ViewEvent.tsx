@@ -122,7 +122,7 @@ const ViewEvent: React.FC = () => {
 
   const handleEditRace = (raceId: string) => {
     if (eventId) {
-      navigate(`/events/event-details/${eventId}/race/${raceId}/edit`);
+      navigate(`/events/event-details/${eventId}/race/edit/${raceId}`);
     }
   };
 

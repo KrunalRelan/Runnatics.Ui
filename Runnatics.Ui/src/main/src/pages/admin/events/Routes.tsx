@@ -53,7 +53,7 @@ export const eventsRoutes: RouteObject[] = [
         ),
       },
       {
-        path: "event-details/:eventId/race/edit/:id",
+        path: "event-details/:eventId/race/edit/:raceId",
         element: (
           <ProtectedRoute>
             <EditRace />
@@ -61,7 +61,7 @@ export const eventsRoutes: RouteObject[] = [
         ),
       },
       {
-        path: "event-details/:eventId/race/:id",
+        path: "event-details/:eventId/race/:raceId",
         element: (
           <ProtectedRoute>
             <ViewRaces />
