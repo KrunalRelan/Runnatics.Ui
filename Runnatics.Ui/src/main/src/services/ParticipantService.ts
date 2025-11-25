@@ -12,12 +12,12 @@ export class ParticipantService {
     static async uploadParticipantCSV(
         eventId: string,
         file: File,
-        raceId?: number
+        raceId?: string
     ): Promise<ResponseBase<UploadResponse>> {
         const formData = new FormData();
         formData.append('File', file);
         if (raceId) {
-            formData.append('RaceId', raceId.toString());
+            formData.append('RaceId', raceId);
         }
 
         const response: AxiosResponse<ResponseBase<UploadResponse>> = await apiClient.post(
@@ -39,20 +39,21 @@ export class ParticipantService {
     static async processParticipantImport(
         eventId: string,
         importBatchId: string,
-        raceId?: number
+        raceId?: string
     ): Promise<ResponseBase<ProcessResponse>> {
-        // Note: Backend expects importBatchId as number in the request body
-        // but we keep it as string in the URL (encrypted)
         const requestBody: ProcessImportRequest = {
-            importBatchId: parseInt(importBatchId, 10),
-            eventId: parseInt(eventId, 10),
-            raceId: raceId,
+            importBatchId: importBatchId,
+            eventId: eventId,
+            raceId: raceId ?? undefined, // 👈 important if backend allows undefined
         };
 
-        const response: AxiosResponse<ResponseBase<ProcessResponse>> = await apiClient.post(
-            ServiceUrl.processParticipantImport(eventId, importBatchId),
-            requestBody
-        );
+        const response: AxiosResponse<ResponseBase<ProcessResponse>> =
+            await apiClient.post(
+                ServiceUrl.processParticipantImport(eventId, importBatchId),
+                requestBody
+            );
+
         return response.data;
     }
+      
 }

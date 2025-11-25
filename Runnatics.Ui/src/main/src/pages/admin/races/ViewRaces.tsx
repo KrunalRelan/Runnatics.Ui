@@ -71,7 +71,8 @@ const ViewRaces: React.FC = () => {
 
   // Add Participant Dialog State
   const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
-  const [openBulkUploadDialog, setOpenBulkUploadDialog] = useState<boolean>(false);
+  const [openBulkUploadDialog, setOpenBulkUploadDialog] =
+    useState<boolean>(false);
 
   // Fetch all races for the event on mount (only once)
   useEffect(() => {
@@ -326,7 +327,10 @@ const ViewRaces: React.FC = () => {
       // Re-fetch race details to get updated participant list
       const fetchRaceDetails = async () => {
         try {
-          const response = await RaceService.getRaceById(eventId, selectedRaceId);
+          const response = await RaceService.getRaceById(
+            eventId,
+            selectedRaceId
+          );
           const fetchedRace = response.message as Race;
           setRace(fetchedRace);
 
@@ -473,7 +477,12 @@ const ViewRaces: React.FC = () => {
       minWidth: 100,
       maxWidth: 120,
       cellRenderer: (params: any) => (
-        <Stack direction="row" spacing={0.5} justifyContent="center" sx={{ height: "100%", alignItems: "center" }}>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          justifyContent="center"
+          sx={{ height: "100%", alignItems: "center" }}
+        >
           <IconButton
             size="small"
             color="primary"
@@ -622,7 +631,7 @@ const ViewRaces: React.FC = () => {
 
       {/* Content Area */}
       <Card>
-        <CardContent sx={{ p: 3, pb: 0, '&:last-child': { pb: 0 } }}>
+        <CardContent sx={{ p: 3, pb: 0, "&:last-child": { pb: 0 } }}>
           {/* Action Buttons */}
           <Stack
             direction="row"
@@ -675,10 +684,7 @@ const ViewRaces: React.FC = () => {
                 sx={{ flex: 1, minWidth: 200 }}
                 size="small"
               />
-              <FormControl
-                sx={{ flex: 1, minWidth: 200 }}
-                size="small"
-              >
+              <FormControl sx={{ flex: 1, minWidth: 200 }} size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={filters.status}
@@ -693,10 +699,7 @@ const ViewRaces: React.FC = () => {
                   <MenuItem value="cancelled">Cancelled</MenuItem>
                 </Select>
               </FormControl>
-              <FormControl
-                sx={{ flex: 1, minWidth: 200 }}
-                size="small"
-              >
+              <FormControl sx={{ flex: 1, minWidth: 200 }} size="small">
                 <InputLabel>Gender</InputLabel>
                 <Select
                   value={filters.gender}
@@ -711,10 +714,7 @@ const ViewRaces: React.FC = () => {
                   <MenuItem value="other">Other</MenuItem>
                 </Select>
               </FormControl>
-              <FormControl
-                sx={{ flex: 1, minWidth: 200 }}
-                size="small"
-              >
+              <FormControl sx={{ flex: 1, minWidth: 200 }} size="small">
                 <InputLabel>Category</InputLabel>
                 <Select
                   value={filters.category}
@@ -729,10 +729,7 @@ const ViewRaces: React.FC = () => {
                   <MenuItem value="junior">Junior</MenuItem>
                 </Select>
               </FormControl>
-              <FormControl
-                sx={{ flex: 1, minWidth: 200 }}
-                size="small"
-              >
+              <FormControl sx={{ flex: 1, minWidth: 200 }} size="small">
                 <InputLabel>Per Page</InputLabel>
                 <Select
                   value={filters.pageSize.toString()}
@@ -803,7 +800,7 @@ const ViewRaces: React.FC = () => {
           onClose={handleCloseBulkUploadDialog}
           onComplete={handleBulkUploadComplete}
           eventId={eventId}
-          raceId={selectedRaceId ? parseInt(selectedRaceId, 10) : undefined}
+          raceId={selectedRaceId}
         />
       )}
     </Container>

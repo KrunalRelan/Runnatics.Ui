@@ -1,5 +1,5 @@
 export interface ProcessImportRequest {
-  importBatchId: number;
-  eventId: number;
-  raceId?: number;
+  importBatchId: string;
+  eventId: string;
+  raceId?: string;
 }

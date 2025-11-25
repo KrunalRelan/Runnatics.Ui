@@ -34,7 +34,7 @@ interface BulkUploadParticipantsProps {
   onClose: () => void;
   onComplete: () => void;
   eventId: string;
-  raceId?: number;
+  raceId?: string;
 }
 
 const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
