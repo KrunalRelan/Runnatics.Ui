@@ -53,14 +53,14 @@ export const AddRace: React.FC = () => {
 
   // Leaderboard settings state
   const [leaderBoardSettings, setLeaderBoardSettings] = useState<LeaderBoardSettings>({
-    ShowOverallResults: true,
-    ShowCategoryResults: true,
-    SortByCategoryChipTime: true,
-    SortByOverallChipTime: true,
-    SortByOverallGunTime: false,
-    SortByCategoryGunTime: false,
-    NumberOfResultsToShowOverall: 10,
-    NumberOfResultsToShowCategory: 5,
+    showOverallResults: true,
+    showCategoryResults: true,
+    sortByCategoryChipTime: true,
+    sortByOverallChipTime: true,
+    sortByOverallGunTime: false,
+    sortByCategoryGunTime: false,
+    numberOfResultsToShowOverall: 10,
+    numberOfResultsToShowCategory: 5,
   });
 
   const [formData, setFormData] = useState<CreateRaceRequest>({
@@ -105,14 +105,14 @@ export const AddRace: React.FC = () => {
         // Load event-level leaderboard settings as default
         if (eventData?.leaderboardSettings) {
           setLeaderBoardSettings({
-            ShowOverallResults: eventData.leaderboardSettings.ShowOverallResults ?? true,
-            ShowCategoryResults: eventData.leaderboardSettings.ShowCategoryResults ?? true,
-            SortByCategoryChipTime: eventData.leaderboardSettings.SortByCategoryChipTime ?? true,
-            SortByOverallChipTime: eventData.leaderboardSettings.SortByOverallChipTime ?? true,
-            SortByOverallGunTime: eventData.leaderboardSettings.SortByOverallGunTime ?? false,
-            SortByCategoryGunTime: eventData.leaderboardSettings.SortByCategoryGunTime ?? false,
-            NumberOfResultsToShowOverall: eventData.leaderboardSettings.NumberOfResultsToShowOverall ?? 10,
-            NumberOfResultsToShowCategory: eventData.leaderboardSettings.NumberOfResultsToShowCategory ?? 5,
+            showOverallResults: eventData.leaderboardSettings.showOverallResults ?? true,
+            showCategoryResults: eventData.leaderboardSettings.showCategoryResults ?? true,
+            sortByCategoryChipTime: eventData.leaderboardSettings.sortByCategoryChipTime ?? true,
+            sortByOverallChipTime: eventData.leaderboardSettings.sortByOverallChipTime ?? true,
+            sortByOverallGunTime: eventData.leaderboardSettings.sortByOverallGunTime ?? false,
+            sortByCategoryGunTime: eventData.leaderboardSettings.sortByCategoryGunTime ?? false,
+            numberOfResultsToShowOverall: eventData.leaderboardSettings.numberOfResultsToShowOverall ?? 10,
+            numberOfResultsToShowCategory: eventData.leaderboardSettings.numberOfResultsToShowCategory ?? 5,
           });
         }
 

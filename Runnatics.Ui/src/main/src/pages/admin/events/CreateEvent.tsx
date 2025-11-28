@@ -86,14 +86,14 @@ export const CreateEvent: React.FC = () => {
 
   const [leaderBoardSettings, setLeaderBoardSettings] =
     useState<LeaderBoardSettings>({
-      ShowOverallResults: true,
-      ShowCategoryResults: true,
-      SortByCategoryChipTime: true,
-      SortByOverallChipTime: true,
-      SortByOverallGunTime: false,
-      SortByCategoryGunTime: false,
-      NumberOfResultsToShowOverall: 10,
-      NumberOfResultsToShowCategory: 5,
+      showOverallResults: true,
+      showCategoryResults: true,
+      sortByCategoryChipTime: true,
+      sortByOverallChipTime: true,
+      sortByOverallGunTime: false,
+      sortByCategoryGunTime: false,
+      numberOfResultsToShowOverall: 10,
+      numberOfResultsToShowCategory: 5,
     });
 
   const [formData, setFormData] = useState<CreateEventRequest>({
@@ -117,14 +117,14 @@ export const CreateEvent: React.FC = () => {
     timeZone: "Asia/Kolkata",
     smsText: "",
     leaderBoardSettings: {
-      ShowOverallResults: true,
-      ShowCategoryResults: true,
-      SortByOverallChipTime: true,
-      SortByCategoryChipTime: true,
-      SortByOverallGunTime: true,
-      SortByCategoryGunTime: true,
-      NumberOfResultsToShowOverall: 10,
-      NumberOfResultsToShowCategory: 5,
+      showOverallResults: true,
+      showCategoryResults: true,
+      sortByOverallChipTime: true,
+      sortByCategoryChipTime: true,
+      sortByOverallGunTime: true,
+      sortByCategoryGunTime: true,
+      numberOfResultsToShowOverall: 10,
+      numberOfResultsToShowCategory: 5,
     },
     eventSettings: {
       removeBanner: false,
@@ -463,23 +463,23 @@ export const CreateEvent: React.FC = () => {
         leaderboardSettings: leaderBoardSettings
           ? {
             showOverallResults:
-              leaderBoardSettings.ShowOverallResults || false,
+              leaderBoardSettings.showOverallResults || false,
             showCategoryResults:
-              leaderBoardSettings.ShowCategoryResults || false,
+              leaderBoardSettings.showCategoryResults || false,
             showGenderResults: true,
             showAgeGroupResults: true,
             sortByOverallChipTime:
-              leaderBoardSettings.SortByOverallChipTime || false,
+              leaderBoardSettings.sortByOverallChipTime || false,
             sortByOverallGunTime:
-              leaderBoardSettings.SortByOverallGunTime || false,
+              leaderBoardSettings.sortByOverallGunTime || false,
             sortByCategoryChipTime:
-              leaderBoardSettings.SortByCategoryChipTime || false,
+              leaderBoardSettings.sortByCategoryChipTime || false,
             sortByCategoryGunTime:
-              leaderBoardSettings.SortByCategoryGunTime || false,
+              leaderBoardSettings.sortByCategoryGunTime || false,
             numberOfResultsToShowOverall:
-              leaderBoardSettings.NumberOfResultsToShowOverall || 10,
+              leaderBoardSettings.numberOfResultsToShowOverall || 10,
             numberOfResultsToShowCategory:
-              leaderBoardSettings.NumberOfResultsToShowCategory || 5,
+              leaderBoardSettings.numberOfResultsToShowCategory || 5,
             enableLiveLeaderboard: true,
             showSplitTimes: true,
             showPace: true,
@@ -488,8 +488,8 @@ export const CreateEvent: React.FC = () => {
             allowAnonymousView: true,
             autoRefreshIntervalSec: 30,
             maxDisplayedRecords: Math.max(
-              leaderBoardSettings.NumberOfResultsToShowOverall || 10,
-              leaderBoardSettings.NumberOfResultsToShowCategory || 5
+              leaderBoardSettings.numberOfResultsToShowOverall || 10,
+              leaderBoardSettings.numberOfResultsToShowCategory || 5
             ),
           }
           : {

@@ -118,22 +118,22 @@ export const LeaderboardSettingsComponent: React.FC<LeaderboardSettingsProps> = 
               <FormControlLabel
                 control={
                   <Switch
-                    checked={settings.ShowOverallResults}
+                    checked={settings.showOverallResults}
                     onChange={(e) => {
                       const isChecked = e.target.checked;
                       if (
                         isChecked &&
-                        !settings.SortByOverallChipTime &&
-                        !settings.SortByOverallGunTime
+                        !settings.sortByOverallChipTime &&
+                        !settings.sortByOverallGunTime
                       ) {
                         handleSettingChange({
-                          ShowOverallResults: true,
-                          SortByOverallChipTime: true,
-                          SortByOverallGunTime: false,
+                          showOverallResults: true,
+                          sortByOverallChipTime: true,
+                          sortByOverallGunTime: false,
                         });
                       } else {
                         handleSettingChange({
-                          ShowOverallResults: isChecked,
+                          showOverallResults: isChecked,
                         });
                       }
                     }}
@@ -148,7 +148,7 @@ export const LeaderboardSettingsComponent: React.FC<LeaderboardSettingsProps> = 
                   fontWeight: 600,
                   pl: "16px",
                   mb: 0.5,
-                  opacity: settings.ShowOverallResults ? 1 : 0.5,
+                  opacity: settings.showOverallResults ? 1 : 0.5,
                 }}
               >
                 Overall Result Sort By
@@ -157,13 +157,13 @@ export const LeaderboardSettingsComponent: React.FC<LeaderboardSettingsProps> = 
               <FormControlLabel
                 control={
                   <Switch
-                    checked={settings.SortByOverallChipTime}
-                    disabled={!settings.ShowOverallResults}
+                    checked={settings.sortByOverallChipTime}
+                    disabled={!settings.showOverallResults}
                     onChange={(e) => {
                       if (e.target.checked) {
                         handleSettingChange({
-                          SortByOverallChipTime: true,
-                          SortByOverallGunTime: false,
+                          sortByOverallChipTime: true,
+                          sortByOverallGunTime: false,
                         });
                       }
                     }}
@@ -175,13 +175,13 @@ export const LeaderboardSettingsComponent: React.FC<LeaderboardSettingsProps> = 
               <FormControlLabel
                 control={
                   <Switch
-                    checked={settings.SortByOverallGunTime}
-                    disabled={!settings.ShowOverallResults}
+                    checked={settings.sortByOverallGunTime}
+                    disabled={!settings.showOverallResults}
                     onChange={(e) => {
                       if (e.target.checked) {
                         handleSettingChange({
-                          SortByOverallGunTime: true,
-                          SortByOverallChipTime: false,
+                          sortByOverallGunTime: true,
+                          sortByOverallChipTime: false,
                         });
                       }
                     }}
@@ -203,22 +203,22 @@ export const LeaderboardSettingsComponent: React.FC<LeaderboardSettingsProps> = 
               <FormControlLabel
                 control={
                   <Switch
-                    checked={settings.ShowCategoryResults}
+                    checked={settings.showCategoryResults}
                     onChange={(e) => {
                       const isChecked = e.target.checked;
                       if (
                         isChecked &&
-                        !settings.SortByCategoryChipTime &&
-                        !settings.SortByCategoryGunTime
+                        !settings.sortByCategoryChipTime &&
+                        !settings.sortByCategoryGunTime
                       ) {
                         handleSettingChange({
-                          ShowCategoryResults: true,
-                          SortByCategoryChipTime: true,
-                          SortByCategoryGunTime: false,
+                          showCategoryResults: true,
+                          sortByCategoryChipTime: true,
+                          sortByCategoryGunTime: false,
                         });
                       } else {
                         handleSettingChange({
-                          ShowCategoryResults: isChecked,
+                          showCategoryResults: isChecked,
                         });
                       }
                     }}
@@ -233,7 +233,7 @@ export const LeaderboardSettingsComponent: React.FC<LeaderboardSettingsProps> = 
                   fontWeight: 600,
                   pl: "16px",
                   mb: 0.5,
-                  opacity: settings.ShowCategoryResults ? 1 : 0.5,
+                  opacity: settings.showCategoryResults ? 1 : 0.5,
                 }}
               >
                 Category Result Sort By
@@ -242,13 +242,13 @@ export const LeaderboardSettingsComponent: React.FC<LeaderboardSettingsProps> = 
               <FormControlLabel
                 control={
                   <Switch
-                    checked={settings.SortByCategoryChipTime}
-                    disabled={!settings.ShowCategoryResults}
+                    checked={settings.sortByCategoryChipTime}
+                    disabled={!settings.showCategoryResults}
                     onChange={(e) => {
                       if (e.target.checked) {
                         handleSettingChange({
-                          SortByCategoryChipTime: true,
-                          SortByCategoryGunTime: false,
+                          sortByCategoryChipTime: true,
+                          sortByCategoryGunTime: false,
                         });
                       }
                     }}
@@ -260,13 +260,13 @@ export const LeaderboardSettingsComponent: React.FC<LeaderboardSettingsProps> = 
               <FormControlLabel
                 control={
                   <Switch
-                    checked={settings.SortByCategoryGunTime}
-                    disabled={!settings.ShowCategoryResults}
+                    checked={settings.sortByCategoryGunTime}
+                    disabled={!settings.showCategoryResults}
                     onChange={(e) => {
                       if (e.target.checked) {
                         handleSettingChange({
-                          SortByCategoryGunTime: true,
-                          SortByCategoryChipTime: false,
+                          sortByCategoryGunTime: true,
+                          sortByCategoryChipTime: false,
                         });
                       }
                     }}
@@ -283,16 +283,16 @@ export const LeaderboardSettingsComponent: React.FC<LeaderboardSettingsProps> = 
             spacing={3}
             sx={{ mt: 3 }}
           >
-            {settings.ShowOverallResults && (
+            {settings.showOverallResults && (
               <Box sx={{ flex: 1 }}>
                 <TextField
                   fullWidth
                   label="Overall Results to Show"
                   type="number"
-                  value={settings.NumberOfResultsToShowOverall || 10}
+                  value={settings.numberOfResultsToShowOverall || 10}
                   onChange={(e) =>
                     handleSettingChange({
-                      NumberOfResultsToShowOverall:
+                      numberOfResultsToShowOverall:
                         parseInt(e.target.value, 10) || 10,
                     })
                   }
@@ -304,16 +304,16 @@ export const LeaderboardSettingsComponent: React.FC<LeaderboardSettingsProps> = 
               </Box>
             )}
 
-            {settings.ShowCategoryResults && (
+            {settings.showCategoryResults && (
               <Box sx={{ flex: 1 }}>
                 <TextField
                   fullWidth
                   label="Category Results to Show"
                   type="number"
-                  value={settings.NumberOfResultsToShowCategory || 5}
+                  value={settings.numberOfResultsToShowCategory || 5}
                   onChange={(e) =>
                     handleSettingChange({
-                      NumberOfResultsToShowCategory:
+                      numberOfResultsToShowCategory:
                         parseInt(e.target.value, 10) || 5,
                     })
                   }
