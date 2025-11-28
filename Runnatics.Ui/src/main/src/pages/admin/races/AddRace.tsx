@@ -472,76 +472,70 @@ export const AddRace: React.FC = () => {
                 <Typography variant="subtitle1" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
                   General Settings
                 </Typography>
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={3}>
-
-                  <Stack spacing={2}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={formData.raceSettings?.published}
-                          onChange={handleRaceSettingsSwitchChange("published")}
-                        />
-                      }
-                      label="Published"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={formData.raceSettings?.sendSms}
-                          onChange={handleRaceSettingsSwitchChange("sendSms")}
-                        />
-                      }
-                      label="Send SMS"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={formData.raceSettings?.checkValidation}
-                          onChange={handleRaceSettingsSwitchChange("checkValidation")}
-                        />
-                      }
-                      label="Check Validation"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={formData.raceSettings?.showLeaderboard}
-                          onChange={handleRaceSettingsSwitchChange("showLeaderboard")}
-                        />
-                      }
-                      label="Show Leaderboard"
-                    />
-
-                  </Stack>
-                  <Stack spacing={2}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={formData.raceSettings?.showResultTable}
-                          onChange={handleRaceSettingsSwitchChange("showResultTable")}
-                        />
-                      }
-                      label="Show Result Table"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={formData.raceSettings?.isTimed}
-                          onChange={handleRaceSettingsSwitchChange("isTimed")}
-                        />
-                      }
-                      label="Is Timed"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={formData.raceSettings?.publishDnf}
-                          onChange={handleRaceSettingsSwitchChange("publishDnf")}
-                        />
-                      }
-                      label="Publish DNF"
-                    />
-                  </Stack>
+                <Stack spacing={2}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.raceSettings?.published}
+                        onChange={handleRaceSettingsSwitchChange("published")}
+                      />
+                    }
+                    label="Published"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.raceSettings?.sendSms}
+                        onChange={handleRaceSettingsSwitchChange("sendSms")}
+                      />
+                    }
+                    label="Send SMS"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.raceSettings?.checkValidation}
+                        onChange={handleRaceSettingsSwitchChange("checkValidation")}
+                      />
+                    }
+                    label="Check Validation"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.raceSettings?.showLeaderboard}
+                        onChange={handleRaceSettingsSwitchChange("showLeaderboard")}
+                      />
+                    }
+                    label="Show Leaderboard"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.raceSettings?.showResultTable}
+                        onChange={handleRaceSettingsSwitchChange("showResultTable")}
+                      />
+                    }
+                    label="Show Result Table"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.raceSettings?.isTimed}
+                        onChange={handleRaceSettingsSwitchChange("isTimed")}
+                      />
+                    }
+                    label="Is Timed"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.raceSettings?.publishDnf}
+                        onChange={handleRaceSettingsSwitchChange("publishDnf")}
+                      />
+                    }
+                    label="Publish DNF"
+                  />
                 </Stack>
               </Box>
 
