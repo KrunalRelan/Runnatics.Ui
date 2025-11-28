@@ -24,6 +24,7 @@ import {
   DialogActions,
   CircularProgress,
 } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 // If your project requires it, you can instead do:
 // import { SelectChangeEvent } from "@mui/material/Select";
 import { SelectChangeEvent } from "@mui/material/Select";
@@ -422,94 +423,94 @@ export const CreateEvent: React.FC = () => {
         status: EventStatus.Draft,
         maxParticipants: 1000,
         registrationDeadline:
-        apiData.registrationCloseDate || apiData.startDate || null,
+          apiData.registrationCloseDate || apiData.startDate || null,
         eventType: apiData.eventType,
         eventSettings: eventSettings
           ? {
-              removeBanner: eventSettings.removeBanner || false,
-              published: eventSettings.published || false,
-              rankOnNet:
-                eventSettings.rankOnNet !== undefined
-                  ? eventSettings.rankOnNet
-                  : true,
-              showResultSummaryForRaces:
-                eventSettings.showResultSummaryForRaces !== undefined
-                  ? eventSettings.showResultSummaryForRaces
-                  : true,
-              useOldData: eventSettings.useOldData || false,
-              confirmedEvent: eventSettings.confirmedEvent || false,
-              allowNameCheck:
-                eventSettings.allowNameCheck !== undefined
-                  ? eventSettings.allowNameCheck
-                  : true,
-              allowParticipantEdit:
-                eventSettings.allowParticipantEdit !== undefined
-                  ? eventSettings.allowParticipantEdit
-                  : true,
-            }
+            removeBanner: eventSettings.removeBanner || false,
+            published: eventSettings.published || false,
+            rankOnNet:
+              eventSettings.rankOnNet !== undefined
+                ? eventSettings.rankOnNet
+                : true,
+            showResultSummaryForRaces:
+              eventSettings.showResultSummaryForRaces !== undefined
+                ? eventSettings.showResultSummaryForRaces
+                : true,
+            useOldData: eventSettings.useOldData || false,
+            confirmedEvent: eventSettings.confirmedEvent || false,
+            allowNameCheck:
+              eventSettings.allowNameCheck !== undefined
+                ? eventSettings.allowNameCheck
+                : true,
+            allowParticipantEdit:
+              eventSettings.allowParticipantEdit !== undefined
+                ? eventSettings.allowParticipantEdit
+                : true,
+          }
           : {
-              removeBanner: false,
-              published: false,
-              rankOnNet: true,
-              showResultSummaryForRaces: true,
-              useOldData: false,
-              confirmedEvent: false,
-              allowNameCheck: true,
-              allowParticipantEdit: true,
-            },
+            removeBanner: false,
+            published: false,
+            rankOnNet: true,
+            showResultSummaryForRaces: true,
+            useOldData: false,
+            confirmedEvent: false,
+            allowNameCheck: true,
+            allowParticipantEdit: true,
+          },
 
         leaderboardSettings: leaderBoardSettings
           ? {
-              showOverallResults:
-                leaderBoardSettings.ShowOverallResults || false,
-              showCategoryResults:
-                leaderBoardSettings.ShowCategoryResults || false,
-              showGenderResults: true,
-              showAgeGroupResults: true,
-              sortByOverallChipTime:
-                leaderBoardSettings.SortByOverallChipTime || false,
-              sortByOverallGunTime:
-                leaderBoardSettings.SortByOverallGunTime || false,
-              sortByCategoryChipTime:
-                leaderBoardSettings.SortByCategoryChipTime || false,
-              sortByCategoryGunTime:
-                leaderBoardSettings.SortByCategoryGunTime || false,
-              numberOfResultsToShowOverall:
-                leaderBoardSettings.NumberOfResultsToShowOverall || 10,
-              numberOfResultsToShowCategory:
-                leaderBoardSettings.NumberOfResultsToShowCategory || 5,
-              enableLiveLeaderboard: true,
-              showSplitTimes: true,
-              showPace: true,
-              showTeamResults: false,
-              showMedalIcon: true,
-              allowAnonymousView: true,
-              autoRefreshIntervalSec: 30,
-              maxDisplayedRecords: Math.max(
-                leaderBoardSettings.NumberOfResultsToShowOverall || 10,
-                leaderBoardSettings.NumberOfResultsToShowCategory || 5
-              ),
-            }
+            showOverallResults:
+              leaderBoardSettings.ShowOverallResults || false,
+            showCategoryResults:
+              leaderBoardSettings.ShowCategoryResults || false,
+            showGenderResults: true,
+            showAgeGroupResults: true,
+            sortByOverallChipTime:
+              leaderBoardSettings.SortByOverallChipTime || false,
+            sortByOverallGunTime:
+              leaderBoardSettings.SortByOverallGunTime || false,
+            sortByCategoryChipTime:
+              leaderBoardSettings.SortByCategoryChipTime || false,
+            sortByCategoryGunTime:
+              leaderBoardSettings.SortByCategoryGunTime || false,
+            numberOfResultsToShowOverall:
+              leaderBoardSettings.NumberOfResultsToShowOverall || 10,
+            numberOfResultsToShowCategory:
+              leaderBoardSettings.NumberOfResultsToShowCategory || 5,
+            enableLiveLeaderboard: true,
+            showSplitTimes: true,
+            showPace: true,
+            showTeamResults: false,
+            showMedalIcon: true,
+            allowAnonymousView: true,
+            autoRefreshIntervalSec: 30,
+            maxDisplayedRecords: Math.max(
+              leaderBoardSettings.NumberOfResultsToShowOverall || 10,
+              leaderBoardSettings.NumberOfResultsToShowCategory || 5
+            ),
+          }
           : {
-              showOverallResults: false,
-              showCategoryResults: false,
-              showGenderResults: true,
-              showAgeGroupResults: true,
-              sortByOverallChipTime: false,
-              sortByOverallGunTime: false,
-              sortByCategoryChipTime: false,
-              sortByCategoryGunTime: false,
-              numberOfResultsToShowOverall: 10,
-              numberOfResultsToShowCategory: 5,
-              enableLiveLeaderboard: true,
-              showSplitTimes: true,
-              showPace: true,
-              showTeamResults: false,
-              showMedalIcon: true,
-              allowAnonymousView: true,
-              autoRefreshIntervalSec: 30,
-              maxDisplayedRecords: 100,
-            },
+            showOverallResults: false,
+            showCategoryResults: false,
+            showGenderResults: true,
+            showAgeGroupResults: true,
+            sortByOverallChipTime: false,
+            sortByOverallGunTime: false,
+            sortByCategoryChipTime: false,
+            sortByCategoryGunTime: false,
+            numberOfResultsToShowOverall: 10,
+            numberOfResultsToShowCategory: 5,
+            enableLiveLeaderboard: true,
+            showSplitTimes: true,
+            showPace: true,
+            showTeamResults: false,
+            showMedalIcon: true,
+            allowAnonymousView: true,
+            autoRefreshIntervalSec: 30,
+            maxDisplayedRecords: 100,
+          },
       };
       const createdEvent = await EventService.createEvent(
         requestPayload as any
@@ -566,8 +567,20 @@ export const CreateEvent: React.FC = () => {
     label: String(type),
   }));
 
+  const handleBack = () => {
+    navigate(`/events/events-dashboard`);
+  };
+
   return (
     <Box sx={{ maxWidth: 1200, mx: "auto", p: 3 }}>
+      <Button
+        variant="outlined"
+        startIcon={<ArrowBackIcon />}
+        onClick={handleBack}
+        sx={{ mb: 2 }}
+      >
+        Back
+      </Button>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Create New Event

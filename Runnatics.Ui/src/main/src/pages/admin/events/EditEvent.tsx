@@ -22,6 +22,7 @@ import {
   AlertTitle,
   CircularProgress,
 } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { EventService } from "../../../services/EventService";
 import {
   EventOrganizer,
@@ -317,6 +318,10 @@ export const EditEvent: React.FC = () => {
     }));
   }, [eventSettings, leaderBoardSettings]);
 
+  const handleBack = () => {
+    navigate(`/events/events-dashboard`);
+  };
+
   // Handle input changes for TextField
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -521,6 +526,14 @@ export const EditEvent: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
+      <Button
+        variant="outlined"
+        startIcon={<ArrowBackIcon />}
+        onClick={handleBack}
+        sx={{ mb: 2 }}
+      >
+        Back
+      </Button>
       <Paper sx={{ p: 4 }}>
         <Typography variant="h4" gutterBottom>
           Edit Event

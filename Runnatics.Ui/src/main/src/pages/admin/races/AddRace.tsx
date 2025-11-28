@@ -59,7 +59,7 @@ export const AddRace: React.FC = () => {
       showLeaderboard: true,
       showResultTable: true,
       isTimed: false,
-      publichDnf: false,
+      publishDnf: false,
       dedUpSeconds: 0,
       earlyStartCutOff: 300,
       lateStartCutOff: 1200,
@@ -237,7 +237,7 @@ export const AddRace: React.FC = () => {
           showLeaderboard: formData.raceSettings?.showLeaderboard ?? true,
           showResultTable: formData.raceSettings?.showResultTable ?? true,
           isTimed: formData.raceSettings?.isTimed ?? false,
-          publichDnf: formData.raceSettings?.publichDnf ?? false,
+          publishDnf: formData.raceSettings?.publishDnf ?? false,
           dedUpSeconds: formData.raceSettings?.dedUpSeconds ?? 0,
           earlyStartCutOff: formData.raceSettings?.earlyStartCutOff ?? 0,
           lateStartCutOff: formData.raceSettings?.lateStartCutOff ?? 0,
@@ -376,6 +376,9 @@ export const AddRace: React.FC = () => {
                 helperText={errors.startTime}
                 required
                 InputLabelProps={{ shrink: true }}
+                inputProps={{
+                  min: new Date().toISOString().slice(0, 16),
+                }}
               />
 
               {/* End Time */}
@@ -390,6 +393,9 @@ export const AddRace: React.FC = () => {
                 helperText={errors.endTime}
                 required
                 InputLabelProps={{ shrink: true }}
+                inputProps={{
+                  min: new Date().toISOString().slice(0, 16),
+                }}
               />
             </Stack>
           </Box>
@@ -478,8 +484,8 @@ export const AddRace: React.FC = () => {
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formData.raceSettings?.publichDnf}
-                        onChange={handleRaceSettingsSwitchChange("publichDnf")}
+                        checked={formData.raceSettings?.publishDnf}
+                        onChange={handleRaceSettingsSwitchChange("publishDnf")}
                       />
                     }
                     label="Publish DNF"
