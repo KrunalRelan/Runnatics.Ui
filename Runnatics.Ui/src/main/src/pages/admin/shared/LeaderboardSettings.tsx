@@ -19,6 +19,7 @@ interface LeaderboardSettingsProps {
   onOverrideToggle?: (enabled: boolean) => void;
   disabled?: boolean;
   title?: string;
+  showBorder?: boolean; // New prop for explicit border control
 }
 
 export const LeaderboardSettingsComponent: React.FC<LeaderboardSettingsProps> = ({
@@ -29,8 +30,15 @@ export const LeaderboardSettingsComponent: React.FC<LeaderboardSettingsProps> = 
   onOverrideToggle,
   disabled = false,
   title = "Leaderboard Settings",
+  showBorder, // Will auto-determine if not provided
 }) => {
   const isDisabled = disabled || (showOverrideToggle && !overrideEnabled);
+  
+  // Auto-determine border: show border only when override toggle is present
+  // But allow explicit override via showBorder prop
+  const shouldShowBorder = showBorder !== undefined 
+    ? showBorder 
+    : showOverrideToggle;
 
   const handleSettingChange = (updates: Partial<LeaderBoardSettings>) => {
     onSettingsChange({
@@ -74,9 +82,13 @@ export const LeaderboardSettingsComponent: React.FC<LeaderboardSettingsProps> = 
         <Box
           sx={{
             p: 3,
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: 1,
+            // Conditionally apply border based on shouldShowBorder
+            ...(shouldShowBorder && {
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 1,
+            }),
+            // Only apply disabled background when actually disabled
             bgcolor: isDisabled ? "action.disabledBackground" : "background.paper",
             opacity: isDisabled ? 0.6 : 1,
             pointerEvents: isDisabled ? "none" : "auto",
