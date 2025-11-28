@@ -20,6 +20,7 @@ import { EventService } from "../../../services/EventService";
 import { RaceService } from "../../../services/RaceService";
 import { Event } from "../../../models/Event";
 import { CreateRaceRequest } from "@/main/src/models/races/CreateRaceRequest";
+import { LeaderBoardSettings } from "@/main/src/models";
 
 interface FormErrors {
   [key: string]: string;
@@ -35,6 +36,9 @@ export const AddRace: React.FC = () => {
   const [error, setError] = useState<string>("");
   const [errors, setErrors] = useState<FormErrors>({});
 
+  // Toggle for overriding leaderboard settings at race level
+  const [overrideLeaderboardSettings, setOverrideLeaderboardSettings] = useState(false);
+
   // Snackbar for success/error messages
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -44,6 +48,18 @@ export const AddRace: React.FC = () => {
     open: false,
     message: '',
     severity: 'success',
+  });
+
+  // Leaderboard settings state
+  const [leaderBoardSettings, setLeaderBoardSettings] = useState<LeaderBoardSettings>({
+    ShowOverallResults: true,
+    ShowCategoryResults: true,
+    SortByCategoryChipTime: true,
+    SortByOverallChipTime: true,
+    SortByOverallGunTime: false,
+    SortByCategoryGunTime: false,
+    NumberOfResultsToShowOverall: 10,
+    NumberOfResultsToShowCategory: 5,
   });
 
   const [formData, setFormData] = useState<CreateRaceRequest>({
@@ -66,11 +82,11 @@ export const AddRace: React.FC = () => {
       hasLoops: false,
       loopLength: 0,
       dataHeaders: "",
-    }
+    },
+    leaderBoardSettings: undefined, // Will be set when override is enabled
   });
 
-  // Fetch event data 
-  // Fetch event data to display event name
+  // Fetch event data and its leaderboard settings
   useEffect(() => {
     const fetchEvent = async () => {
       if (!eventId) {
@@ -84,6 +100,20 @@ export const AddRace: React.FC = () => {
         const response = await EventService.getEventById(eventId);
         const eventData = response.message || response;
         setEvent(eventData);
+
+        // Load event-level leaderboard settings as default
+        if (eventData?.leaderboardSettings) {
+          setLeaderBoardSettings({
+            ShowOverallResults: eventData.leaderboardSettings.ShowOverallResults ?? true,
+            ShowCategoryResults: eventData.leaderboardSettings.ShowCategoryResults ?? true,
+            SortByCategoryChipTime: eventData.leaderboardSettings.SortByCategoryChipTime ?? true,
+            SortByOverallChipTime: eventData.leaderboardSettings.SortByOverallChipTime ?? true,
+            SortByOverallGunTime: eventData.leaderboardSettings.SortByOverallGunTime ?? false,
+            SortByCategoryGunTime: eventData.leaderboardSettings.SortByCategoryGunTime ?? false,
+            NumberOfResultsToShowOverall: eventData.leaderboardSettings.NumberOfResultsToShowOverall ?? 10,
+            NumberOfResultsToShowCategory: eventData.leaderboardSettings.NumberOfResultsToShowCategory ?? 5,
+          });
+        }
 
         // Set default date from event date (if available)
         if (eventData?.eventDate) {
@@ -111,6 +141,14 @@ export const AddRace: React.FC = () => {
 
     fetchEvent();
   }, [eventId]);
+
+  // Update formData when override toggle or leaderboard settings change
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      leaderBoardSettings: overrideLeaderboardSettings ? leaderBoardSettings : undefined,
+    }));
+  }, [overrideLeaderboardSettings, leaderBoardSettings]);
 
   const handleBack = () => {
     navigate(`/events/event-details/${eventId}`);
@@ -239,40 +277,48 @@ export const AddRace: React.FC = () => {
           isTimed: formData.raceSettings?.isTimed ?? false,
           publishDnf: formData.raceSettings?.publishDnf ?? false,
           dedUpSeconds: formData.raceSettings?.dedUpSeconds ?? 0,
-          earlyStartCutOff: formData.raceSettings?.earlyStartCutOff ?? 0,
-          lateStartCutOff: formData.raceSettings?.lateStartCutOff ?? 0,
+          earlyStartCutOff: formData.raceSettings?.earlyStartCutOff ?? 300,
+          lateStartCutOff: formData.raceSettings?.lateStartCutOff ?? 1200,
           hasLoops: formData.raceSettings?.hasLoops ?? false,
           loopLength: formData.raceSettings?.loopLength ?? 0,
           dataHeaders: formData.raceSettings?.dataHeaders ?? "",
-        }
+        },
+        // Only include leaderBoardSettings if override is enabled
+        leaderBoardSettings: overrideLeaderboardSettings ? leaderBoardSettings : undefined,
       };
 
-      console.log("Creating race with data:", requestPayload);
+      console.log("Creating race with payload:", requestPayload);
 
-      // Call the API
-      const createdRace = await RaceService.createRace(eventId!, requestPayload);
+      const response = await RaceService.createRace(eventId!, requestPayload);
 
-      if (createdRace) {
-        // Show success message
-        setSnackbar({
-          open: true,
-          message: `Race "${requestPayload.title}" created successfully!`,
-          severity: 'success',
-        });
+      setSnackbar({
+        open: true,
+        message: "Race created successfully!",
+        severity: "success",
+      });
 
-        setTimeout(() => {
-          navigate(`/events/event-details/${eventId}`);
-        }, 1000);
-      }
+      // Navigate back after a short delay
+      setTimeout(() => {
+        navigate(`/events/event-details/${eventId}`);
+      }, 1500);
     } catch (err: any) {
       console.error("Error creating race:", err);
-      setError(
-        err.response?.data?.message || "Failed to create race. Please try again."
-      );
+      const errorMessage =
+        err.response?.data?.message || "Failed to create race. Please try again.";
+      setError(errorMessage);
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: "error",
+      });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCancel = () => {
+    navigate(`/events/event-details/${eventId}`);
   };
 
   if (loading) {
@@ -426,70 +472,76 @@ export const AddRace: React.FC = () => {
                 <Typography variant="subtitle1" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
                   General Settings
                 </Typography>
-                <Stack spacing={2}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={formData.raceSettings?.published}
-                        onChange={handleRaceSettingsSwitchChange("published")}
-                      />
-                    }
-                    label="Published"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={formData.raceSettings?.sendSms}
-                        onChange={handleRaceSettingsSwitchChange("sendSms")}
-                      />
-                    }
-                    label="Send SMS"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={formData.raceSettings?.checkValidation}
-                        onChange={handleRaceSettingsSwitchChange("checkValidation")}
-                      />
-                    }
-                    label="Check Validation"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={formData.raceSettings?.showLeaderboard}
-                        onChange={handleRaceSettingsSwitchChange("showLeaderboard")}
-                      />
-                    }
-                    label="Show Leaderboard"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={formData.raceSettings?.showResultTable}
-                        onChange={handleRaceSettingsSwitchChange("showResultTable")}
-                      />
-                    }
-                    label="Show Result Table"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={formData.raceSettings?.isTimed}
-                        onChange={handleRaceSettingsSwitchChange("isTimed")}
-                      />
-                    }
-                    label="Is Timed"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={formData.raceSettings?.publishDnf}
-                        onChange={handleRaceSettingsSwitchChange("publishDnf")}
-                      />
-                    }
-                    label="Publish DNF"
-                  />
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={3}>
+
+                  <Stack spacing={2}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.raceSettings?.published}
+                          onChange={handleRaceSettingsSwitchChange("published")}
+                        />
+                      }
+                      label="Published"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.raceSettings?.sendSms}
+                          onChange={handleRaceSettingsSwitchChange("sendSms")}
+                        />
+                      }
+                      label="Send SMS"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.raceSettings?.checkValidation}
+                          onChange={handleRaceSettingsSwitchChange("checkValidation")}
+                        />
+                      }
+                      label="Check Validation"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.raceSettings?.showLeaderboard}
+                          onChange={handleRaceSettingsSwitchChange("showLeaderboard")}
+                        />
+                      }
+                      label="Show Leaderboard"
+                    />
+
+                  </Stack>
+                  <Stack spacing={2}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.raceSettings?.showResultTable}
+                          onChange={handleRaceSettingsSwitchChange("showResultTable")}
+                        />
+                      }
+                      label="Show Result Table"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.raceSettings?.isTimed}
+                          onChange={handleRaceSettingsSwitchChange("isTimed")}
+                        />
+                      }
+                      label="Is Timed"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.raceSettings?.publishDnf}
+                          onChange={handleRaceSettingsSwitchChange("publishDnf")}
+                        />
+                      }
+                      label="Publish DNF"
+                    />
+                  </Stack>
                 </Stack>
               </Box>
 
@@ -575,6 +627,279 @@ export const AddRace: React.FC = () => {
                     error={!!errors.dataHeaders}
                     helperText={errors.dataHeaders || "Data Field Headers"}
                   />
+                </Stack>
+              </Box>
+            </Stack>
+          </Box>
+
+          {/* Leaderboard Settings Section */}
+          <Box sx={{ mb: 4 }}>
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
+              <Typography variant="h6">
+                Leaderboard Settings
+              </Typography>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={overrideLeaderboardSettings}
+                    onChange={(e) => setOverrideLeaderboardSettings(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label="Override Event Settings"
+              />
+            </Stack>
+
+            {!overrideLeaderboardSettings && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Using event-level leaderboard settings. Enable override to customize for this race.
+              </Alert>
+            )}
+
+            <Stack spacing={3}>
+              <Box
+                sx={{
+                  p: 3,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  bgcolor: overrideLeaderboardSettings ? "background.paper" : "action.disabledBackground",
+                  opacity: overrideLeaderboardSettings ? 1 : 0.6,
+                  pointerEvents: overrideLeaderboardSettings ? "auto" : "none",
+                }}
+              >
+                <Stack
+                  direction={{ xs: "column", md: "row" }}
+                  spacing={4}
+                  divider={
+                    <Divider
+                      orientation="vertical"
+                      flexItem
+                      sx={{ display: { xs: "none", md: "block" } }}
+                    />
+                  }
+                >
+                  <Stack spacing={1.5} sx={{ flex: 1 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 600, pl: "16px", mb: 0.5 }}
+                    >
+                      Overall Results
+                    </Typography>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.ShowOverallResults}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            setLeaderBoardSettings((prev) => {
+                              if (
+                                isChecked &&
+                                !prev.SortByOverallChipTime &&
+                                !prev.SortByOverallGunTime
+                              ) {
+                                return {
+                                  ...prev,
+                                  ShowOverallResults: true,
+                                  SortByOverallChipTime: true,
+                                  SortByOverallGunTime: false,
+                                };
+                              }
+                              return {
+                                ...prev,
+                                ShowOverallResults: isChecked,
+                              };
+                            });
+                          }}
+                        />
+                      }
+                      label="Show Overall Results"
+                    />
+
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        pl: "16px",
+                        mb: 0.5,
+                        opacity: leaderBoardSettings.ShowOverallResults ? 1 : 0.5,
+                      }}
+                    >
+                      Overall Result Sort By
+                    </Typography>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.SortByOverallChipTime}
+                          disabled={!leaderBoardSettings.ShowOverallResults}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setLeaderBoardSettings((prev) => ({
+                                ...prev,
+                                SortByOverallChipTime: true,
+                                SortByOverallGunTime: false,
+                              }));
+                            }
+                          }}
+                        />
+                      }
+                      label="Chip Time"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.SortByOverallGunTime}
+                          disabled={!leaderBoardSettings.ShowOverallResults}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setLeaderBoardSettings((prev) => ({
+                                ...prev,
+                                SortByOverallGunTime: true,
+                                SortByOverallChipTime: false,
+                              }));
+                            }
+                          }}
+                        />
+                      }
+                      label="Gun Time"
+                    />
+                  </Stack>
+
+                  <Stack spacing={1.5} sx={{ flex: 1 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 600, pl: "16px", mb: 0.5 }}
+                    >
+                      Category Results
+                    </Typography>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.ShowCategoryResults}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            setLeaderBoardSettings((prev) => {
+                              if (
+                                isChecked &&
+                                !prev.SortByCategoryChipTime &&
+                                !prev.SortByCategoryGunTime
+                              ) {
+                                return {
+                                  ...prev,
+                                  ShowCategoryResults: true,
+                                  SortByCategoryChipTime: true,
+                                  SortByCategoryGunTime: false,
+                                };
+                              }
+                              return {
+                                ...prev,
+                                ShowCategoryResults: isChecked,
+                              };
+                            });
+                          }}
+                        />
+                      }
+                      label="Show Category Results"
+                    />
+
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        pl: "16px",
+                        mb: 0.5,
+                        opacity: leaderBoardSettings.ShowCategoryResults ? 1 : 0.5,
+                      }}
+                    >
+                      Category Result Sort By
+                    </Typography>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.SortByCategoryChipTime}
+                          disabled={!leaderBoardSettings.ShowCategoryResults}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setLeaderBoardSettings((prev) => ({
+                                ...prev,
+                                SortByCategoryChipTime: true,
+                                SortByCategoryGunTime: false,
+                              }));
+                            }
+                          }}
+                        />
+                      }
+                      label="Chip Time"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={leaderBoardSettings.SortByCategoryGunTime}
+                          disabled={!leaderBoardSettings.ShowCategoryResults}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setLeaderBoardSettings((prev) => ({
+                                ...prev,
+                                SortByCategoryGunTime: true,
+                                SortByCategoryChipTime: false,
+                              }));
+                            }
+                          }}
+                        />
+                      }
+                      label="Gun Time"
+                    />
+                  </Stack>
+                </Stack>
+
+                <Stack
+                  direction={{ xs: "column", md: "row" }}
+                  spacing={3}
+                  sx={{ mt: 3 }}
+                >
+                  {leaderBoardSettings.ShowOverallResults && (
+                    <Box sx={{ flex: 1 }}>
+                      <TextField
+                        fullWidth
+                        label="Overall Results to Show"
+                        type="number"
+                        value={leaderBoardSettings.NumberOfResultsToShowOverall || 10}
+                        onChange={(e) =>
+                          setLeaderBoardSettings((prev) => ({
+                            ...prev,
+                            NumberOfResultsToShowOverall:
+                              parseInt(e.target.value, 10) || 10,
+                          }))
+                        }
+                        placeholder="Enter number of overall results"
+                        size="small"
+                        inputProps={{ min: 1, step: 1 }}
+                        helperText="Number of overall results to display"
+                      />
+                    </Box>
+                  )}
+
+                  {leaderBoardSettings.ShowCategoryResults && (
+                    <Box sx={{ flex: 1 }}>
+                      <TextField
+                        fullWidth
+                        label="Category Results to Show"
+                        type="number"
+                        value={leaderBoardSettings.NumberOfResultsToShowCategory || 5}
+                        onChange={(e) =>
+                          setLeaderBoardSettings((prev) => ({
+                            ...prev,
+                            NumberOfResultsToShowCategory:
+                              parseInt(e.target.value, 10) || 5,
+                          }))
+                        }
+                        placeholder="Enter number of category results"
+                        size="small"
+                        inputProps={{ min: 1, step: 1 }}
+                        helperText="Number of category results to display"
+                      />
+                    </Box>
+                  )}
                 </Stack>
               </Box>
             </Stack>
