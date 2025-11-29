@@ -7,7 +7,7 @@ export interface RaceSettings {
     showLeaderboard: boolean;
     showResultTable: boolean;
     isTimed: boolean;
-    publichDnf: boolean;
+    publishDnf: boolean;
     dedUpSeconds?: number;
     earlyStartCutOff?: number;
     lateStartCutOff?: number;

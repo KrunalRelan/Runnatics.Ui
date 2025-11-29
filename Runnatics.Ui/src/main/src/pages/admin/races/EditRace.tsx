@@ -54,7 +54,7 @@ export const EditRace: React.FC = () => {
       showLeaderboard: true,
       showResultTable: true,
       isTimed: false,
-      publichDnf: false,
+      publishDnf: false,
       dedUpSeconds: 0,
       earlyStartCutOff: 0,
       lateStartCutOff: 0,
@@ -93,7 +93,7 @@ export const EditRace: React.FC = () => {
               showLeaderboard: raceData.raceSettings?.showLeaderboard ?? true,
               showResultTable: raceData.raceSettings?.showResultTable ?? true,
               isTimed: raceData.raceSettings?.isTimed ?? false,
-              publichDnf: raceData.raceSettings?.publichDnf ?? false,
+              publishDnf: raceData.raceSettings?.publishDnf ?? false,
               dedUpSeconds: raceData.raceSettings?.dedUpSeconds ?? 0,
               earlyStartCutOff: raceData.raceSettings?.earlyStartCutOff ?? 0,
               lateStartCutOff: raceData.raceSettings?.lateStartCutOff ?? 0,
@@ -226,7 +226,7 @@ export const EditRace: React.FC = () => {
           showLeaderboard: formData.raceSettings?.showLeaderboard ?? true,
           showResultTable: formData.raceSettings?.showResultTable ?? true,
           isTimed: formData.raceSettings?.isTimed ?? false,
-          publichDnf: formData.raceSettings?.publichDnf ?? false,
+          publishDnf: formData.raceSettings?.publishDnf ?? false,
           dedUpSeconds: formData.raceSettings?.dedUpSeconds ?? 0,
           earlyStartCutOff: formData.raceSettings?.earlyStartCutOff ?? 0,
           lateStartCutOff: formData.raceSettings?.lateStartCutOff ?? 0,
@@ -440,8 +440,8 @@ export const EditRace: React.FC = () => {
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formData.raceSettings?.publichDnf}
-                        onChange={handleRaceSettingsSwitchChange("publichDnf")}
+                        checked={formData.raceSettings?.publishDnf}
+                        onChange={handleRaceSettingsSwitchChange("publishDnf")}
                       />
                     }
                     label="Publish DNF"
