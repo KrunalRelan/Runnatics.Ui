@@ -30,33 +30,33 @@ export const lightTheme = themeQuartz.withParams({
 });
 
 /**
- * AG Grid Dark Theme - Modern Professional Design
+ * AG Grid Dark Theme - Modern Balanced Design
  *
- * Inspired by LinkedIn, GitHub, and modern dark themes
- * - Soft backgrounds with good contrast
- * - Subtle borders for better visual hierarchy
- * - Clean, professional appearance
+ * Matches the improved application dark theme
+ * - Balanced backgrounds that aren't too dark
+ * - Good contrast for readability
+ * - Professional and comfortable appearance
  */
 export const darkTheme = themeQuartz.withParams({
-  accentColor: "#0A66C2", // LinkedIn blue - professional and recognizable
-  backgroundColor: "#1B1F23", // Rich dark gray (similar to GitHub)
-  borderColor: "#2D333B", // Subtle borders for depth
+  accentColor: "#3399FF", // Bright blue accent (matches MUI primary)
+  backgroundColor: "#252D3D", // Balanced dark background (matches paper)
+  borderColor: "rgba(255, 255, 255, 0.12)", // Subtle borders
   borderRadius: 6,
   browserColorScheme: "dark",
-  chromeBackgroundColor: "#161A1E", // Darker header background
+  chromeBackgroundColor: "#2C3547", // Slightly lighter header
   columnBorder: true,
   fontFamily: '"IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   fontSize: 14,
-  foregroundColor: "#E6EDF3", // Soft white for better readability
-  headerBackgroundColor: "#161A1E", // Darker header for contrast
+  foregroundColor: "#E8EAED", // Soft white text (matches theme)
+  headerBackgroundColor: "#2C3547", // Lighter header background
   headerFontSize: 14,
   headerFontWeight: 600,
-  headerTextColor: "#E6EDF3", // Match text color
-  oddRowBackgroundColor: "#22272E", // Subtle zebra striping
+  headerTextColor: "#E8EAED", // Match text color
+  oddRowBackgroundColor: "#2A3341", // Very subtle zebra striping
   rowBorder: true,
   spacing: 4,
   cellHorizontalPaddingScale: 0.5,
   // Additional modern dark theme enhancements
-  rowHoverColor: "#2D333B", // Subtle hover effect
-  selectedRowBackgroundColor: "#0D419D", // LinkedIn blue with opacity
+  rowHoverColor: "#323A4D", // Subtle hover effect
+  selectedRowBackgroundColor: "#2B5A8F", // Blue selection with good contrast
 });

@@ -280,7 +280,7 @@ const lightThemeOptions: ThemeOptions = {
     },
 };
 
-// Dark theme - MUI Website Style
+// Dark theme - Modern Balanced Style
 const darkThemeOptions: ThemeOptions = {
     palette: {
         mode: 'dark',
@@ -288,7 +288,7 @@ const darkThemeOptions: ThemeOptions = {
             main: muiBlue[400],
             light: muiBlue[300],
             dark: muiBlue[700],
-            contrastText: muiGrey[900],
+            contrastText: '#1A1F2E',
         },
         secondary: {
             main: '#F50057',
@@ -296,21 +296,21 @@ const darkThemeOptions: ThemeOptions = {
             dark: '#C51162',
         },
         background: {
-            default: 'hsl(210, 14%, 7%)', // MUI docs dark background
-            paper: '#0A1929',
+            default: '#1E2433', // Balanced dark gray-blue (not too dark)
+            paper: '#252D3D', // Lighter navy-gray for cards
         },
         text: {
-            primary: '#fff',
-            secondary: muiGrey[400],
+            primary: '#E8EAED',
+            secondary: '#B8BFC6',
             disabled: muiGrey[600],
         },
-        divider: 'rgba(194, 224, 255, 0.08)',
+        divider: 'rgba(255, 255, 255, 0.12)',
         grey: muiGrey,
         success: {
             main: '#1DB45A',
             light: '#6AE79C',
             dark: '#1AA251',
-            contrastText: muiGrey[900],
+            contrastText: '#1A1F2E',
         },
         error: {
             main: '#FF4141',
@@ -322,13 +322,13 @@ const darkThemeOptions: ThemeOptions = {
             main: '#FFB600',
             light: '#FFDC48',
             dark: '#AB6800',
-            contrastText: muiGrey[900],
+            contrastText: '#1A1F2E',
         },
         info: {
             main: muiBlue[400],
             light: muiBlue[300],
             dark: muiBlue[700],
-            contrastText: muiGrey[900],
+            contrastText: '#1A1F2E',
         },
     },
     typography: lightThemeOptions.typography,
@@ -361,7 +361,7 @@ const darkThemeOptions: ThemeOptions = {
                 root: {
                     borderRadius: '12px',
                     border: '1px solid',
-                    borderColor: 'rgba(194, 224, 255, 0.08)',
+                    borderColor: 'rgba(255, 255, 255, 0.12)',
                     boxShadow: 'none',
                     backgroundImage: 'none',
                 },
@@ -379,12 +379,12 @@ const darkThemeOptions: ThemeOptions = {
             styleOverrides: {
                 root: {
                     backgroundImage: 'none',
-                    backgroundColor: '#001E3C',
+                    backgroundColor: '#2C3547', // Lighter control background
                 },
                 outlined: {
                     display: 'block',
-                    borderColor: 'rgba(194, 224, 255, 0.08)',
-                    backgroundColor: muiGrey[900],
+                    borderColor: 'rgba(255, 255, 255, 0.12)',
+                    backgroundColor: '#252D3D',
                 },
             },
         },
@@ -402,19 +402,19 @@ const darkThemeOptions: ThemeOptions = {
                 root: {
                     boxShadow: 'none',
                     borderBottom: '1px solid',
-                    borderColor: 'rgba(194, 224, 255, 0.08)',
-                    backgroundColor: '#0A1929',
+                    borderColor: 'rgba(255, 255, 255, 0.12)',
+                    backgroundColor: '#252D3D',
                 },
             },
         },
         MuiCssBaseline: {
             styleOverrides: {
                 body: {
-                    backgroundColor: 'hsl(210, 14%, 7%)', // MUI docs dark background
+                    backgroundColor: '#1E2433', // Balanced dark background
                     backgroundImage: 'none',
                 },
                 '#root': {
-                    backgroundColor: 'hsl(210, 14%, 7%)', // MUI docs dark background
+                    backgroundColor: '#1E2433', // Balanced dark background
                     minHeight: '100vh',
                 },
             },
