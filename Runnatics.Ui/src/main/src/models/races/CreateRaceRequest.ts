@@ -8,6 +8,7 @@ export interface CreateRaceRequest {
   startTime: string; // ISO string format
   endTime: string;
   maxParticipants?: number;
+  overrideSettings?: boolean;
   raceSettings?: RaceSettings;
-  leaderBoardSettings?: LeaderBoardSettings;
+  leaderboardSettings?: LeaderBoardSettings;
 }

@@ -84,7 +84,7 @@ export const AddRace: React.FC = () => {
       loopLength: 0,
       dataHeaders: "",
     },
-    leaderBoardSettings: undefined, // Will be set when override is enabled
+    leaderboardSettings: undefined, // Will be set when override is enabled
   });
 
   // Fetch event data and its leaderboard settings
@@ -147,7 +147,7 @@ export const AddRace: React.FC = () => {
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
-      leaderBoardSettings: overrideLeaderboardSettings ? leaderBoardSettings : undefined,
+      leaderboardSettings: overrideLeaderboardSettings ? leaderBoardSettings : undefined,
     }));
   }, [overrideLeaderboardSettings, leaderBoardSettings]);
 
@@ -269,6 +269,7 @@ export const AddRace: React.FC = () => {
         description: formData.description || "",
         startTime: formData.startTime,
         endTime: formData.endTime,
+        overrideSettings: overrideLeaderboardSettings,
         raceSettings: {
           published: formData.raceSettings?.published ?? false,
           sendSms: formData.raceSettings?.sendSms ?? false,
@@ -284,9 +285,21 @@ export const AddRace: React.FC = () => {
           loopLength: formData.raceSettings?.loopLength ?? 0,
           dataHeaders: formData.raceSettings?.dataHeaders ?? "",
         },
-        // Only include leaderBoardSettings if override is enabled
-        leaderBoardSettings: overrideLeaderboardSettings ? leaderBoardSettings : undefined,
       };
+
+      // Only include leaderboardSettings if override is enabled
+      if (overrideLeaderboardSettings) {
+        requestPayload.leaderboardSettings = {
+          showOverallResults: leaderBoardSettings.showOverallResults,
+          showCategoryResults: leaderBoardSettings.showCategoryResults,
+          sortByCategoryChipTime: leaderBoardSettings.sortByCategoryChipTime,
+          sortByOverallChipTime: leaderBoardSettings.sortByOverallChipTime,
+          sortByOverallGunTime: leaderBoardSettings.sortByOverallGunTime,
+          sortByCategoryGunTime: leaderBoardSettings.sortByCategoryGunTime,
+          numberOfResultsToShowOverall: leaderBoardSettings.numberOfResultsToShowOverall,
+          numberOfResultsToShowCategory: leaderBoardSettings.numberOfResultsToShowCategory,
+        };
+      }
 
       console.log("Creating race with payload:", requestPayload);
 
