@@ -30,30 +30,33 @@ export const lightTheme = themeQuartz.withParams({
 });
 
 /**
- * AG Grid Dark Theme - Using MUI theme colors
+ * AG Grid Dark Theme - Modern Balanced Design
  *
- * Matches the application's dark theme color scheme from theme.ts
- * - Primary Blue: #3399FF (muiBlue[400])
- * - Background: #001E3C (MUI dark paper)
- * - Dark grey palette with blue tints
+ * Matches the improved application dark theme
+ * - Balanced backgrounds that aren't too dark
+ * - Good contrast for readability
+ * - Professional and comfortable appearance
  */
 export const darkTheme = themeQuartz.withParams({
-  accentColor: "#3399FF", // muiBlue[400]
-  backgroundColor: "#001E3C", // Paper background from MUI theme
-  borderColor: "rgba(194, 224, 255, 0.08)", // Divider color from MUI theme
-  borderRadius: 4,
+  accentColor: "#3399FF", // Bright blue accent (matches MUI primary)
+  backgroundColor: "#252D3D", // Balanced dark background (matches paper)
+  borderColor: "rgba(255, 255, 255, 0.12)", // Subtle borders
+  borderRadius: 6,
   browserColorScheme: "dark",
-  chromeBackgroundColor: "#0A1929", // Paper background from MUI theme
+  chromeBackgroundColor: "#2C3547", // Slightly lighter header
   columnBorder: true,
   fontFamily: '"IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   fontSize: 14,
-  foregroundColor: "#ffffff",
-  headerBackgroundColor: "#0A1929",
+  foregroundColor: "#E8EAED", // Soft white text (matches theme)
+  headerBackgroundColor: "#2C3547", // Lighter header background
   headerFontSize: 14,
   headerFontWeight: 600,
-  headerTextColor: "#ffffff",
-  oddRowBackgroundColor: "hsl(210, 14%, 9%)", // Slightly lighter than default background
+  headerTextColor: "#E8EAED", // Match text color
+  oddRowBackgroundColor: "#2A3341", // Very subtle zebra striping
   rowBorder: true,
   spacing: 4,
   cellHorizontalPaddingScale: 0.5,
+  // Additional modern dark theme enhancements
+  rowHoverColor: "#323A4D", // Subtle hover effect
+  selectedRowBackgroundColor: "#2B5A8F", // Blue selection with good contrast
 });

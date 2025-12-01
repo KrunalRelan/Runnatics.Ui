@@ -20,6 +20,8 @@ import { EventService } from "../../../services/EventService";
 import { RaceService } from "../../../services/RaceService";
 import { Event } from "../../../models/Event";
 import { CreateRaceRequest } from "@/main/src/models/races/CreateRaceRequest";
+import { LeaderBoardSettings } from "@/main/src/models";
+import { LeaderboardSettingsComponent } from "../shared/LeaderBoardSettings";
 
 interface FormErrors {
   [key: string]: string;
@@ -35,6 +37,9 @@ export const AddRace: React.FC = () => {
   const [error, setError] = useState<string>("");
   const [errors, setErrors] = useState<FormErrors>({});
 
+  // Toggle for overriding leaderboard settings at race level
+  const [overrideLeaderboardSettings, setOverrideLeaderboardSettings] = useState(false);
+
   // Snackbar for success/error messages
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -44,6 +49,18 @@ export const AddRace: React.FC = () => {
     open: false,
     message: '',
     severity: 'success',
+  });
+
+  // Leaderboard settings state
+  const [leaderBoardSettings, setLeaderBoardSettings] = useState<LeaderBoardSettings>({
+    showOverallResults: true,
+    showCategoryResults: true,
+    sortByCategoryChipTime: true,
+    sortByOverallChipTime: true,
+    sortByOverallGunTime: false,
+    sortByCategoryGunTime: false,
+    numberOfResultsToShowOverall: 10,
+    numberOfResultsToShowCategory: 5,
   });
 
   const [formData, setFormData] = useState<CreateRaceRequest>({
@@ -59,18 +76,18 @@ export const AddRace: React.FC = () => {
       showLeaderboard: true,
       showResultTable: true,
       isTimed: false,
-      publichDnf: false,
+      publishDnf: false,
       dedUpSeconds: 0,
       earlyStartCutOff: 300,
       lateStartCutOff: 1200,
       hasLoops: false,
       loopLength: 0,
       dataHeaders: "",
-    }
+    },
+    leaderboardSettings: undefined, // Will be set when override is enabled
   });
 
-  // Fetch event data 
-  // Fetch event data to display event name
+  // Fetch event data and its leaderboard settings
   useEffect(() => {
     const fetchEvent = async () => {
       if (!eventId) {
@@ -84,6 +101,20 @@ export const AddRace: React.FC = () => {
         const response = await EventService.getEventById(eventId);
         const eventData = response.message || response;
         setEvent(eventData);
+
+        // Load event-level leaderboard settings as default
+        if (eventData?.leaderboardSettings) {
+          setLeaderBoardSettings({
+            showOverallResults: eventData.leaderboardSettings.showOverallResults ?? true,
+            showCategoryResults: eventData.leaderboardSettings.showCategoryResults ?? true,
+            sortByCategoryChipTime: eventData.leaderboardSettings.sortByCategoryChipTime ?? true,
+            sortByOverallChipTime: eventData.leaderboardSettings.sortByOverallChipTime ?? true,
+            sortByOverallGunTime: eventData.leaderboardSettings.sortByOverallGunTime ?? false,
+            sortByCategoryGunTime: eventData.leaderboardSettings.sortByCategoryGunTime ?? false,
+            numberOfResultsToShowOverall: eventData.leaderboardSettings.numberOfResultsToShowOverall ?? 10,
+            numberOfResultsToShowCategory: eventData.leaderboardSettings.numberOfResultsToShowCategory ?? 5,
+          });
+        }
 
         // Set default date from event date (if available)
         if (eventData?.eventDate) {
@@ -111,6 +142,14 @@ export const AddRace: React.FC = () => {
 
     fetchEvent();
   }, [eventId]);
+
+  // Update formData when override toggle or leaderboard settings change
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      leaderboardSettings: overrideLeaderboardSettings ? leaderBoardSettings : undefined,
+    }));
+  }, [overrideLeaderboardSettings, leaderBoardSettings]);
 
   const handleBack = () => {
     navigate(`/events/event-details/${eventId}`);
@@ -230,6 +269,7 @@ export const AddRace: React.FC = () => {
         description: formData.description || "",
         startTime: formData.startTime,
         endTime: formData.endTime,
+        overrideSettings: overrideLeaderboardSettings,
         raceSettings: {
           published: formData.raceSettings?.published ?? false,
           sendSms: formData.raceSettings?.sendSms ?? false,
@@ -237,42 +277,62 @@ export const AddRace: React.FC = () => {
           showLeaderboard: formData.raceSettings?.showLeaderboard ?? true,
           showResultTable: formData.raceSettings?.showResultTable ?? true,
           isTimed: formData.raceSettings?.isTimed ?? false,
-          publichDnf: formData.raceSettings?.publichDnf ?? false,
+          publishDnf: formData.raceSettings?.publishDnf ?? false,
           dedUpSeconds: formData.raceSettings?.dedUpSeconds ?? 0,
-          earlyStartCutOff: formData.raceSettings?.earlyStartCutOff ?? 0,
-          lateStartCutOff: formData.raceSettings?.lateStartCutOff ?? 0,
+          earlyStartCutOff: formData.raceSettings?.earlyStartCutOff ?? 300,
+          lateStartCutOff: formData.raceSettings?.lateStartCutOff ?? 1200,
           hasLoops: formData.raceSettings?.hasLoops ?? false,
           loopLength: formData.raceSettings?.loopLength ?? 0,
           dataHeaders: formData.raceSettings?.dataHeaders ?? "",
-        }
+        },
       };
 
-      console.log("Creating race with data:", requestPayload);
-
-      // Call the API
-      const createdRace = await RaceService.createRace(eventId!, requestPayload);
-
-      if (createdRace) {
-        // Show success message
-        setSnackbar({
-          open: true,
-          message: `Race "${requestPayload.title}" created successfully!`,
-          severity: 'success',
-        });
-
-        setTimeout(() => {
-          navigate(`/events/event-details/${eventId}`);
-        }, 1000);
+      // Only include leaderboardSettings if override is enabled
+      if (overrideLeaderboardSettings) {
+        requestPayload.leaderboardSettings = {
+          showOverallResults: leaderBoardSettings.showOverallResults,
+          showCategoryResults: leaderBoardSettings.showCategoryResults,
+          sortByCategoryChipTime: leaderBoardSettings.sortByCategoryChipTime,
+          sortByOverallChipTime: leaderBoardSettings.sortByOverallChipTime,
+          sortByOverallGunTime: leaderBoardSettings.sortByOverallGunTime,
+          sortByCategoryGunTime: leaderBoardSettings.sortByCategoryGunTime,
+          numberOfResultsToShowOverall: leaderBoardSettings.numberOfResultsToShowOverall,
+          numberOfResultsToShowCategory: leaderBoardSettings.numberOfResultsToShowCategory,
+        };
       }
+
+      console.log("Creating race with payload:", requestPayload);
+
+      const response = await RaceService.createRace(eventId!, requestPayload);
+
+      setSnackbar({
+        open: true,
+        message: "Race created successfully!",
+        severity: "success",
+      });
+
+      // Navigate back after a short delay
+      setTimeout(() => {
+        navigate(`/events/event-details/${eventId}`);
+      }, 1500);
     } catch (err: any) {
       console.error("Error creating race:", err);
-      setError(
-        err.response?.data?.message || "Failed to create race. Please try again."
-      );
+      const errorMessage =
+        err.response?.data?.message || "Failed to create race. Please try again.";
+      setError(errorMessage);
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: "error",
+      });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCancel = () => {
+    navigate(`/events/event-details/${eventId}`);
   };
 
   if (loading) {
@@ -376,6 +436,9 @@ export const AddRace: React.FC = () => {
                 helperText={errors.startTime}
                 required
                 InputLabelProps={{ shrink: true }}
+                inputProps={{
+                  min: new Date().toISOString().slice(0, 16),
+                }}
               />
 
               {/* End Time */}
@@ -390,6 +453,9 @@ export const AddRace: React.FC = () => {
                 helperText={errors.endTime}
                 required
                 InputLabelProps={{ shrink: true }}
+                inputProps={{
+                  min: new Date().toISOString().slice(0, 16),
+                }}
               />
             </Stack>
           </Box>
@@ -478,8 +544,8 @@ export const AddRace: React.FC = () => {
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formData.raceSettings?.publichDnf}
-                        onChange={handleRaceSettingsSwitchChange("publichDnf")}
+                        checked={formData.raceSettings?.publishDnf}
+                        onChange={handleRaceSettingsSwitchChange("publishDnf")}
                       />
                     }
                     label="Publish DNF"
@@ -573,6 +639,16 @@ export const AddRace: React.FC = () => {
               </Box>
             </Stack>
           </Box>
+
+          {/* Use the shared LeaderboardSettings component */}
+          <LeaderboardSettingsComponent
+            settings={leaderBoardSettings}
+            onSettingsChange={setLeaderBoardSettings}
+            showOverrideToggle={true}
+            overrideEnabled={overrideLeaderboardSettings}
+            onOverrideToggle={setOverrideLeaderboardSettings}
+            title="Leaderboard Settings"
+          />
 
           {/* Form Actions */}
           <Box

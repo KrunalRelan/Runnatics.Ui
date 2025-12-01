@@ -1,3 +1,4 @@
+import { LeaderBoardSettings } from "../LeaderBoardSettings";
 import { RaceSettings } from "./RaceSettings";
 
 export interface CreateRaceRequest {
@@ -7,5 +8,7 @@ export interface CreateRaceRequest {
   startTime: string; // ISO string format
   endTime: string;
   maxParticipants?: number;
+  overrideSettings?: boolean;
   raceSettings?: RaceSettings;
+  leaderboardSettings?: LeaderBoardSettings;
 }

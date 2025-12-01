@@ -20,5 +20,9 @@ export const ServiceUrl = {
     createRace: (eventId: string) => `Races/${eventId}/create`,
     editRace: (eventId: string, id: string) => `Races/${eventId}/${id}/edit-race`,
     deleteRace: (eventId: string, id: string) => `Races/${eventId}/${id}/delete-race`,
+
+    //participants
+    uploadParticipantImport: (eventId: string) => `participants/${eventId}/import`,
+    processParticipantImport: (eventId: string, importBatchId: string) => `participants/${eventId}/import/${importBatchId}/process`,
 };
 

@@ -71,7 +71,8 @@ const ViewRaces: React.FC = () => {
 
   // Add Participant Dialog State
   const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
-  const [openBulkUploadDialog, setOpenBulkUploadDialog] = useState<boolean>(false);
+  const [openBulkUploadDialog, setOpenBulkUploadDialog] =
+    useState<boolean>(false);
 
   // Fetch all races for the event on mount (only once)
   useEffect(() => {
@@ -220,7 +221,7 @@ const ViewRaces: React.FC = () => {
         navigate("/events/events-dashboard");
         break;
       case 1: // Event Details
-        navigate(`/events/event-details/${eventId}`);
+        navigate(`/events/events-edit/${eventId}`);
         break;
       case 2: // Participants (current page)
         // Already on this page, no navigation needed
@@ -318,14 +319,33 @@ const ViewRaces: React.FC = () => {
     setOpenBulkUploadDialog(false);
   };
 
-  const handleBulkUpload = (uploadedParticipants: Participant[]) => {
-    // TODO: Call API to bulk upload participants
-    // For now, add to local state
-    setParticipants((prev) => [...prev, ...uploadedParticipants]);
-    setTotalRecords((prev) => prev + uploadedParticipants.length);
+  const handleBulkUploadComplete = () => {
+    // Refresh participants list after successful import
+    // The second useEffect will automatically re-fetch race details
+    // when selectedRaceId changes or we can force a re-fetch
+    if (eventId && selectedRaceId) {
+      // Re-fetch race details to get updated participant list
+      const fetchRaceDetails = async () => {
+        try {
+          const response = await RaceService.getRaceById(
+            eventId,
+            selectedRaceId
+          );
+          const fetchedRace = response.message as Race;
+          setRace(fetchedRace);
 
-    console.log(`Bulk uploaded ${uploadedParticipants.length} participants`);
-    // Show success message
+          if (fetchedRace.participants && fetchedRace.participants.length > 0) {
+            setParticipants(fetchedRace.participants);
+            setTotalRecords(fetchedRace.participants.length);
+          }
+        } catch (err: any) {
+          console.error("Error refreshing participants:", err);
+        }
+      };
+
+      fetchRaceDetails();
+    }
+    handleCloseBulkUploadDialog();
   };
 
   // Loading state
@@ -457,7 +477,12 @@ const ViewRaces: React.FC = () => {
       minWidth: 100,
       maxWidth: 120,
       cellRenderer: (params: any) => (
-        <Stack direction="row" spacing={0.5} justifyContent="center" sx={{ height: "100%", alignItems: "center" }}>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          justifyContent="center"
+          sx={{ height: "100%", alignItems: "center" }}
+        >
           <IconButton
             size="small"
             color="primary"
@@ -606,7 +631,7 @@ const ViewRaces: React.FC = () => {
 
       {/* Content Area */}
       <Card>
-        <CardContent sx={{ p: 3, pb: 0, '&:last-child': { pb: 0 } }}>
+        <CardContent sx={{ p: 3, pb: 0, "&:last-child": { pb: 0 } }}>
           {/* Action Buttons */}
           <Stack
             direction="row"
@@ -659,10 +684,7 @@ const ViewRaces: React.FC = () => {
                 sx={{ flex: 1, minWidth: 200 }}
                 size="small"
               />
-              <FormControl
-                sx={{ flex: 1, minWidth: 200 }}
-                size="small"
-              >
+              <FormControl sx={{ flex: 1, minWidth: 200 }} size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={filters.status}
@@ -677,10 +699,7 @@ const ViewRaces: React.FC = () => {
                   <MenuItem value="cancelled">Cancelled</MenuItem>
                 </Select>
               </FormControl>
-              <FormControl
-                sx={{ flex: 1, minWidth: 200 }}
-                size="small"
-              >
+              <FormControl sx={{ flex: 1, minWidth: 200 }} size="small">
                 <InputLabel>Gender</InputLabel>
                 <Select
                   value={filters.gender}
@@ -695,10 +714,7 @@ const ViewRaces: React.FC = () => {
                   <MenuItem value="other">Other</MenuItem>
                 </Select>
               </FormControl>
-              <FormControl
-                sx={{ flex: 1, minWidth: 200 }}
-                size="small"
-              >
+              <FormControl sx={{ flex: 1, minWidth: 200 }} size="small">
                 <InputLabel>Category</InputLabel>
                 <Select
                   value={filters.category}
@@ -713,10 +729,7 @@ const ViewRaces: React.FC = () => {
                   <MenuItem value="junior">Junior</MenuItem>
                 </Select>
               </FormControl>
-              <FormControl
-                sx={{ flex: 1, minWidth: 200 }}
-                size="small"
-              >
+              <FormControl sx={{ flex: 1, minWidth: 200 }} size="small">
                 <InputLabel>Per Page</InputLabel>
                 <Select
                   value={filters.pageSize.toString()}
@@ -781,13 +794,15 @@ const ViewRaces: React.FC = () => {
       />
 
       {/* Bulk Upload Participants Dialog */}
-      <BulkUploadParticipants
-        open={openBulkUploadDialog}
-        onClose={handleCloseBulkUploadDialog}
-        onUpload={handleBulkUpload}
-        eventId={eventId}
-        raceId={selectedRaceId}
-      />
+      {eventId && (
+        <BulkUploadParticipants
+          open={openBulkUploadDialog}
+          onClose={handleCloseBulkUploadDialog}
+          onComplete={handleBulkUploadComplete}
+          eventId={eventId}
+          raceId={selectedRaceId}
+        />
+      )}
     </Container>
   );
 };

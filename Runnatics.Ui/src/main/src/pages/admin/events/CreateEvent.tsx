@@ -24,6 +24,7 @@ import {
   DialogActions,
   CircularProgress,
 } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 // If your project requires it, you can instead do:
 // import { SelectChangeEvent } from "@mui/material/Select";
 import { SelectChangeEvent } from "@mui/material/Select";
@@ -39,6 +40,7 @@ import {
   CreateEventRequest,
 } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
+import { LeaderboardSettingsComponent } from "../shared/LeaderBoardSettings";
 
 interface FormErrors {
   [key: string]: string;
@@ -84,14 +86,14 @@ export const CreateEvent: React.FC = () => {
 
   const [leaderBoardSettings, setLeaderBoardSettings] =
     useState<LeaderBoardSettings>({
-      ShowOverallResults: true,
-      ShowCategoryResults: true,
-      SortByCategoryChipTime: true,
-      SortByOverallChipTime: true,
-      SortByOverallGunTime: false,
-      SortByCategoryGunTime: false,
-      NumberOfResultsToShowOverall: 10,
-      NumberOfResultsToShowCategory: 5,
+      showOverallResults: true,
+      showCategoryResults: true,
+      sortByCategoryChipTime: true,
+      sortByOverallChipTime: true,
+      sortByOverallGunTime: false,
+      sortByCategoryGunTime: false,
+      numberOfResultsToShowOverall: 10,
+      numberOfResultsToShowCategory: 5,
     });
 
   const [formData, setFormData] = useState<CreateEventRequest>({
@@ -115,14 +117,14 @@ export const CreateEvent: React.FC = () => {
     timeZone: "Asia/Kolkata",
     smsText: "",
     leaderBoardSettings: {
-      ShowOverallResults: true,
-      ShowCategoryResults: true,
-      SortByOverallChipTime: true,
-      SortByCategoryChipTime: true,
-      SortByOverallGunTime: true,
-      SortByCategoryGunTime: true,
-      NumberOfResultsToShowOverall: 10,
-      NumberOfResultsToShowCategory: 5,
+      showOverallResults: true,
+      showCategoryResults: true,
+      sortByOverallChipTime: true,
+      sortByCategoryChipTime: true,
+      sortByOverallGunTime: true,
+      sortByCategoryGunTime: true,
+      numberOfResultsToShowOverall: 10,
+      numberOfResultsToShowCategory: 5,
     },
     eventSettings: {
       removeBanner: false,
@@ -422,94 +424,94 @@ export const CreateEvent: React.FC = () => {
         status: EventStatus.Draft,
         maxParticipants: 1000,
         registrationDeadline:
-        apiData.registrationCloseDate || apiData.startDate || null,
+          apiData.registrationCloseDate || apiData.startDate || null,
         eventType: apiData.eventType,
         eventSettings: eventSettings
           ? {
-              removeBanner: eventSettings.removeBanner || false,
-              published: eventSettings.published || false,
-              rankOnNet:
-                eventSettings.rankOnNet !== undefined
-                  ? eventSettings.rankOnNet
-                  : true,
-              showResultSummaryForRaces:
-                eventSettings.showResultSummaryForRaces !== undefined
-                  ? eventSettings.showResultSummaryForRaces
-                  : true,
-              useOldData: eventSettings.useOldData || false,
-              confirmedEvent: eventSettings.confirmedEvent || false,
-              allowNameCheck:
-                eventSettings.allowNameCheck !== undefined
-                  ? eventSettings.allowNameCheck
-                  : true,
-              allowParticipantEdit:
-                eventSettings.allowParticipantEdit !== undefined
-                  ? eventSettings.allowParticipantEdit
-                  : true,
-            }
+            removeBanner: eventSettings.removeBanner || false,
+            published: eventSettings.published || false,
+            rankOnNet:
+              eventSettings.rankOnNet !== undefined
+                ? eventSettings.rankOnNet
+                : true,
+            showResultSummaryForRaces:
+              eventSettings.showResultSummaryForRaces !== undefined
+                ? eventSettings.showResultSummaryForRaces
+                : true,
+            useOldData: eventSettings.useOldData || false,
+            confirmedEvent: eventSettings.confirmedEvent || false,
+            allowNameCheck:
+              eventSettings.allowNameCheck !== undefined
+                ? eventSettings.allowNameCheck
+                : true,
+            allowParticipantEdit:
+              eventSettings.allowParticipantEdit !== undefined
+                ? eventSettings.allowParticipantEdit
+                : true,
+          }
           : {
-              removeBanner: false,
-              published: false,
-              rankOnNet: true,
-              showResultSummaryForRaces: true,
-              useOldData: false,
-              confirmedEvent: false,
-              allowNameCheck: true,
-              allowParticipantEdit: true,
-            },
+            removeBanner: false,
+            published: false,
+            rankOnNet: true,
+            showResultSummaryForRaces: true,
+            useOldData: false,
+            confirmedEvent: false,
+            allowNameCheck: true,
+            allowParticipantEdit: true,
+          },
 
         leaderboardSettings: leaderBoardSettings
           ? {
-              showOverallResults:
-                leaderBoardSettings.ShowOverallResults || false,
-              showCategoryResults:
-                leaderBoardSettings.ShowCategoryResults || false,
-              showGenderResults: true,
-              showAgeGroupResults: true,
-              sortByOverallChipTime:
-                leaderBoardSettings.SortByOverallChipTime || false,
-              sortByOverallGunTime:
-                leaderBoardSettings.SortByOverallGunTime || false,
-              sortByCategoryChipTime:
-                leaderBoardSettings.SortByCategoryChipTime || false,
-              sortByCategoryGunTime:
-                leaderBoardSettings.SortByCategoryGunTime || false,
-              numberOfResultsToShowOverall:
-                leaderBoardSettings.NumberOfResultsToShowOverall || 10,
-              numberOfResultsToShowCategory:
-                leaderBoardSettings.NumberOfResultsToShowCategory || 5,
-              enableLiveLeaderboard: true,
-              showSplitTimes: true,
-              showPace: true,
-              showTeamResults: false,
-              showMedalIcon: true,
-              allowAnonymousView: true,
-              autoRefreshIntervalSec: 30,
-              maxDisplayedRecords: Math.max(
-                leaderBoardSettings.NumberOfResultsToShowOverall || 10,
-                leaderBoardSettings.NumberOfResultsToShowCategory || 5
-              ),
-            }
+            showOverallResults:
+              leaderBoardSettings.showOverallResults || false,
+            showCategoryResults:
+              leaderBoardSettings.showCategoryResults || false,
+            showGenderResults: true,
+            showAgeGroupResults: true,
+            sortByOverallChipTime:
+              leaderBoardSettings.sortByOverallChipTime || false,
+            sortByOverallGunTime:
+              leaderBoardSettings.sortByOverallGunTime || false,
+            sortByCategoryChipTime:
+              leaderBoardSettings.sortByCategoryChipTime || false,
+            sortByCategoryGunTime:
+              leaderBoardSettings.sortByCategoryGunTime || false,
+            numberOfResultsToShowOverall:
+              leaderBoardSettings.numberOfResultsToShowOverall || 10,
+            numberOfResultsToShowCategory:
+              leaderBoardSettings.numberOfResultsToShowCategory || 5,
+            enableLiveLeaderboard: true,
+            showSplitTimes: true,
+            showPace: true,
+            showTeamResults: false,
+            showMedalIcon: true,
+            allowAnonymousView: true,
+            autoRefreshIntervalSec: 30,
+            maxDisplayedRecords: Math.max(
+              leaderBoardSettings.numberOfResultsToShowOverall || 10,
+              leaderBoardSettings.numberOfResultsToShowCategory || 5
+            ),
+          }
           : {
-              showOverallResults: false,
-              showCategoryResults: false,
-              showGenderResults: true,
-              showAgeGroupResults: true,
-              sortByOverallChipTime: false,
-              sortByOverallGunTime: false,
-              sortByCategoryChipTime: false,
-              sortByCategoryGunTime: false,
-              numberOfResultsToShowOverall: 10,
-              numberOfResultsToShowCategory: 5,
-              enableLiveLeaderboard: true,
-              showSplitTimes: true,
-              showPace: true,
-              showTeamResults: false,
-              showMedalIcon: true,
-              allowAnonymousView: true,
-              autoRefreshIntervalSec: 30,
-              maxDisplayedRecords: 100,
-            },
+            showOverallResults: false,
+            showCategoryResults: false,
+            showGenderResults: true,
+            showAgeGroupResults: true,
+            sortByOverallChipTime: false,
+            sortByOverallGunTime: false,
+            sortByCategoryChipTime: false,
+            sortByCategoryGunTime: false,
+            numberOfResultsToShowOverall: 10,
+            numberOfResultsToShowCategory: 5,
+            enableLiveLeaderboard: true,
+            showSplitTimes: true,
+            showPace: true,
+            showTeamResults: false,
+            showMedalIcon: true,
+            allowAnonymousView: true,
+            autoRefreshIntervalSec: 30,
+            maxDisplayedRecords: 100,
+          },
       };
       const createdEvent = await EventService.createEvent(
         requestPayload as any
@@ -566,8 +568,20 @@ export const CreateEvent: React.FC = () => {
     label: String(type),
   }));
 
+  const handleBack = () => {
+    navigate(`/events/events-dashboard`);
+  };
+
   return (
     <Box sx={{ maxWidth: 1200, mx: "auto", p: 3 }}>
+      <Button
+        variant="outlined"
+        startIcon={<ArrowBackIcon />}
+        onClick={handleBack}
+        sx={{ mb: 2 }}
+      >
+        Back
+      </Button>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Create New Event
@@ -1075,239 +1089,12 @@ export const CreateEvent: React.FC = () => {
               </Box>
 
               {/* Leaderboard Settings */}
-              <Box sx={{ flex: 1, pl: { xs: 0, md: 2 } }}>
-                <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-                  Leaderboard Settings
-                </Typography>
-                <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                  <Stack spacing={1.5} sx={{ flex: 1 }}>
-                    <Typography
-                      variant="body2"
-                      sx={{ fontWeight: 600, pl: "16px", mb: 0.5 }}
-                    >
-                      Overall Results
-                    </Typography>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={leaderBoardSettings.ShowOverallResults}
-                          onChange={(e) => {
-                            const isChecked = e.target.checked;
-                            setLeaderBoardSettings((prev) => {
-                              if (
-                                isChecked &&
-                                !prev.SortByOverallChipTime &&
-                                !prev.SortByOverallGunTime
-                              ) {
-                                return {
-                                  ...prev,
-                                  ShowOverallResults: true,
-                                  SortByOverallChipTime: true,
-                                  SortByOverallGunTime: false,
-                                };
-                              }
-                              return { ...prev, ShowOverallResults: isChecked };
-                            });
-                          }}
-                        />
-                      }
-                      label="Show Overall Results"
-                    />
-
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 600,
-                        pl: "16px",
-                        mb: 0.5,
-                        opacity: leaderBoardSettings.ShowOverallResults
-                          ? 1
-                          : 0.5,
-                      }}
-                    >
-                      Overall Result Sort By
-                    </Typography>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={leaderBoardSettings.SortByOverallChipTime}
-                          disabled={!leaderBoardSettings.ShowOverallResults}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setLeaderBoardSettings((prev) => ({
-                                ...prev,
-                                SortByOverallChipTime: true,
-                                SortByOverallGunTime: false,
-                              }));
-                            }
-                          }}
-                        />
-                      }
-                      label="Chip Time"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={leaderBoardSettings.SortByOverallGunTime}
-                          disabled={!leaderBoardSettings.ShowOverallResults}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setLeaderBoardSettings((prev) => ({
-                                ...prev,
-                                SortByOverallGunTime: true,
-                                SortByOverallChipTime: false,
-                              }));
-                            }
-                          }}
-                        />
-                      }
-                      label="Gun Time"
-                    />
-                  </Stack>
-
-                  <Stack spacing={1.5} sx={{ flex: 1 }}>
-                    <Typography
-                      variant="body2"
-                      sx={{ fontWeight: 600, pl: "16px", mb: 0.5 }}
-                    >
-                      Category Results
-                    </Typography>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={leaderBoardSettings.ShowCategoryResults}
-                          onChange={(e) => {
-                            const isChecked = e.target.checked;
-                            setLeaderBoardSettings((prev) => {
-                              if (
-                                isChecked &&
-                                !prev.SortByCategoryChipTime &&
-                                !prev.SortByCategoryGunTime
-                              ) {
-                                return {
-                                  ...prev,
-                                  ShowCategoryResults: true,
-                                  SortByCategoryChipTime: true,
-                                  SortByCategoryGunTime: false,
-                                };
-                              }
-                              return {
-                                ...prev,
-                                ShowCategoryResults: isChecked,
-                              };
-                            });
-                          }}
-                        />
-                      }
-                      label="Show Category Results"
-                    />
-
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 600,
-                        pl: "16px",
-                        mb: 0.5,
-                        opacity: leaderBoardSettings.ShowCategoryResults
-                          ? 1
-                          : 0.5,
-                      }}
-                    >
-                      Category Result Sort By
-                    </Typography>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={leaderBoardSettings.SortByCategoryChipTime}
-                          disabled={!leaderBoardSettings.ShowCategoryResults}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setLeaderBoardSettings((prev) => ({
-                                ...prev,
-                                SortByCategoryChipTime: true,
-                                SortByCategoryGunTime: false,
-                              }));
-                            }
-                          }}
-                        />
-                      }
-                      label="Chip Time"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={leaderBoardSettings.SortByCategoryGunTime}
-                          disabled={!leaderBoardSettings.ShowCategoryResults}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setLeaderBoardSettings((prev) => ({
-                                ...prev,
-                                SortByCategoryGunTime: true,
-                                SortByCategoryChipTime: false,
-                              }));
-                            }
-                          }}
-                        />
-                      }
-                      label="Gun Time"
-                    />
-                  </Stack>
-                </Stack>
-
-                <Stack
-                  direction={{ xs: "column", md: "row" }}
-                  spacing={3}
-                  sx={{ mt: 3 }}
-                >
-                  {leaderBoardSettings.ShowOverallResults && (
-                    <Box sx={{ flex: 1 }}>
-                      <TextField
-                        fullWidth
-                        label="Overall Results to Show"
-                        type="number"
-                        value={
-                          leaderBoardSettings.NumberOfResultsToShowOverall || 10
-                        }
-                        onChange={(e) =>
-                          setLeaderBoardSettings((prev) => ({
-                            ...prev,
-                            NumberOfResultsToShowOverall:
-                              parseInt(e.target.value, 10) || 10,
-                          }))
-                        }
-                        placeholder="Enter number of overall results"
-                        size="small"
-                        inputProps={{ min: 1, step: 1 }}
-                        helperText="Number of overall results to display"
-                      />
-                    </Box>
-                  )}
-
-                  {leaderBoardSettings.ShowCategoryResults && (
-                    <Box sx={{ flex: 1 }}>
-                      <TextField
-                        fullWidth
-                        label="Category Results to Show"
-                        type="number"
-                        value={
-                          leaderBoardSettings.NumberOfResultsToShowCategory || 5
-                        }
-                        onChange={(e) =>
-                          setLeaderBoardSettings((prev) => ({
-                            ...prev,
-                            NumberOfResultsToShowCategory:
-                              parseInt(e.target.value, 10) || 5,
-                          }))
-                        }
-                        placeholder="Enter number of category results"
-                        size="small"
-                        inputProps={{ min: 1, step: 1 }}
-                        helperText="Number of category results to display"
-                      />
-                    </Box>
-                  )}
-                </Stack>
-              </Box>
+              <LeaderboardSettingsComponent
+                settings={leaderBoardSettings}
+                onSettingsChange={setLeaderBoardSettings}
+                showOverrideToggle={false}
+                title="Leaderboard Settings"
+              />
             </Stack>
           </Box>
 

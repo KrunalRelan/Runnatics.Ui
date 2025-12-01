@@ -18,6 +18,8 @@ import {
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import { RaceService } from "@/main/src/services/RaceService";
 import { CreateRaceRequest } from "@/main/src/models/races/CreateRaceRequest";
+import { LeaderBoardSettings } from "@/main/src/models";
+import { LeaderboardSettingsComponent } from "../shared/LeaderBoardSettings";
 
 interface FormErrors {
   [key: string]: string;
@@ -41,6 +43,21 @@ export const EditRace: React.FC = () => {
     severity: "success",
   });
 
+  // Toggle for overriding leaderboard settings at race level
+  const [overrideLeaderboardSettings, setOverrideLeaderboardSettings] = useState(false);
+
+  // Leaderboard settings state
+  const [leaderBoardSettings, setLeaderBoardSettings] = useState<LeaderBoardSettings>({
+    showOverallResults: true,
+    showCategoryResults: true,
+    sortByCategoryChipTime: true,
+    sortByOverallChipTime: true,
+    sortByOverallGunTime: false,
+    sortByCategoryGunTime: false,
+    numberOfResultsToShowOverall: 10,
+    numberOfResultsToShowCategory: 5,
+  });
+
   const [formData, setFormData] = useState<CreateRaceRequest>({
     title: "",
     distance: 0,
@@ -54,7 +71,7 @@ export const EditRace: React.FC = () => {
       showLeaderboard: true,
       showResultTable: true,
       isTimed: false,
-      publichDnf: false,
+      publishDnf: false,
       dedUpSeconds: 0,
       earlyStartCutOff: 0,
       lateStartCutOff: 0,
@@ -62,6 +79,7 @@ export const EditRace: React.FC = () => {
       loopLength: 0,
       dataHeaders: "",
     },
+    leaderboardSettings: undefined, // Will be set when override is enabled
   });
 
   // Fetch race data and populate form
@@ -80,6 +98,23 @@ export const EditRace: React.FC = () => {
         const response = await RaceService.getRaceById(eventId, raceId);
         const raceData = response.message;
         if (raceData) {
+          // Load race-level leaderboard settings if they exist
+          if (raceData.leaderboardSettings) {
+            const hasOverride = raceData.leaderboardSettings.overrideSettings ?? false;
+            setOverrideLeaderboardSettings(hasOverride);
+
+            setLeaderBoardSettings({
+              showOverallResults: raceData.leaderboardSettings.showOverallResults ?? true,
+              showCategoryResults: raceData.leaderboardSettings.showCategoryResults ?? true,
+              sortByCategoryChipTime: raceData.leaderboardSettings.sortByCategoryChipTime ?? true,
+              sortByOverallChipTime: raceData.leaderboardSettings.sortByOverallChipTime ?? true,
+              sortByOverallGunTime: raceData.leaderboardSettings.sortByOverallGunTime ?? false,
+              sortByCategoryGunTime: raceData.leaderboardSettings.sortByCategoryGunTime ?? false,
+              numberOfResultsToShowOverall: raceData.leaderboardSettings.numberOfResultsToShowOverall ?? 10,
+              numberOfResultsToShowCategory: raceData.leaderboardSettings.numberOfResultsToShowCategory ?? 5,
+            });
+          }
+
           setFormData({
             title: raceData.title || "",
             distance: raceData.distance || 0,
@@ -93,7 +128,7 @@ export const EditRace: React.FC = () => {
               showLeaderboard: raceData.raceSettings?.showLeaderboard ?? true,
               showResultTable: raceData.raceSettings?.showResultTable ?? true,
               isTimed: raceData.raceSettings?.isTimed ?? false,
-              publichDnf: raceData.raceSettings?.publichDnf ?? false,
+              publishDnf: raceData.raceSettings?.publishDnf ?? false,
               dedUpSeconds: raceData.raceSettings?.dedUpSeconds ?? 0,
               earlyStartCutOff: raceData.raceSettings?.earlyStartCutOff ?? 0,
               lateStartCutOff: raceData.raceSettings?.lateStartCutOff ?? 0,
@@ -101,6 +136,18 @@ export const EditRace: React.FC = () => {
               loopLength: raceData.raceSettings?.loopLength ?? 0,
               dataHeaders: raceData.raceSettings?.dataHeaders ?? "",
             },
+            leaderboardSettings: raceData.leaderboardSettings?.overrideSettings
+              ? {
+                  showOverallResults: raceData.leaderboardSettings.showOverallResults ?? true,
+                  showCategoryResults: raceData.leaderboardSettings.showCategoryResults ?? true,
+                  sortByCategoryChipTime: raceData.leaderboardSettings.sortByCategoryChipTime ?? true,
+                  sortByOverallChipTime: raceData.leaderboardSettings.sortByOverallChipTime ?? true,
+                  sortByOverallGunTime: raceData.leaderboardSettings.sortByOverallGunTime ?? false,
+                  sortByCategoryGunTime: raceData.leaderboardSettings.sortByCategoryGunTime ?? false,
+                  numberOfResultsToShowOverall: raceData.leaderboardSettings.numberOfResultsToShowOverall ?? 10,
+                  numberOfResultsToShowCategory: raceData.leaderboardSettings.numberOfResultsToShowCategory ?? 5,
+                }
+              : undefined,
           });
         }
       } catch (err: any) {
@@ -113,6 +160,14 @@ export const EditRace: React.FC = () => {
     };
     fetchRace();
   }, [raceId, eventId]);
+
+  // Update formData when override toggle or leaderboard settings change
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      leaderboardSettings: overrideLeaderboardSettings ? leaderBoardSettings : undefined,
+    }));
+  }, [overrideLeaderboardSettings, leaderBoardSettings]);
 
   const handleBack = () => {
     navigate(`/events/event-details/${eventId}`);
@@ -219,6 +274,7 @@ export const EditRace: React.FC = () => {
         description: formData.description || "",
         startTime: formData.startTime,
         endTime: formData.endTime,
+        overrideSettings: overrideLeaderboardSettings,
         raceSettings: {
           published: formData.raceSettings?.published ?? false,
           sendSms: formData.raceSettings?.sendSms ?? false,
@@ -226,7 +282,7 @@ export const EditRace: React.FC = () => {
           showLeaderboard: formData.raceSettings?.showLeaderboard ?? true,
           showResultTable: formData.raceSettings?.showResultTable ?? true,
           isTimed: formData.raceSettings?.isTimed ?? false,
-          publichDnf: formData.raceSettings?.publichDnf ?? false,
+          publishDnf: formData.raceSettings?.publishDnf ?? false,
           dedUpSeconds: formData.raceSettings?.dedUpSeconds ?? 0,
           earlyStartCutOff: formData.raceSettings?.earlyStartCutOff ?? 0,
           lateStartCutOff: formData.raceSettings?.lateStartCutOff ?? 0,
@@ -235,6 +291,23 @@ export const EditRace: React.FC = () => {
           dataHeaders: formData.raceSettings?.dataHeaders ?? "",
         },
       };
+
+      // Only include leaderboardSettings if override is enabled
+      if (overrideLeaderboardSettings) {
+        requestPayload.leaderboardSettings = {
+          showOverallResults: leaderBoardSettings.showOverallResults,
+          showCategoryResults: leaderBoardSettings.showCategoryResults,
+          sortByCategoryChipTime: leaderBoardSettings.sortByCategoryChipTime,
+          sortByOverallChipTime: leaderBoardSettings.sortByOverallChipTime,
+          sortByOverallGunTime: leaderBoardSettings.sortByOverallGunTime,
+          sortByCategoryGunTime: leaderBoardSettings.sortByCategoryGunTime,
+          numberOfResultsToShowOverall: leaderBoardSettings.numberOfResultsToShowOverall,
+          numberOfResultsToShowCategory: leaderBoardSettings.numberOfResultsToShowCategory,
+        };
+      }
+
+      console.log("Updating race with payload:", requestPayload);
+
       await RaceService.updateRace(eventId!, raceId!, requestPayload);
       setSnackbar({
         open: true,
@@ -440,8 +513,8 @@ export const EditRace: React.FC = () => {
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formData.raceSettings?.publichDnf}
-                        onChange={handleRaceSettingsSwitchChange("publichDnf")}
+                        checked={formData.raceSettings?.publishDnf}
+                        onChange={handleRaceSettingsSwitchChange("publishDnf")}
                       />
                     }
                     label="Publish DNF"
@@ -531,6 +604,16 @@ export const EditRace: React.FC = () => {
               </Box>
             </Stack>
           </Box>
+
+          {/* Use the shared LeaderboardSettings component */}
+          <LeaderboardSettingsComponent
+            settings={leaderBoardSettings}
+            onSettingsChange={setLeaderBoardSettings}
+            showOverrideToggle={true}
+            overrideEnabled={overrideLeaderboardSettings}
+            onOverrideToggle={setOverrideLeaderboardSettings}
+            title="Leaderboard Settings"
+          />
 
           {/* Form Actions */}
           <Box
