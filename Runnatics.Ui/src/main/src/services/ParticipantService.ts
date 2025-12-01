@@ -1,7 +1,7 @@
 import { ServiceUrl } from '../models';
 import { apiClient } from '../utils/axios.config';
 import { AxiosResponse } from 'axios';
-import { UploadResponse, ProcessResponse, ProcessImportRequest } from '../models/participants';
+import { UploadResponse, ProcessResponse, ProcessImportRequest, ParticipantSearchRequest, ParticipantSearchResponse } from '../models/participants';
 import { ResponseBase } from '../models/ResponseBase';
 
 export class ParticipantService {
@@ -55,5 +55,23 @@ export class ParticipantService {
 
         return response.data;
     }
-      
+
+    /**
+     * Search participants for a race
+     * Note: JWT token is automatically included via interceptor
+     */
+    static async searchParticipants(
+        eventId: string,
+        raceId: string,
+        searchRequest: ParticipantSearchRequest
+    ): Promise<ResponseBase<ParticipantSearchResponse[]>> {
+        const response: AxiosResponse<ResponseBase<ParticipantSearchResponse[]>> =
+            await apiClient.post(
+                ServiceUrl.searchParticipants(eventId, raceId),
+                searchRequest
+            );
+
+        return response.data;
+    }
+
 }

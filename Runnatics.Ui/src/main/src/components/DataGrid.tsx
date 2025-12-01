@@ -26,18 +26,6 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 
 /**
  * DataGrid Component - Modern AG Grid v32+ with Quartz Theme
- *
- * AG Grid wrapper with consistent MUI styling matching EventsList.tsx theme.
- * Uses the new themeQuartz API for modern, clean styling.
- * Provides all AG Grid features (sorting, filtering, virtual scrolling, etc.)
- *
- * @example
- * <DataGrid
- *   rowData={data}
- *   columnDefs={columns}
- *   pagination={true}
- *   loading={loading}
- * />
  */
 export const DataGrid = <T extends any>({
   rowData,
@@ -54,7 +42,7 @@ export const DataGrid = <T extends any>({
   height = 600,
   enableSorting = true,
   enableFiltering = true,
-  enableColumnMenu = true, // ✅ Keep prop but won't use menuTabs
+  enableColumnMenu = true,
   suppressPaginationPanel = false,
   rowSelection,
   animateRows = true,
@@ -72,25 +60,21 @@ export const DataGrid = <T extends any>({
   onPageChange,
   onPageSizeChange,
 }: DataGridProps<T>) => {
-  // Get MUI theme to determine dark/light mode
   const muiTheme = useMuiTheme();
   const isDarkMode = muiTheme.palette.mode === "dark";
 
-  // Use the provided theme or select based on MUI theme mode
   const agGridTheme = theme || (isDarkMode ? darkTheme : lightTheme);
+  
   const defaultColumnDef = useMemo<ColDef>(
     () => ({
       sortable: enableSorting,
       filter: enableFiltering,
       resizable: true,
-      // ✅ REMOVED menuTabs - This is an Enterprise feature
-      // menuTabs: enableColumnMenu ? ['filterMenuTab', 'generalMenuTab'] : [],
       ...defaultColDef,
     }),
     [enableSorting, enableFiltering, defaultColDef]
-  ); // ✅ Removed enableColumnMenu from deps
+  );
 
-  // Handle sort changes
   const handleSortChanged = useCallback(
     (event: SortChangedEvent) => {
       if (onSortChanged) {
@@ -128,15 +112,19 @@ export const DataGrid = <T extends any>({
           border: (theme) => `1px solid ${theme.palette.divider}`,
           borderRadius: 2,
           overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
+        {/* Grid Container */}
         <Box
           sx={{
-            height: height === "auto" ? undefined : height,
+            height: domLayout === "autoHeight" ? "auto" : height,
             width: "100%",
             position: "relative",
             opacity: loading ? 0.6 : 1,
             transition: "opacity 0.3s ease-in-out",
+            overflow: "hidden",
           }}
         >
           <AgGridReact<T>
@@ -160,26 +148,44 @@ export const DataGrid = <T extends any>({
             {...defaultGridOptions}
           />
         </Box>
+
+        {/* Custom Pagination Footer - Separate from Grid */}
         {useCustomPagination && (
           <Box
             sx={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              mt: 0,
-              p: 2,
+              px: 3,
+              py: 2,
               backgroundColor: "background.paper",
               borderTop: (theme) => `1px solid ${theme.palette.divider}`,
               flexWrap: "wrap",
               gap: 2,
+              minHeight: "72px",
+              position: "relative",
+              zIndex: 10, // Ensure footer is above grid content
             }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Typography variant="body2" color="text.secondary">
+            {/* Left side - Info and Page Size */}
+            <Box 
+              sx={{ 
+                display: "flex", 
+                alignItems: "center", 
+                gap: 2,
+                flexWrap: "wrap",
+              }}
+            >
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ whiteSpace: "nowrap" }}
+              >
                 Showing {totalRecords > 0 ? (pageNumber - 1) * paginationPageSize + 1 : 0} to{" "}
                 {Math.min(pageNumber * paginationPageSize, totalRecords)} of {totalRecords} entries
               </Typography>
-              <FormControl size="small" sx={{ minWidth: 120 }}>
+              
+              <FormControl size="small" sx={{ minWidth: 140 }}>
                 <InputLabel id="page-size-label">Rows per page</InputLabel>
                 <Select
                   labelId="page-size-label"
@@ -187,8 +193,10 @@ export const DataGrid = <T extends any>({
                   label="Rows per page"
                   onChange={(e) => onPageSizeChange?.(Number(e.target.value))}
                   disabled={loading}
+                  sx={{
+                    backgroundColor: "background.paper",
+                  }}
                 >
-                  <MenuItem value={5}>5</MenuItem>
                   <MenuItem value={10}>10</MenuItem>
                   <MenuItem value={25}>25</MenuItem>
                   <MenuItem value={50}>50</MenuItem>
@@ -196,39 +204,62 @@ export const DataGrid = <T extends any>({
                 </Select>
               </FormControl>
             </Box>
-            <Stack direction="row" spacing={2} alignItems="center">
+
+            {/* Right side - Pagination Controls */}
+            <Stack 
+              direction="row" 
+              spacing={1} 
+              alignItems="center"
+              sx={{ flexWrap: "wrap" }}
+            >
               <Button
                 variant="outlined"
                 size="small"
                 disabled={pageNumber === 1 || loading}
                 onClick={() => onPageChange?.(1)}
+                sx={{ minWidth: "70px" }}
               >
                 First
               </Button>
+              
               <Button
                 variant="outlined"
                 size="small"
                 disabled={pageNumber === 1 || loading}
                 onClick={() => onPageChange?.(pageNumber - 1)}
+                sx={{ minWidth: "90px" }}
               >
                 Previous
               </Button>
-              <Typography variant="body2" sx={{ minWidth: "100px", textAlign: "center" }}>
+              
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  minWidth: "120px", 
+                  textAlign: "center",
+                  px: 2,
+                  whiteSpace: "nowrap",
+                }}
+              >
                 Page {pageNumber} of {totalPages || 1}
               </Typography>
+              
               <Button
                 variant="outlined"
                 size="small"
-                disabled={pageNumber >= totalPages || loading}
+                disabled={pageNumber >= totalPages || loading || totalPages === 0}
                 onClick={() => onPageChange?.(pageNumber + 1)}
+                sx={{ minWidth: "70px" }}
               >
                 Next
               </Button>
+              
               <Button
                 variant="outlined"
                 size="small"
-                disabled={pageNumber >= totalPages || loading}
+                disabled={pageNumber >= totalPages || loading || totalPages === 0}
                 onClick={() => onPageChange?.(totalPages)}
+                sx={{ minWidth: "70px" }}
               >
                 Last
               </Button>

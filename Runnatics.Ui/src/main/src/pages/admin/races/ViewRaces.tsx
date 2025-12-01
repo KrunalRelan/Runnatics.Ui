@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -47,6 +47,7 @@ import {
   defaultParticipantFilters,
 } from "@/main/src/models/races/ParticipantFilters";
 import { RaceService } from "@/main/src/services/RaceService";
+import { ParticipantService } from "@/main/src/services/ParticipantService";
 import AddParticipant from "@/main/src/pages/admin/participants/AddParticipant";
 import BulkUploadParticipants from "@/main/src/pages/admin/participants/BulkUploadParticipants";
 
@@ -58,21 +59,94 @@ const ViewRaces: React.FC = () => {
   const [race, setRace] = useState<Race | null>(null);
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [participantsLoading, setParticipantsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<number>(2);
-  const [selectedRaceId, setSelectedRaceId] = useState<string | undefined>(
-    raceId
-  );
-  const [filters, setFilters] = useState<ParticipantFilters>(
-    defaultParticipantFilters
-  );
+  const [selectedRaceId, setSelectedRaceId] = useState<string | undefined>(raceId);
+  const [filters, setFilters] = useState<ParticipantFilters>(defaultParticipantFilters);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [totalRecords, setTotalRecords] = useState<number>(0);
 
   // Add Participant Dialog State
   const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
-  const [openBulkUploadDialog, setOpenBulkUploadDialog] =
-    useState<boolean>(false);
+  const [openBulkUploadDialog, setOpenBulkUploadDialog] = useState<boolean>(false);
+
+  // Refs to track initial mount and prevent duplicate calls
+  const isInitialMount = useRef(true);
+  const isRaceChanging = useRef(false);
+
+  // Reusable function to fetch participants
+  const fetchParticipants = async (
+    evtId: string,
+    rcId: string,
+    currentFilters: ParticipantFilters
+  ) => {
+    try {
+      setParticipantsLoading(true);
+
+      const searchResponse = await ParticipantService.searchParticipants(
+        evtId,
+        rcId,
+        {
+          searchString: currentFilters.nameOrBib || "",
+          sortFieldName: "bib",
+          sortDirection: 0,
+          pageNumber: currentFilters.pageNumber,
+          pageSize: currentFilters.pageSize,
+        }
+      );
+
+      // Handle the actual response structure from your API
+      let participantData: any[] = [];
+      let total = 0;
+
+      // Your API returns: { message: [], totalCount: number }
+      if (searchResponse.message && Array.isArray(searchResponse.message)) {
+        participantData = searchResponse.message;
+        total = searchResponse.totalCount || 0;
+      }
+      // Fallback for paginated response structure: { data: [], pagination: {} }
+      else if (searchResponse.message && searchResponse.message) {
+        participantData = searchResponse.message;
+        total = searchResponse.totalCount || 0;
+      }
+      // Fallback for direct array response
+      else if (Array.isArray(searchResponse)) {
+        participantData = searchResponse;
+        total = searchResponse.length;
+      }
+      else {
+      }
+
+      // Map the API response to the Participant interface
+      const mappedParticipants = participantData.map((p: any) => ({
+        id: p.id,
+        bib: p.bib || "",
+        name: p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim(),
+        fullName: p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim(),
+        firstName: p.firstName || "",
+        lastName: p.lastName || "",
+        email: p.email || "",
+        phone: p.phone || "",
+        gender: p.gender || "",
+        category: p.ageCategory || "",
+        status: "Registered" as const,
+        checkIn: false,
+        chipId: "",
+      }));
+
+
+
+      setParticipants(mappedParticipants);
+      setTotalRecords(total);
+    } catch (err: any) {
+
+      setParticipants([]);
+      setTotalRecords(0);
+    } finally {
+      setParticipantsLoading(false);
+    }
+  };
 
   // Fetch all races for the event on mount (only once)
   useEffect(() => {
@@ -84,6 +158,7 @@ const ViewRaces: React.FC = () => {
       }
 
       try {
+
         setLoading(true);
         setError(null);
 
@@ -92,7 +167,7 @@ const ViewRaces: React.FC = () => {
           eventId,
           searchCriteria: {
             pageNumber: 1,
-            pageSize: 100, // Get all races
+            pageSize: 100,
             sortFieldName: "startTime",
             sortDirection: 1,
           },
@@ -102,104 +177,87 @@ const ViewRaces: React.FC = () => {
         setRaces(fetchedRaces);
 
         // Set the selected race (from URL parameter or first race)
-        // This will trigger the second useEffect to fetch race details
         const currentRaceId = raceId || fetchedRaces[0]?.id;
+
         setSelectedRaceId(currentRaceId);
       } catch (err: any) {
-        console.error("Error fetching races list:", err);
+
         setError(err.response?.data?.message || "Failed to fetch races data");
         setLoading(false);
       }
-      // Don't set loading to false here - let the second useEffect handle it
     };
 
     fetchAllRaces();
-  }, [eventId, raceId]); // Add raceId to dependencies to handle URL changes
+  }, [eventId, raceId]); // Include raceId to prevent issues with URL changes
 
-  // Fetch selected race details when race changes
+  // Fetch selected race details and participants when race changes
   useEffect(() => {
-    const fetchRaceDetails = async () => {
-      if (!eventId || !selectedRaceId) return;
+    const fetchRaceDetailsAndParticipants = async () => {
+      if (!eventId || !selectedRaceId) {
+
+        return;
+      }
 
       try {
         setLoading(true);
         setError(null);
 
         // Fetch the selected race details
-        const raceResponse = await RaceService.getRaceById(
-          eventId,
-          selectedRaceId
-        );
+        const raceResponse = await RaceService.getRaceById(eventId, selectedRaceId);
         const fetchedRace = raceResponse.message;
         setRace(fetchedRace);
 
-        // Check if race has participants data
-        if (fetchedRace.participants && fetchedRace.participants.length > 0) {
-          // Use real participants data from the race
-          setParticipants(fetchedRace.participants);
-          setTotalRecords(fetchedRace.participants.length);
-        } else {
-          // Fall back to mock data if no participants in the response
-          const mockParticipants: Participant[] = [
-            {
-              bib: "1001",
-              name: "John Doe",
-              gender: "Male",
-              category: "Open",
-              status: "Registered",
-              checkIn: true,
-              chipId: "CHIP001",
-            },
-            {
-              bib: "1002",
-              name: "Jane Smith",
-              gender: "Female",
-              category: "Open",
-              status: "Registered",
-              checkIn: true,
-              chipId: "CHIP002",
-            },
-            {
-              bib: "1003",
-              name: "Mike Johnson",
-              gender: "Male",
-              category: "Veteran",
-              status: "Pending",
-              checkIn: false,
-              chipId: "CHIP003",
-            },
-            {
-              bib: "1004",
-              name: "Sarah Williams",
-              gender: "Female",
-              category: "Open",
-              status: "Registered",
-              checkIn: true,
-              chipId: "CHIP004",
-            },
-            {
-              bib: "1005",
-              name: "Robert Brown",
-              gender: "Male",
-              category: "Junior",
-              status: "Cancelled",
-              checkIn: false,
-              chipId: "CHIP005",
-            },
-          ];
-          setParticipants(mockParticipants);
-          setTotalRecords(mockParticipants.length);
-        }
+        // Fetch participants - ONLY ONCE per race change
+        await fetchParticipants(eventId, selectedRaceId, filters);
+
+        // Mark that initial mount is complete
+        isInitialMount.current = false;
+        isRaceChanging.current = false;
       } catch (err: any) {
-        console.error("Error fetching race details:", err);
+      
         setError(err.response?.data?.message || "Failed to fetch race details");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRaceDetails();
-  }, [eventId, selectedRaceId]); // Depend on selectedRaceId instead of raceId
+    fetchRaceDetailsAndParticipants();
+  }, [eventId, selectedRaceId]); // DO NOT include filters here
+
+  // Fetch participants when filters change (but NOT on initial mount or race change)
+  useEffect(() => {
+    // Skip if initial mount (already fetched in previous effect)
+    if (isInitialMount.current) {
+     
+      return;
+    }
+
+    // Skip if race is changing (already fetching in previous effect)
+    if (isRaceChanging.current) {
+     
+      return;
+    }
+
+    // Skip if no eventId or selectedRaceId
+    if (!eventId || !selectedRaceId || loading) {
+    
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      fetchParticipants(eventId, selectedRaceId, filters);
+    }, 300); // Debounce for search
+
+    return () => clearTimeout(timeoutId);
+  }, 
+  [
+    filters.pageNumber,
+    filters.pageSize,
+    filters.nameOrBib,
+    filters.status,
+    filters.gender,
+    filters.category,
+  ]); // DO NOT include eventId, selectedRaceId, or loading
 
   // Handlers
   const handleBack = () => {
@@ -213,53 +271,48 @@ const ViewRaces: React.FC = () => {
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
 
-    // Handle navigation based on tab index
     if (!eventId || !selectedRaceId) return;
 
     switch (newValue) {
-      case 0: // Event Dashboard
+      case 0:
         navigate("/events/events-dashboard");
         break;
-      case 1: // Event Details
+      case 1:
         navigate(`/events/events-edit/${eventId}`);
         break;
-      case 2: // Participants (current page)
-        // Already on this page, no navigation needed
+      case 2:
         break;
-      case 3: // Dashboard
-        // TODO: Add route when dashboard page is ready
-        console.log("Navigate to race dashboard");
+      case 3:
+     
         break;
-      // case 4: // Edit
-      //   navigate(
-      //     `/events/event-details/${eventId}/race/${selectedRaceId}`
-      //   );
-      //   break;
-      case 4: // Checkpoints
-        // TODO: Add route when checkpoints page is ready
-        console.log("Navigate to checkpoints");
+      case 4:
+    
         break;
-      case 5: // Segments
-        // TODO: Add route when segments page is ready
-        console.log("Navigate to segments");
+      case 5:
+       
         break;
-      case 6: // Add Certificate
-        // TODO: Add route when certificate page is ready
-        console.log("Navigate to add certificate");
+      case 6:
+       
         break;
       default:
         break;
     }
   };
 
-  const handleRaceChange = (raceId: string) => {
+  const handleRaceChange = (newRaceId: string) => {
     if (!eventId) return;
 
-    // Update selected race - this will trigger the second useEffect to fetch race details
-    setSelectedRaceId(raceId);
+    // Set flag to prevent filter effect from running
+    isRaceChanging.current = true;
+
+    // Update selected race
+    setSelectedRaceId(newRaceId);
+
+    // Reset filters to default when changing race
+    setFilters(defaultParticipantFilters);
 
     // Update URL to reflect selected race
-    navigate(`/events/event-details/${eventId}/race/${raceId}`, {
+    navigate(`/events/event-details/${eventId}/race/${newRaceId}`, {
       replace: true,
     });
   };
@@ -268,7 +321,12 @@ const ViewRaces: React.FC = () => {
     field: keyof ParticipantFilters,
     value: string | number
   ) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
+    setFilters((prev) => ({
+      ...prev,
+      [field]: value,
+      // Reset to page 1 when changing filters (except pagination)
+      ...(field !== "pageNumber" && field !== "pageSize" ? { pageNumber: 1 } : {}),
+    }));
   };
 
   const handleResetFilters = () => {
@@ -280,17 +338,27 @@ const ViewRaces: React.FC = () => {
   };
 
   const handlePageSizeChange = (size: number) => {
-    setFilters((prev) => ({ ...prev, pageNumber: 1, pageSize: size }));
+
+    setFilters((prev) => ({
+      ...prev,
+      pageNumber: 1,
+      pageSize: size,
+    }));
+  };
+
+  const handleRefresh = () => {
+  
+    if (eventId && selectedRaceId) {
+      fetchParticipants(eventId, selectedRaceId, filters);
+    }
   };
 
   const handleEditParticipant = (participant: Participant) => {
-    console.log("Edit participant:", participant);
-    // Navigate to edit page or open edit dialog
+   
   };
 
   const handleDeleteParticipant = (participant: Participant) => {
-    console.log("Delete participant:", participant);
-    // Show confirmation dialog and delete
+   
   };
 
   const handleOpenAddDialog = () => {
@@ -302,13 +370,10 @@ const ViewRaces: React.FC = () => {
   };
 
   const handleAddParticipant = (participant: Participant) => {
-    // TODO: Call API to add participant
-    // For now, add to local state
-    setParticipants((prev) => [...prev, participant]);
-    setTotalRecords((prev) => prev + 1);
-
-    console.log("Added participant:", participant);
-    // Show success message
+  
+    if (eventId && selectedRaceId) {
+      fetchParticipants(eventId, selectedRaceId, filters);
+    }
   };
 
   const handleOpenBulkUploadDialog = () => {
@@ -319,37 +384,19 @@ const ViewRaces: React.FC = () => {
     setOpenBulkUploadDialog(false);
   };
 
-  const handleBulkUploadComplete = () => {
-    // Refresh participants list after successful import
-    // The second useEffect will automatically re-fetch race details
-    // when selectedRaceId changes or we can force a re-fetch
+  const handleBulkUploadComplete = async () => {
+   
     if (eventId && selectedRaceId) {
-      // Re-fetch race details to get updated participant list
-      const fetchRaceDetails = async () => {
-        try {
-          const response = await RaceService.getRaceById(
-            eventId,
-            selectedRaceId
-          );
-          const fetchedRace = response.message as Race;
-          setRace(fetchedRace);
-
-          if (fetchedRace.participants && fetchedRace.participants.length > 0) {
-            setParticipants(fetchedRace.participants);
-            setTotalRecords(fetchedRace.participants.length);
-          }
-        } catch (err: any) {
-          console.error("Error refreshing participants:", err);
-        }
-      };
-
-      fetchRaceDetails();
+      await fetchParticipants(eventId, selectedRaceId, filters);
     }
     handleCloseBulkUploadDialog();
   };
 
+  // Calculate total pages
+  const totalPages = totalRecords > 0 ? Math.ceil(totalRecords / filters.pageSize) : 1;
+
   // Loading state
-  if (loading) {
+  if (loading && !race) {
     return (
       <Container
         maxWidth="lg"
@@ -394,8 +441,6 @@ const ViewRaces: React.FC = () => {
     );
   }
 
-  const totalPages = Math.ceil(totalRecords / filters.pageSize);
-
   // Define grid columns using AG Grid column definitions
   const columnDefs: ColDef<Participant>[] = [
     {
@@ -407,10 +452,28 @@ const ViewRaces: React.FC = () => {
       filter: true,
     },
     {
-      field: "name",
+      field: "fullName",
       headerName: "Name",
       flex: 1.5,
       minWidth: 150,
+      sortable: true,
+      filter: true,
+      valueGetter: (params: any) =>
+        params.data?.fullName || params.data?.name || "",
+    },
+    {
+      field: "email",
+      headerName: "Email",
+      flex: 1.5,
+      minWidth: 150,
+      sortable: true,
+      filter: true,
+    },
+    {
+      field: "phone",
+      headerName: "Phone",
+      flex: 1.2,
+      minWidth: 120,
       sortable: true,
       filter: true,
     },
@@ -438,6 +501,7 @@ const ViewRaces: React.FC = () => {
       sortable: true,
       filter: true,
       cellRenderer: (params: any) => {
+        if (!params.value) return null;
         const statusColors: Record<string, "success" | "warning" | "error"> = {
           Registered: "success",
           Pending: "warning",
@@ -533,7 +597,7 @@ const ViewRaces: React.FC = () => {
           Manage race details, participants, and settings
         </Typography>
 
-        {/* Race Selector - Only show if multiple races */}
+        {/* Race Selector */}
         {races.length > 0 && (
           <Card sx={{ p: 2.5, mb: 2 }}>
             <Typography
@@ -553,9 +617,8 @@ const ViewRaces: React.FC = () => {
               {races.map((raceItem) => (
                 <Chip
                   key={raceItem.id}
-                  label={`${
-                    raceItem.distance ? `${raceItem.distance} KM` : ""
-                  } - ${raceItem.title}`}
+                  label={`${raceItem.distance ? `${raceItem.distance} KM` : ""
+                    } - ${raceItem.title}`}
                   onClick={() => handleRaceChange(raceItem.id)}
                   color={selectedRaceId === raceItem.id ? "primary" : "default"}
                   variant={
@@ -575,16 +638,6 @@ const ViewRaces: React.FC = () => {
           </Card>
         )}
 
-        {/* Current Race Title */}
-        {/* <Typography variant="h5" sx={{ fontWeight: 600, mt: 2, mb: 3 }}>
-          {race.distance ? `${race.distance} KM` : 'Race'} -{' '}
-          <Box
-            component="span"
-            sx={{ fontStyle: 'italic', color: 'text.secondary', fontWeight: 400 }}
-          >
-            {race.title}
-          </Box>
-        </Typography> */}
         {race.description && (
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             {race.description}
@@ -618,7 +671,6 @@ const ViewRaces: React.FC = () => {
           <Tab icon={<Edit />} iconPosition="start" label="Event Details" />
           <Tab icon={<People />} iconPosition="start" label="Participants" />
           <Tab icon={<TrendingUp />} iconPosition="start" label="Dashboard" />
-          {/* <Tab icon={<Edit />} iconPosition="start" label="Edit" /> */}
           <Tab icon={<Place />} iconPosition="start" label="Checkpoints (3)" />
           <Tab icon={<Timer />} iconPosition="start" label="Segments" />
           <Tab
@@ -631,7 +683,7 @@ const ViewRaces: React.FC = () => {
 
       {/* Content Area */}
       <Card>
-        <CardContent sx={{ p: 3, pb: 0, "&:last-child": { pb: 0 } }}>
+        <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
           {/* Action Buttons */}
           <Stack
             direction="row"
@@ -663,7 +715,12 @@ const ViewRaces: React.FC = () => {
               Export
             </Button>
             <Box sx={{ flexGrow: 1 }} />
-            <IconButton color="primary" title="Refresh">
+            <IconButton
+              color="primary"
+              title="Refresh"
+              onClick={handleRefresh}
+              disabled={participantsLoading}
+            >
               <Refresh />
             </IconButton>
           </Stack>
@@ -762,7 +819,7 @@ const ViewRaces: React.FC = () => {
           <Divider sx={{ mb: 0 }} />
 
           {/* DataGrid Component */}
-          <Box sx={{ mt: 0 }}>
+          <Box sx={{ mt: 0, pb: 3 }}>
             <DataGrid<Participant>
               rowData={participants}
               columnDefs={columnDefs}
@@ -771,7 +828,7 @@ const ViewRaces: React.FC = () => {
               enableSorting={true}
               enableFiltering={true}
               animateRows={true}
-              loading={loading}
+              loading={participantsLoading}
               useCustomPagination={true}
               pageNumber={filters.pageNumber}
               totalRecords={totalRecords}
