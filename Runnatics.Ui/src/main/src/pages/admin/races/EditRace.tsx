@@ -151,9 +151,22 @@ export const EditRace: React.FC = () => {
           });
         }
       } catch (err: any) {
-        setError(
-          err.response?.data?.message || "Failed to load race details"
-        );
+        // Handle different error response structures
+        let errorMessage = "Failed to load race details";
+
+        // Don't show detailed error message for 500 errors
+        if (err.response?.status === 500) {
+          errorMessage = "Server error. Please try again later.";
+        } else {
+          // Extract error message from API response
+          errorMessage =
+            err.response?.data?.error?.message || // API error structure { error: { message: "..." } }
+            err.response?.data?.message || // Alternative structure
+            err.userMessage || // From axios interceptor
+            "Failed to load race details";
+        }
+
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -319,9 +332,22 @@ export const EditRace: React.FC = () => {
         navigate(`/events/event-details/${eventId}`);
       }, 1000);
     } catch (err: any) {
-      setError(
-        err.response?.data?.message || "Failed to update race. Please try again."
-      );
+      // Handle different error response structures
+      let errorMessage = "Failed to update race. Please try again.";
+
+      // Don't show detailed error message for 500 errors
+      if (err.response?.status === 500) {
+        errorMessage = "Server error. Please try again later.";
+      } else {
+        // Extract error message from API response
+        errorMessage =
+          err.response?.data?.error?.message || // API error structure { error: { message: "..." } }
+          err.response?.data?.message || // Alternative structure
+          err.userMessage || // From axios interceptor
+          "Failed to update race. Please try again.";
+      }
+
+      setError(errorMessage);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
@@ -332,19 +358,6 @@ export const EditRace: React.FC = () => {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, display: "flex", justifyContent: "center" }}>
         <CircularProgress />
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={handleBack}>
-          Back to Event
-        </Button>
       </Container>
     );
   }
@@ -368,6 +381,13 @@ export const EditRace: React.FC = () => {
           Update race details for this event
         </Typography>
       </Box>
+
+      {/* Error Alert - shown at the top of the form */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
 
       <Paper elevation={2} sx={{ p: 3 }}>
         <form onSubmit={handleSubmit}>
