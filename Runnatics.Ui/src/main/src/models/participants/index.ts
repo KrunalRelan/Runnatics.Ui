@@ -4,3 +4,5 @@ export * from './ProcessingError';
 export * from './UploadResponse';
 export * from './ProcessResponse';
 export * from './ProcessImportRequest';
+export * from './ParticipantSearchRequest';
+export * from './ParticipantSearchResponse';

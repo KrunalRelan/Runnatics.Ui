@@ -24,5 +24,6 @@ export const ServiceUrl = {
     //participants
     uploadParticipantImport: (eventId: string) => `participants/${eventId}/import`,
     processParticipantImport: (eventId: string, importBatchId: string) => `participants/${eventId}/import/${importBatchId}/process`,
+    searchParticipants: (eventId: string, raceId: string) => `participants/${eventId}/${raceId}/search`,
 };
 

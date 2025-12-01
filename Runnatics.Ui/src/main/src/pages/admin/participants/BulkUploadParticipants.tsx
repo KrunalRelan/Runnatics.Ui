@@ -329,14 +329,16 @@ const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
               <Typography variant="body2">
                 <strong>File:</strong> {uploadResult.fileName}
               </Typography>
-              <Typography variant="body2">
-                <strong>Status:</strong>{" "}
+              <Box display="flex" alignItems="center" gap={1}>
+                <Typography variant="body2">
+                  <strong>Status:</strong>
+                </Typography>
                 <Chip
                   size="small"
                   label={uploadResult.status}
                   color={uploadResult.status === "Validated" ? "success" : "warning"}
                 />
-              </Typography>
+              </Box>
             </Box>
 
             {uploadResult.errors && uploadResult.errors.length > 0 && (
