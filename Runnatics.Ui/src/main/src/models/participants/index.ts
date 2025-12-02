@@ -6,3 +6,4 @@ export * from './ProcessResponse';
 export * from './ProcessImportRequest';
 export * from './ParticipantSearchRequest';
 export * from './ParticipantSearchResponse';
+export * from './AddParticipantRequest';
