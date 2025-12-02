@@ -85,6 +85,21 @@ const ViewRaces: React.FC = () => {
   const isInitialMount = useRef(true);
   const isRaceChanging = useRef(false);
 
+  const genderMap: Record<string, number> = {
+    male: 1,
+    female: 2,
+    other: 3,
+    all: 0,
+  };
+
+  const statusMap: Record<string, number> = {
+    registered: 1,
+    completed: 2,
+    dnf: 3,
+    noShow: 4,
+    all: 0,
+  };
+
   // Reusable function to fetch participants
   const fetchParticipants = async (
     evtId: string,
@@ -99,6 +114,9 @@ const ViewRaces: React.FC = () => {
         rcId,
         {
           searchString: currentFilters.nameOrBib || "",
+          status: currentFilters.status === "all" ? null : statusMap[String(currentFilters.status)],
+          gender: currentFilters.gender === "all" ? null : genderMap[String(currentFilters.gender)],
+          category: currentFilters.category === "all" ? null : currentFilters.category,
           sortFieldName: "bib",
           sortDirection: 0,
           pageNumber: currentFilters.pageNumber,
@@ -224,7 +242,7 @@ const ViewRaces: React.FC = () => {
         isInitialMount.current = false;
         isRaceChanging.current = false;
       } catch (err: any) {
-      
+
         setError(err.response?.data?.message || "Failed to fetch race details");
       } finally {
         setLoading(false);
@@ -238,19 +256,19 @@ const ViewRaces: React.FC = () => {
   useEffect(() => {
     // Skip if initial mount (already fetched in previous effect)
     if (isInitialMount.current) {
-     
+
       return;
     }
 
     // Skip if race is changing (already fetching in previous effect)
     if (isRaceChanging.current) {
-     
+
       return;
     }
 
     // Skip if no eventId or selectedRaceId
     if (!eventId || !selectedRaceId || loading) {
-    
+
       return;
     }
 
@@ -259,15 +277,15 @@ const ViewRaces: React.FC = () => {
     }, 300); // Debounce for search
 
     return () => clearTimeout(timeoutId);
-  }, 
-  [
-    filters.pageNumber,
-    filters.pageSize,
-    filters.nameOrBib,
-    filters.status,
-    filters.gender,
-    filters.category,
-  ]); // DO NOT include eventId, selectedRaceId, or loading
+  },
+    [
+      filters.pageNumber,
+      filters.pageSize,
+      filters.nameOrBib,
+      filters.status,
+      filters.gender,
+      filters.category,
+    ]); // DO NOT include eventId, selectedRaceId, or loading
 
   // Handlers
   const handleBack = () => {
@@ -293,16 +311,16 @@ const ViewRaces: React.FC = () => {
       case 2:
         break;
       case 3:
-     
+
         break;
       case 4:
-    
+
         break;
       case 5:
-       
+
         break;
       case 6:
-       
+
         break;
       default:
         break;
@@ -357,7 +375,7 @@ const ViewRaces: React.FC = () => {
   };
 
   const handleRefresh = () => {
-  
+
     if (eventId && selectedRaceId) {
       fetchParticipants(eventId, selectedRaceId, filters);
     }
@@ -406,7 +424,7 @@ const ViewRaces: React.FC = () => {
   };
 
   const handleAddParticipant = () => {
-  
+
     if (eventId && selectedRaceId) {
       fetchParticipants(eventId, selectedRaceId, filters);
     }
@@ -421,7 +439,7 @@ const ViewRaces: React.FC = () => {
   };
 
   const handleBulkUploadComplete = async () => {
-   
+
     if (eventId && selectedRaceId) {
       await fetchParticipants(eventId, selectedRaceId, filters);
     }
@@ -788,8 +806,11 @@ const ViewRaces: React.FC = () => {
                 >
                   <MenuItem value="all">All Status</MenuItem>
                   <MenuItem value="registered">Registered</MenuItem>
-                  <MenuItem value="pending">Pending</MenuItem>
-                  <MenuItem value="cancelled">Cancelled</MenuItem>
+                  <MenuItem value="completed">Completed</MenuItem>
+                  {/* <MenuItem value="pending">Pending</MenuItem> */}
+                  <MenuItem value="dnf">DNF</MenuItem>
+                  <MenuItem value="noShow">No Show</MenuItem>
+                  {/* <MenuItem value="cancelled">Cancelled</MenuItem> */}
                 </Select>
               </FormControl>
               <FormControl sx={{ flex: 1, minWidth: 200 }} size="small">
