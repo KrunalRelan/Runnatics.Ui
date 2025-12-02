@@ -49,6 +49,7 @@ import {
 import { RaceService } from "@/main/src/services/RaceService";
 import { ParticipantService } from "@/main/src/services/ParticipantService";
 import AddParticipant from "@/main/src/pages/admin/participants/AddParticipant";
+import EditParticipant from "@/main/src/pages/admin/participants/EditParticipant";
 import BulkUploadParticipants from "@/main/src/pages/admin/participants/BulkUploadParticipants";
 
 const ViewRaces: React.FC = () => {
@@ -70,6 +71,10 @@ const ViewRaces: React.FC = () => {
   // Add Participant Dialog State
   const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
   const [openBulkUploadDialog, setOpenBulkUploadDialog] = useState<boolean>(false);
+
+  // Edit Participant Dialog State
+  const [openEditDialog, setOpenEditDialog] = useState<boolean>(false);
+  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
 
   // Refs to track initial mount and prevent duplicate calls
   const isInitialMount = useRef(true);
@@ -354,11 +359,24 @@ const ViewRaces: React.FC = () => {
   };
 
   const handleEditParticipant = (participant: Participant) => {
-   
+    setSelectedParticipant(participant);
+    setOpenEditDialog(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setOpenEditDialog(false);
+    setSelectedParticipant(null);
+  };
+
+  const handleUpdateParticipant = () => {
+    // Refresh participant list after update
+    if (eventId && selectedRaceId) {
+      fetchParticipants(eventId, selectedRaceId, filters);
+    }
   };
 
   const handleDeleteParticipant = (participant: Participant) => {
-   
+   console.log("Delete participant", participant);
   };
 
   const handleOpenAddDialog = () => {
@@ -369,7 +387,7 @@ const ViewRaces: React.FC = () => {
     setOpenAddDialog(false);
   };
 
-  const handleAddParticipant = (participant: Participant) => {
+  const handleAddParticipant = () => {
   
     if (eventId && selectedRaceId) {
       fetchParticipants(eventId, selectedRaceId, filters);
@@ -848,6 +866,14 @@ const ViewRaces: React.FC = () => {
         onAdd={handleAddParticipant}
         eventId={eventId}
         raceId={selectedRaceId}
+      />
+
+      {/* Edit Participant Dialog */}
+      <EditParticipant
+        open={openEditDialog}
+        onClose={handleCloseEditDialog}
+        onUpdate={handleUpdateParticipant}
+        participant={selectedParticipant}
       />
 
       {/* Bulk Upload Participants Dialog */}

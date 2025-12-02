@@ -1,7 +1,7 @@
 import { ServiceUrl } from '../models';
 import { apiClient } from '../utils/axios.config';
 import { AxiosResponse } from 'axios';
-import { UploadResponse, ProcessResponse, ProcessImportRequest, ParticipantSearchRequest, ParticipantSearchResponse, AddParticipantRequest } from '../models/participants';
+import { UploadResponse, ProcessResponse, ProcessImportRequest, ParticipantSearchRequest, ParticipantSearchResponse, ParticipantRequest } from '../models/participants';
 import { ResponseBase } from '../models/ResponseBase';
 
 export class ParticipantService {
@@ -81,10 +81,20 @@ export class ParticipantService {
     static async addParticipant(
         eventId: string,
         raceId: string,
-        participant: AddParticipantRequest
+        participant: ParticipantRequest
     ): Promise<void> {
         await apiClient.post(
             ServiceUrl.addParticipant(eventId, raceId),
+            participant
+        );
+    }
+
+    static async editParticipant(
+        participantId: string,
+        participant: ParticipantRequest
+    ): Promise<void> {
+        await apiClient.put(
+            ServiceUrl.editParticipant(participantId),
             participant
         );
     }

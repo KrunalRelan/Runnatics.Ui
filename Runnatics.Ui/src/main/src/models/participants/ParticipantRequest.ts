@@ -1,4 +1,4 @@
-export interface AddParticipantRequest {
+export interface ParticipantRequest {
   bibNumber: string;
   firstName?: string;
   lastName?: string;
