@@ -99,4 +99,16 @@ export class ParticipantService {
         );
     }
 
+    /**
+     * Delete a participant
+     * Note: JWT token is automatically included via interceptor
+     */
+    static async deleteParticipant(
+        participantId: string
+    ): Promise<void> {
+        await apiClient.put(
+            ServiceUrl.deleteParticipant(participantId)
+        );
+    }
+
 }

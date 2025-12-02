@@ -27,5 +27,6 @@ export const ServiceUrl = {
     searchParticipants: (eventId: string, raceId: string) => `participants/${eventId}/${raceId}/search`,
     addParticipant: (eventId: string, raceId: string) => `participants/${eventId}/${raceId}/add-participant`,
     editParticipant: (participantId: string) => `participants/${participantId}/edit-participant`,
+    deleteParticipant: (participantId: string) => `participants/${participantId}/delete-participant`,
 };
 

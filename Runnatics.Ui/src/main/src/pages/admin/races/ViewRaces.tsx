@@ -50,6 +50,7 @@ import { RaceService } from "@/main/src/services/RaceService";
 import { ParticipantService } from "@/main/src/services/ParticipantService";
 import AddParticipant from "@/main/src/pages/admin/participants/AddParticipant";
 import EditParticipant from "@/main/src/pages/admin/participants/EditParticipant";
+import DeleteParticipant from "@/main/src/pages/admin/participants/DeleteParticipant";
 import BulkUploadParticipants from "@/main/src/pages/admin/participants/BulkUploadParticipants";
 
 const ViewRaces: React.FC = () => {
@@ -75,6 +76,10 @@ const ViewRaces: React.FC = () => {
   // Edit Participant Dialog State
   const [openEditDialog, setOpenEditDialog] = useState<boolean>(false);
   const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
+
+  // Delete Participant Dialog State
+  const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
+  const [participantToDelete, setParticipantToDelete] = useState<Participant | null>(null);
 
   // Refs to track initial mount and prevent duplicate calls
   const isInitialMount = useRef(true);
@@ -376,7 +381,20 @@ const ViewRaces: React.FC = () => {
   };
 
   const handleDeleteParticipant = (participant: Participant) => {
-   console.log("Delete participant", participant);
+    setParticipantToDelete(participant);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setOpenDeleteDialog(false);
+    setParticipantToDelete(null);
+  };
+
+  const handleConfirmDelete = () => {
+    // Refresh participant list after delete
+    if (eventId && selectedRaceId) {
+      fetchParticipants(eventId, selectedRaceId, filters);
+    }
   };
 
   const handleOpenAddDialog = () => {
@@ -874,6 +892,14 @@ const ViewRaces: React.FC = () => {
         onClose={handleCloseEditDialog}
         onUpdate={handleUpdateParticipant}
         participant={selectedParticipant}
+      />
+
+      {/* Delete Participant Dialog */}
+      <DeleteParticipant
+        open={openDeleteDialog}
+        onClose={handleCloseDeleteDialog}
+        onDelete={handleConfirmDelete}
+        participant={participantToDelete}
       />
 
       {/* Bulk Upload Participants Dialog */}
