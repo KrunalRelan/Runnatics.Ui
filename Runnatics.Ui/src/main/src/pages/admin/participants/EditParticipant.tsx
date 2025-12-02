@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -16,24 +16,23 @@ import {
   Checkbox,
   Alert,
   CircularProgress,
+  Snackbar,
 } from "@mui/material";
 import { Participant } from "@/main/src/models/races/Participant";
 import { ParticipantService } from "@/main/src/services/ParticipantService";
 
-interface AddParticipantProps {
+interface EditParticipantProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (participant: Participant) => void;
-  eventId?: string;
-  raceId?: string;
+  onUpdate: (participant: Participant) => void;
+  participant: Participant | null;
 }
 
-const AddParticipant: React.FC<AddParticipantProps> = ({
+const EditParticipant: React.FC<EditParticipantProps> = ({
   open,
   onClose,
-  onAdd,
-  eventId,
-  raceId,
+  onUpdate,
+  participant,
 }) => {
   const [formData, setFormData] = useState<Participant>({
     bib: "",
@@ -42,7 +41,7 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
     fullName: "",
     email: "",
     phone: "",
-    gender: "Male",
+    gender: "",
     category: "",
     status: "Registered",
     checkIn: false,
@@ -51,6 +50,35 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "info";
+  }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  // Populate form when participant prop changes
+  useEffect(() => {
+    if (participant && open) {
+      setFormData({
+        id: participant.id,
+        bib: participant.bib || "",
+        firstName: participant.firstName || "",
+        lastName: participant.lastName || "",
+        fullName: participant.fullName || "",
+        email: participant.email || "",
+        phone: participant.phone || "",
+        gender: participant.gender || "",
+        category: participant.category || "",
+        status: participant.status || "Registered",
+        checkIn: participant.checkIn || false,
+        chipId: participant.chipId || "",
+      });
+    }
+  }, [participant, open]);
 
   const handleFormChange = (
     field: keyof Participant,
@@ -67,7 +95,7 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
       fullName: "",
       email: "",
       phone: "",
-      gender: "Male",
+      gender: "",
       category: "",
       status: "Registered",
       checkIn: false,
@@ -89,8 +117,8 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
       return;
     }
 
-    if (!eventId || !raceId) {
-      setError("Event ID or Race ID is missing");
+    if (!formData.id) {
+      setError("Participant ID is missing");
       return;
     }
 
@@ -98,8 +126,8 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
     setError(null);
 
     try {
-      // Call API to add participant - only send non-empty values
-      await ParticipantService.addParticipant(eventId, raceId, {
+      // Call API to edit participant - only send non-empty values
+      await ParticipantService.editParticipant(formData.id, {
         bibNumber: formData.bib,
         firstName: formData.firstName?.trim() || undefined,
         lastName: formData.lastName?.trim() || undefined,
@@ -115,22 +143,31 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
       const fullName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim();
 
       // Create participant object for parent component callback
-      const participantToAdd: Participant = {
+      const updatedParticipant: Participant = {
         ...formData,
         fullName: fullName || undefined,
         name: fullName || undefined,
-        raceId: raceId,
-        eventId: eventId,
       };
 
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: "Participant updated successfully!",
+        severity: "success",
+      });
+
       // Call parent callback to refresh the list
-      onAdd(participantToAdd);
-      handleClose();
+      onUpdate(updatedParticipant);
+
+      // Close dialog after a short delay to allow user to see the success message
+      setTimeout(() => {
+        handleClose();
+      }, 1500);
     } catch (err: any) {
-      console.error("Error adding participant:", err);
+      console.error("Error editing participant:", err);
 
       // Extract error message from various possible response formats
-      let errorMessage = "Failed to add participant. Please try again.";
+      let errorMessage = "Failed to update participant. Please try again.";
 
       if (err.response?.data) {
         const data = err.response.data;
@@ -167,18 +204,19 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={(_event, reason) => {
-        if (reason === "backdropClick" || reason === "escapeKeyDown") {
-          return;
-        }
-        handleClose();
-      }}
-      maxWidth="sm"
-      fullWidth
-    >
-      <DialogTitle>Add New Participant</DialogTitle>
+    <>
+      <Dialog
+        open={open}
+        onClose={(_event, reason) => {
+          if (reason === "backdropClick" || reason === "escapeKeyDown") {
+            return;
+          }
+          handleClose();
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+      <DialogTitle>Edit Participant</DialogTitle>
       <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2, mt: 2 }} onClose={() => setError(null)}>
@@ -311,11 +349,28 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
           disabled={loading || !formData.bib}
           startIcon={loading ? <CircularProgress size={20} /> : null}
         >
-          {loading ? "Adding..." : "Add Participant"}
+          {loading ? "Updating..." : "Update Participant"}
         </Button>
       </DialogActions>
     </Dialog>
+
+    {/* Success/Error Snackbar */}
+    <Snackbar
+      open={snackbar.open}
+      autoHideDuration={3000}
+      onClose={() => setSnackbar({ ...snackbar, open: false })}
+      anchorOrigin={{ vertical: "top", horizontal: "right" }}
+    >
+      <Alert
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        severity={snackbar.severity}
+        sx={{ width: "100%" }}
+      >
+        {snackbar.message}
+      </Alert>
+    </Snackbar>
+    </>
   );
 };
 
-export default AddParticipant;
+export default EditParticipant;

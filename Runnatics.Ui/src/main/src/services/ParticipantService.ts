@@ -1,7 +1,7 @@
 import { ServiceUrl } from '../models';
 import { apiClient } from '../utils/axios.config';
 import { AxiosResponse } from 'axios';
-import { UploadResponse, ProcessResponse, ProcessImportRequest, ParticipantSearchRequest, ParticipantSearchResponse } from '../models/participants';
+import { UploadResponse, ProcessResponse, ProcessImportRequest, ParticipantSearchRequest, ParticipantSearchResponse, ParticipantRequest } from '../models/participants';
 import { ResponseBase } from '../models/ResponseBase';
 
 export class ParticipantService {
@@ -72,6 +72,43 @@ export class ParticipantService {
             );
 
         return response.data;
+    }
+
+    /**
+     * Add a new participant to a race
+     * Note: JWT token is automatically included via interceptor
+     */
+    static async addParticipant(
+        eventId: string,
+        raceId: string,
+        participant: ParticipantRequest
+    ): Promise<void> {
+        await apiClient.post(
+            ServiceUrl.addParticipant(eventId, raceId),
+            participant
+        );
+    }
+
+    static async editParticipant(
+        participantId: string,
+        participant: ParticipantRequest
+    ): Promise<void> {
+        await apiClient.put(
+            ServiceUrl.editParticipant(participantId),
+            participant
+        );
+    }
+
+    /**
+     * Delete a participant
+     * Note: JWT token is automatically included via interceptor
+     */
+    static async deleteParticipant(
+        participantId: string
+    ): Promise<void> {
+        await apiClient.put(
+            ServiceUrl.deleteParticipant(participantId)
+        );
     }
 
 }
