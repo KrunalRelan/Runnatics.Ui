@@ -1,12 +1,13 @@
 import DataGrid from "@/main/src/components/DataGrid";
 import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
 import { Edit, Delete, Add as AddIcon } from "@mui/icons-material";
-import { Box, Button, Card, CardContent, Divider, IconButton, Stack, Typography } from "@mui/material";
+import { Box, Button, Card, CardContent, Chip, Divider, IconButton, Stack, Typography } from "@mui/material";
 import { ColDef } from "ag-grid-community";
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import AddCheckpoint from "./AddCheckpoint";
+import { useCallback, useEffect, useState } from "react";
 import { CheckpointsService } from "@/main/src/services/CheckpointsService";
+import AddOrEditCheckpoint from "./AddOrEditCheckpoint";
+import { useParams } from "react-router-dom";
+import { CheckpointFilters, defaultCheckpointFilters } from "@/main/src/models/checkpoints/CheckpointFilters";
 
 interface ViewCheckPointsProps {
     eventId: string;
@@ -15,13 +16,15 @@ interface ViewCheckPointsProps {
 
 const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
     const { eventId, raceId } = useParams<{ eventId: string; raceId: string }>();
-    const navigate = useNavigate();
 
     const [loading, setLoading] = useState<boolean>(false);
-    const [localCheckpoint, setLocalCheckpoint] = useState<Checkpoint[]>([]);
+    const [localCheckpoints, setLocalCheckpoints] = useState<Checkpoint[]>([]);
     const [totalCount, setTotalCount] = useState<number>(0);
     const [totalPages, setTotalPages] = useState<number>(0);
     const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
+    const [checkpointToEdit, setCheckpointToEdit] = useState<Checkpoint | null>(null);
+    const [filters, setFilters] = useState<CheckpointFilters>(defaultCheckpointFilters);
+
     const handleOpenAddDialog = () => setOpenAddDialog(true);
     const handleCloseAddDialog = () => setOpenAddDialog(false);
 
@@ -36,7 +39,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                     raceId
                 });
                 const checkpoints = response.message || [];
-                setLocalCheckpoint(checkpoints);
+                setLocalCheckpoints(checkpoints);
                 setTotalCount(checkpoints.length);
                 setTotalPages(1); // Or calculate based on pagination
             } catch (err) {
@@ -49,19 +52,35 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
         fetchAllCheckpoints();
     }, [eventId, raceId]);
 
-    const handleAddCheckpoint = () => {
+    const handleAddOrEditCheckpoint = () => {
         // fetchCheckpoints(filters);
     };
 
-    // Default Column Definition
-    const defaultColDef = useMemo<ColDef>(
-        () => ({
-            sortable: true,
-            filter: true,
-            resizable: true,
-        }),
-        []
-    );
+      const IsMandatoryCellRenderer = useCallback((props: any) => {
+        const isMandatory = props.value;
+        return (
+          <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+            <Chip
+              label={isMandatory ? "Yes" : "No"}
+              color={isMandatory ? "success" : "error"}
+              size="small"
+              variant={isMandatory ? "filled" : "outlined"}
+            />
+          </Box>
+        );
+      }, []);
+
+    const handlePageChange = (page: number) => {
+        setFilters((prev) => ({ ...prev, pageNumber: page }));
+    };
+
+    const handlePageSizeChange = (size: number) => {
+        setFilters((prev) => ({
+            ...prev,
+            pageNumber: 1,
+            pageSize: size,
+        }));
+    };
 
     // Define grid columns
     const columnDefs: ColDef<Checkpoint>[] = [
@@ -84,12 +103,14 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                 params.data?.deviceName || "N/A",
         },
         {
-            field: "isMandatory",
+            // field: "isMandatory",
             headerName: "Is Mandatory",
             flex: 0.8,
             minWidth: 80,
             sortable: true,
             filter: true,
+            cellRenderer: IsMandatoryCellRenderer,
+            valueGetter: (params) => params.data?.isMandatory || false,
         },
         {
             field: "distanceFromStart",
@@ -124,7 +145,8 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                         color="primary"
                         onClick={(e) => {
                             e.stopPropagation();
-                            //   handleEditParticipant(params.data);
+                            setCheckpointToEdit(params.data); // Set the checkpoint to edit
+                            setOpenAddDialog(true);           // Open the dialog
                         }}
                         title="Edit"
                     >
@@ -171,38 +193,37 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                 <Divider sx={{ mb: 3 }} />
 
                 <DataGrid<Checkpoint>
-                    rowData={localCheckpoint}
+                    rowData={localCheckpoints}
                     columnDefs={columnDefs}
-                    defaultColDef={defaultColDef}
-                    domLayout="normal"
-                    height={400}
                     pagination={false}
-                    suppressPaginationPanel={true}
+                    domLayout="autoHeight"
+                    enableSorting={true}
+                    enableFiltering={true}
                     animateRows={true}
-                    rowHeight={50}
-                    headerHeight={50}
                     loading={loading}
-                    // onSortChanged={handleSortChanged}
-                    overlayLoadingTemplate='<span class="ag-overlay-loading-center">Loading checkpoints...</span>'
-                    overlayNoRowsTemplate='<span class="ag-overlay-no-rows-center">No checkpoints to display</span>'
                     useCustomPagination={true}
-                    // pageNumber={searchCriteria.pageNumber}
-                    // paginationPageSize={searchCriteria.pageSize}
+                    pageNumber={filters.pageNumber}
                     totalRecords={totalCount}
                     totalPages={totalPages}
-                // onPageChange={handlePageChange}
-                // onPageSizeChange={handlePageSizeChange}
+                    paginationPageSize={filters.pageSize}
+                    onPageChange={handlePageChange}
+                    onPageSizeChange={handlePageSizeChange}
                 />
             </CardContent>
 
             {/* Add Checkpoint Dialog */}
-            <AddCheckpoint
+            <AddOrEditCheckpoint
                 open={openAddDialog}
-                onClose={handleCloseAddDialog}
-                onAdd={handleAddCheckpoint}
+                onClose={() => {
+                    handleCloseAddDialog();
+                    setCheckpointToEdit(null); // Reset after close
+                }}
+                onClick={handleAddOrEditCheckpoint}
                 eventId={eventId}
                 raceId={raceId}
+                checkpointToEdit={checkpointToEdit ?? undefined}
             />
+
         </Card>
     );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Dialog,
     DialogTitle,
@@ -15,20 +15,22 @@ import {
 import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
 import { CheckpointsService } from "@/main/src/services/CheckpointsService";
 
-interface AddCheckpointProps {
+interface AddOrEditCheckpointProps {
     open: boolean;
     onClose: () => void;
-    onAdd: (checkpoint: Checkpoint) => void;
+    onClick: (checkpoint: Checkpoint) => void;
     eventId?: string;
     raceId?: string;
+    checkpointToEdit?: Checkpoint; // Optional for edit mode
 }
 
-const AddCheckpoint: React.FC<AddCheckpointProps> = ({
+const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
     open,
     onClose,
-    onAdd,
+    onClick,
     eventId,
     raceId,
+    checkpointToEdit,
 }) => {
     const [formData, setFormData] = useState<Checkpoint>({
         id: "",
@@ -42,6 +44,24 @@ const AddCheckpoint: React.FC<AddCheckpointProps> = ({
 
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Initialize formData for edit mode
+    useEffect(() => {
+        if (open && checkpointToEdit) {
+            setFormData(checkpointToEdit);
+        } else if (open) {
+            setFormData({
+                id: "",
+                name: "",
+                deviceId: "",
+                parentDeviceId: "",
+                isMandatory: false,
+                distanceFromStart: 0,
+                lastUpdateMode: "",
+            });
+        }
+        setError(null);
+    }, [open, checkpointToEdit]);
 
     const handleFormChange = (
         field: keyof Checkpoint,
@@ -85,41 +105,40 @@ const AddCheckpoint: React.FC<AddCheckpointProps> = ({
         setError(null);
 
         try {
-            await CheckpointsService.createCheckpoint(eventId, raceId, {
-                name: formData.name,
-                deviceId: formData.deviceId,
-                parentDeviceId: formData.parentDeviceId,
-                isMandatory: formData.isMandatory,
-                distanceFromStart: formData.distanceFromStart,
-                lastUpdateMode: formData.lastUpdateMode
-            });
-
-            // Create checkpoint object for parent component callback
-            const checkpointToAdd: Checkpoint = {
-                ...formData,
-                name: formData.name,
-                deviceId: formData.deviceId,
-                parentDeviceId: formData.parentDeviceId,
-                isMandatory: formData.isMandatory,
-                distanceFromStart: formData.distanceFromStart,
-                lastUpdateMode: formData.lastUpdateMode
-            };
-
-            // Call parent callback to refresh the list
-            onAdd(checkpointToAdd);
+            if (checkpointToEdit) {
+                // EDIT MODE
+                await CheckpointsService.updateCheckpoint(eventId, raceId, formData.id, {
+                    name: formData.name,
+                    deviceId: formData.deviceId,
+                    parentDeviceId: formData.parentDeviceId,
+                    isMandatory: formData.isMandatory,
+                    distanceFromStart: formData.distanceFromStart,
+                    lastUpdateMode: formData.lastUpdateMode
+                });
+                onClick(formData); // or use onUpdate if you want a separate callback
+            } else {
+                // ADD MODE
+                await CheckpointsService.createCheckpoint(eventId, raceId, {
+                    name: formData.name,
+                    deviceId: formData.deviceId,
+                    parentDeviceId: formData.parentDeviceId,
+                    isMandatory: formData.isMandatory,
+                    distanceFromStart: formData.distanceFromStart,
+                    lastUpdateMode: formData.lastUpdateMode
+                });
+                onClick(formData);
+            }
             handleClose();
         } catch (err: any) {
-            console.error("Error adding checkpoint:", err);
+            console.error("Error saving checkpoint:", err);
 
-            // Extract error message from various possible response formats
-            let errorMessage = "Failed to add checkpoint. Please try again.";
+            let errorMessage = checkpointToEdit
+                ? "Failed to update checkpoint. Please try again."
+                : "Failed to add checkpoint. Please try again.";
 
             if (err.response?.data) {
                 const data = err.response.data;
-
-                // Check for validation errors from ASP.NET
                 if (data.errors && typeof data.errors === 'object') {
-                    // Format validation errors
                     const validationErrors = Object.entries(data.errors)
                         .map(([field, messages]: [string, any]) => {
                             const msgs = Array.isArray(messages) ? messages.join(', ') : messages;
@@ -127,17 +146,11 @@ const AddCheckpoint: React.FC<AddCheckpointProps> = ({
                         })
                         .join('; ');
                     errorMessage = validationErrors;
-                }
-                // Check for title/detail error format
-                else if (data.title || data.detail) {
+                } else if (data.title || data.detail) {
                     errorMessage = data.detail || data.title;
-                }
-                // Check for simple message string
-                else if (typeof data === 'string') {
+                } else if (typeof data === 'string') {
                     errorMessage = data;
-                }
-                // Check for message property
-                else if (data.message) {
+                } else if (data.message) {
                     errorMessage = data.message;
                 }
             }
@@ -160,7 +173,9 @@ const AddCheckpoint: React.FC<AddCheckpointProps> = ({
             maxWidth="sm"
             fullWidth
         >
-            <DialogTitle>Add New Checkpoint</DialogTitle>
+            <DialogTitle>
+                {checkpointToEdit ? "Edit Checkpoint" : "Add New Checkpoint"}
+            </DialogTitle>
             <DialogContent>
                 {error && (
                     <Alert severity="error" sx={{ mb: 2, mt: 2 }} onClose={() => setError(null)}>
@@ -169,8 +184,6 @@ const AddCheckpoint: React.FC<AddCheckpointProps> = ({
                 )}
                 <Stack spacing={2} sx={{ mt: error ? 1 : 2 }}>
                     <Stack direction="row" spacing={2}>
-
-                        {/* Name - REQUIRED */}
                         <TextField
                             label="Checkpoint Name"
                             value={formData.name}
@@ -180,8 +193,6 @@ const AddCheckpoint: React.FC<AddCheckpointProps> = ({
                             size="small"
                             helperText="Required field"
                         />
-
-                        {/* Contact Information - Optional */}
                         <TextField
                             label="Distance From Start"
                             type="number"
@@ -191,8 +202,6 @@ const AddCheckpoint: React.FC<AddCheckpointProps> = ({
                             size="small"
                         />
                     </Stack>
-
-                    {/* Device - Required*/}
                     <Stack direction="row" spacing={2}>
                         <TextField
                             label="Device Name"
@@ -211,7 +220,6 @@ const AddCheckpoint: React.FC<AddCheckpointProps> = ({
                             size="small"
                         />
                     </Stack>
-
                     <FormControlLabel
                         control={
                             <Checkbox
@@ -233,11 +241,17 @@ const AddCheckpoint: React.FC<AddCheckpointProps> = ({
                     disabled={loading || !formData.name}
                     startIcon={loading ? <CircularProgress size={20} /> : null}
                 >
-                    {loading ? "Adding..." : "Add Checkpoint"}
+                    {loading
+                        ? checkpointToEdit
+                            ? "Updating..."
+                            : "Adding..."
+                        : checkpointToEdit
+                            ? "Update Checkpoint"
+                            : "Add Checkpoint"}
                 </Button>
             </DialogActions>
         </Dialog>
     );
 };
 
-export default AddCheckpoint;
+export default AddOrEditCheckpoint;
