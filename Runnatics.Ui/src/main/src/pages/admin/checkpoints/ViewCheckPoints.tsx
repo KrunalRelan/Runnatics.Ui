@@ -56,6 +56,23 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
         // fetchCheckpoints(filters);
     };
 
+    const handleDelete = (checkpoint: Checkpoint) => {
+        if (!eventId || !raceId || !checkpoint.id) return;
+        setLoading(true);
+        CheckpointsService.deleteCheckpoint(eventId, raceId, checkpoint.id)
+            .then(() => {
+                setLocalCheckpoints((prev) => prev.filter(cp => cp.id !== checkpoint.id));
+                setTotalCount((prev) => prev - 1);
+            })
+            .catch((err) => {
+                // Optionally show error notification
+                console.error('Failed to delete checkpoint:', err);
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    };
+
     const IsMandatoryCellRenderer = useCallback((props: any) => {
         const isMandatory = props.value;
         return (
@@ -167,7 +184,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                         color="error"
                         onClick={(e) => {
                             e.stopPropagation();
-                            //   handleDeleteParticipant(params.data);
+                            handleDelete(params.data);
                         }}
                         title="Delete"
                     >
