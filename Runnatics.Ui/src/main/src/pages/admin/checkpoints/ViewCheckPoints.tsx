@@ -56,19 +56,19 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
         // fetchCheckpoints(filters);
     };
 
-      const IsMandatoryCellRenderer = useCallback((props: any) => {
+    const IsMandatoryCellRenderer = useCallback((props: any) => {
         const isMandatory = props.value;
         return (
-          <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
-            <Chip
-              label={isMandatory ? "Yes" : "No"}
-              color={isMandatory ? "success" : "error"}
-              size="small"
-              variant={isMandatory ? "filled" : "outlined"}
-            />
-          </Box>
+            <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+                <Chip
+                    label={isMandatory ? "Yes" : "No"}
+                    color={isMandatory ? "success" : "error"}
+                    size="small"
+                    variant={isMandatory ? "filled" : "outlined"}
+                />
+            </Box>
         );
-      }, []);
+    }, []);
 
     const handlePageChange = (page: number) => {
         setFilters((prev) => ({ ...prev, pageNumber: page }));
@@ -84,6 +84,17 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
 
     // Define grid columns
     const columnDefs: ColDef<Checkpoint>[] = [
+        {
+            headerName: "#",
+            valueGetter: (params) => {
+                const pageSize = filters.pageSize || 10;
+                const pageNumber = filters.pageNumber || 1;
+                return (pageNumber - 1) * pageSize + (params.node?.rowIndex ?? 0) + 1;
+            },
+            width: 80,
+            sortable: false,
+            filter: false,
+        },
         {
             field: "name",
             headerName: "Name",
@@ -103,7 +114,6 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                 params.data?.deviceName || "N/A",
         },
         {
-            // field: "isMandatory",
             headerName: "Is Mandatory",
             flex: 0.8,
             minWidth: 80,

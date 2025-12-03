@@ -204,6 +204,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                     </Stack>
                     <Stack direction="row" spacing={2}>
                         <TextField
+                            select
                             label="Device Name"
                             value={formData.deviceId}
                             onChange={(e) => handleFormChange("deviceId", e.target.value)}
@@ -211,14 +212,25 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                             fullWidth
                             size="small"
                             helperText="Required field"
-                        />
+                        >
+                            <option value="">Select Device</option>
+                            <option value="1">Device 1</option>
+                            <option value="2">Device 2</option>
+                            <option value="3">Device 3</option>
+                        </TextField>
                         <TextField
+                            select
                             label="Parent Device Name"
                             value={formData.parentDeviceId}
                             onChange={(e) => handleFormChange("parentDeviceId", e.target.value)}
                             fullWidth
                             size="small"
-                        />
+                        >
+                            <option value="">Select Parent Device</option>
+                            <option value="1">Parent Device 1</option>
+                            <option value="2">Parent Device 2</option>
+                            <option value="3">Parent Device 3</option>
+                        </TextField>
                     </Stack>
                     <FormControlLabel
                         control={
