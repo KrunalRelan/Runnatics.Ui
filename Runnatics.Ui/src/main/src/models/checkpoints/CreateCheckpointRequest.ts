@@ -1,5 +1,4 @@
-export interface Checkpoint {
-  id: string;
+export interface CreateCheckpointRequest {
   name: string;
   deviceId: string; 
   parentDeviceId?: string;

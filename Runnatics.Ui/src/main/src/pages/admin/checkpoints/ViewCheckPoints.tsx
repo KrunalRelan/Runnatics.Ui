@@ -1,9 +1,12 @@
 import DataGrid from "@/main/src/components/DataGrid";
-import { Checkpoint } from "@/main/src/models/checkpoints/CheckPoint";
+import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
 import { Edit, Delete, Add as AddIcon } from "@mui/icons-material";
 import { Box, Button, Card, CardContent, Divider, IconButton, Stack, Typography } from "@mui/material";
 import { ColDef } from "ag-grid-community";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import AddCheckpoint from "./AddCheckpoint";
+import { CheckpointsService } from "@/main/src/services/CheckpointsService";
 
 interface ViewCheckPointsProps {
     eventId: string;
@@ -11,11 +14,44 @@ interface ViewCheckPointsProps {
 }
 
 const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
+    const { eventId, raceId } = useParams<{ eventId: string; raceId: string }>();
+    const navigate = useNavigate();
 
     const [loading, setLoading] = useState<boolean>(false);
     const [localCheckpoint, setLocalCheckpoint] = useState<Checkpoint[]>([]);
     const [totalCount, setTotalCount] = useState<number>(0);
-    const [totalPages, setTotalPages] = useState<number>(0);  
+    const [totalPages, setTotalPages] = useState<number>(0);
+    const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
+    const handleOpenAddDialog = () => setOpenAddDialog(true);
+    const handleCloseAddDialog = () => setOpenAddDialog(false);
+
+    useEffect(() => {
+        const fetchAllCheckpoints = async () => {
+            if (!eventId || !raceId) return;
+            setLoading(true);
+            try {
+                // Replace with your actual API call
+                const response = await CheckpointsService.getAllCheckpoints({
+                    eventId,
+                    raceId
+                });
+                const checkpoints = response.message || [];
+                setLocalCheckpoint(checkpoints);
+                setTotalCount(checkpoints.length);
+                setTotalPages(1); // Or calculate based on pagination
+            } catch (err) {
+                // Handle error
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAllCheckpoints();
+    }, [eventId, raceId]);
+
+    const handleAddCheckpoint = () => {
+        // fetchCheckpoints(filters);
+    };
 
     // Default Column Definition
     const defaultColDef = useMemo<ColDef>(
@@ -26,7 +62,6 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
         }),
         []
     );
-    
 
     // Define grid columns
     const columnDefs: ColDef<Checkpoint>[] = [
@@ -39,7 +74,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
             filter: true,
         },
         {
-            field: "deviceName",
+            field: "deviceId",
             headerName: "Device Name",
             flex: 1,
             minWidth: 100,
@@ -49,7 +84,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                 params.data?.deviceName || "N/A",
         },
         {
-            field: "mandatory",
+            field: "isMandatory",
             headerName: "Is Mandatory",
             flex: 0.8,
             minWidth: 80,
@@ -128,7 +163,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                     <Button
                         variant="outlined"
                         startIcon={<AddIcon />}
-                    //   onClick={handleAddCheckpoint}
+                        onClick={handleOpenAddDialog}
                     >
                         Add Checkpoint
                     </Button>
@@ -155,10 +190,19 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                     // paginationPageSize={searchCriteria.pageSize}
                     totalRecords={totalCount}
                     totalPages={totalPages}
-                    // onPageChange={handlePageChange}
-                    // onPageSizeChange={handlePageSizeChange}
+                // onPageChange={handlePageChange}
+                // onPageSizeChange={handlePageSizeChange}
                 />
             </CardContent>
+
+            {/* Add Checkpoint Dialog */}
+            <AddCheckpoint
+                open={openAddDialog}
+                onClose={handleCloseAddDialog}
+                onAdd={handleAddCheckpoint}
+                eventId={eventId}
+                raceId={raceId}
+            />
         </Card>
     );
 }
