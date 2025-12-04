@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -61,16 +61,17 @@ const ViewRaces: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<number>(2);
-  const [selectedRaceId, setSelectedRaceId] = useState<string | undefined>(raceId);
+  const [selectedRaceId, setSelectedRaceId] = useState<string | undefined>(undefined);
 
-  // Fetch all races for the event on mount
+  // Ref to track if races have been fetched
+  const racesInitialized = useRef(false);
+
+  // Fetch all races for the event on mount (only once)
   useEffect(() => {
     const fetchAllRaces = async () => {
-      if (!eventId) {
-        setError("Event ID is missing");
-        setLoading(false);
-        return;
-      }
+      if (!eventId || racesInitialized.current) return;
+
+      racesInitialized.current = true;
 
       try {
         setLoading(true);
@@ -89,8 +90,9 @@ const ViewRaces: React.FC = () => {
         const fetchedRaces = racesResponse.message || [];
         setRaces(fetchedRaces);
 
-        const currentRaceId = raceId || fetchedRaces[0]?.id;
-        setSelectedRaceId(currentRaceId);
+        // Set initial selectedRaceId from URL or first race
+        const initialRaceId = raceId || fetchedRaces[0]?.id;
+        setSelectedRaceId(initialRaceId);
       } catch (err: any) {
         setError(err.response?.data?.message || "Failed to fetch races data");
         setLoading(false);
@@ -98,7 +100,15 @@ const ViewRaces: React.FC = () => {
     };
 
     fetchAllRaces();
-  }, [eventId, raceId]);
+  }, [eventId, raceId]); // Include both dependencies
+
+  // Sync URL raceId parameter with selectedRaceId when user navigates
+  useEffect(() => {
+    // Only update if we already have races loaded and raceId changed
+    if (racesInitialized.current && raceId && raceId !== selectedRaceId) {
+      setSelectedRaceId(raceId);
+    }
+  }, [raceId, selectedRaceId]);
 
   // Fetch selected race details when race changes
   useEffect(() => {

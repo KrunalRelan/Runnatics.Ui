@@ -64,8 +64,10 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
   const [participantToDelete, setParticipantToDelete] = useState<Participant | null>(null);
 
-  // Refs to track initial mount
+  // Refs to track initial mount and prevent duplicate calls
   const isInitialMount = useRef(true);
+  const prevEventId = useRef<string | undefined>(undefined);
+  const prevRaceId = useRef<string | undefined>(undefined);
 
   const genderMap: Record<string, number> = {
     male: 1,
@@ -142,10 +144,21 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     }
   };
 
-  // Initial fetch on mount
+  // Initial fetch on mount and when eventId or raceId changes
   useEffect(() => {
-    fetchParticipants(filters);
-    isInitialMount.current = false;
+    if (!eventId || !raceId) return;
+
+    // Only fetch if eventId or raceId actually changed
+    const hasChanged =
+      prevEventId.current !== eventId ||
+      prevRaceId.current !== raceId;
+
+    if (hasChanged) {
+      prevEventId.current = eventId;
+      prevRaceId.current = raceId;
+      fetchParticipants(filters);
+      isInitialMount.current = false;
+    }
   }, [eventId, raceId]);
 
   // Fetch participants when filters change (with debounce)
