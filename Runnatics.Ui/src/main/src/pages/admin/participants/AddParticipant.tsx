@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -19,6 +19,8 @@ import {
 } from "@mui/material";
 import { Participant } from "@/main/src/models/races/Participant";
 import { ParticipantService } from "@/main/src/services/ParticipantService";
+import { Race } from "@/main/src/models/races/Race";
+import { RaceService } from "@/main/src/services/RaceService";
 
 interface AddParticipantProps {
   open: boolean;
@@ -51,6 +53,50 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [races, setRaces] = useState<Race[]>([]);
+  const [selectedRaceId, setSelectedRaceId] = useState<string>(raceId || "");
+  const [racesLoading, setRacesLoading] = useState<boolean>(false);
+
+  // Fetch races when dialog opens and set initial selection
+  useEffect(() => {
+    const fetchRaces = async () => {
+      if (!open || !eventId) return;
+
+      setRacesLoading(true);
+      try {
+        const response = await RaceService.getAllRaces({
+          eventId,
+          searchCriteria: {
+            pageNumber: 1,
+            pageSize: 100,
+            sortFieldName: "startTime",
+            sortDirection: 1,
+          },
+        });
+
+        const fetchedRaces = response.message || [];
+        setRaces(fetchedRaces);
+
+        // Always pre-select the race from props (current race context)
+        // If raceId prop exists, use it; otherwise use first race
+        if (raceId) {
+          setSelectedRaceId(raceId);
+        } else if (fetchedRaces.length > 0) {
+          setSelectedRaceId(fetchedRaces[0]?.id || "");
+        }
+      } catch (err) {
+        console.error("Error fetching races:", err);
+      } finally {
+        setRacesLoading(false);
+      }
+    };
+
+    // Reset selected race when dialog opens
+    if (open) {
+      setSelectedRaceId(raceId || "");
+      fetchRaces();
+    }
+  }, [open, eventId, raceId]);
 
   const handleFormChange = (
     field: keyof Participant,
@@ -89,7 +135,7 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
       return;
     }
 
-    if (!eventId || !raceId) {
+    if (!eventId || !selectedRaceId) {
       setError("Event ID or Race ID is missing");
       return;
     }
@@ -99,7 +145,7 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
 
     try {
       // Call API to add participant - only send non-empty values
-      await ParticipantService.addParticipant(eventId, raceId, {
+      await ParticipantService.addParticipant(eventId, selectedRaceId, {
         bibNumber: formData.bib,
         firstName: formData.firstName?.trim() || undefined,
         lastName: formData.lastName?.trim() || undefined,
@@ -109,7 +155,8 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
         category: formData.category?.trim() || undefined,
         chipId: formData.chipId?.trim() || undefined,
         checkIn: formData.checkIn || false,
-      });
+        raceId: selectedRaceId, // Include raceId in request body
+      } as any);
 
       // Auto-generate fullName from firstName and lastName for local state
       const fullName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim();
@@ -119,7 +166,7 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
         ...formData,
         fullName: fullName || undefined,
         name: fullName || undefined,
-        raceId: raceId,
+        raceId: selectedRaceId,
         eventId: eventId,
       };
 
@@ -286,6 +333,31 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
               </Select>
             </FormControl>
           </Stack>
+          {/* Race Selection - Required */}
+          <FormControl fullWidth size="small" required>
+            <InputLabel>Race</InputLabel>
+            <Select
+              value={selectedRaceId}
+              label="Race"
+              onChange={(e: SelectChangeEvent) => setSelectedRaceId(e.target.value)}
+              disabled={true}
+            >
+              {racesLoading ? (
+                <MenuItem disabled>
+                  <CircularProgress size={20} sx={{ mr: 1 }} />
+                  Loading races...
+                </MenuItem>
+              ) : races.length === 0 ? (
+                <MenuItem disabled>No races available</MenuItem>
+              ) : (
+                races.map((race) => (
+                  <MenuItem key={race.id} value={race.id}>
+                    {race.distance ? `${race.distance} KM` : ""} - {race.title}
+                  </MenuItem>
+                ))
+              )}
+            </Select>
+          </FormControl>
 
           {/* Check In - Optional */}
           <FormControlLabel

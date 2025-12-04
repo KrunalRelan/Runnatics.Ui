@@ -573,6 +573,8 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
         onClose={handleCloseEditDialog}
         onUpdate={handleUpdateParticipant}
         participant={selectedParticipant}
+        eventId={eventId}
+        raceId={raceId}
       />
 
       {/* Delete Participant Dialog */}
