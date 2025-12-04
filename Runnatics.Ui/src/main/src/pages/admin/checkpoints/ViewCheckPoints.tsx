@@ -1,7 +1,7 @@
 import DataGrid from "@/main/src/components/DataGrid";
 import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
-import { Edit, Delete, Add as AddIcon } from "@mui/icons-material";
-import { Box, Button, Card, CardContent, Chip, Divider, IconButton, Stack, Typography } from "@mui/material";
+import { Edit, Delete, Add as AddIcon, Refresh } from "@mui/icons-material";
+import { Box, Button, Card, CardContent, Chip, Divider, IconButton, Stack, Typography, Snackbar, Alert } from "@mui/material";
 import { ColDef } from "ag-grid-community";
 import { useCallback, useEffect, useState } from "react";
 import { CheckpointsService } from "@/main/src/services/CheckpointsService";
@@ -24,16 +24,47 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
     const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
     const [checkpointToEdit, setCheckpointToEdit] = useState<Checkpoint | null>(null);
     const [filters, setFilters] = useState<CheckpointFilters>(defaultCheckpointFilters);
+    const [snackbar, setSnackbar] = useState<{
+        open: boolean;
+        message: string;
+        severity: "success" | "error" | "info";
+    }>({
+        open: false,
+        message: "",
+        severity: "success",
+    });
 
     const handleOpenAddDialog = () => setOpenAddDialog(true);
     const handleCloseAddDialog = () => setOpenAddDialog(false);
 
+    // Reusable function to fetch checkpoints
+    const fetchCheckpoints = async () => {
+        if (!eventId || !raceId) return;
+
+        setLoading(true);
+        try {
+            const response = await CheckpointsService.getAllCheckpoints({
+                eventId,
+                raceId
+            });
+            const checkpoints = response.message || [];
+            setLocalCheckpoints(checkpoints);
+            setTotalCount(checkpoints.length);
+            setTotalPages(1); // Or calculate based on pagination
+        } catch (err) {
+            console.error("Error fetching checkpoints:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Fetch checkpoints on mount and when eventId or raceId changes
     useEffect(() => {
-        const fetchAllCheckpoints = async () => {
+        const loadCheckpoints = async () => {
             if (!eventId || !raceId) return;
+
             setLoading(true);
             try {
-                // Replace with your actual API call
                 const response = await CheckpointsService.getAllCheckpoints({
                     eventId,
                     raceId
@@ -41,19 +72,33 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                 const checkpoints = response.message || [];
                 setLocalCheckpoints(checkpoints);
                 setTotalCount(checkpoints.length);
-                setTotalPages(1); // Or calculate based on pagination
+                setTotalPages(1);
             } catch (err) {
-                // Handle error
+                console.error("Error fetching checkpoints:", err);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchAllCheckpoints();
-    }, [eventId, raceId]);
+        loadCheckpoints();
+    }, [eventId, raceId]); // Only depends on eventId and raceId
 
     const handleAddOrEditCheckpoint = () => {
-        // fetchCheckpoints(filters);
+        // Show success message
+        setSnackbar({
+            open: true,
+            message: checkpointToEdit
+                ? "Checkpoint updated successfully!"
+                : "Checkpoint added successfully!",
+            severity: "success",
+        });
+
+        // Refresh checkpoints list
+        fetchCheckpoints();
+    };
+
+    const handleRefresh = () => {
+        fetchCheckpoints();
     };
 
     const handleDelete = (checkpoint: Checkpoint) => {
@@ -198,26 +243,37 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
     ];
 
     return (
-        <Card sx={{ p: 3 }}>
-            <CardContent>
-                <Box
-                    sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        mb: 2,
-                    }}
-                >
-                    <Typography variant="h6">Checkpoints</Typography>
-                    <Button
-                        variant="outlined"
-                        startIcon={<AddIcon />}
-                        onClick={handleOpenAddDialog}
+        <>
+            <Card sx={{ p: 3 }}>
+                <CardContent>
+                    <Box
+                        sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            mb: 2,
+                        }}
                     >
-                        Add Checkpoint
-                    </Button>
-                </Box>
-                <Divider sx={{ mb: 3 }} />
+                        <Typography variant="h6">Checkpoints</Typography>
+                        <Stack direction="row" spacing={1.5}>
+                            <IconButton
+                                color="primary"
+                                title="Refresh"
+                                onClick={handleRefresh}
+                                disabled={loading}
+                            >
+                                <Refresh />
+                            </IconButton>
+                            <Button
+                                variant="outlined"
+                                startIcon={<AddIcon />}
+                                onClick={handleOpenAddDialog}
+                            >
+                                Add Checkpoint
+                            </Button>
+                        </Stack>
+                    </Box>
+                    <Divider sx={{ mb: 3 }} />
 
                 <DataGrid<Checkpoint>
                     rowData={localCheckpoints}
@@ -237,21 +293,37 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                     onPageSizeChange={handlePageSizeChange}
                 />
             </CardContent>
-
-            {/* Add Checkpoint Dialog */}
-            <AddOrEditCheckpoint
-                open={openAddDialog}
-                onClose={() => {
-                    handleCloseAddDialog();
-                    setCheckpointToEdit(null); // Reset after close
-                }}
-                onClick={handleAddOrEditCheckpoint}
-                eventId={eventId}
-                raceId={raceId}
-                checkpointToEdit={checkpointToEdit ?? undefined}
-            />
-
         </Card>
+
+        {/* Add Checkpoint Dialog */}
+        <AddOrEditCheckpoint
+            open={openAddDialog}
+            onClose={() => {
+                handleCloseAddDialog();
+                setCheckpointToEdit(null); // Reset after close
+            }}
+            onClick={handleAddOrEditCheckpoint}
+            eventId={eventId}
+            raceId={raceId}
+            checkpointToEdit={checkpointToEdit ?? undefined}
+        />
+
+        {/* Success/Error Snackbar */}
+        <Snackbar
+            open={snackbar.open}
+            autoHideDuration={3000}
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+            <Alert
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+                severity={snackbar.severity}
+                sx={{ width: "100%" }}
+            >
+                {snackbar.message}
+            </Alert>
+        </Snackbar>
+    </>
     );
 }
 
