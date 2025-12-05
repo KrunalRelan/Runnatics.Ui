@@ -1,7 +1,7 @@
 import DataGrid from "@/main/src/components/DataGrid";
 import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
 import { Edit, Delete, Add as AddIcon, Refresh } from "@mui/icons-material";
-import { Box, Button, Card, CardContent, Chip, Divider, IconButton, Stack, Typography, Snackbar, Alert, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material";
+import { Box, Button, Card, CardContent, Chip, Divider, IconButton, Stack, Typography, Snackbar, Alert, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Drawer, MenuItem, Select, Tab, Tabs } from "@mui/material";
 import { ColDef } from "ag-grid-community";
 import { useCallback, useEffect, useState } from "react";
 import { CheckpointsService } from "@/main/src/services/CheckpointsService";
@@ -15,6 +15,9 @@ interface ViewCheckPointsProps {
 }
 
 const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
+    // Drawer state for Loops/Clone Checkpoints
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [activeDrawerTab, setActiveDrawerTab] = useState(0); // 0: Loops, 1: Clone
     const { eventId, raceId } = useParams<{ eventId: string; raceId: string }>();
 
     const [loading, setLoading] = useState<boolean>(false);
@@ -301,26 +304,62 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                             </Button>
                             <Button
                                 variant="outlined"
-                                onClick={() => {/* TODO: Add logic to open Add Loop dialog */}}
+                                onClick={() => { setDrawerOpen(true); setActiveDrawerTab(0); }}
                                 sx={{ minWidth: 120 }}
                             >
                                 Add Loop
                             </Button>
                             <Button
                                 variant="outlined"
-                                onClick={() => {/* TODO: Add logic to open Clone Checkpoints dialog */}}
+                                onClick={() => { setDrawerOpen(true); setActiveDrawerTab(1); }}
                                 sx={{ minWidth: 160 }}
                             >
                                 Clone Checkpoints
                             </Button>
                         </Stack>
                     </Box>
-                    <Divider sx={{ mb: 3 }} />
 
-                    <DataGrid<Checkpoint>
-                        rowData={localCheckpoints}
-                        columnDefs={columnDefs}
-                        pagination={false}
+                    {/* Side Drawer for Loops/Clone Checkpoints */}
+                    <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+                        <Box sx={{ width: 400, p: 3 }}>
+                            <Tabs value={activeDrawerTab} onChange={(_, v) => setActiveDrawerTab(v)}>
+                                <Tab label="Loops" />
+                                <Tab label="Clone Checkpoints" />
+                            </Tabs>
+                            {activeDrawerTab === 0 && (
+                                <Box sx={{ mt: 3 }}>
+                                    {/* Loops content: dropdown for loop count, summary/list, etc. */}
+                                    <Typography variant="subtitle1" sx={{ mb: 2 }}>Manage Loops</Typography>
+                                    <Select defaultValue={1} size="small" sx={{ minWidth: 120 }}>
+                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                                            <MenuItem key={n} value={n}>{n} Loops</MenuItem>
+                                        ))}
+                                    </Select>
+                                    {/* Add summary/list here */}
+                                </Box>
+                            )}
+                            {activeDrawerTab === 1 && (
+                                <Box sx={{ mt: 3 }}>
+                                    {/* Clone content: dropdown for race, dropdown for checkpoints, etc. */}
+                                    <Typography variant="subtitle1" sx={{ mb: 2 }}>Clone Checkpoints</Typography>
+                                    <Select defaultValue="" size="small" sx={{ minWidth: 220, mb: 2 }}>
+                                        <MenuItem value="">Select Race</MenuItem>
+                                        {/* Map races here */}
+                                        <MenuItem value="race1">Race 1</MenuItem>
+                                        <MenuItem value="race2">Race 2</MenuItem>
+                                    </Select>
+                                    <Select defaultValue="" size="small" sx={{ minWidth: 220 }}>
+                                        <MenuItem value="">Select Checkpoint</MenuItem>
+                                        {/* Map checkpoints here */}
+                                        <MenuItem value="cp1">Checkpoint 1</MenuItem>
+                                        <MenuItem value="cp2">Checkpoint 2</MenuItem>
+                                    </Select>
+                                    {/* Add summary/preview here */}
+                                </Box>
+                            )}
+                        </Box>
+                    </Drawer>
+                    <DataGrid
                         domLayout="autoHeight"
                         enableSorting={true}
                         enableFiltering={true}
@@ -333,6 +372,8 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                         paginationPageSize={filters.pageSize}
                         onPageChange={handlePageChange}
                         onPageSizeChange={handlePageSizeChange}
+                        columnDefs={columnDefs}
+                        rowData={localCheckpoints}
                     />
                 </CardContent>
             </Card>
@@ -396,6 +437,6 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
             </Snackbar>
         </>
     );
-}
+};
 
 export default ViewCheckPoints;
