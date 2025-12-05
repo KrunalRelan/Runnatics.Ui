@@ -275,55 +275,55 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                     </Box>
                     <Divider sx={{ mb: 3 }} />
 
-                <DataGrid<Checkpoint>
-                    rowData={localCheckpoints}
-                    columnDefs={columnDefs}
-                    pagination={false}
-                    domLayout="autoHeight"
-                    enableSorting={true}
-                    enableFiltering={true}
-                    animateRows={true}
-                    loading={loading}
-                    useCustomPagination={true}
-                    pageNumber={filters.pageNumber}
-                    totalRecords={totalCount}
-                    totalPages={totalPages}
-                    paginationPageSize={filters.pageSize}
-                    onPageChange={handlePageChange}
-                    onPageSizeChange={handlePageSizeChange}
-                />
-            </CardContent>
-        </Card>
+                    <DataGrid<Checkpoint>
+                        rowData={localCheckpoints}
+                        columnDefs={columnDefs}
+                        pagination={false}
+                        domLayout="autoHeight"
+                        enableSorting={true}
+                        enableFiltering={true}
+                        animateRows={true}
+                        loading={loading}
+                        useCustomPagination={true}
+                        pageNumber={filters.pageNumber}
+                        totalRecords={totalCount}
+                        totalPages={totalPages}
+                        paginationPageSize={filters.pageSize}
+                        onPageChange={handlePageChange}
+                        onPageSizeChange={handlePageSizeChange}
+                    />
+                </CardContent>
+            </Card>
 
-        {/* Add Checkpoint Dialog */}
-        <AddOrEditCheckpoint
-            open={openAddDialog}
-            onClose={() => {
-                handleCloseAddDialog();
-                setCheckpointToEdit(null); // Reset after close
-            }}
-            onClick={handleAddOrEditCheckpoint}
-            eventId={eventId}
-            raceId={raceId}
-            checkpointToEdit={checkpointToEdit ?? undefined}
-        />
+            {/* Add Checkpoint Dialog */}
+            <AddOrEditCheckpoint
+                open={openAddDialog}
+                onClose={() => {
+                    handleCloseAddDialog();
+                    setCheckpointToEdit(null); // Reset after close
+                }}
+                onClick={handleAddOrEditCheckpoint}
+                eventId={eventId}
+                raceId={raceId}
+                checkpointToEdit={checkpointToEdit ?? undefined}
+            />
 
-        {/* Success/Error Snackbar */}
-        <Snackbar
-            open={snackbar.open}
-            autoHideDuration={3000}
-            onClose={() => setSnackbar({ ...snackbar, open: false })}
-            anchorOrigin={{ vertical: "top", horizontal: "right" }}
-        >
-            <Alert
+            {/* Success/Error Snackbar */}
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={3000}
                 onClose={() => setSnackbar({ ...snackbar, open: false })}
-                severity={snackbar.severity}
-                sx={{ width: "100%" }}
+                anchorOrigin={{ vertical: "top", horizontal: "right" }}
             >
-                {snackbar.message}
-            </Alert>
-        </Snackbar>
-    </>
+                <Alert
+                    onClose={() => setSnackbar({ ...snackbar, open: false })}
+                    severity={snackbar.severity}
+                    sx={{ width: "100%" }}
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
+        </>
     );
 }
 

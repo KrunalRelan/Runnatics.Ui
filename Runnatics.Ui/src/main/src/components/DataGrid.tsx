@@ -42,7 +42,6 @@ export const DataGrid = <T extends any>({
   height = 600,
   enableSorting = true,
   enableFiltering = true,
-  enableColumnMenu = true,
   suppressPaginationPanel = false,
   rowSelection,
   animateRows = true,
@@ -207,8 +206,8 @@ export const DataGrid = <T extends any>({
 
             {/* Right side - Pagination Controls */}
             <Stack 
-              direction="row" 
-              spacing={1} 
+              direction="row"
+              spacing={1}
               alignItems="center"
               sx={{ flexWrap: "wrap" }}
             >
@@ -233,15 +232,33 @@ export const DataGrid = <T extends any>({
               </Button>
               
               <Typography 
-                variant="body2" 
-                sx={{ 
-                  minWidth: "120px", 
+                variant="body2"
+                sx={{
+                  minWidth: "120px",
                   textAlign: "center",
                   px: 2,
                   whiteSpace: "nowrap",
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
                 }}
               >
-                Page {pageNumber} of {totalPages || 1}
+                Page
+                <input
+                  type="number"
+                  min={1}
+                  max={totalPages || 1}
+                  value={pageNumber}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    if (value >= 1 && value <= (totalPages || 1)) {
+                      onPageChange?.(value);
+                    }
+                  }}
+                  style={{ width: 40, padding: '2px 4px', borderRadius: 4, border: '1px solid #ccc', fontSize: '0.95em', textAlign: 'center' }}
+                  disabled={loading}
+                />
+                of {totalPages || 1}
               </Typography>
               
               <Button
