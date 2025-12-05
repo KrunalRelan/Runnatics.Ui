@@ -319,45 +319,57 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                         </Stack>
                     </Box>
 
+                    <Divider sx={{ mb: 3 }} />
+
                     {/* Side Drawer for Loops/Clone Checkpoints */}
-                    <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-                        <Box sx={{ width: 400, p: 3 }}>
-                            <Tabs value={activeDrawerTab} onChange={(_, v) => setActiveDrawerTab(v)}>
-                                <Tab label="Loops" />
-                                <Tab label="Clone Checkpoints" />
-                            </Tabs>
-                            {activeDrawerTab === 0 && (
-                                <Box sx={{ mt: 3 }}>
-                                    {/* Loops content: dropdown for loop count, summary/list, etc. */}
-                                    <Typography variant="subtitle1" sx={{ mb: 2 }}>Manage Loops</Typography>
-                                    <Select defaultValue={1} size="small" sx={{ minWidth: 120 }}>
-                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                                            <MenuItem key={n} value={n}>{n} Loops</MenuItem>
-                                        ))}
-                                    </Select>
-                                    {/* Add summary/list here */}
-                                </Box>
-                            )}
-                            {activeDrawerTab === 1 && (
-                                <Box sx={{ mt: 3 }}>
-                                    {/* Clone content: dropdown for race, dropdown for checkpoints, etc. */}
-                                    <Typography variant="subtitle1" sx={{ mb: 2 }}>Clone Checkpoints</Typography>
-                                    <Select defaultValue="" size="small" sx={{ minWidth: 220, mb: 2 }}>
-                                        <MenuItem value="">Select Race</MenuItem>
-                                        {/* Map races here */}
-                                        <MenuItem value="race1">Race 1</MenuItem>
-                                        <MenuItem value="race2">Race 2</MenuItem>
-                                    </Select>
-                                    <Select defaultValue="" size="small" sx={{ minWidth: 220 }}>
-                                        <MenuItem value="">Select Checkpoint</MenuItem>
-                                        {/* Map checkpoints here */}
-                                        <MenuItem value="cp1">Checkpoint 1</MenuItem>
-                                        <MenuItem value="cp2">Checkpoint 2</MenuItem>
-                                    </Select>
-                                    {/* Add summary/preview here */}
-                                </Box>
-                            )}
-                        </Box>
+                    <Drawer
+                        anchor="right"
+                        open={drawerOpen}
+                        onClose={() => setDrawerOpen(false)}
+                        PaperProps={{
+                            sx: {
+                                width: '50vw',
+                                maxWidth: 500,
+                                minWidth: 340,
+                                top: '40%',
+                                transform: 'translateY(-50%)',
+                                height: 'auto',
+                                maxHeight: '80vh',
+                                borderRadius: 3,
+                                p: 3,
+                                overflowY: 'auto',
+                            },
+                        }}
+                    >
+                        <Tabs value={activeDrawerTab} onChange={(_, v) => setActiveDrawerTab(v)}>
+                            <Tab label="Loops" />
+                            <Tab label="Clone Checkpoints" />
+                        </Tabs>
+                        {activeDrawerTab === 0 && (
+                            <Box sx={{ mt: 3 }}>
+                                <Typography variant="subtitle1" sx={{ mb: 2 }}>Manage Loops</Typography>
+                                <Select defaultValue={1} size="small" sx={{ minWidth: 120 }}>
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                                        <MenuItem key={n} value={n}>{n} Loops</MenuItem>
+                                    ))}
+                                </Select>
+                            </Box>
+                        )}
+                        {activeDrawerTab === 1 && (
+                            <Box sx={{ mt: 3 }}>
+                                <Typography variant="subtitle1" sx={{ mb: 2 }}>Clone Checkpoints</Typography>
+                                <Select defaultValue="" size="small" sx={{ minWidth: 220, mb: 2 }}>
+                                    <MenuItem value="">Select Race</MenuItem>
+                                    <MenuItem value="race1">Race 1</MenuItem>
+                                    <MenuItem value="race2">Race 2</MenuItem>
+                                </Select>
+                                <Select defaultValue="" size="small" sx={{ minWidth: 220 }}>
+                                    <MenuItem value="">Select Checkpoint</MenuItem>
+                                    <MenuItem value="cp1">Checkpoint 1</MenuItem>
+                                    <MenuItem value="cp2">Checkpoint 2</MenuItem>
+                                </Select>
+                            </Box>
+                        )}
                     </Drawer>
                     <DataGrid
                         domLayout="autoHeight"
