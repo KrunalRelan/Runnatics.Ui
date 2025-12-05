@@ -1,7 +1,7 @@
 import DataGrid from "@/main/src/components/DataGrid";
 import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
 import { Edit, Delete, Add as AddIcon, Refresh } from "@mui/icons-material";
-import { Box, Button, Card, CardContent, Chip, Divider, IconButton, Stack, Typography, Snackbar, Alert } from "@mui/material";
+import { Box, Button, Card, CardContent, Chip, Divider, IconButton, Stack, Typography, Snackbar, Alert, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material";
 import { ColDef } from "ag-grid-community";
 import { useCallback, useEffect, useState } from "react";
 import { CheckpointsService } from "@/main/src/services/CheckpointsService";
@@ -23,6 +23,8 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
     const [totalPages, setTotalPages] = useState<number>(0);
     const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
     const [checkpointToEdit, setCheckpointToEdit] = useState<Checkpoint | null>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [checkpointToDelete, setCheckpointToDelete] = useState<Checkpoint | null>(null);
     const [filters, setFilters] = useState<CheckpointFilters>(defaultCheckpointFilters);
     const [snackbar, setSnackbar] = useState<{
         open: boolean;
@@ -102,20 +104,46 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
     };
 
     const handleDelete = (checkpoint: Checkpoint) => {
-        if (!eventId || !raceId || !checkpoint.id) return;
+        setCheckpointToDelete(checkpoint);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!eventId || !raceId || !checkpointToDelete?.id)
+            return;
+
         setLoading(true);
-        CheckpointsService.deleteCheckpoint(eventId, raceId, checkpoint.id)
+        await CheckpointsService.deleteCheckpoint(eventId, raceId, checkpointToDelete.id)
             .then(() => {
-                setLocalCheckpoints((prev) => prev.filter(cp => cp.id !== checkpoint.id));
+                setLocalCheckpoints((prev) => prev.filter(cp => cp.id !== checkpointToDelete.id));
                 setTotalCount((prev) => prev - 1);
+
+                setSnackbar({
+                    open: true,
+                    message: `Checkpoint "${checkpointToDelete.name}" deleted successfully!`,
+                    severity: "success",
+                });
             })
             .catch((err) => {
-                // Optionally show error notification
                 console.error('Failed to delete checkpoint:', err);
+                setSnackbar({
+                    open: true,
+                    message:
+                        err.response?.data?.message ||
+                        "Failed to delete checkpoint. Please try again.",
+                    severity: "error",
+                });
             })
             .finally(() => {
                 setLoading(false);
+                setDeleteDialogOpen(false);
+                setCheckpointToDelete(null);
             });
+    };
+
+    const handleDeleteCancel = () => {
+        setDeleteDialogOpen(false);
+        setCheckpointToDelete(null);
     };
 
     const IsMandatoryCellRenderer = useCallback((props: any) => {
@@ -193,7 +221,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
             filter: true,
         },
         {
-            field: "lastUpdateMode",
+            // field: "lastUpdateMode",
             headerName: "Last Update Mode",
             flex: 1,
             minWidth: 100,
@@ -265,11 +293,25 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                                 <Refresh />
                             </IconButton>
                             <Button
-                                variant="outlined"
+                                variant="contained"
                                 startIcon={<AddIcon />}
                                 onClick={handleOpenAddDialog}
                             >
                                 Add Checkpoint
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                onClick={() => {/* TODO: Add logic to open Add Loop dialog */}}
+                                sx={{ minWidth: 120 }}
+                            >
+                                Add Loop
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                onClick={() => {/* TODO: Add logic to open Clone Checkpoints dialog */}}
+                                sx={{ minWidth: 160 }}
+                            >
+                                Clone Checkpoints
                             </Button>
                         </Stack>
                     </Box>
@@ -307,6 +349,35 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                 raceId={raceId}
                 checkpointToEdit={checkpointToEdit ?? undefined}
             />
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={handleDeleteCancel}
+                aria-labelledby="alert-dialog-title"
+                aria-describedby="alert-dialog-description"
+            >
+                <DialogTitle id="alert-dialog-title">Confirm Delete</DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="alert-dialog-description">
+                        Are you sure you want to delete the checkpoint "{checkpointToDelete?.name}"?
+                        This action cannot be undone.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleDeleteCancel} color="primary">
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleDeleteConfirm}
+                        color="error"
+                        variant="contained"
+                        autoFocus
+                    >
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Success/Error Snackbar */}
             <Snackbar

@@ -117,8 +117,6 @@ export const RaceList: React.FC<RaceListProps> = ({
 
     try {
       await RaceService.deleteRace(raceToDelete.eventId, raceToDelete.id);
-      setDeleteDialogOpen(false);
-      setRaceToDelete(null);
 
       setSnackbar({
         open: true,
@@ -139,9 +137,10 @@ export const RaceList: React.FC<RaceListProps> = ({
           "Failed to delete race. Please try again.",
         severity: "error",
       });
-      setDeleteDialogOpen(false);
-      setRaceToDelete(null);
     }
+
+    setDeleteDialogOpen(false);
+    setRaceToDelete(null);
   };
 
   const handleDeleteCancel = () => {

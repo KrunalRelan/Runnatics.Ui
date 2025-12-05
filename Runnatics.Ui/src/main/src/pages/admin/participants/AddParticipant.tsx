@@ -16,6 +16,7 @@ import {
   Checkbox,
   Alert,
   CircularProgress,
+  Divider,
 } from "@mui/material";
 import { Participant } from "@/main/src/models/races/Participant";
 import { ParticipantService } from "@/main/src/services/ParticipantService";
@@ -226,6 +227,9 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
       fullWidth
     >
       <DialogTitle>Add New Participant</DialogTitle>
+
+      <Divider sx={{ mb: 0 }} />
+      
       <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2, mt: 2 }} onClose={() => setError(null)}>
