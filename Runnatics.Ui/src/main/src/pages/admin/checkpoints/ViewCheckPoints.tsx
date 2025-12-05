@@ -6,19 +6,18 @@ import { ColDef } from "ag-grid-community";
 import { useCallback, useEffect, useState } from "react";
 import { CheckpointsService } from "@/main/src/services/CheckpointsService";
 import AddOrEditCheckpoint from "./AddOrEditCheckpoint";
-import { useParams } from "react-router-dom";
 import { CheckpointFilters, defaultCheckpointFilters } from "@/main/src/models/checkpoints/CheckpointFilters";
+import { Race } from "@/main/src/models/races/Race";
 
 interface ViewCheckPointsProps {
     eventId: string;
     raceId: string;
+    races: Race[];
 }
 
-const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
-    // Drawer state for Loops/Clone Checkpoints
+const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, races }) => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [activeDrawerTab, setActiveDrawerTab] = useState(0); // 0: Loops, 1: Clone
-    const { eventId, raceId } = useParams<{ eventId: string; raceId: string }>();
 
     const [loading, setLoading] = useState<boolean>(false);
     const [localCheckpoints, setLocalCheckpoints] = useState<Checkpoint[]>([]);
@@ -360,14 +359,16 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                                 <Typography variant="subtitle1" sx={{ mb: 2 }}>Clone Checkpoints</Typography>
                                 <Select defaultValue="" size="small" sx={{ minWidth: 220, mb: 2 }}>
                                     <MenuItem value="">Select Race</MenuItem>
-                                    <MenuItem value="race1">Race 1</MenuItem>
-                                    <MenuItem value="race2">Race 2</MenuItem>
+                                    {races.filter(race => race.id !== raceId).map(race => (
+                                        <MenuItem key={race.id} value={race.id}>{race.title}</MenuItem>
+                                    ))}
                                 </Select>
-                                <Select defaultValue="" size="small" sx={{ minWidth: 220 }}>
-                                    <MenuItem value="">Select Checkpoint</MenuItem>
-                                    <MenuItem value="cp1">Checkpoint 1</MenuItem>
-                                    <MenuItem value="cp2">Checkpoint 2</MenuItem>
-                                </Select>
+                                <Button
+                                    variant="outlined"
+                                    sx={{ minWidth: 120 }}
+                                >
+                                    Clone
+                                </Button>
                             </Box>
                         )}
                     </Drawer>
