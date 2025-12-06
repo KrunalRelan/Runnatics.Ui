@@ -68,6 +68,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   const isInitialMount = useRef(true);
   const prevEventId = useRef<string | undefined>(undefined);
   const prevRaceId = useRef<string | undefined>(undefined);
+  const prevFiltersRef = useRef<string>("");
 
   const genderMap: Record<string, number> = {
     male: 1,
@@ -144,33 +145,48 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     }
   };
 
-  // Initial fetch on mount and when eventId or raceId changes
+  // Single useEffect to handle all fetch scenarios
   useEffect(() => {
     if (!eventId || !raceId) return;
 
-    // Only fetch if eventId or raceId actually changed
-    const hasChanged =
-      prevEventId.current !== eventId ||
-      prevRaceId.current !== raceId;
+    const eventOrRaceChanged =
+      prevEventId.current !== eventId || prevRaceId.current !== raceId;
 
-    if (hasChanged) {
-      prevEventId.current = eventId;
-      prevRaceId.current = raceId;
-      fetchParticipants(filters);
+    const currentFiltersKey = JSON.stringify({
+      pageNumber: filters.pageNumber,
+      pageSize: filters.pageSize,
+      nameOrBib: filters.nameOrBib,
+      status: filters.status,
+      gender: filters.gender,
+      category: filters.category,
+    });
+
+    const filtersChanged = prevFiltersRef.current !== currentFiltersKey;
+
+    // Update refs
+    prevEventId.current = eventId;
+    prevRaceId.current = raceId;
+
+    // On initial mount or eventId/raceId change, fetch immediately
+    if (isInitialMount.current || eventOrRaceChanged) {
       isInitialMount.current = false;
-    }
-  }, [eventId, raceId]);
-
-  // Fetch participants when filters change (with debounce)
-  useEffect(() => {
-    if (isInitialMount.current) return;
-
-    const timeoutId = setTimeout(() => {
+      prevFiltersRef.current = currentFiltersKey;
       fetchParticipants(filters);
-    }, 300);
+      return;
+    }
 
-    return () => clearTimeout(timeoutId);
+    // On filter change, debounce the fetch
+    if (filtersChanged) {
+      const timeoutId = setTimeout(() => {
+        prevFiltersRef.current = currentFiltersKey;
+        fetchParticipants(filters);
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
   }, [
+    eventId,
+    raceId,
     filters.pageNumber,
     filters.pageSize,
     filters.nameOrBib,
@@ -285,22 +301,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       filter: true,
       valueGetter: (params: any) =>
         params.data?.fullName || params.data?.name || "",
-    },
-    {
-      field: "email",
-      headerName: "Email",
-      flex: 1.5,
-      minWidth: 150,
-      sortable: true,
-      filter: true,
-    },
-    {
-      field: "phone",
-      headerName: "Phone",
-      flex: 1.2,
-      minWidth: 120,
-      sortable: true,
-      filter: true,
     },
     {
       field: "gender",
@@ -533,7 +533,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
             </Button>
           </Stack>
         </Card>
-        
+
         {/* DataGrid Component */}
         <Box sx={{ mt: 0, pb: 3 }}>
           <DataGrid<Participant>
