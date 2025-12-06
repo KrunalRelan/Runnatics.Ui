@@ -148,7 +148,12 @@ const DeleteParticipant: React.FC<DeleteParticipantProps> = ({
             Are you sure you want to delete this participant?
           </Typography>
           {participant && (
-            <Box sx={{ mt: 2, p: 2, bgcolor: "grey.100", borderRadius: 1 }}>
+            <Box sx={{
+              mt: 2,
+              p: 2,
+              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100',
+              borderRadius: 1
+            }}>
               <Typography variant="body2">
                 <strong>Bib:</strong> {participant.bib}
               </Typography>
