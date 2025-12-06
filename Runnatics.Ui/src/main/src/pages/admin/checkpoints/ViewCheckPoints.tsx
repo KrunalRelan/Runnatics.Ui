@@ -313,7 +313,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
             open={snackbar.open}
             autoHideDuration={3000}
             onClose={() => setSnackbar({ ...snackbar, open: false })}
-            anchorOrigin={{ vertical: "top", horizontal: "right" }}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         >
             <Alert
                 onClose={() => setSnackbar({ ...snackbar, open: false })}
