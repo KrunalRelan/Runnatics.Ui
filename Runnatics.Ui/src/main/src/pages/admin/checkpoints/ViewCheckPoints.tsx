@@ -1,21 +1,23 @@
 import DataGrid from "@/main/src/components/DataGrid";
 import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
 import { Edit, Delete, Add as AddIcon, Refresh } from "@mui/icons-material";
-import { Box, Button, Card, CardContent, Chip, Divider, IconButton, Stack, Typography, Snackbar, Alert } from "@mui/material";
+import { Box, Button, Card, CardContent, Chip, Divider, IconButton, Stack, Typography, Snackbar, Alert, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Drawer, MenuItem, Select, Tab, Tabs } from "@mui/material";
 import { ColDef } from "ag-grid-community";
 import { useCallback, useEffect, useState } from "react";
 import { CheckpointsService } from "@/main/src/services/CheckpointsService";
 import AddOrEditCheckpoint from "./AddOrEditCheckpoint";
-import { useParams } from "react-router-dom";
 import { CheckpointFilters, defaultCheckpointFilters } from "@/main/src/models/checkpoints/CheckpointFilters";
+import { Race } from "@/main/src/models/races/Race";
 
 interface ViewCheckPointsProps {
     eventId: string;
     raceId: string;
+    races: Race[];
 }
 
-const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
-    const { eventId, raceId } = useParams<{ eventId: string; raceId: string }>();
+const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, races }) => {
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [activeDrawerTab, setActiveDrawerTab] = useState(0); // 0: Loops, 1: Clone
 
     const [loading, setLoading] = useState<boolean>(false);
     const [localCheckpoints, setLocalCheckpoints] = useState<Checkpoint[]>([]);
@@ -23,6 +25,8 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
     const [totalPages, setTotalPages] = useState<number>(0);
     const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
     const [checkpointToEdit, setCheckpointToEdit] = useState<Checkpoint | null>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [checkpointToDelete, setCheckpointToDelete] = useState<Checkpoint | null>(null);
     const [filters, setFilters] = useState<CheckpointFilters>(defaultCheckpointFilters);
     const [snackbar, setSnackbar] = useState<{
         open: boolean;
@@ -102,20 +106,46 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
     };
 
     const handleDelete = (checkpoint: Checkpoint) => {
-        if (!eventId || !raceId || !checkpoint.id) return;
+        setCheckpointToDelete(checkpoint);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!eventId || !raceId || !checkpointToDelete?.id)
+            return;
+
         setLoading(true);
-        CheckpointsService.deleteCheckpoint(eventId, raceId, checkpoint.id)
+        await CheckpointsService.deleteCheckpoint(eventId, raceId, checkpointToDelete.id)
             .then(() => {
-                setLocalCheckpoints((prev) => prev.filter(cp => cp.id !== checkpoint.id));
+                setLocalCheckpoints((prev) => prev.filter(cp => cp.id !== checkpointToDelete.id));
                 setTotalCount((prev) => prev - 1);
+
+                setSnackbar({
+                    open: true,
+                    message: `Checkpoint "${checkpointToDelete.name}" deleted successfully!`,
+                    severity: "success",
+                });
             })
             .catch((err) => {
-                // Optionally show error notification
                 console.error('Failed to delete checkpoint:', err);
+                setSnackbar({
+                    open: true,
+                    message:
+                        err.response?.data?.message ||
+                        "Failed to delete checkpoint. Please try again.",
+                    severity: "error",
+                });
             })
             .finally(() => {
                 setLoading(false);
+                setDeleteDialogOpen(false);
+                setCheckpointToDelete(null);
             });
+    };
+
+    const handleDeleteCancel = () => {
+        setDeleteDialogOpen(false);
+        setCheckpointToDelete(null);
     };
 
     const IsMandatoryCellRenderer = useCallback((props: any) => {
@@ -193,7 +223,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
             filter: true,
         },
         {
-            field: "lastUpdateMode",
+            // field: "lastUpdateMode",
             headerName: "Last Update Mode",
             flex: 1,
             minWidth: 100,
@@ -265,35 +295,101 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
                                 <Refresh />
                             </IconButton>
                             <Button
-                                variant="outlined"
+                                variant="contained"
                                 startIcon={<AddIcon />}
                                 onClick={handleOpenAddDialog}
                             >
                                 Add Checkpoint
                             </Button>
+                            <Button
+                                variant="outlined"
+                                onClick={() => { setDrawerOpen(true); setActiveDrawerTab(0); }}
+                                sx={{ minWidth: 120 }}
+                            >
+                                Add Loop
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                onClick={() => { setDrawerOpen(true); setActiveDrawerTab(1); }}
+                                sx={{ minWidth: 160 }}
+                            >
+                                Clone Checkpoints
+                            </Button>
                         </Stack>
                     </Box>
+
                     <Divider sx={{ mb: 3 }} />
 
-                <DataGrid<Checkpoint>
-                    rowData={localCheckpoints}
-                    columnDefs={columnDefs}
-                    pagination={false}
-                    domLayout="autoHeight"
-                    enableSorting={true}
-                    enableFiltering={true}
-                    animateRows={true}
-                    loading={loading}
-                    useCustomPagination={true}
-                    pageNumber={filters.pageNumber}
-                    totalRecords={totalCount}
-                    totalPages={totalPages}
-                    paginationPageSize={filters.pageSize}
-                    onPageChange={handlePageChange}
-                    onPageSizeChange={handlePageSizeChange}
-                />
-            </CardContent>
-        </Card>
+                    {/* Side Drawer for Loops/Clone Checkpoints */}
+                    <Drawer
+                        anchor="right"
+                        open={drawerOpen}
+                        onClose={() => setDrawerOpen(false)}
+                        PaperProps={{
+                            sx: {
+                                width: '50vw',
+                                maxWidth: 500,
+                                minWidth: 340,
+                                top: '40%',
+                                transform: 'translateY(-50%)',
+                                height: 'auto',
+                                maxHeight: '80vh',
+                                borderRadius: 3,
+                                p: 3,
+                                overflowY: 'auto',
+                            },
+                        }}
+                    >
+                        <Tabs value={activeDrawerTab} onChange={(_, v) => setActiveDrawerTab(v)}>
+                            <Tab label="Loops" />
+                            <Tab label="Clone Checkpoints" />
+                        </Tabs>
+                        {activeDrawerTab === 0 && (
+                            <Box sx={{ mt: 3 }}>
+                                <Typography variant="subtitle1" sx={{ mb: 2 }}>Manage Loops</Typography>
+                                <Select defaultValue={1} size="small" sx={{ minWidth: 120 }}>
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                                        <MenuItem key={n} value={n}>{n} Loops</MenuItem>
+                                    ))}
+                                </Select>
+                            </Box>
+                        )}
+                        {activeDrawerTab === 1 && (
+                            <Box sx={{ mt: 3 }}>
+                                <Typography variant="subtitle1" sx={{ mb: 2 }}>Clone Checkpoints</Typography>
+                                <Select defaultValue="" size="small" sx={{ minWidth: 220, mb: 2 }}>
+                                    <MenuItem value="">Select Race</MenuItem>
+                                    {races.filter(race => race.id !== raceId).map(race => (
+                                        <MenuItem key={race.id} value={race.id}>{race.title}</MenuItem>
+                                    ))}
+                                </Select>
+                                <Button
+                                    variant="outlined"
+                                    sx={{ minWidth: 120 }}
+                                >
+                                    Clone
+                                </Button>
+                            </Box>
+                        )}
+                    </Drawer>
+                    <DataGrid
+                        domLayout="autoHeight"
+                        enableSorting={true}
+                        enableFiltering={true}
+                        animateRows={true}
+                        loading={loading}
+                        useCustomPagination={true}
+                        pageNumber={filters.pageNumber}
+                        totalRecords={totalCount}
+                        totalPages={totalPages}
+                        paginationPageSize={filters.pageSize}
+                        onPageChange={handlePageChange}
+                        onPageSizeChange={handlePageSizeChange}
+                        columnDefs={columnDefs}
+                        rowData={localCheckpoints}
+                    />
+                </CardContent>
+            </Card>
 
         {/* Add Checkpoint Dialog */}
         <AddOrEditCheckpoint
@@ -325,6 +421,6 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = () => {
         </Snackbar>
     </>
     );
-}
+};
 
 export default ViewCheckPoints;

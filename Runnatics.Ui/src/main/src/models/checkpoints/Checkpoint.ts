@@ -5,5 +5,5 @@ export interface Checkpoint {
   parentDeviceId?: string;
   isMandatory: boolean;
   distanceFromStart?: number;
-  lastUpdateMode?: string;
+  // lastUpdateMode?: string;
 }

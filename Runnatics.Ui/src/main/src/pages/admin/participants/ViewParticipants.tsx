@@ -533,9 +533,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
             </Button>
           </Stack>
         </Card>
-
-        <Divider sx={{ mb: 0 }} />
-
+        
         {/* DataGrid Component */}
         <Box sx={{ mt: 0, pb: 3 }}>
           <DataGrid<Participant>

@@ -26,7 +26,7 @@ export class CheckpointsService {
 
     static async createCheckpoint(eventId: string, raceId: string, checkpointData: Partial<Checkpoint>): Promise<Checkpoint> {
         const response = await apiClient.post<Checkpoint>(
-            `checkpoints/${eventId}/${raceId}/create`,
+            ServiceUrl.addCheckpoint(eventId, raceId),
             checkpointData
         );
         return response.data;
@@ -34,7 +34,7 @@ export class CheckpointsService {
 
     static async updateCheckpoint(eventId: string, raceId: string, checkpointId: string, checkpointData: Partial<Checkpoint>): Promise<Checkpoint> {
         const response = await apiClient.put<Checkpoint>(
-            `checkpoints/${eventId}/${raceId}/${checkpointId}/edit`,
+            ServiceUrl.editCheckpoint(eventId, raceId, checkpointId),
             checkpointData
         );
         return response.data;
@@ -42,7 +42,7 @@ export class CheckpointsService {
 
     static async deleteCheckpoint(eventId: string, raceId: string, checkpointId: string): Promise<void> {
         await apiClient.delete(
-            `checkpoints/${eventId}/${raceId}/${checkpointId}/delete`
+            ServiceUrl.deleteCheckpoint(eventId, raceId, checkpointId)
         );
     }
 }

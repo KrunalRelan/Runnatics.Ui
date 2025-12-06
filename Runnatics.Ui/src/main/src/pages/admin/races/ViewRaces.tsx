@@ -184,7 +184,7 @@ const ViewRaces: React.FC = () => {
       case 3:
         return <RaceDashboard eventId={eventId} raceId={selectedRaceId} />;
       case 4:
-        return <ViewCheckPoints eventId={eventId} raceId={selectedRaceId} />;
+        return <ViewCheckPoints eventId={eventId} raceId={selectedRaceId} races={races} />;
       case 5:
         return <Segments eventId={eventId} raceId={selectedRaceId} />;
       case 6:

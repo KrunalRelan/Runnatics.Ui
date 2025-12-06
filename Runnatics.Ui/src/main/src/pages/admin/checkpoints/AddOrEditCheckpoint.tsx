@@ -11,6 +11,8 @@ import {
     Checkbox,
     Alert,
     CircularProgress,
+    Divider,
+    MenuItem,
 } from "@mui/material";
 import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
 import { CheckpointsService } from "@/main/src/services/CheckpointsService";
@@ -39,7 +41,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
         parentDeviceId: "",
         isMandatory: false,
         distanceFromStart: 0,
-        lastUpdateMode: "",
+        // lastUpdateMode: "",
     });
 
     const [loading, setLoading] = useState<boolean>(false);
@@ -57,7 +59,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                 parentDeviceId: "",
                 isMandatory: false,
                 distanceFromStart: 0,
-                lastUpdateMode: "",
+                // lastUpdateMode: "",
             });
         }
         setError(null);
@@ -78,7 +80,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
             parentDeviceId: "",
             isMandatory: false,
             distanceFromStart: 0,
-            lastUpdateMode: "",
+            // lastUpdateMode: "",
         });
         setError(null);
     };
@@ -91,8 +93,8 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
 
     const handleSubmit = async () => {
         // Validate required fields
-        if (!formData.name || formData.name.trim() === "") {
-            setError("Please enter Checkpoint Name");
+        if (!formData.parentDeviceId && (!formData.name || formData.name.trim() === "")) {
+            setError("Please enter Checkpoint Name or select Parent Device Name");
             return;
         }
 
@@ -113,7 +115,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                     parentDeviceId: formData.parentDeviceId,
                     isMandatory: formData.isMandatory,
                     distanceFromStart: formData.distanceFromStart,
-                    lastUpdateMode: formData.lastUpdateMode
+                    // lastUpdateMode: formData.lastUpdateMode
                 });
                 onClick(formData); // or use onUpdate if you want a separate callback
             } else {
@@ -124,7 +126,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                     parentDeviceId: formData.parentDeviceId,
                     isMandatory: formData.isMandatory,
                     distanceFromStart: formData.distanceFromStart,
-                    lastUpdateMode: formData.lastUpdateMode
+                    // lastUpdateMode: formData.lastUpdateMode
                 });
                 onClick(formData);
             }
@@ -177,11 +179,44 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                 {checkpointToEdit ? "Edit Checkpoint" : "Add New Checkpoint"}
             </DialogTitle>
             <DialogContent>
+                <Divider sx={{ mb: 3 }} />
+
                 {error && (
                     <Alert severity="error" sx={{ mb: 2, mt: 2 }} onClose={() => setError(null)}>
                         <strong>Error:</strong> {error}
                     </Alert>
                 )}
+                <Stack direction="row" spacing={2}>
+                    <TextField
+                        select
+                        label="Device Name"
+                        value={formData.deviceId}
+                        onChange={(e) => handleFormChange("deviceId", e.target.value)}
+                        required
+                        fullWidth
+                        size="small"
+                        helperText="Required field"
+                    >
+                        <MenuItem value="">Select Device</MenuItem>
+                        <MenuItem value="1">Device 1</MenuItem>
+                        <MenuItem value="2">Device 2</MenuItem>
+                        <MenuItem value="3">Device 3</MenuItem>
+                    </TextField>
+                    <TextField
+                        select
+                        label="Parent Device Name"
+                        value={formData.parentDeviceId}
+                        onChange={(e) => handleFormChange("parentDeviceId", e.target.value)}
+                        fullWidth
+                        size="small"
+                    >
+                        <MenuItem value="">Select Parent Device</MenuItem>
+                        <MenuItem value="1">Parent Device 1</MenuItem>
+                        <MenuItem value="2">Parent Device 2</MenuItem>
+                        <MenuItem value="3">Parent Device 3</MenuItem>
+                    </TextField>
+                </Stack>
+
                 <Stack spacing={2} sx={{ mt: error ? 1 : 2 }}>
                     <Stack direction="row" spacing={2}>
                         <TextField
@@ -189,49 +224,21 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                             value={formData.name}
                             onChange={(e) => handleFormChange("name", e.target.value)}
                             fullWidth
-                            required
+                            required={!formData.parentDeviceId}
                             size="small"
-                            helperText="Required field"
+                            helperText={formData.parentDeviceId ? "Optional if Parent Device is selected" : "Required field"}
                         />
                         <TextField
                             label="Distance From Start"
                             type="number"
+                            inputProps={{ min: 1 }}
                             value={formData.distanceFromStart}
                             onChange={(e) => handleFormChange("distanceFromStart", e.target.value)}
                             fullWidth
                             size="small"
                         />
                     </Stack>
-                    <Stack direction="row" spacing={2}>
-                        <TextField
-                            select
-                            label="Device Name"
-                            value={formData.deviceId}
-                            onChange={(e) => handleFormChange("deviceId", e.target.value)}
-                            required
-                            fullWidth
-                            size="small"
-                            helperText="Required field"
-                        >
-                            <option value="">Select Device</option>
-                            <option value="1">Device 1</option>
-                            <option value="2">Device 2</option>
-                            <option value="3">Device 3</option>
-                        </TextField>
-                        <TextField
-                            select
-                            label="Parent Device Name"
-                            value={formData.parentDeviceId}
-                            onChange={(e) => handleFormChange("parentDeviceId", e.target.value)}
-                            fullWidth
-                            size="small"
-                        >
-                            <option value="">Select Parent Device</option>
-                            <option value="1">Parent Device 1</option>
-                            <option value="2">Parent Device 2</option>
-                            <option value="3">Parent Device 3</option>
-                        </TextField>
-                    </Stack>
+
                     <FormControlLabel
                         control={
                             <Checkbox
