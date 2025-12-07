@@ -37,5 +37,8 @@ export const ServiceUrl = {
     editCheckpoint: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
     deleteCheckpoint: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
     getCheckpointById: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
+
+    //dashboard
+    dashboardStats: () => "dashboard/stats",
 };
 

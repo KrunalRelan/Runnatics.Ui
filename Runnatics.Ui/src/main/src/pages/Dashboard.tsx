@@ -1,6 +1,7 @@
 // src/main/src/pages/Dashboard.tsx
-import { Box, Typography, Paper, Card, CardContent, Button, Divider, Avatar, Stack } from '@mui/material';
+import { Box, Typography, Paper, Card, CardContent, Button, Divider, Avatar, Stack, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
 import {
   Event as EventIcon,
   People as PeopleIcon,
@@ -10,10 +11,38 @@ import {
   Person as PersonIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { DashboardService } from '../services/DashboardService';
+import { DashboardStatsResponse } from '../models/Dashboard/DashboardStatsResponse';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const [stats, setStats] = useState<DashboardStatsResponse | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const hasFetched = useRef(false);
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      // Prevent duplicate calls in React Strict Mode
+      if (hasFetched.current) return;
+      hasFetched.current = true;
+
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await DashboardService.getDashboardStats();
+        setStats(data);
+      } catch (err: any) {
+        console.error('Failed to fetch dashboard stats:', err);
+        setError(err.response?.data?.error?.message || err.message || 'Failed to load dashboard statistics');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardStats();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -29,28 +58,28 @@ const Dashboard = () => {
   const cards = [
     {
       title: 'Events',
-      value: '12',
+      value: loading ? '...' : (stats?.totalEvents?.toString() || '0'),
       icon: <EventIcon sx={{ fontSize: 40 }} />,
       color: '#1976d2',
       path: '/events/events-dashboard',
     },
     {
       title: 'Participants',
-      value: '248',
+      value: loading ? '...' : (stats?.totalParticipants?.toString() || '0'),
       icon: <PeopleIcon sx={{ fontSize: 40 }} />,
       color: '#2e7d32',
       path: '/participants',
     },
     {
       title: 'Reports',
-      value: '36',
+      value: loading ? '...' : (stats?.totalReports?.toString() || '0'),
       icon: <AssessmentIcon sx={{ fontSize: 40 }} />,
       color: '#ed6c02',
       path: '/reports',
     },
     {
       title: 'Growth',
-      value: '+24%',
+      value: loading ? '...' : (stats?.growthPercentage ? `+${stats.growthPercentage}%` : '0%'),
       icon: <TrendingUpIcon sx={{ fontSize: 40 }} />,
       color: '#9c27b0',
       path: '/analytics',
@@ -59,6 +88,13 @@ const Dashboard = () => {
 
   return (
     <Box sx={{ p: 3 }}>
+      {/* Error Message */}
+      {error && (
+        <Paper sx={{ p: 2, mb: 3, bgcolor: 'error.light', color: 'error.contrastText' }}>
+          <Typography variant="body1">{error}</Typography>
+        </Paper>
+      )}
+
       {/* Header with User Info and Logout */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
@@ -148,11 +184,28 @@ const Dashboard = () => {
         <Box>
           <Paper sx={{ p: 3, height: '100%' }}>
             <Typography variant="h6" gutterBottom>
-              Recent Activity
+              Event Statistics
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              No recent activity to display.
-            </Typography>
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                  <Typography variant="body1" fontWeight="500">Active Events</Typography>
+                  <Typography variant="h6" color="success.main">{stats?.activeEvents || 0}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                  <Typography variant="body1" fontWeight="500">Upcoming Events</Typography>
+                  <Typography variant="h6" color="primary.main">{stats?.upcomingEvents || 0}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                  <Typography variant="body1" fontWeight="500">Completed Events</Typography>
+                  <Typography variant="h6" color="text.secondary">{stats?.completedEvents || 0}</Typography>
+                </Box>
+              </Box>
+            )}
           </Paper>
         </Box>
         <Box>
