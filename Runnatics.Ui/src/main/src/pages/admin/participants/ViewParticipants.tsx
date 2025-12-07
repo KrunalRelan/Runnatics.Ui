@@ -361,6 +361,20 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   // Define grid columns
   const columnDefs: ColDef<Participant>[] = [
     {
+      headerName: "#",
+      flex: 0.5,
+      minWidth: 25,
+      maxWidth: 50,
+      sortable: true,
+      filter: true,
+      valueGetter: (params: any) => {
+        if (params.node?.rowIndex !== undefined && params.node?.rowIndex !== null) {
+          return (filters.pageNumber - 1) * filters.pageSize + params.node.rowIndex + 1;
+        }
+        return "";
+      },
+    },
+    {
       field: "bib",
       headerName: "Bib",
       flex: 0.8,
