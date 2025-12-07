@@ -3,6 +3,7 @@ import { apiClient } from '../utils/axios.config';
 import { AxiosResponse } from 'axios';
 import { UploadResponse, ProcessResponse, ProcessImportRequest, ParticipantSearchRequest, ParticipantSearchResponse, ParticipantRequest } from '../models/participants';
 import { ResponseBase } from '../models/ResponseBase';
+import { Category } from '../models/participants/Category';
 
 export class ParticipantService {
     /**
@@ -109,6 +110,13 @@ export class ParticipantService {
         await apiClient.put(
             ServiceUrl.deleteParticipant(participantId)
         );
+    }
+
+    static async getCategories(eventId: string, raceId?: string): Promise<Category[]> {
+        const response: AxiosResponse<ResponseBase<Category[]>> = await apiClient.get(
+            ServiceUrl.getParticipantCategories(eventId, raceId)
+        );
+        return response.data.message;
     }
 
 }

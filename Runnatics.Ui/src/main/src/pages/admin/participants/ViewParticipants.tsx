@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense, lazy } from "react";
 import {
   Box,
   Button,
@@ -8,13 +8,12 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Paper,
   Stack,
   SelectChangeEvent,
   Card,
   CardContent,
-  Divider,
   Chip,
+  CircularProgress,
 } from "@mui/material";
 import {
   Add,
@@ -32,10 +31,55 @@ import {
   defaultParticipantFilters,
 } from "@/main/src/models/races/ParticipantFilters";
 import { ParticipantService } from "@/main/src/services/ParticipantService";
-import AddParticipant from "@/main/src/pages/admin/participants/AddParticipant";
-import EditParticipant from "@/main/src/pages/admin/participants/EditParticipant";
-import DeleteParticipant from "@/main/src/pages/admin/participants/DeleteParticipant";
-import BulkUploadParticipants from "@/main/src/pages/admin/participants/BulkUploadParticipants";
+import { Category } from "@/main/src/models/participants/Category";
+
+// LAZY LOAD DIALOG COMPONENTS - Only loaded when needed
+const AddParticipant = lazy(
+  () => import("@/main/src/pages/admin/participants/AddParticipant")
+);
+const EditParticipant = lazy(
+  () => import("@/main/src/pages/admin/participants/EditParticipant")
+);
+const DeleteParticipant = lazy(
+  () => import("@/main/src/pages/admin/participants/DeleteParticipant")
+);
+const BulkUploadParticipants = lazy(
+  () => import("@/main/src/pages/admin/participants/BulkUploadParticipants")
+);
+
+// Loading fallback component for dialogs
+const DialogLoader: React.FC = () => (
+  <Box
+    sx={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      zIndex: 1300,
+    }}
+  >
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 2,
+        p: 4,
+        bgcolor: "background.paper",
+        borderRadius: 2,
+        boxShadow: 24,
+      }}
+    >
+      <CircularProgress />
+      <Box sx={{ color: "text.secondary" }}>Loading...</Box>
+    </Box>
+  </Box>
+);
 
 interface ViewParticipantsProps {
   eventId: string;
@@ -51,6 +95,11 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   const [filters, setFilters] = useState<ParticipantFilters>(defaultParticipantFilters);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [totalRecords, setTotalRecords] = useState<number>(0);
+
+  // Categories state for lazy loading
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState<boolean>(false);
+  const [categoriesLoaded, setCategoriesLoaded] = useState<boolean>(false);
 
   // Add Participant Dialog State
   const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
@@ -83,6 +132,36 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     dnf: 3,
     noShow: 4,
     all: 0,
+  };
+
+  // Fetch categories function (lazy loading)
+  const fetchCategories = async () => {
+    if (categoriesLoaded || categoriesLoading) return;
+
+    try {
+      setCategoriesLoading(true);
+      const categoryData = await ParticipantService.getCategories(eventId, raceId);
+      setCategories(categoryData || []);
+      setCategoriesLoaded(true);
+    } catch (err: any) {
+      console.error("Failed to fetch categories:", err);
+      setCategories([]);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  // Reset categories when eventId or raceId changes
+  useEffect(() => {
+    setCategoriesLoaded(false);
+    setCategories([]);
+  }, [eventId, raceId]);
+
+  // Handler for category dropdown open
+  const handleCategoryDropdownOpen = () => {
+    if (!categoriesLoaded && !categoriesLoading) {
+      fetchCategories();
+    }
   };
 
   // Fetch participants function
@@ -129,7 +208,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
         email: p.email || "",
         phone: p.phone || "",
         gender: p.gender || "",
-        category: p.ageCategory || "",
+        category: p.category || "",
         status: "Registered" as const,
         checkIn: false,
         chipId: "",
@@ -163,11 +242,9 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
 
     const filtersChanged = prevFiltersRef.current !== currentFiltersKey;
 
-    // Update refs
     prevEventId.current = eventId;
     prevRaceId.current = raceId;
 
-    // On initial mount or eventId/raceId change, fetch immediately
     if (isInitialMount.current || eventOrRaceChanged) {
       isInitialMount.current = false;
       prevFiltersRef.current = currentFiltersKey;
@@ -175,7 +252,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       return;
     }
 
-    // On filter change, debounce the fetch
     if (filtersChanged) {
       const timeoutId = setTimeout(() => {
         prevFiltersRef.current = currentFiltersKey;
@@ -452,9 +528,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               label="Name or Bib"
               placeholder="Enter Name or Bib Number"
               value={filters.nameOrBib}
-              onChange={(e) =>
-                handleFilterChange("nameOrBib", e.target.value)
-              }
+              onChange={(e) => handleFilterChange("nameOrBib", e.target.value)}
               sx={{ flex: 1, minWidth: 200 }}
               size="small"
             />
@@ -497,11 +571,21 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
                 onChange={(e: SelectChangeEvent) =>
                   handleFilterChange("category", e.target.value)
                 }
+                onOpen={handleCategoryDropdownOpen}
               >
                 <MenuItem value="all">All Categories</MenuItem>
-                <MenuItem value="open">Open</MenuItem>
-                <MenuItem value="veteran">Veteran</MenuItem>
-                <MenuItem value="junior">Junior</MenuItem>
+                {categoriesLoading && (
+                  <MenuItem disabled>
+                    <CircularProgress size={20} sx={{ mr: 1 }} />
+                    Loading...
+                  </MenuItem>
+                )}
+                {!categoriesLoading &&
+                  categories.map((category) => (
+                    <MenuItem key={category.categoryName} value={category.categoryName}>
+                      {category.categoryName}
+                    </MenuItem>
+                  ))}
               </Select>
             </FormControl>
             <FormControl sx={{ flex: 1, minWidth: 200 }} size="small">
@@ -556,41 +640,59 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
         </Box>
       </CardContent>
 
+      {/* LAZY LOADED DIALOGS - Only load component when dialog is opened */}
+      
       {/* Add Participant Dialog */}
-      <AddParticipant
-        open={openAddDialog}
-        onClose={handleCloseAddDialog}
-        onAdd={handleAddParticipant}
-        eventId={eventId}
-        raceId={raceId}
-      />
+      {openAddDialog && (
+        <Suspense fallback={<DialogLoader />}>
+          <AddParticipant
+            open={openAddDialog}
+            onClose={handleCloseAddDialog}
+            onAdd={handleAddParticipant}
+            eventId={eventId}
+            raceId={raceId}
+          />
+        </Suspense>
+      )}
 
       {/* Edit Participant Dialog */}
-      <EditParticipant
-        open={openEditDialog}
-        onClose={handleCloseEditDialog}
-        onUpdate={handleUpdateParticipant}
-        participant={selectedParticipant}
-        eventId={eventId}
-        raceId={raceId}
-      />
+      {openEditDialog && (
+        <Suspense fallback={<DialogLoader />}>
+          <EditParticipant
+            open={openEditDialog}
+            onClose={handleCloseEditDialog}
+            onUpdate={handleUpdateParticipant}
+            participant={selectedParticipant}
+            eventId={eventId}
+            raceId={raceId}
+          />
+        </Suspense>
+      )}
 
       {/* Delete Participant Dialog */}
-      <DeleteParticipant
-        open={openDeleteDialog}
-        onClose={handleCloseDeleteDialog}
-        onDelete={handleConfirmDelete}
-        participant={participantToDelete}
-      />
+      {openDeleteDialog && (
+        <Suspense fallback={<DialogLoader />}>
+          <DeleteParticipant
+            open={openDeleteDialog}
+            onClose={handleCloseDeleteDialog}
+            onDelete={handleConfirmDelete}
+            participant={participantToDelete}
+          />
+        </Suspense>
+      )}
 
       {/* Bulk Upload Participants Dialog */}
-      <BulkUploadParticipants
-        open={openBulkUploadDialog}
-        onClose={handleCloseBulkUploadDialog}
-        onComplete={handleBulkUploadComplete}
-        eventId={eventId}
-        raceId={raceId}
-      />
+      {openBulkUploadDialog && (
+        <Suspense fallback={<DialogLoader />}>
+          <BulkUploadParticipants
+            open={openBulkUploadDialog}
+            onClose={handleCloseBulkUploadDialog}
+            onComplete={handleBulkUploadComplete}
+            eventId={eventId}
+            raceId={raceId}
+          />
+        </Suspense>
+      )}
     </Card>
   );
 };
