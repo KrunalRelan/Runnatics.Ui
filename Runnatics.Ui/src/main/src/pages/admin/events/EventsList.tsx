@@ -32,6 +32,8 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import {
   Edit as EditIcon,
@@ -39,6 +41,8 @@ import {
   Add as AddIcon,
   Search as SearchIcon,
   Clear as ClearIcon,
+  EventAvailable as EventAvailableIcon,
+  History as HistoryIcon,
 } from "@mui/icons-material";
 import {
   ColDef,
@@ -58,7 +62,7 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 // Default search criteria with required pagination values
 const defaultSearchCriteria: EventSearchRequest = {
   pageNumber: 1,
-  pageSize: 10,
+  pageSize: 25,
   sortFieldName: "CreatedAt",
   sortDirection: SortDirection.Descending,
 };
@@ -78,6 +82,9 @@ const EventsList: React.FC = () => {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [dateError, setDateError] = useState<string>("");
+
+  // Tab state: 0 = Upcoming/Future Events, 1 = Past Events
+  const [tabValue, setTabValue] = useState<number>(0);
 
   // Track the last criteria we fetched to prevent duplicate calls
   const lastFetchedCriteriaRef = useRef<string>("");
@@ -159,6 +166,26 @@ const EventsList: React.FC = () => {
     console.log("🎯 useEffect triggered - searchCriteria:", searchCriteria);
     fetchEvents(searchCriteria);
   }, [searchCriteria, fetchEvents]);
+
+  // Filter events based on tab selection
+  const currentDate = new Date();
+  const upcomingEvents = useMemo(() => {
+    return events.filter((event) => {
+      const eventDate = event.eventDate ? new Date(event.eventDate) : null;
+      return eventDate && eventDate >= currentDate;
+    });
+  }, [events]);
+
+  const pastEvents = useMemo(() => {
+    return events.filter((event) => {
+      const eventDate = event.eventDate ? new Date(event.eventDate) : null;
+      return eventDate && eventDate < currentDate;
+    });
+  }, [events]);
+
+  // Get events to display based on selected tab
+  const displayedEvents = tabValue === 0 ? upcomingEvents : pastEvents;
+  const displayedTotalCount = tabValue === 0 ? upcomingEvents.length : pastEvents.length;
 
   // Auto-search when user types 3+ characters or changes date range
   useEffect(() => {
@@ -295,6 +322,10 @@ const EventsList: React.FC = () => {
     setEndDate("");
     setDateError("");
     setSearchCriteria(defaultSearchCriteria);
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
   };
 
   // Handle Enter key press in search field
@@ -693,8 +724,33 @@ const EventsList: React.FC = () => {
         </Alert>
       )}
 
+      {/* Tabs for Upcoming and Past Events */}
+      <Card sx={{ mb: 3 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            aria-label="event tabs"
+            sx={{ px: 2 }}
+          >
+            <Tab
+              icon={<EventAvailableIcon />}
+              iconPosition="start"
+              label={`Upcoming Events (${upcomingEvents.length})`}
+              sx={{ textTransform: 'none', fontWeight: 500 }}
+            />
+            <Tab
+              icon={<HistoryIcon />}
+              iconPosition="start"
+              label={`Past Events (${pastEvents.length})`}
+              sx={{ textTransform: 'none', fontWeight: 500 }}
+            />
+          </Tabs>
+        </Box>
+      </Card>
+
       {/* Events Table */}
-      {events.length === 0 && !loading ? (
+      {displayedEvents.length === 0 && !loading ? (
         <Card>
           <CardContent>
             <Typography variant="h6" align="center" color="text.secondary">
@@ -752,7 +808,7 @@ const EventsList: React.FC = () => {
             )}
 
             <DataGrid
-              rowData={events}
+              rowData={displayedEvents}
               columnDefs={columnDefs}
               defaultColDef={defaultColDef}
               domLayout="normal"
@@ -768,8 +824,8 @@ const EventsList: React.FC = () => {
               useCustomPagination={true}
               pageNumber={pageNumber}
               paginationPageSize={pageSize}
-              totalRecords={totalRecords}
-              totalPages={totalPages}
+              totalRecords={displayedTotalCount}
+              totalPages={Math.ceil(displayedTotalCount / pageSize)}
               onPageChange={handlePageChange}
               onPageSizeChange={handlePageSizeChange}
             />
