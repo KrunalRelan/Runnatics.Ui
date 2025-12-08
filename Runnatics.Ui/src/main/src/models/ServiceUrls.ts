@@ -37,5 +37,10 @@ export const ServiceUrl = {
     editCheckpoint: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
     deleteCheckpoint: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
     getCheckpointById: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
+    cloneCheckpoints: (eventId: string, sourceRaceId: string, destinationRaceId: string) => `checkpoints/${eventId}/${sourceRaceId}/${destinationRaceId}/clone`,
+
+    //devices
+    getAllDevices: () => "devices",
+
 };
 

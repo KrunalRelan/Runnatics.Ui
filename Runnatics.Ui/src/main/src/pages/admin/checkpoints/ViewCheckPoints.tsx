@@ -16,8 +16,17 @@ interface ViewCheckPointsProps {
 }
 
 const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, races }) => {
+
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [activeDrawerTab, setActiveDrawerTab] = useState(0); // 0: Loops, 1: Clone
+    const [selectedRaceId, setSelectedRaceId] = useState("");
+
+    // Reset selectedRaceId when opening drawer for Clone Checkpoints
+    const handleOpenDrawer = (tab: number) => {
+        setDrawerOpen(true);
+        setActiveDrawerTab(tab);
+        if (tab === 1) setSelectedRaceId("");
+    };
 
     const [loading, setLoading] = useState<boolean>(false);
     const [localCheckpoints, setLocalCheckpoints] = useState<Checkpoint[]>([]);
@@ -99,6 +108,26 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
 
         // Refresh checkpoints list
         fetchCheckpoints();
+    };
+
+     // Clone checkpoints handler
+    const handleCloneCheckpoints = async () => {
+        if (!eventId || !selectedRaceId || !raceId) return;
+        try {
+            await CheckpointsService.cloneCheckpoints(eventId, selectedRaceId, raceId);
+            setSnackbar({
+                open: true,
+                message: "Checkpoints cloned successfully!",
+                severity: "success",
+            });
+            fetchCheckpoints();
+        } catch (err) {
+            setSnackbar({
+                open: true,
+                message: "Failed to clone checkpoints.",
+                severity: "error",
+            });
+        }
     };
 
     const handleRefresh = () => {
@@ -303,14 +332,14 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                             </Button>
                             <Button
                                 variant="outlined"
-                                onClick={() => { setDrawerOpen(true); setActiveDrawerTab(0); }}
+                                onClick={() => handleOpenDrawer(0)}
                                 sx={{ minWidth: 120 }}
                             >
                                 Add Loop
                             </Button>
                             <Button
                                 variant="outlined"
-                                onClick={() => { setDrawerOpen(true); setActiveDrawerTab(1); }}
+                                onClick={() => handleOpenDrawer(1)}
                                 sx={{ minWidth: 160 }}
                             >
                                 Clone Checkpoints
@@ -357,8 +386,14 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                         {activeDrawerTab === 1 && (
                             <Box sx={{ mt: 3 }}>
                                 <Typography variant="subtitle1" sx={{ mb: 2 }}>Clone Checkpoints</Typography>
-                                <Select defaultValue="" size="small" sx={{ minWidth: 220, mb: 2 }}>
-                                    <MenuItem value="">Select Race</MenuItem>
+                                <Select
+                                    value={selectedRaceId}
+                                    onChange={e => setSelectedRaceId(e.target.value)}
+                                    size="small"
+                                    sx={{ minWidth: 220, mb: 2 }}
+                                    displayEmpty
+                                    renderValue={selected => selected ? races.find(r => r.id === selected)?.title : "Select Race"}
+                                >
                                     {races.filter(race => race.id !== raceId).map(race => (
                                         <MenuItem key={race.id} value={race.id}>{race.title}</MenuItem>
                                     ))}
@@ -366,6 +401,8 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                                 <Button
                                     variant="outlined"
                                     sx={{ minWidth: 120 }}
+                                    disabled={!selectedRaceId}
+                                    onClick={handleCloneCheckpoints}
                                 >
                                     Clone
                                 </Button>
