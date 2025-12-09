@@ -545,7 +545,7 @@ export const EditEvent: React.FC = () => {
   ];
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ maxWidth: 1200, mx: "auto", p: 3 }}>
       <Button
         variant="outlined"
         startIcon={<ArrowBackIcon />}
@@ -554,11 +554,16 @@ export const EditEvent: React.FC = () => {
       >
         Back
       </Button>
-      <Paper sx={{ p: 4 }}>
-        <Typography variant="h4" gutterBottom>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
           Edit Event
         </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Fill in the details below to update the event
+        </Typography>
+      </Box>
 
+      <Paper elevation={2} sx={{ p: 3 }}>
         {apiError && (
           <Alert severity="error" sx={{ mb: 3 }}>
             <AlertTitle>Error</AlertTitle>
@@ -1009,26 +1014,37 @@ export const EditEvent: React.FC = () => {
             </Stack>
           </Box>
 
-          {/* Action Buttons */}
-          <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              disabled={isSubmitting}
-              size="large"
-            >
-              {isSubmitting ? "Updating..." : "Update Event"}
-            </Button>
+          {/* Form Actions */}
+          <Box
+            sx={{
+              display: "flex",
+              gap: 2,
+              justifyContent: "flex-end",
+              flexDirection: { xs: "column", sm: "row" },
+            }}
+          >
             <Button
               variant="outlined"
               onClick={() => navigate("/events/events-dashboard")}
               disabled={isSubmitting}
               size="large"
+              fullWidth={false}
+              sx={{ minWidth: { xs: "100%", sm: 120 } }}
             >
               Cancel
             </Button>
-          </Stack>
+
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isSubmitting}
+              size="large"
+              fullWidth={false}
+              sx={{ minWidth: { xs: "100%", sm: 120 } }}
+            >
+              {isSubmitting ? "Updating..." : "Update Event"}
+            </Button>
+          </Box>
         </form>
       </Paper>
       {/* Success/Error Snackbar */}
