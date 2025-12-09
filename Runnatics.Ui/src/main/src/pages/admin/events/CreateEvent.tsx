@@ -23,6 +23,7 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
+  Snackbar,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 // If your project requires it, you can instead do:
@@ -68,6 +69,18 @@ export const CreateEvent: React.FC = () => {
   const [newOrgName, setNewOrgName] = useState("");
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
   const [orgError, setOrgError] = useState("");
+
+  // Snackbar for success/error messages
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info';
+  }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+
 
   // Event Settings state
   const [eventSettings, setEventSettings] = useState<EventSettings>({
@@ -348,13 +361,6 @@ export const CreateEvent: React.FC = () => {
     if (!formData.startDate) {
       newErrors.startDate = "Start date is required";
     }
-    // else {
-    //   const selectedDate = new Date(formData.startDate);
-    //   const now = new Date();
-    //   if (selectedDate < now) {
-    //     newErrors.startDate = "Event date cannot be in the past";
-    //   }
-    // }
 
     if (!formData.location.trim()) {
       newErrors.location = "Location is required";
@@ -517,11 +523,18 @@ export const CreateEvent: React.FC = () => {
         requestPayload as any
       );
 
-      if (bannerFile && createdEvent.id) {
-        await EventService.uploadBannerImage(createdEvent.id, bannerFile);
-      }
-
-      navigate("/events/events-dashboard");
+      setSnackbar({
+        open: true,
+        message: `Event "${requestPayload.name}" created successfully!`,
+        severity: "success",
+      });
+      // Redirect after 1 second (1000 ms)
+      setTimeout(async () => {
+        if (bannerFile && createdEvent.id) {
+          await EventService.uploadBannerImage(createdEvent.id, bannerFile);
+        }
+        navigate("/events/events-dashboard");
+      }, 1000);
     } catch (error: any) {
       let errorMessage = "Failed to create event. Please try again.";
 
@@ -838,7 +851,7 @@ export const CreateEvent: React.FC = () => {
                   onChange={handleInputChange}
                   error={!!errors.startDate}
                   helperText={
-                    errors.startDate || "Event date cannot be in the past"
+                    errors.startDate || "Event date is required"
                   }
                   required
                   InputLabelProps={{ shrink: true }}
@@ -1174,6 +1187,23 @@ export const CreateEvent: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
