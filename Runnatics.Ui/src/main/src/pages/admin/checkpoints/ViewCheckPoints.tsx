@@ -16,6 +16,34 @@ interface ViewCheckPointsProps {
 }
 
 const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, races }) => {
+    // Add Loop handler
+    const handleAddLoop = async () => {
+        // Find the selected race to get its distance
+        const selectedRace = races.find(r => r.id === raceId);
+        if (!selectedRace || !selectedRace.distance || localCheckpoints.length === 0) return;
+        const raceDistance = Number(selectedRace.distance);
+        // Calculate current loop count
+        const checkpointsPerLoop = localCheckpoints.length;
+        const currentLoopCount = Math.floor(localCheckpoints.length / checkpointsPerLoop);
+        const newLoopNumber = currentLoopCount + 1;
+        // Copy all current checkpoints as the new loop
+        const newCheckpoints = localCheckpoints.map(cp => {
+            const newDistance = (Number(cp.distanceFromStart) || 0) + raceDistance * currentLoopCount;
+            return {
+                ...cp,
+                id: '', // New checkpoint, so no id
+                distanceFromStart: newDistance,
+                name: `${newDistance} KM`,
+            };
+        });
+        // Optionally, call backend to persist new checkpoints here
+        setLocalCheckpoints([...localCheckpoints, ...newCheckpoints]);
+        setSnackbar({
+            open: true,
+            message: `Loop ${newLoopNumber} added!`,
+            severity: 'success',
+        });
+    };
 
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [activeDrawerTab, setActiveDrawerTab] = useState(0); // 0: Loops, 1: Clone
@@ -330,12 +358,20 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                             >
                                 Add Checkpoint
                             </Button>
-                            <Button
+                            {/* <Button
                                 variant="outlined"
-                                onClick={() => handleOpenDrawer(0)}
+                                onClick={() => { handleOpenDrawer(0); }}
                                 sx={{ minWidth: 120 }}
                             >
                                 Add Loop
+                            </Button> */}
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={handleAddLoop}
+                                sx={{ minWidth: 120 }}
+                            >
+                                Add Loop (Action)
                             </Button>
                             <Button
                                 variant="outlined"
