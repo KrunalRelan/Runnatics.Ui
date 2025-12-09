@@ -30,7 +30,7 @@ export const ServiceUrl = {
     addParticipant: (eventId: string, raceId: string) => `participants/${eventId}/${raceId}/add-participant`,
     editParticipant: (participantId: string) => `participants/${participantId}/edit-participant`,
     deleteParticipant: (participantId: string) => `participants/${participantId}/delete-participant`,
-
+    getParticipantCategories: (eventId: string, raceId?: string) => `participants/${eventId}/${raceId}/categories`,
     //checkpoints
     searchCheckpoints: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,
     addCheckpoint: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,
@@ -42,5 +42,8 @@ export const ServiceUrl = {
     //devices
     getAllDevices: () => "devices",
 
+
+    //dashboard
+    dashboardStats: () => "dashboard/stats",
 };
 

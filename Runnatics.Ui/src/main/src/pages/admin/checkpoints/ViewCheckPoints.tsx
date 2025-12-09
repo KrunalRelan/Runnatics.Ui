@@ -464,64 +464,35 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                 </CardContent>
             </Card>
 
-            {/* Add Checkpoint Dialog */}
-            <AddOrEditCheckpoint
-                open={openAddDialog}
-                onClose={() => {
-                    handleCloseAddDialog();
-                    setCheckpointToEdit(null); // Reset after close
-                }}
-                onClick={handleAddOrEditCheckpoint}
-                eventId={eventId}
-                raceId={raceId}
-                checkpointToEdit={checkpointToEdit ?? undefined}
-            />
+        {/* Add Checkpoint Dialog */}
+        <AddOrEditCheckpoint
+            open={openAddDialog}
+            onClose={() => {
+                handleCloseAddDialog();
+                setCheckpointToEdit(null); // Reset after close
+            }}
+            onClick={handleAddOrEditCheckpoint}
+            eventId={eventId}
+            raceId={raceId}
+            checkpointToEdit={checkpointToEdit ?? undefined}
+        />
 
-            {/* Delete Confirmation Dialog */}
-            <Dialog
-                open={deleteDialogOpen}
-                onClose={handleDeleteCancel}
-                aria-labelledby="alert-dialog-title"
-                aria-describedby="alert-dialog-description"
-            >
-                <DialogTitle id="alert-dialog-title">Confirm Delete</DialogTitle>
-                <DialogContent>
-                    <DialogContentText id="alert-dialog-description">
-                        Are you sure you want to delete the checkpoint "{checkpointToDelete?.name}"?
-                        This action cannot be undone.
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleDeleteCancel} color="primary">
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleDeleteConfirm}
-                        color="error"
-                        variant="contained"
-                        autoFocus
-                    >
-                        Delete
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Success/Error Snackbar */}
-            <Snackbar
-                open={snackbar.open}
-                autoHideDuration={3000}
+        {/* Success/Error Snackbar */}
+        <Snackbar
+            open={snackbar.open}
+            autoHideDuration={3000}
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        >
+            <Alert
                 onClose={() => setSnackbar({ ...snackbar, open: false })}
-                anchorOrigin={{ vertical: "top", horizontal: "right" }}
+                severity={snackbar.severity}
+                sx={{ width: "100%" }}
             >
-                <Alert
-                    onClose={() => setSnackbar({ ...snackbar, open: false })}
-                    severity={snackbar.severity}
-                    sx={{ width: "100%" }}
-                >
-                    {snackbar.message}
-                </Alert>
-            </Snackbar>
-        </>
+                {snackbar.message}
+            </Alert>
+        </Snackbar>
+    </>
     );
 };
 
