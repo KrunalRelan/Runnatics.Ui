@@ -1,3 +1,4 @@
+
 import DataGrid from "@/main/src/components/DataGrid";
 import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
 import { Edit, Delete, Add as AddIcon, Refresh } from "@mui/icons-material";
@@ -16,6 +17,127 @@ interface ViewCheckPointsProps {
 }
 
 const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, races }) => {
+    
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [activeDrawerTab, setActiveDrawerTab] = useState(0); // 0: Loops, 1: Clone
+    const [selectedRaceId, setSelectedRaceId] = useState("");
+
+    // Reset selectedRaceId when opening drawer for Clone Checkpoints
+    const handleOpenDrawer = (tab: number) => {
+        setDrawerOpen(true);
+        setActiveDrawerTab(tab);
+        if (tab === 1) setSelectedRaceId("");
+    };
+
+    const [loading, setLoading] = useState<boolean>(false);
+    // const [selectedRace, setSelectedRace] = useState<Race>();
+    const [localCheckpoints, setLocalCheckpoints] = useState<Checkpoint[]>([]);
+    const [totalCount, setTotalCount] = useState<number>(0);
+    const [totalPages, setTotalPages] = useState<number>(0);
+    const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
+    const [checkpointToEdit, setCheckpointToEdit] = useState<Checkpoint | null>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [checkpointToDelete, setCheckpointToDelete] = useState<Checkpoint | null>(null);
+    const [filters, setFilters] = useState<CheckpointFilters>(defaultCheckpointFilters);
+    const handleOpenAddDialog = () => setOpenAddDialog(true);
+    const handleCloseAddDialog = () => setOpenAddDialog(false);
+
+    const [snackbar, setSnackbar] = useState<{
+        open: boolean;
+        message: string;
+        severity: "success" | "error" | "info";
+    }>({
+        open: false,
+        message: "",
+        severity: "success",
+    });
+
+    // Reusable function to fetch checkpoints
+    const fetchCheckpoints = async () => {
+        if (!eventId || !raceId) return;
+
+        setLoading(true);
+        try {
+            const response = await CheckpointsService.getAllCheckpoints({
+                eventId,
+                raceId
+            });
+            const checkpoints = response.message || [];
+            setLocalCheckpoints(checkpoints);
+            setTotalCount(checkpoints.length);
+            setTotalPages(1); // Or calculate based on pagination
+        } catch (err) {
+            console.error("Error fetching checkpoints:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Set selectedRace when component loads or races/raceId change
+    // useEffect(() => {
+    //     setSelectedRace(races.find(r => r.id === raceId));
+    // }, [races, raceId]);
+    
+
+    // Fetch checkpoints on mount and when eventId or raceId changes
+    useEffect(() => {
+        const loadCheckpoints = async () => {
+            if (!eventId || !raceId) return;
+
+            setLoading(true);
+            try {
+                const response = await CheckpointsService.getAllCheckpoints({
+                    eventId,
+                    raceId
+                });
+                const checkpoints = response.message || [];
+                setLocalCheckpoints(checkpoints);
+                setTotalCount(checkpoints.length);
+                setTotalPages(1);
+            } catch (err) {
+                console.error("Error fetching checkpoints:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadCheckpoints();
+    }, [eventId, raceId]); // Only depends on eventId and raceId
+
+    const handleAddOrEditCheckpoint = () => {
+        // Show success message
+        setSnackbar({
+            open: true,
+            message: checkpointToEdit
+                ? "Checkpoint updated successfully!"
+                : "Checkpoint added successfully!",
+            severity: "success",
+        });
+
+        // Refresh checkpoints list
+        fetchCheckpoints();
+    };
+
+    // Clone checkpoints handler
+    const handleCloneCheckpoints = async () => {
+        if (!eventId || !selectedRaceId || !raceId) return;
+        try {
+            await CheckpointsService.cloneCheckpoints(eventId, selectedRaceId, raceId);
+            setSnackbar({
+                open: true,
+                message: "Checkpoints cloned successfully!",
+                severity: "success",
+            });
+            fetchCheckpoints();
+        } catch (err) {
+            setSnackbar({
+                open: true,
+                message: "Failed to clone checkpoints.",
+                severity: "error",
+            });
+        }
+    };
+
     // Add Loop handler
     const handleAddLoop = async () => {
         // Find the selected race to get its distance
@@ -72,119 +194,6 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
             message: `Loop added!`,
             severity: 'success',
         });
-    };
-
-    const [drawerOpen, setDrawerOpen] = useState(false);
-    const [activeDrawerTab, setActiveDrawerTab] = useState(0); // 0: Loops, 1: Clone
-    const [selectedRaceId, setSelectedRaceId] = useState("");
-
-    // Reset selectedRaceId when opening drawer for Clone Checkpoints
-    const handleOpenDrawer = (tab: number) => {
-        setDrawerOpen(true);
-        setActiveDrawerTab(tab);
-        if (tab === 1) setSelectedRaceId("");
-    };
-
-    const [loading, setLoading] = useState<boolean>(false);
-    const [localCheckpoints, setLocalCheckpoints] = useState<Checkpoint[]>([]);
-    const [totalCount, setTotalCount] = useState<number>(0);
-    const [totalPages, setTotalPages] = useState<number>(0);
-    const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
-    const [checkpointToEdit, setCheckpointToEdit] = useState<Checkpoint | null>(null);
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [checkpointToDelete, setCheckpointToDelete] = useState<Checkpoint | null>(null);
-    const [filters, setFilters] = useState<CheckpointFilters>(defaultCheckpointFilters);
-    const [snackbar, setSnackbar] = useState<{
-        open: boolean;
-        message: string;
-        severity: "success" | "error" | "info";
-    }>({
-        open: false,
-        message: "",
-        severity: "success",
-    });
-
-    const handleOpenAddDialog = () => setOpenAddDialog(true);
-    const handleCloseAddDialog = () => setOpenAddDialog(false);
-
-    // Reusable function to fetch checkpoints
-    const fetchCheckpoints = async () => {
-        if (!eventId || !raceId) return;
-
-        setLoading(true);
-        try {
-            const response = await CheckpointsService.getAllCheckpoints({
-                eventId,
-                raceId
-            });
-            const checkpoints = response.message || [];
-            setLocalCheckpoints(checkpoints);
-            setTotalCount(checkpoints.length);
-            setTotalPages(1); // Or calculate based on pagination
-        } catch (err) {
-            console.error("Error fetching checkpoints:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Fetch checkpoints on mount and when eventId or raceId changes
-    useEffect(() => {
-        const loadCheckpoints = async () => {
-            if (!eventId || !raceId) return;
-
-            setLoading(true);
-            try {
-                const response = await CheckpointsService.getAllCheckpoints({
-                    eventId,
-                    raceId
-                });
-                const checkpoints = response.message || [];
-                setLocalCheckpoints(checkpoints);
-                setTotalCount(checkpoints.length);
-                setTotalPages(1);
-            } catch (err) {
-                console.error("Error fetching checkpoints:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadCheckpoints();
-    }, [eventId, raceId]); // Only depends on eventId and raceId
-
-    const handleAddOrEditCheckpoint = () => {
-        // Show success message
-        setSnackbar({
-            open: true,
-            message: checkpointToEdit
-                ? "Checkpoint updated successfully!"
-                : "Checkpoint added successfully!",
-            severity: "success",
-        });
-
-        // Refresh checkpoints list
-        fetchCheckpoints();
-    };
-
-     // Clone checkpoints handler
-    const handleCloneCheckpoints = async () => {
-        if (!eventId || !selectedRaceId || !raceId) return;
-        try {
-            await CheckpointsService.cloneCheckpoints(eventId, selectedRaceId, raceId);
-            setSnackbar({
-                open: true,
-                message: "Checkpoints cloned successfully!",
-                severity: "success",
-            });
-            fetchCheckpoints();
-        } catch (err) {
-            setSnackbar({
-                open: true,
-                message: "Failed to clone checkpoints.",
-                severity: "error",
-            });
-        }
     };
 
     const handleRefresh = () => {
@@ -387,13 +396,6 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                             >
                                 Add Checkpoint
                             </Button>
-                            {/* <Button
-                                variant="outlined"
-                                onClick={() => { handleOpenDrawer(0); }}
-                                sx={{ minWidth: 120 }}
-                            >
-                                Add Loop
-                            </Button> */}
                             <Button
                                 variant="contained"
                                 color="primary"
@@ -493,35 +495,35 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                 </CardContent>
             </Card>
 
-        {/* Add Checkpoint Dialog */}
-        <AddOrEditCheckpoint
-            open={openAddDialog}
-            onClose={() => {
-                handleCloseAddDialog();
-                setCheckpointToEdit(null); // Reset after close
-            }}
-            onClick={handleAddOrEditCheckpoint}
-            eventId={eventId}
-            raceId={raceId}
-            checkpointToEdit={checkpointToEdit ?? undefined}
-        />
+            {/* Add Checkpoint Dialog */}
+            <AddOrEditCheckpoint
+                open={openAddDialog}
+                onClose={() => {
+                    handleCloseAddDialog();
+                    setCheckpointToEdit(null); // Reset after close
+                }}
+                onClick={handleAddOrEditCheckpoint}
+                eventId={eventId}
+                raceId={raceId}
+                checkpointToEdit={checkpointToEdit ?? undefined}
+            />
 
-        {/* Success/Error Snackbar */}
-        <Snackbar
-            open={snackbar.open}
-            autoHideDuration={3000}
-            onClose={() => setSnackbar({ ...snackbar, open: false })}
-            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        >
-            <Alert
+            {/* Success/Error Snackbar */}
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={3000}
                 onClose={() => setSnackbar({ ...snackbar, open: false })}
-                severity={snackbar.severity}
-                sx={{ width: "100%" }}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
             >
-                {snackbar.message}
-            </Alert>
-        </Snackbar>
-    </>
+                <Alert
+                    onClose={() => setSnackbar({ ...snackbar, open: false })}
+                    severity={snackbar.severity}
+                    sx={{ width: "100%" }}
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
+        </>
     );
 };
 
