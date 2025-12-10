@@ -28,10 +28,6 @@ import {
   Stack,
   Tooltip,
   Snackbar,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Tabs,
   Tab,
 } from "@mui/material";
@@ -48,7 +44,8 @@ import {
   ColDef,
   GridReadyEvent,
   ModuleRegistry,
-  AllCommunityModule
+  AllCommunityModule,
+  GridApi,
 } from "ag-grid-community";
 import { EventService } from "../../../services/EventService";
 import { Event } from "../../../models/Event";
@@ -59,19 +56,25 @@ import DataGrid from "@/main/src/components/DataGrid";
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule]);
 
+// Tab enum for clarity
+enum EventTab {
+  Future = 0,
+  Past = 1,
+}
+
 // Default search criteria with required pagination values
-const defaultSearchCriteria: EventSearchRequest = {
+const getDefaultSearchCriteria = (): EventSearchRequest => ({
   pageNumber: 1,
   pageSize: 25,
-  sortFieldName: "CreatedAt",
-  sortDirection: SortDirection.Descending,
-};
+  sortFieldName: "EventDate",
+  sortDirection: SortDirection.Ascending,
+});
 
 const EventsList: React.FC = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [searchCriteria, setSearchCriteria] = useState<EventSearchRequest>(
-    defaultSearchCriteria
+    getDefaultSearchCriteria()
   );
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -84,7 +87,14 @@ const EventsList: React.FC = () => {
   const [dateError, setDateError] = useState<string>("");
 
   // Tab state: 0 = Upcoming/Future Events, 1 = Past Events
-  const [tabValue, setTabValue] = useState<number>(0);
+  const [tabValue, setTabValue] = useState<EventTab>(EventTab.Future);
+
+  // Lazy loading states for Future Events
+  const [hasMoreFutureEvents, setHasMoreFutureEvents] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const observerTarget = useRef<HTMLDivElement>(null);
+  const gridApiRef = useRef<GridApi | null>(null);
 
   // Track the last criteria we fetched to prevent duplicate calls
   const lastFetchedCriteriaRef = useRef<string>("");
@@ -122,70 +132,142 @@ const EventsList: React.FC = () => {
     []
   );
 
-  // Fetch events function (with optional force flag)
+  // Fetch events function based on current tab
   const fetchEvents = useCallback(
-    async (criteria: EventSearchRequest, force: boolean = false) => {
-      const criteriaKey = JSON.stringify(criteria);
+    async (
+      criteria: EventSearchRequest,
+      tab: EventTab,
+      force: boolean = false,
+      append: boolean = false
+    ) => {
+      const criteriaKey = JSON.stringify({ criteria, tab });
 
-      // Skip if we just fetched with the same criteria and not forcing
-      if (!force && lastFetchedCriteriaRef.current === criteriaKey) {
+      // Skip if we just fetched with the same criteria and not forcing (only for non-append calls)
+      if (!force && !append && lastFetchedCriteriaRef.current === criteriaKey) {
         console.log("⏭️ Skipping duplicate fetch for same criteria");
         return;
       }
 
-      console.log("🔍 fetchEvents called with criteria:", criteria);
-      lastFetchedCriteriaRef.current = criteriaKey;
+      console.log("🔍 fetchEvents called with criteria:", criteria, "tab:", tab, "append:", append);
+
+      if (!append) {
+        lastFetchedCriteriaRef.current = criteriaKey;
+      }
 
       try {
-        setLoading(true);
+        if (append) {
+          setLoadingMore(true);
+        } else {
+          setLoading(true);
+        }
         setError(null);
 
-        // Call the API with search criteria wrapped in the correct format
-        const response = await EventService.getAllEvents({
-          searchCriteria: criteria,
-        });
+        // Call the appropriate API based on selected tab
+        const response =
+          tab === EventTab.Future
+            ? await EventService.getFutureEvents(criteria)
+            : await EventService.getPastEvents(criteria);
 
         console.log("✅ API response received:", response);
-        // Backend returns events in the message property and total count in totalCount
-        setEvents(response.message || []);
-        setTotalRecords(response.totalCount || 0);
+
+        const newEvents = response.message || [];
+        const total = response.totalCount || 0;
+
+        if (append && tab === EventTab.Future) {
+          // Append events for lazy loading
+          setEvents((prev) => {
+            const combined = [...prev, ...newEvents];
+            // Check if there are more events to load
+            setHasMoreFutureEvents(combined.length < total);
+            return combined;
+          });
+        } else {
+          // Replace events for initial load or Past Events tab
+          setEvents(newEvents);
+          // Check if there are more events to load (for Future Events)
+          if (tab === EventTab.Future) {
+            setHasMoreFutureEvents(newEvents.length < total);
+          }
+        }
+
+        setTotalRecords(total);
       } catch (err: any) {
         console.error("Error fetching events:", err);
         setError(err.response?.data?.message || "Failed to fetch events");
-        setEvents([]);
-        setTotalRecords(0);
+        if (!append) {
+          setEvents([]);
+          setTotalRecords(0);
+        }
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     },
     []
   );
 
-  // Fetch events whenever searchCriteria changes
+  // Load more events for lazy loading
+  const loadMoreEvents = useCallback(() => {
+    if (loadingMore || !hasMoreFutureEvents || tabValue !== EventTab.Future || loading) {
+      return;
+    }
+
+    const nextPage = currentPage + 1;
+    setCurrentPage(nextPage);
+
+    console.log("📜 Loading more events, page:", nextPage);
+
+    fetchEvents(
+      { ...searchCriteria, pageNumber: nextPage },
+      EventTab.Future,
+      true,
+      true // append = true
+    );
+  }, [
+    loadingMore,
+    hasMoreFutureEvents,
+    tabValue,
+    loading,
+    currentPage,
+    searchCriteria,
+    fetchEvents,
+  ]);
+
+  // Intersection Observer for lazy loading
   useEffect(() => {
-    console.log("🎯 useEffect triggered - searchCriteria:", searchCriteria);
-    fetchEvents(searchCriteria);
-  }, [searchCriteria, fetchEvents]);
+    if (tabValue !== EventTab.Future) return;
 
-  // Filter events based on tab selection
-  const currentDate = new Date();
-  const upcomingEvents = useMemo(() => {
-    return events.filter((event) => {
-      const eventDate = event.eventDate ? new Date(event.eventDate) : null;
-      return eventDate && eventDate >= currentDate;
-    });
-  }, [events]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreFutureEvents && !loadingMore && !loading) {
+          console.log("👀 Observer triggered - loading more events");
+          loadMoreEvents();
+        }
+      },
+      { threshold: 0.1, rootMargin: "100px" }
+    );
 
-  const pastEvents = useMemo(() => {
-    return events.filter((event) => {
-      const eventDate = event.eventDate ? new Date(event.eventDate) : null;
-      return eventDate && eventDate < currentDate;
-    });
-  }, [events]);
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
 
-  // Get events to display based on selected tab
-  const displayedEvents = tabValue === 0 ? upcomingEvents : pastEvents;
-  const displayedTotalCount = tabValue === 0 ? upcomingEvents.length : pastEvents.length;
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [tabValue, hasMoreFutureEvents, loadingMore, loading, loadMoreEvents]);
+
+  // Fetch events whenever searchCriteria or tab changes
+  useEffect(() => {
+    console.log("🎯 useEffect triggered - searchCriteria:", searchCriteria, "tab:", tabValue);
+
+    // Reset states when tab or search criteria changes
+    setCurrentPage(1);
+    setHasMoreFutureEvents(true);
+    fetchEvents({ ...searchCriteria, pageNumber: 1 }, tabValue);
+  }, [searchCriteria, tabValue, fetchEvents]);
 
   // Auto-search when user types 3+ characters or changes date range
   useEffect(() => {
@@ -217,21 +299,23 @@ const EventsList: React.FC = () => {
       if (searchQuery.length >= 3) {
         console.log("📝 Auto-setting search criteria for query:", searchQuery);
 
-        setSearchCriteria({
-          ...defaultSearchCriteria,
+        setSearchCriteria((prev) => ({
+          ...prev,
           name: searchQuery || undefined,
           eventDateFrom: formattedStartDate,
           eventDateTo: formattedEndDate,
           pageNumber: 1,
-        });
+        }));
       } else if (searchQuery.length === 0) {
         console.log("🧹 Auto-clearing search criteria with date filters");
 
-        setSearchCriteria({
-          ...defaultSearchCriteria,
+        setSearchCriteria((prev) => ({
+          ...prev,
+          name: undefined,
           eventDateFrom: formattedStartDate,
           eventDateTo: formattedEndDate,
-        });
+          pageNumber: 1,
+        }));
       }
     }, 500); // 500ms debounce
 
@@ -268,8 +352,10 @@ const EventsList: React.FC = () => {
         severity: "success",
       });
 
-      // Explicitly re-fetch with current criteria (force = true)
-      await fetchEvents(searchCriteria, true);
+      // Reset and re-fetch
+      setCurrentPage(1);
+      setHasMoreFutureEvents(true);
+      await fetchEvents({ ...searchCriteria, pageNumber: 1 }, tabValue, true);
     } catch (err: any) {
       console.error("Error deleting event:", err);
 
@@ -295,7 +381,7 @@ const EventsList: React.FC = () => {
   const handleSearch = () => {
     // Validate date range before searching
     if (!validateDateRange(startDate, endDate)) {
-      return; // Don't proceed with search if validation fails
+      return;
     }
 
     const formattedStartDate = startDate
@@ -307,13 +393,13 @@ const EventsList: React.FC = () => {
 
     console.log("🔍 Manual search triggered with query:", searchQuery);
 
-    setSearchCriteria({
-      ...defaultSearchCriteria,
+    setSearchCriteria((prev) => ({
+      ...prev,
       name: searchQuery || undefined,
       eventDateFrom: formattedStartDate,
       eventDateTo: formattedEndDate,
       pageNumber: 1,
-    });
+    }));
   };
 
   const handleClearFilters = () => {
@@ -321,11 +407,34 @@ const EventsList: React.FC = () => {
     setStartDate("");
     setEndDate("");
     setDateError("");
-    setSearchCriteria(defaultSearchCriteria);
+    setCurrentPage(1);
+    setHasMoreFutureEvents(true);
+
+    // Reset to default criteria based on current tab
+    setSearchCriteria({
+      ...getDefaultSearchCriteria(),
+      sortDirection:
+        tabValue === EventTab.Future
+          ? SortDirection.Ascending
+          : SortDirection.Descending,
+    });
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: EventTab) => {
     setTabValue(newValue);
+    setCurrentPage(1);
+    setHasMoreFutureEvents(true);
+
+    // Reset pagination and update sort direction based on tab
+    setSearchCriteria((prev) => ({
+      ...prev,
+      pageNumber: 1,
+      sortFieldName: "EventDate",
+      sortDirection:
+        newValue === EventTab.Future
+          ? SortDirection.Ascending // Future: nearest events first
+          : SortDirection.Descending, // Past: most recent past events first
+    }));
   };
 
   // Handle Enter key press in search field
@@ -359,37 +468,40 @@ const EventsList: React.FC = () => {
   };
 
   // Actions cell renderer
-  const ActionsCellRenderer = useCallback((props: any) => {
-    const event = props.data;
-    return (
-      <Stack
-        direction="row"
-        spacing={1}
-        justifyContent="center"
-        alignItems="center"
-        sx={{ height: "100%" }}
-      >
-        <Tooltip title="Edit">
-          <IconButton
-            color="primary"
-            size="small"
-            onClick={() => handleEditEvent(event.id)}
-          >
-            <EditIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Delete">
-          <IconButton
-            color="error"
-            size="small"
-            onClick={() => handleDeleteClick(event)}
-          >
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </Stack>
-    );
-  }, []);
+  const ActionsCellRenderer = useCallback(
+    (props: any) => {
+      const event = props.data;
+      return (
+        <Stack
+          direction="row"
+          spacing={1}
+          justifyContent="center"
+          alignItems="center"
+          sx={{ height: "100%" }}
+        >
+          <Tooltip title="Edit">
+            <IconButton
+              color="primary"
+              size="small"
+              onClick={() => handleEditEvent(event.id)}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete">
+            <IconButton
+              color="error"
+              size="small"
+              onClick={() => handleDeleteClick(event)}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      );
+    },
+    []
+  );
 
   // Event name cell renderer with hyperlink
   const EventNameCellRenderer = useCallback(
@@ -440,8 +552,76 @@ const EventsList: React.FC = () => {
     );
   }, []);
 
-  // AG Grid column definitions
-  const columnDefs: ColDef<Event>[] = useMemo(
+  // AG Grid column definitions for Future Events (lazy loading - no row number based on page)
+  const futureEventsColumnDefs: ColDef<Event>[] = useMemo(
+    () => [
+      {
+        headerName: "#",
+        valueGetter: (params) => {
+          return (params.node?.rowIndex ?? 0) + 1;
+        },
+        width: 80,
+        sortable: false,
+        filter: false,
+      },
+      {
+        field: "name",
+        headerName: "Event Name",
+        flex: 2,
+        sortable: true,
+        filter: true,
+        cellRenderer: EventNameCellRenderer,
+      },
+      {
+        field: "eventDate",
+        headerName: "Event Date",
+        flex: 1.5,
+        sortable: true,
+        filter: "agDateColumnFilter",
+        valueFormatter: (params) => formatDate(params.value),
+      },
+      {
+        field: "venueAddress",
+        headerName: "Address",
+        flex: 2,
+        sortable: true,
+        filter: true,
+        valueGetter: (params) => params.data?.venueAddress || "N/A",
+      },
+      {
+        field: "eventOrganizerName",
+        headerName: "Organizer",
+        flex: 1.5,
+        sortable: true,
+        filter: true,
+        valueGetter: (params) => params.data?.eventOrganizerName || "N/A",
+      },
+      {
+        headerName: "Published",
+        width: 120,
+        sortable: true,
+        filter: true,
+        cellRenderer: PublishedCellRenderer,
+        valueGetter: (params) => params.data?.eventSettings?.published || false,
+      },
+      {
+        headerName: "Action",
+        width: 140,
+        sortable: false,
+        filter: false,
+        cellRenderer: ActionsCellRenderer,
+        cellStyle: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        },
+      },
+    ],
+    [ActionsCellRenderer, PublishedCellRenderer, EventNameCellRenderer]
+  );
+
+  // AG Grid column definitions for Past Events (pagination)
+  const pastEventsColumnDefs: ColDef<Event>[] = useMemo(
     () => [
       {
         headerName: "#",
@@ -525,28 +705,27 @@ const EventsList: React.FC = () => {
     []
   );
 
-  const onGridReady = useCallback((_params: GridReadyEvent) => {
-    // Grid is ready - can be used for additional initialization if needed
+  const onGridReady = useCallback((params: GridReadyEvent) => {
+    gridApiRef.current = params.api;
   }, []);
 
   const pageSize = searchCriteria.pageSize || 10;
   const pageNumber = searchCriteria.pageNumber || 1;
   const totalPages = Math.ceil(totalRecords / pageSize);
 
-  
   const handlePageChange = (page: number) => {
-    setSearchCriteria({
-      ...searchCriteria,
+    setSearchCriteria((prev) => ({
+      ...prev,
       pageNumber: page,
-    });
+    }));
   };
 
   const handlePageSizeChange = (size: number) => {
-    setSearchCriteria({
-      ...searchCriteria,
+    setSearchCriteria((prev) => ({
+      ...prev,
       pageNumber: 1,
       pageSize: size,
-    });
+    }));
   };
 
   if (loading && events.length === 0) {
@@ -583,6 +762,31 @@ const EventsList: React.FC = () => {
           Create Event
         </Button>
       </Box>
+
+      {/* Tabs for Upcoming and Past Events */}
+      <Card sx={{ mb: 3 }}>
+        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            aria-label="event tabs"
+            sx={{ px: 2 }}
+          >
+            <Tab
+              icon={<EventAvailableIcon />}
+              iconPosition="start"
+              label="Upcoming Events"
+              sx={{ textTransform: "none", fontWeight: 500 }}
+            />
+            <Tab
+              icon={<HistoryIcon />}
+              iconPosition="start"
+              label="Past Events"
+              sx={{ textTransform: "none", fontWeight: 500 }}
+            />
+          </Tabs>
+        </Box>
+      </Card>
 
       {/* Search and Filter Bar */}
       <Card sx={{ mb: 3, p: 2 }}>
@@ -724,41 +928,30 @@ const EventsList: React.FC = () => {
         </Alert>
       )}
 
-      {/* Tabs for Upcoming and Past Events */}
-      <Card sx={{ mb: 3 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs
-            value={tabValue}
-            onChange={handleTabChange}
-            aria-label="event tabs"
-            sx={{ px: 2 }}
-          >
-            <Tab
-              icon={<EventAvailableIcon />}
-              iconPosition="start"
-              label={`Upcoming Events (${upcomingEvents.length})`}
-              sx={{ textTransform: 'none', fontWeight: 500 }}
-            />
-            <Tab
-              icon={<HistoryIcon />}
-              iconPosition="start"
-              label={`Past Events (${pastEvents.length})`}
-              sx={{ textTransform: 'none', fontWeight: 500 }}
-            />
-          </Tabs>
-        </Box>
-      </Card>
+      {/* Results Summary */}
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="body2" color="text.secondary">
+          {tabValue === EventTab.Future ? "Upcoming" : "Past"} Events:{" "}
+          {tabValue === EventTab.Future
+            ? `Showing ${events.length} of ${totalRecords}`
+            : `${totalRecords} total`}
+        </Typography>
+      </Box>
 
       {/* Events Table */}
-      {displayedEvents.length === 0 && !loading ? (
+      {events.length === 0 && !loading ? (
         <Card>
           <CardContent>
             <Typography variant="h6" align="center" color="text.secondary">
               {searchQuery
-                ? "No events found matching your search"
-                : "No events found"}
+                ? `No ${
+                    tabValue === EventTab.Future ? "upcoming" : "past"
+                  } events found matching your search`
+                : `No ${
+                    tabValue === EventTab.Future ? "upcoming" : "past"
+                  } events found`}
             </Typography>
-            {!searchQuery && (
+            {!searchQuery && tabValue === EventTab.Future && (
               <Box sx={{ mt: 2, display: "flex", justifyContent: "center" }}>
                 <Button
                   variant="contained"
@@ -773,7 +966,7 @@ const EventsList: React.FC = () => {
         </Card>
       ) : (
         <>
-          {/* AG Grid Table with Integrated Pagination */}
+          {/* AG Grid Table */}
           <Box
             sx={{
               position: "relative",
@@ -807,28 +1000,86 @@ const EventsList: React.FC = () => {
               </Box>
             )}
 
-            <DataGrid
-              rowData={displayedEvents}
-              columnDefs={columnDefs}
-              defaultColDef={defaultColDef}
-              domLayout="normal"
-              height={600}
-              pagination={false}
-              suppressPaginationPanel={true}
-              animateRows={true}
-              rowHeight={60}
-              headerHeight={50}
-              loading={loading}
-              overlayLoadingTemplate='<span class="ag-overlay-loading-center">Loading events...</span>'
-              overlayNoRowsTemplate='<span class="ag-overlay-no-rows-center">No events to display</span>'
-              useCustomPagination={true}
-              pageNumber={pageNumber}
-              paginationPageSize={pageSize}
-              totalRecords={displayedTotalCount}
-              totalPages={Math.ceil(displayedTotalCount / pageSize)}
-              onPageChange={handlePageChange}
-              onPageSizeChange={handlePageSizeChange}
-            />
+            {/* Future Events - Lazy Loading (No Pagination) */}
+            {tabValue === EventTab.Future && (
+              <>
+                <DataGrid
+                  rowData={events}
+                  columnDefs={futureEventsColumnDefs}
+                  defaultColDef={defaultColDef}
+                  domLayout="normal"
+                  height={600}
+                  pagination={false}
+                  suppressPaginationPanel={true}
+                  animateRows={true}
+                  rowHeight={60}
+                  headerHeight={50}
+                  loading={loading}
+                  onGridReady={onGridReady}
+                  overlayLoadingTemplate='<span class="ag-overlay-loading-center">Loading events...</span>'
+                  overlayNoRowsTemplate='<span class="ag-overlay-no-rows-center">No events to display</span>'
+                  useCustomPagination={false}
+                />
+
+                {/* Lazy Loading Trigger Element */}
+                <Box
+                  ref={observerTarget}
+                  sx={{
+                    height: "50px",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    mt: 2,
+                  }}
+                >
+                  {loadingMore && (
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <CircularProgress size={24} />
+                      <Typography variant="body2" color="text.secondary">
+                        Loading more events...
+                      </Typography>
+                    </Stack>
+                  )}
+                  {!loadingMore && hasMoreFutureEvents && events.length > 0 && (
+                    <Typography variant="body2" color="text.secondary">
+                      Scroll down to load more events
+                    </Typography>
+                  )}
+                  {!hasMoreFutureEvents && events.length > 0 && (
+                    <Typography variant="body2" color="text.secondary">
+                      All {totalRecords} upcoming events loaded
+                    </Typography>
+                  )}
+                </Box>
+              </>
+            )}
+
+            {/* Past Events - Traditional Pagination */}
+            {tabValue === EventTab.Past && (
+              <DataGrid
+                rowData={events}
+                columnDefs={pastEventsColumnDefs}
+                defaultColDef={defaultColDef}
+                domLayout="normal"
+                height={600}
+                pagination={false}
+                suppressPaginationPanel={true}
+                animateRows={true}
+                rowHeight={60}
+                headerHeight={50}
+                loading={loading}
+                onGridReady={onGridReady}
+                overlayLoadingTemplate='<span class="ag-overlay-loading-center">Loading events...</span>'
+                overlayNoRowsTemplate='<span class="ag-overlay-no-rows-center">No events to display</span>'
+                useCustomPagination={true}
+                pageNumber={pageNumber}
+                paginationPageSize={pageSize}
+                totalRecords={totalRecords}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            )}
           </Box>
         </>
       )}

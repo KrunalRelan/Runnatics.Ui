@@ -13,9 +13,9 @@ import { EventRequest } from '../models/EventRequest';
 // All requests will automatically include the Bearer token
 
 export class EventService {
+
     /**
-     * Get all events with optional filters
-     * Note: JWT token is automatically included via interceptor
+     * Get all events with optional filters (generic search)
      */
     static async getAllEvents(params?: {
        searchCriteria?: EventSearchRequest;
@@ -23,6 +23,25 @@ export class EventService {
         const response = await apiClient.post<SearchResponse<Event>>(
             ServiceUrl.searchEventService(), 
             params?.searchCriteria
+        );
+        return response.data;
+    }
+
+     static async getPastEvents(searchCriteria?: EventSearchRequest): Promise<SearchResponse<Event>> {
+        const response = await apiClient.post<SearchResponse<Event>>(
+            ServiceUrl.searchPastEvents(), 
+            searchCriteria
+        );
+        return response.data;
+    }
+
+    /**
+     * Get future/upcoming events (events from today onwards)
+     */
+    static async getFutureEvents(searchCriteria?: EventSearchRequest): Promise<SearchResponse<Event>> {
+        const response = await apiClient.post<SearchResponse<Event>>(
+            ServiceUrl.searchFutureEvents(), 
+            searchCriteria
         );
         return response.data;
     }
@@ -108,4 +127,6 @@ export class EventService {
         const response: AxiosResponse<Event> = await apiClient.post(`/events/${id}/cancel`);
         return response.data;
     }
+
+    
 }
