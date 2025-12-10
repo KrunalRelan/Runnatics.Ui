@@ -412,9 +412,9 @@ export const EditEvent: React.FC = () => {
     if (!(formData.city ?? "").trim()) {
       newErrors.city = "City is required";
     }
-    if (!(formData.state ?? "").trim()) {
-      newErrors.state = "State is required";
-    }
+    // if (!(formData.state ?? "").trim()) {
+    //   newErrors.state = "State is required";
+    // }
     if (!(formData.country ?? "").trim()) {
       newErrors.country = "Country is required";
     }
