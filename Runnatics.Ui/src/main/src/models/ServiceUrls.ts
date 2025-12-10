@@ -15,6 +15,15 @@ export const ServiceUrl = {
     deleteEvent: (id: string) => `Events/${id}/delete-event`,
     getEventOrganizer: () => "EventOrganizer/all-event-organizers",
     createEventOrganizer: () => "EventOrganizer/create-event-organizer",
+    // New endpoints for past and future events
+    searchPastEvents(): string {
+        return 'events/search/past';
+    },
+    
+     searchFutureEvents(): string {
+        return 'events/search/future';
+    },
+
 
     //races
     searchRaceService: (eventId: string) => `Races/${eventId}/search`,
@@ -31,11 +40,15 @@ export const ServiceUrl = {
     editParticipant: (participantId: string) => `participants/${participantId}/edit-participant`,
     deleteParticipant: (participantId: string) => `participants/${participantId}/delete-participant`,
     getParticipantCategories: (eventId: string, raceId?: string) => `participants/${eventId}/${raceId}/categories`,
+    addParticipantRange: (eventId: string, raceId: string) => `participants/${eventId}/${raceId}/add-participant-range`,
     //checkpoints
     searchCheckpoints: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,
     addCheckpoint: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,
     editCheckpoint: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
     deleteCheckpoint: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
     getCheckpointById: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
+
+    //dashboard
+    dashboardStats: () => "dashboard/stats",
 };
 

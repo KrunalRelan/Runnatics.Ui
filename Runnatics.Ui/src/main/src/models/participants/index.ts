@@ -7,3 +7,6 @@ export * from './ProcessImportRequest';
 export * from './ParticipantSearchRequest';
 export * from './ParticipantSearchResponse';
 export * from './ParticipantRequest';
+export * from './AddParticipantRangeDialogProps';
+export * from './AddParticipantRangeRequest';
+export * from './AddParticipantRangeResponse';

@@ -1,7 +1,7 @@
 import { ServiceUrl } from '../models';
 import { apiClient } from '../utils/axios.config';
 import { AxiosResponse } from 'axios';
-import { UploadResponse, ProcessResponse, ProcessImportRequest, ParticipantSearchRequest, ParticipantSearchResponse, ParticipantRequest } from '../models/participants';
+import { UploadResponse, ProcessResponse, ProcessImportRequest, ParticipantSearchRequest, ParticipantSearchResponse, ParticipantRequest, AddParticipantRangeRequest, AddParticipantRangeResponse } from '../models/participants';
 import { ResponseBase } from '../models/ResponseBase';
 import { Category } from '../models/participants/Category';
 
@@ -117,6 +117,24 @@ export class ParticipantService {
             ServiceUrl.getParticipantCategories(eventId, raceId)
         );
         return response.data.message;
+    }
+
+    /**
+     * Add participants with bib numbers in a specified range
+     * Note: JWT token is automatically included via interceptor
+     */
+    static async addParticipantRange(
+        eventId: string,
+        raceId: string,
+        request: AddParticipantRangeRequest
+    ): Promise<ResponseBase<AddParticipantRangeResponse>> {
+        const response: AxiosResponse<ResponseBase<AddParticipantRangeResponse>> =
+            await apiClient.post(
+                ServiceUrl.addParticipantRange(eventId, raceId),
+                request
+            );
+
+        return response.data;
     }
 
 }

@@ -14,6 +14,7 @@ import {
   CardContent,
   Chip,
   CircularProgress,
+  Typography,
 } from "@mui/material";
 import {
   Add,
@@ -22,6 +23,7 @@ import {
   Refresh,
   Edit,
   Delete,
+  ViewWeek,
 } from "@mui/icons-material";
 import DataGrid from "@/main/src/components/DataGrid";
 import type { ColDef } from "ag-grid-community";
@@ -45,6 +47,9 @@ const DeleteParticipant = lazy(
 );
 const BulkUploadParticipants = lazy(
   () => import("@/main/src/pages/admin/participants/BulkUploadParticipants")
+);
+const AddParticipantRangeDialog = lazy(
+  () => import("@/main/src/pages/admin/participants/AddParticipantRangeDialog")
 );
 
 // Loading fallback component for dialogs
@@ -104,6 +109,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   // Add Participant Dialog State
   const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
   const [openBulkUploadDialog, setOpenBulkUploadDialog] = useState<boolean>(false);
+  const [openAddRangeDialog, setOpenAddRangeDialog] = useState<boolean>(false);
 
   // Edit Participant Dialog State
   const [openEditDialog, setOpenEditDialog] = useState<boolean>(false);
@@ -299,11 +305,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     }));
   };
 
-  const handleRefresh = () => {
-    fetchParticipants(filters);
-  };
-
-  const handleEditParticipant = (participant: Participant) => {
+   const handleEditParticipant = (participant: Participant) => {
     setSelectedParticipant(participant);
     setOpenEditDialog(true);
   };
@@ -354,6 +356,19 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   const handleBulkUploadComplete = async () => {
     await fetchParticipants(filters);
     handleCloseBulkUploadDialog();
+  };
+
+  const handleOpenAddRangeDialog = () => {
+    setOpenAddRangeDialog(true);
+  };
+
+  const handleCloseAddRangeDialog = () => {
+    setOpenAddRangeDialog(false);
+  };
+
+  const handleAddRangeComplete = async () => {
+    await fetchParticipants(filters);
+    handleCloseAddRangeDialog();
   };
 
   const totalPages = totalRecords > 0 ? Math.ceil(totalRecords / filters.pageSize) : 1;
@@ -494,46 +509,50 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   return (
     <Card>
       <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
-        {/* Action Buttons */}
-        <Stack
-          direction="row"
-          spacing={1.5}
-          sx={{ mb: 3, flexWrap: "wrap" }}
-          useFlexGap
-        >
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            sx={{ textTransform: "none", fontWeight: 500 }}
-            onClick={handleOpenAddDialog}
+        {/* Header and Action Buttons */}
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, flexWrap: "wrap", gap: 2 }}>
+          <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
+            Participants
+          </Typography>
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{ flexWrap: "wrap" }}
+            useFlexGap
           >
-            Add Participant
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<FileUpload />}
-            sx={{ textTransform: "none", fontWeight: 500 }}
-            onClick={handleOpenBulkUploadDialog}
-          >
-            Bulk Upload
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<FileDownload />}
-            sx={{ textTransform: "none", fontWeight: 500 }}
-          >
-            Export
-          </Button>
-          <Box sx={{ flexGrow: 1 }} />
-          <IconButton
-            color="primary"
-            title="Refresh"
-            onClick={handleRefresh}
-            disabled={participantsLoading}
-          >
-            <Refresh />
-          </IconButton>
-        </Stack>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              sx={{ textTransform: "none", fontWeight: 500 }}
+              onClick={handleOpenAddDialog}
+            >
+              Add Participant
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon= {<ViewWeek/>}
+              sx={{ textTransform: "none", fontWeight: 500 }}
+              onClick={handleOpenAddRangeDialog}
+            >
+              Add Participant Range
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<FileUpload />}
+              sx={{ textTransform: "none", fontWeight: 500 }}
+              onClick={handleOpenBulkUploadDialog}
+            >
+              Bulk Upload
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<FileDownload />}
+              sx={{ textTransform: "none", fontWeight: 500 }}
+            >
+              Export
+            </Button>
+          </Stack>
+        </Box>
 
         {/* Filters Section */}
         <Card sx={{ p: 3, mb: 3 }}>
@@ -602,21 +621,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
                   ))}
               </Select>
             </FormControl>
-            <FormControl sx={{ flex: 1, minWidth: 200 }} size="small">
-              <InputLabel>Per Page</InputLabel>
-              <Select
-                value={filters.pageSize.toString()}
-                label="Per Page"
-                onChange={(e: SelectChangeEvent) =>
-                  handlePageSizeChange(parseInt(e.target.value))
-                }
-              >
-                <MenuItem value="10">10</MenuItem>
-                <MenuItem value="25">25</MenuItem>
-                <MenuItem value="50">50</MenuItem>
-                <MenuItem value="100">100</MenuItem>
-              </Select>
-            </FormControl>
             <Button
               variant="outlined"
               onClick={handleResetFilters}
@@ -655,7 +659,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       </CardContent>
 
       {/* LAZY LOADED DIALOGS - Only load component when dialog is opened */}
-      
+
       {/* Add Participant Dialog */}
       {openAddDialog && (
         <Suspense fallback={<DialogLoader />}>
@@ -707,8 +711,23 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           />
         </Suspense>
       )}
+
+      {/* Add Participant Range Dialog */}
+      {openAddRangeDialog && (
+        <Suspense fallback={<DialogLoader />}>
+          <AddParticipantRangeDialog
+            open={openAddRangeDialog}
+            onClose={handleCloseAddRangeDialog}
+            onComplete={handleAddRangeComplete}
+            eventId={eventId}
+            raceId={raceId}
+          />
+        </Suspense>
+      )}
     </Card>
   );
 };
+
+
 
 export default ViewParticipants;
