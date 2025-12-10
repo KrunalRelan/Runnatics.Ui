@@ -17,7 +17,7 @@ interface ViewCheckPointsProps {
 }
 
 const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, races }) => {
-    
+
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [activeDrawerTab, setActiveDrawerTab] = useState(0); // 0: Loops, 1: Clone
     const [selectedRaceId, setSelectedRaceId] = useState("");
@@ -30,7 +30,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
     };
 
     const [loading, setLoading] = useState<boolean>(false);
-    // const [selectedRace, setSelectedRace] = useState<Race>();
+    const [selectedRace, setSelectedRace] = useState<Race>();
     const [localCheckpoints, setLocalCheckpoints] = useState<Checkpoint[]>([]);
     const [totalCount, setTotalCount] = useState<number>(0);
     const [totalPages, setTotalPages] = useState<number>(0);
@@ -73,11 +73,11 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
         }
     };
 
-    // Set selectedRace when component loads or races/raceId change
-    // useEffect(() => {
-    //     setSelectedRace(races.find(r => r.id === raceId));
-    // }, [races, raceId]);
-    
+    //Set selectedRace when component loads or races / raceId change
+    useEffect(() => {
+        setSelectedRace(races.find(r => r.id === raceId));
+    }, [races, raceId]);
+
 
     // Fetch checkpoints on mount and when eventId or raceId changes
     useEffect(() => {
@@ -141,7 +141,6 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
     // Add Loop handler
     const handleAddLoop = async () => {
         // Find the selected race to get its distance
-        const selectedRace = races.find(r => r.id === raceId);
         if (!selectedRace || !selectedRace.distance || localCheckpoints.length === 0) return;
         const raceDistance = Number(selectedRace.distance);
 
@@ -188,12 +187,28 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
             }
         }
 
-        setLocalCheckpoints([...localCheckpoints, ...newCheckpoints]);
-        setSnackbar({
-            open: true,
-            message: `Loop added!`,
-            severity: 'success',
-        });
+        // Persist new checkpoints to DB and only update grid if successful
+        if (newCheckpoints.length > 0) {
+            setLoading(true);
+            try {
+                await CheckpointsService.createCheckpoints(eventId, raceId, newCheckpoints);
+                setLocalCheckpoints([...localCheckpoints, ...newCheckpoints]);
+                setSnackbar({
+                    open: true,
+                    message: `Loop added!`,
+                    severity: 'success',
+                });
+                fetchCheckpoints();
+            } catch (err) {
+                setSnackbar({
+                    open: true,
+                    message: 'Failed to save new checkpoints to DB.',
+                    severity: 'error',
+                });
+            } finally {
+                setLoading(false);
+            }
+        }
     };
 
     const handleRefresh = () => {
@@ -397,12 +412,24 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                                 Add Checkpoint
                             </Button>
                             <Button
-                                variant="contained"
-                                color="primary"
+                                variant="outlined"
+                                startIcon={<AddIcon />}
                                 onClick={handleAddLoop}
                                 sx={{ minWidth: 120 }}
+                                disabled={(() => {
+                                    if (!selectedRace || !selectedRace.distance) return true;
+                                    const raceDistance = Number(selectedRace.distance);
+                                    const checkpointsPerLoop = localCheckpoints.filter(cp => Number(cp.distanceFromStart) <= raceDistance).length;
+                                    // Calculate max possible loops
+                                    const loopLength = selectedRace?.raceSettings?.loopLength || 1;
+                                    const maxLoops = Math.floor(raceDistance / loopLength);
+                                    // Count current loops
+                                    const currentLoops = checkpointsPerLoop > 0 ? Math.floor(localCheckpoints.length / checkpointsPerLoop) : 1;
+                                    // Disable if all loops are already added
+                                    return currentLoops >= maxLoops;
+                                })()}
                             >
-                                Add Loop
+                                Add Loops
                             </Button>
                             <Button
                                 variant="outlined"
@@ -493,10 +520,10 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                         rowData={localCheckpoints}
                     />
                 </CardContent>
-            </Card>
+            </Card >
 
             {/* Add Checkpoint Dialog */}
-            <AddOrEditCheckpoint
+            < AddOrEditCheckpoint
                 open={openAddDialog}
                 onClose={() => {
                     handleCloseAddDialog();

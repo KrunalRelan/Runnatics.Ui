@@ -33,6 +33,14 @@ export class CheckpointsService {
         return response.data;
     }
 
+    static async createCheckpoints(eventId: string, raceId: string, checkpointData: Partial<Checkpoint[]>): Promise<Checkpoint[]> {
+        const response = await apiClient.post<Checkpoint[]>(
+            ServiceUrl.addBulkCheckpoints(eventId, raceId),
+            checkpointData
+        );
+        return response.data;
+    }
+
     static async updateCheckpoint(eventId: string, raceId: string, checkpointId: string, checkpointData: Partial<Checkpoint>): Promise<Checkpoint> {
         const response = await apiClient.put<Checkpoint>(
             ServiceUrl.editCheckpoint(eventId, raceId, checkpointId),
