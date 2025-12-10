@@ -22,25 +22,54 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
         const selectedRace = races.find(r => r.id === raceId);
         if (!selectedRace || !selectedRace.distance || localCheckpoints.length === 0) return;
         const raceDistance = Number(selectedRace.distance);
-        // Calculate current loop count
-        const checkpointsPerLoop = localCheckpoints.length;
-        const currentLoopCount = Math.floor(localCheckpoints.length / checkpointsPerLoop);
-        const newLoopNumber = currentLoopCount + 1;
-        // Copy all current checkpoints as the new loop
-        const newCheckpoints = localCheckpoints.map(cp => {
-            const newDistance = (Number(cp.distanceFromStart) || 0) + raceDistance * currentLoopCount;
-            return {
-                ...cp,
-                id: '', // New checkpoint, so no id
-                distanceFromStart: newDistance,
-                name: `${newDistance} KM`,
-            };
-        });
-        // Optionally, call backend to persist new checkpoints here
+
+        // Get the first loop's checkpoints (sorted by distance)
+        const firstLoopCheckpoints = [...localCheckpoints]
+            .filter(cp => Number(cp.distanceFromStart) < raceDistance)
+            .sort((a, b) => Number(a.distanceFromStart) - Number(b.distanceFromStart));
+
+        // Find the last checkpoint's distance
+        const lastCheckpointDistance = localCheckpoints.length > 0
+            ? Math.max(...localCheckpoints.map(cp => Number(cp.distanceFromStart)))
+            : 0;
+
+        // Calculate segment distances from the first loop
+        const segmentDistances = [];
+        for (let i = 1; i < firstLoopCheckpoints.length; i++) {
+            segmentDistances.push(Number(firstLoopCheckpoints[i].distanceFromStart) - Number(firstLoopCheckpoints[i - 1].distanceFromStart));
+        }
+
+        // Generate new checkpoints for the next loop
+        const newCheckpoints: any[] = [];
+        let currentDistance = lastCheckpointDistance;
+        for (let i = 0; i < segmentDistances.length; i++) {
+            currentDistance += segmentDistances[i];
+            if (currentDistance >= raceDistance) {
+                // Only add Finish if it doesn't already exist
+                const finishExists = localCheckpoints.some(cp => Number(cp.distanceFromStart) === raceDistance && cp.name === 'Finish');
+                if (!finishExists) {
+                    newCheckpoints.push({
+                        ...firstLoopCheckpoints[0],
+                        id: '',
+                        distanceFromStart: raceDistance,
+                        name: 'Finish',
+                    });
+                }
+                break;
+            } else {
+                newCheckpoints.push({
+                    ...firstLoopCheckpoints[i + 1],
+                    id: '',
+                    distanceFromStart: currentDistance,
+                    name: `${currentDistance} KM`,
+                });
+            }
+        }
+
         setLocalCheckpoints([...localCheckpoints, ...newCheckpoints]);
         setSnackbar({
             open: true,
-            message: `Loop ${newLoopNumber} added!`,
+            message: `Loop added!`,
             severity: 'success',
         });
     };
@@ -371,7 +400,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                                 onClick={handleAddLoop}
                                 sx={{ minWidth: 120 }}
                             >
-                                Add Loop (Action)
+                                Add Loop
                             </Button>
                             <Button
                                 variant="outlined"
