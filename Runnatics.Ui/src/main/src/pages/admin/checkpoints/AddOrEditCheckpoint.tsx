@@ -16,6 +16,8 @@ import {
 } from "@mui/material";
 import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
 import { CheckpointsService } from "@/main/src/services/CheckpointsService";
+import { Device } from "@/main/src/models/Device";
+import { DevicesService } from "@/main/src/services/DevicesService";
 
 interface AddOrEditCheckpointProps {
     open: boolean;
@@ -43,6 +45,23 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
         distanceFromStart: 0,
         // lastUpdateMode: "",
     });
+        const [devices, setDevices] = useState<Device[]>([]);
+        const [loadingDevices, setLoadingDevices] = useState(false);
+
+        useEffect(() => {
+            const fetchDevices = async () => {
+                setLoadingDevices(true);
+                try {
+                    const result = await DevicesService.getDevices();
+                    setDevices(result);
+                } catch (err) {
+                    setDevices([]);
+                } finally {
+                    setLoadingDevices(false);
+                }
+            };
+            fetchDevices();
+        }, []);
 
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -196,11 +215,12 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                         fullWidth
                         size="small"
                         helperText="Required field"
+                        disabled={loadingDevices}
                     >
                         <MenuItem value="">Select Device</MenuItem>
-                        <MenuItem value="1">Device 1</MenuItem>
-                        <MenuItem value="2">Device 2</MenuItem>
-                        <MenuItem value="3">Device 3</MenuItem>
+                        {devices.map((device) => (
+                            <MenuItem key={device.id} value={device.id}>{device.name}</MenuItem>
+                        ))}
                     </TextField>
                     <TextField
                         select
@@ -209,11 +229,12 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                         onChange={(e) => handleFormChange("parentDeviceId", e.target.value)}
                         fullWidth
                         size="small"
+                        disabled={loadingDevices}
                     >
                         <MenuItem value="">Select Parent Device</MenuItem>
-                        <MenuItem value="1">Parent Device 1</MenuItem>
-                        <MenuItem value="2">Parent Device 2</MenuItem>
-                        <MenuItem value="3">Parent Device 3</MenuItem>
+                        {devices.map((device) => (
+                            <MenuItem key={device.id} value={device.id}>{device.name}</MenuItem>
+                        ))}
                     </TextField>
                 </Stack>
 
