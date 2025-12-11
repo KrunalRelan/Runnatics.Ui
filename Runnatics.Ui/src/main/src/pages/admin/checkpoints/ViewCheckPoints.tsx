@@ -53,7 +53,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
             setSelectedRaceId("");
         }
         if (tab === 0) {
-            setDrawerLoopInput(loopInput);
+            setDrawerLoopInput(loopsToAddInput);
         }
     };
 
@@ -69,7 +69,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
     const [filters, setFilters] = useState<CheckpointFilters>(defaultCheckpointFilters);
     const handleOpenAddDialog = () => setOpenAddDialog(true);
     const handleCloseAddDialog = () => setOpenAddDialog(false);
-    const [loopInput, setLoopInput] = useState<number>(1);
+    const [loopsToAddInput, setLoopsToAddInput] = useState<number>(1);
     const [loopError, setLoopError] = useState<string | null>(null);
 
     const [snackbar, setSnackbar] = useState<{
@@ -82,16 +82,112 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
         severity: "success",
     });
 
-    // Memoized calculation of race parameters
-    const raceParams = useMemo(() => {
-        if (!selectedRace || !selectedRace.distance || !selectedRace.raceSettings?.loopLength) {
-            return { raceDistance: 0, loopLength: 0, maxLoops: 0 };
-        }
-        const raceDistance = Number(selectedRace.distance);
-        const loopLength = Number(selectedRace.raceSettings.loopLength);
-        const maxLoops = loopLength > 0 ? Math.floor(raceDistance / loopLength) : 0;
-        return { raceDistance, loopLength, maxLoops };
+    // Get race distance
+    const raceDistance = useMemo(() => {
+        return selectedRace?.distance ? Number(selectedRace.distance) : 0;
     }, [selectedRace]);
+
+    /**
+     * Detect loop length by finding the repeating checkpoint pattern
+     * Loop length = smallest distance d where:
+     * 1. Checkpoint exists at d
+     * 2. At least one checkpoint exists in (0, d) - meaning first loop has multiple checkpoints
+     * 3. The pattern of checkpoints repeats for subsequent loops
+     */
+    const loopParams = useMemo(() => {
+        if (!raceDistance || localCheckpoints.length === 0) {
+            return { loopLength: 0, maxNewLoops: 0, currentLoopCount: 0, maxCheckpointDistance: 0 };
+        }
+
+        // Get sorted unique distances
+        const sortedDistances = [...new Set(localCheckpoints.map(cp => Number(cp.distanceFromStart)))]
+            .sort((a, b) => a - b);
+
+        const maxCheckpointDistance = sortedDistances[sortedDistances.length - 1];
+        const hasStartCheckpoint = sortedDistances[0] === 0;
+
+        // If no start checkpoint or only one checkpoint, can't determine loop pattern
+        if (sortedDistances.length < 2) {
+            return { 
+                loopLength: maxCheckpointDistance, 
+                maxNewLoops: 0, 
+                currentLoopCount: 1,
+                maxCheckpointDistance 
+            };
+        }
+
+        // Detect loop length by finding repeating pattern
+        let detectedLoopLength = maxCheckpointDistance;
+        
+        // Try each distance as potential loop length
+        for (let i = 1; i < sortedDistances.length; i++) {
+            const candidateLength = sortedDistances[i];
+            if (candidateLength <= 0) continue;
+            
+            // Check if there's at least one checkpoint between 0 and candidateLength
+            // This ensures the first loop has multiple checkpoints
+            const checkpointsInFirstLoop = sortedDistances.filter(d => d > 0 && d < candidateLength);
+            if (checkpointsInFirstLoop.length === 0 && i < sortedDistances.length - 1) {
+                continue; // Try next candidate - first loop should have interior checkpoints
+            }
+            
+            // Get the offsets within the first loop (excluding 0, including the end)
+            const firstLoopOffsets = sortedDistances.filter(d => d > 0 && d <= candidateLength);
+            
+            // Calculate how many full loops we'd have with this loop length
+            const numFullLoops = Math.floor(maxCheckpointDistance / candidateLength);
+            
+            if (numFullLoops < 1) continue;
+            
+            // Verify the pattern repeats for all subsequent loops
+            let patternRepeats = true;
+            
+            for (let loop = 1; loop < numFullLoops; loop++) {
+                const baseOffset = candidateLength * loop;
+                for (const offset of firstLoopOffsets) {
+                    const expectedDist = baseOffset + offset;
+                    // Check if checkpoint exists at expected distance (within tolerance for floating point)
+                    const exists = sortedDistances.some(d => Math.abs(d - expectedDist) < 0.001);
+                    if (expectedDist <= maxCheckpointDistance && !exists) {
+                        patternRepeats = false;
+                        break;
+                    }
+                }
+                if (!patternRepeats) break;
+            }
+            
+            // Also check the last partial loop (if checkpoint at maxCheckpointDistance matches pattern)
+            if (patternRepeats && maxCheckpointDistance % candidateLength === 0) {
+                // Last checkpoint should be at a multiple of loop length
+                detectedLoopLength = candidateLength;
+                break;
+            } else if (patternRepeats && numFullLoops >= 2) {
+                // Pattern repeats for at least 2 full loops
+                detectedLoopLength = candidateLength;
+                break;
+            }
+        }
+
+        // Calculate current loop count based on detected loop length
+        const currentLoopCount = detectedLoopLength > 0 
+            ? Math.ceil(maxCheckpointDistance / detectedLoopLength)
+            : 1;
+        
+        // Calculate max new loops that can be added
+        // Only allow adding loops if max checkpoint distance < race distance
+        let maxNewLoops = 0;
+        if (maxCheckpointDistance < raceDistance && detectedLoopLength > 0) {
+            const maxTotalLoops = Math.floor(raceDistance / detectedLoopLength);
+            maxNewLoops = Math.max(0, maxTotalLoops - currentLoopCount);
+        }
+
+        return { 
+            loopLength: detectedLoopLength, 
+            maxNewLoops, 
+            currentLoopCount,
+            maxCheckpointDistance 
+        };
+    }, [raceDistance, localCheckpoints]);
 
     // Consolidated reusable function to fetch checkpoints
     const fetchCheckpoints = useCallback(async () => {
@@ -129,12 +225,12 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
         fetchCheckpoints();
     }, [fetchCheckpoints]);
 
-    // Update loopInput to maxLoops when race changes
+    // Reset loopsToAddInput when maxNewLoops changes
     useEffect(() => {
-        if (raceParams.maxLoops > 0) {
-            setLoopInput(raceParams.maxLoops);
+        if (loopParams.maxNewLoops > 0) {
+            setLoopsToAddInput(Math.min(loopsToAddInput, loopParams.maxNewLoops));
         }
-    }, [raceParams.maxLoops]);
+    }, [loopParams.maxNewLoops]);
 
     const handleAddOrEditCheckpoint = () => {
         setSnackbar({
@@ -147,76 +243,102 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
         fetchCheckpoints();
     };
 
-    // Check if race has finish checkpoint
-    const hasFinishCheckpoint = useMemo(() => {
-        if (!selectedRace?.distance) return false;
-        return localCheckpoints.some(cp => Number(cp.distanceFromStart) === Number(selectedRace.distance));
-    }, [localCheckpoints, selectedRace?.distance]);
+    // Clone checkpoints handler
+    const handleCloneCheckpoints = async () => {
+        if (!eventId || !selectedRaceId || !raceId) return;
 
-    /**
-     * SIMPLIFIED Add Loops Handler
-     * - Takes the target number of loops from input
-     * - Automatically calculates and adds all necessary checkpoints
-     * - Uses first loop checkpoints as template
-     */
-    const handleAddLoops = async (targetLoops?: number) => {
-        // Defensive guard: if race already has Finish, don't allow more loops
-        if (hasFinishCheckpoint) {
+        setLoading(true);
+        try {
+            await CheckpointsService.cloneCheckpoints(eventId, selectedRaceId, raceId);
             setSnackbar({
                 open: true,
-                message: "Race already has a Finish checkpoint. No more loops can be added.",
-                severity: "info",
+                message: "Checkpoints cloned successfully!",
+                severity: "success",
             });
-            return;
+            fetchCheckpoints();
+            setDrawerOpen(false);
+        } catch (err: any) {
+            setSnackbar({
+                open: true,
+                message: err.response?.data?.error || err.response?.data?.message || "Failed to clone checkpoints.",
+                severity: "error",
+            });
+        } finally {
+            setLoading(false);
         }
+    };
 
-        const totalLoopsWanted = targetLoops ?? loopInput;
+    /**
+     * Add Loops Handler - Based on existing checkpoints
+     * 
+     * Logic:
+     * 1. Loop length = detected from checkpoint pattern
+     * 2. For each new loop, replicate checkpoints with distance > 0 (from first loop)
+     * 3. New checkpoint distance = baseDistance + originalDistance
+     * 4. baseDistance for loop N = loopLength * (currentLoopCount + N - 1)
+     * 
+     * Example: Race 15 KM, existing checkpoints at 0, 2.5, 5 KM
+     * - Loop length = 5 KM, currentLoopCount = 1
+     * - Adding 2 loops:
+     *   - Loop 2 (base=5): 5+2.5=7.5, 5+5=10
+     *   - Loop 3 (base=10): 10+2.5=12.5, 10+5=15 (Finish)
+     */
+    const handleAddLoops = async (loopsToAdd?: number) => {
+        const numLoopsToAdd = loopsToAdd ?? loopsToAddInput;
         setLoopError(null);
 
         // Validation
-        if (!selectedRace || !selectedRace.distance) {
+        if (!selectedRace || !raceDistance) {
             setLoopError("Race configuration is missing.");
             return;
         }
 
-        const { raceDistance, loopLength, maxLoops } = raceParams;
+        if (localCheckpoints.length === 0) {
+            setLoopError("Please add checkpoints for the first loop before adding more loops.");
+            return;
+        }
+
+        const { loopLength, maxNewLoops, currentLoopCount, maxCheckpointDistance } = loopParams;
 
         if (loopLength <= 0) {
-            setLoopError("Loop length is not configured for this race.");
+            setLoopError("Cannot determine loop length. Please add checkpoints with distance > 0.");
             return;
         }
 
-        if (totalLoopsWanted < 1) {
-            setLoopError("Please enter at least 1 loop.");
+        if (numLoopsToAdd < 1) {
+            setLoopError("Please enter at least 1 loop to add.");
             return;
         }
 
-        if (totalLoopsWanted > maxLoops) {
-            setLoopError(`Maximum ${maxLoops} loops allowed for this race (${raceDistance}km / ${loopLength}km per loop).`);
+        if (numLoopsToAdd > maxNewLoops) {
+            setLoopError(
+                `Cannot add ${numLoopsToAdd} loop(s). Maximum ${maxNewLoops} loop(s) can be added. ` +
+                `(Race: ${raceDistance} KM, Loop: ${loopLength} KM)`
+            );
             return;
         }
 
-        if (localCheckpoints.length === 0) {
-            setLoopError("Please add at least one checkpoint for the first loop before adding more loops.");
-            return;
-        }
-
-        // Get first loop checkpoints (checkpoints within the first loopLength distance)
-        const firstLoopCheckpoints = [...localCheckpoints]
-            .filter(cp => Number(cp.distanceFromStart) <= loopLength)
+        // Get first loop checkpoints (excluding start at 0)
+        // Only replicate checkpoints with distance > 0 and within first loop
+        const firstLoopCheckpoints = localCheckpoints
+            .filter(cp => {
+                const dist = Number(cp.distanceFromStart);
+                return dist > 0 && dist <= loopLength;
+            })
             .sort((a, b) => Number(a.distanceFromStart) - Number(b.distanceFromStart));
 
         if (firstLoopCheckpoints.length === 0) {
-            setLoopError("No checkpoints found within the first loop distance. Please add checkpoints first.");
+            setLoopError("No checkpoints found with distance > 0 in the first loop. Please add intermediate checkpoints.");
             return;
         }
 
-        // Generate ALL checkpoints for the requested number of loops
+        // Generate new checkpoints for the requested loops
         const newCheckpoints: any[] = [];
         const existingDistances = new Set(localCheckpoints.map(cp => Number(cp.distanceFromStart)));
 
-        for (let loopIndex = 0; loopIndex < totalLoopsWanted; loopIndex++) {
-            const baseDistance = loopIndex * loopLength;
+        // Start from the current loop count (since we're adding NEW loops)
+        for (let loopIndex = 0; loopIndex < numLoopsToAdd; loopIndex++) {
+            const baseDistance = loopLength * (currentLoopCount + loopIndex);
 
             for (const checkpoint of firstLoopCheckpoints) {
                 const originalDistance = Number(checkpoint.distanceFromStart);
@@ -225,14 +347,13 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                 // Skip if beyond race distance
                 if (newDistance > raceDistance) continue;
 
-                // Skip if checkpoint already exists at this distance
-                if (existingDistances.has(newDistance)) continue;
+                // Skip if checkpoint already exists at this distance (with tolerance)
+                const alreadyExists = [...existingDistances].some(d => Math.abs(d - newDistance) < 0.001);
+                if (alreadyExists) continue;
 
                 // Determine checkpoint name
                 let checkpointName: string;
-                if (newDistance === 0) {
-                    checkpointName = "Start";
-                } else if (newDistance === raceDistance) {
+                if (Math.abs(newDistance - raceDistance) < 0.001) {
                     checkpointName = "Finish";
                 } else {
                     checkpointName = `${newDistance} KM`;
@@ -243,24 +364,12 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                     distanceFromStart: newDistance,
                     deviceId: checkpoint.deviceId || "",
                     parentDeviceId: checkpoint.parentDeviceId || "",
-                    isMandatory: checkpoint.isMandatory || false,
+                    isMandatory: Math.abs(newDistance - raceDistance) < 0.001 ? true : (checkpoint.isMandatory || false),
                 });
 
                 // Track this distance to avoid duplicates within the same batch
                 existingDistances.add(newDistance);
             }
-        }
-
-        // Add finish checkpoint if not exists and we're completing all loops
-        if (!existingDistances.has(raceDistance) && totalLoopsWanted === maxLoops) {
-            const templateCheckpoint = firstLoopCheckpoints[firstLoopCheckpoints.length - 1];
-            newCheckpoints.push({
-                name: "Finish",
-                distanceFromStart: raceDistance,
-                deviceId: templateCheckpoint?.deviceId || "",
-                parentDeviceId: templateCheckpoint?.parentDeviceId || "",
-                isMandatory: true,
-            });
         }
 
         if (newCheckpoints.length === 0) {
@@ -278,11 +387,12 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
             await CheckpointsService.createCheckpoints(eventId, raceId, newCheckpoints);
             setSnackbar({
                 open: true,
-                message: `Successfully added ${newCheckpoints.length} checkpoint(s) for ${totalLoopsWanted} loop(s)!`,
+                message: `Successfully added ${newCheckpoints.length} checkpoint(s) for ${numLoopsToAdd} new loop(s)!`,
                 severity: "success",
             });
             fetchCheckpoints();
             setDrawerOpen(false);
+            setLoopsToAddInput(1); // Reset input
         } catch (err: any) {
             console.error("Error adding loops:", err);
             setSnackbar({
@@ -299,19 +409,19 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
      * Quick action: Add ALL remaining loops to complete the race
      */
     const handleAddAllLoops = async () => {
-        await handleAddLoops(raceParams.maxLoops);
+        await handleAddLoops(loopParams.maxNewLoops);
     };
 
-    const handleLoopInputChange = (value: number) => {
+    const handleLoopsToAddInputChange = (value: number) => {
         setLoopError(null);
 
         if (isNaN(value) || value < 1) {
-            setLoopInput(1);
-        } else if (value > raceParams.maxLoops && raceParams.maxLoops > 0) {
-            setLoopInput(raceParams.maxLoops);
-            setLoopError(`Maximum ${raceParams.maxLoops} loops allowed.`);
+            setLoopsToAddInput(1);
+        } else if (value > loopParams.maxNewLoops && loopParams.maxNewLoops > 0) {
+            setLoopsToAddInput(loopParams.maxNewLoops);
+            setLoopError(`Maximum ${loopParams.maxNewLoops} loop(s) can be added.`);
         } else {
-            setLoopInput(value);
+            setLoopsToAddInput(value);
         }
     };
 
@@ -390,14 +500,36 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
         }));
     };
 
+    // Check if race has finish checkpoint (checkpoint at race distance)
+    const hasFinishCheckpoint = useMemo(() => {
+        if (!raceDistance) return false;
+        return localCheckpoints.some(cp => Math.abs(Number(cp.distanceFromStart) - raceDistance) < 0.001);
+    }, [localCheckpoints, raceDistance]);
+
+    // Check if checkpoints cover the full race distance
+    const isMissingFinish = useMemo(() => {
+        if (!raceDistance || localCheckpoints.length === 0) return false;
+        return loopParams.maxCheckpointDistance < raceDistance;
+    }, [raceDistance, localCheckpoints.length, loopParams.maxCheckpointDistance]);
+
+    // Calculate missing distance
+    const missingDistance = useMemo(() => {
+        if (!isMissingFinish) return 0;
+        return raceDistance - loopParams.maxCheckpointDistance;
+    }, [isMissingFinish, raceDistance, loopParams.maxCheckpointDistance]);
+
     // Check if Add Loops should be disabled
     const isAddLoopsDisabled = useMemo(() => {
-        if (!selectedRace || !selectedRace.distance || raceParams.loopLength <= 0) return true;
+        if (!selectedRace || !raceDistance) return true;
         if (localCheckpoints.length === 0) return true;
-        // Once finish checkpoint exists, we should not allow more loops
+        if (loopParams.loopLength <= 0) return true;
+        if (loopParams.maxNewLoops <= 0) return true;
         if (hasFinishCheckpoint) return true;
         return false;
-    }, [selectedRace, raceParams.loopLength, localCheckpoints.length, hasFinishCheckpoint]);
+    }, [selectedRace, raceDistance, localCheckpoints.length, loopParams.loopLength, loopParams.maxNewLoops, hasFinishCheckpoint]);
+
+    // Calculate total loops after adding (for display purposes)
+    const totalLoopsAfterAdding = loopParams.currentLoopCount + loopsToAddInput;
 
     // Define grid columns
     const columnDefs: ColDef<Checkpoint>[] = [
@@ -512,12 +644,13 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                         }}
                     >
                         <Typography variant="h6">Checkpoints</Typography>
-                        <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
+                        <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="flex-start">
                             <IconButton
                                 color="primary"
                                 title="Refresh"
                                 onClick={handleRefresh}
                                 disabled={loading}
+                                sx={{ mt: 0.5 }}
                             >
                                 <Refresh />
                             </IconButton>
@@ -525,45 +658,59 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                                 variant="contained"
                                 startIcon={<AddIcon />}
                                 onClick={handleOpenAddDialog}
+                                sx={{ mt: 0.5 }}
                             >
                                 Add Checkpoint
                             </Button>
 
                             {/* Loop Input Section */}
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                <TextField
-                                    type="number"
-                                    size="small"
-                                    label="Total Loops"
-                                    inputProps={{
-                                        min: 1,
-                                        max: raceParams.maxLoops || 99,
-                                    }}
-                                    value={loopInput}
-                                    onChange={(e) => handleLoopInputChange(Number(e.target.value))}
-                                    sx={{ width: 100 }}
-                                    disabled={
-                                        !selectedRace ||
-                                        !selectedRace.distance ||
-                                        raceParams.loopLength <= 0
-                                    }
-                                    error={!!loopError}
-                                />
-                                <Button
-                                    variant="outlined"
-                                    startIcon={<AddIcon />}
-                                    onClick={() => handleAddLoops()}
-                                    sx={{ minWidth: 120 }}
-                                    disabled={isAddLoopsDisabled || loading}
-                                >
-                                    {loading ? "Adding..." : "Add Loops"}
-                                </Button>
+                            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                                <Box sx={{ display: "flex", gap: 1 }}>
+                                    <TextField
+                                        type="number"
+                                        size="small"
+                                        label="Loops to Add"
+                                        inputProps={{
+                                            min: 1,
+                                            max: loopParams.maxNewLoops || 1,
+                                        }}
+                                        value={loopsToAddInput}
+                                        onChange={(e) => handleLoopsToAddInputChange(Number(e.target.value))}
+                                        sx={{ width: 120 }}
+                                        disabled={isAddLoopsDisabled}
+                                        error={!!loopError}
+                                    />
+                                    <Button
+                                        variant="outlined"
+                                        startIcon={<AddIcon />}
+                                        onClick={() => handleAddLoops()}
+                                        sx={{ minWidth: 120 }}
+                                        disabled={isAddLoopsDisabled || loading}
+                                    >
+                                        {loading ? "Adding..." : "Add Loops"}
+                                    </Button>
+                                </Box>
+                                {loopParams.maxNewLoops > 0 && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                                        Max: {loopParams.maxNewLoops}
+                                    </Typography>
+                                )}
+                                {localCheckpoints.length === 0 && (
+                                    <Typography variant="caption" color="error.main" sx={{ ml: 0.5 }}>
+                                        Add checkpoints first
+                                    </Typography>
+                                )}
+                                {hasFinishCheckpoint && (
+                                    <Typography variant="caption" color="success.main" sx={{ ml: 0.5 }}>
+                                        Race complete
+                                    </Typography>
+                                )}
                             </Box>
 
                             <Button
                                 variant="outlined"
                                 onClick={() => handleOpenDrawer(1)}
-                                sx={{ minWidth: 160 }}
+                                sx={{ minWidth: 160, mt: 0.5 }}
                             >
                                 Clone Checkpoints
                             </Button>
@@ -575,11 +722,36 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                         <FormHelperText error sx={{ mb: 2 }}>{loopError}</FormHelperText>
                     )}
 
+                    {/* Warning for missing finish checkpoint */}
+                    {isMissingFinish && (
+                        <Alert severity="warning" sx={{ mb: 2 }}>
+                            <strong>Missing Finish Checkpoint!</strong> Checkpoints cover up to {loopParams.maxCheckpointDistance} KM, 
+                            but the race is {raceDistance} KM. Please add a checkpoint at {raceDistance} KM to cover the 
+                            remaining {missingDistance} KM.
+                        </Alert>
+                    )}
+
+                    {/* Race Complete indicator */}
+                    {hasFinishCheckpoint && (
+                        <Alert severity="success" sx={{ mb: 2 }}>
+                            ✓ Race checkpoints complete! Finish checkpoint exists at {raceDistance} KM.
+                        </Alert>
+                    )}
+
                     {/* Race info helper */}
-                    {raceParams.loopLength > 0 && (
+                    {raceDistance > 0 && (
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            Race: {raceParams.raceDistance} KM | Loop Length: {raceParams.loopLength} KM | Max Loops: {raceParams.maxLoops}
-                            {hasFinishCheckpoint && " | ✓ Finish checkpoint exists"}
+                            Race: {raceDistance} KM
+                            {loopParams.loopLength > 0 && (
+                                <>
+                                    {" | "}Loop Length: {loopParams.loopLength} KM
+                                    {" | "}Loop(s): {loopParams.currentLoopCount}
+                                    {loopParams.maxNewLoops > 0 && ` | Can Add: ${loopParams.maxNewLoops} more loop(s)`}
+                                </>
+                            )}
+                            {loopParams.maxCheckpointDistance > 0 && (
+                                <>{" | "}Checkpoints: 0 - {loopParams.maxCheckpointDistance} KM</>
+                            )}
                         </Typography>
                     )}
 
@@ -595,7 +767,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                                 width: "50vw",
                                 maxWidth: 500,
                                 minWidth: 340,
-                                top: "40%",
+                                top: "10%",
                                 transform: "translateY(-50%)",
                                 height: "auto",
                                 maxHeight: "80vh",
@@ -614,36 +786,51 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                             <Box sx={{ mt: 3 }}>
                                 <Typography variant="subtitle1" sx={{ mb: 2 }}>Manage Loops</Typography>
 
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                    Race Distance: {raceDistance} KM
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                    Loop Length: {loopParams.loopLength} KM
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                    Current Loops: {loopParams.currentLoopCount}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                    Checkpoints Coverage: 0 - {loopParams.maxCheckpointDistance} KM
+                                </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                    Race: {raceParams.raceDistance} KM | Loop: {raceParams.loopLength} KM | Max Loops: {raceParams.maxLoops}
+                                    Loops Available to Add: {loopParams.maxNewLoops}
                                 </Typography>
 
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                    Current checkpoints: {localCheckpoints.length}
-                                </Typography>
+                                <Divider sx={{ mb: 2 }} />
+
+                                {/* Warning for missing finish */}
+                                {isMissingFinish && (
+                                    <Alert severity="warning" sx={{ mb: 2 }}>
+                                        Checkpoints only cover up to {loopParams.maxCheckpointDistance} KM. 
+                                        Missing {missingDistance} KM to reach finish at {raceDistance} KM.
+                                    </Alert>
+                                )}
 
                                 <Stack spacing={2}>
                                     <Stack direction="row" spacing={2} alignItems="center">
                                         <TextField
                                             type="number"
                                             size="small"
-                                            label="Number of Loops"
+                                            label="Loops to Add"
                                             inputProps={{
                                                 min: 1,
-                                                max: raceParams.maxLoops || 99,
+                                                max: loopParams.maxNewLoops || 1,
                                             }}
                                             value={drawerLoopInput}
                                             onChange={(e) => {
                                                 const val = Number(e.target.value);
-                                                setDrawerLoopInput(
-                                                    Math.min(
-                                                        Math.max(1, val),
-                                                        raceParams.maxLoops || 99
-                                                    )
-                                                );
+                                                const maxVal = loopParams.maxNewLoops || 1;
+                                                setDrawerLoopInput(Math.min(Math.max(1, val), maxVal));
                                             }}
                                             sx={{ width: 150 }}
-                                            disabled={loading}
+                                            disabled={loading || isAddLoopsDisabled}
+                                            helperText={loopParams.maxNewLoops > 0 ? `Max: ${loopParams.maxNewLoops}` : "No loops available"}
                                         />
                                         <Button
                                             variant="contained"
@@ -654,25 +841,43 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                                         </Button>
                                     </Stack>
 
-                                    <Button
-                                        variant="outlined"
-                                        color="primary"
-                                        onClick={handleAddAllLoops}
-                                        disabled={isAddLoopsDisabled || loading || hasFinishCheckpoint}
-                                        fullWidth
-                                    >
-                                        Add All Loops ({raceParams.maxLoops} loops to {raceParams.raceDistance} KM)
-                                    </Button>
+                                    {loopParams.maxNewLoops > 0 && (
+                                        <Button
+                                            variant="outlined"
+                                            color="primary"
+                                            onClick={handleAddAllLoops}
+                                            disabled={isAddLoopsDisabled || loading}
+                                            fullWidth
+                                        >
+                                            Add All {loopParams.maxNewLoops} Loop(s)
+                                        </Button>
+                                    )}
 
                                     {hasFinishCheckpoint && (
                                         <Alert severity="success">
-                                            Race is complete! Finish checkpoint exists at {raceParams.raceDistance} KM.
+                                            Race is complete! Finish checkpoint exists at {raceDistance} KM.
                                         </Alert>
                                     )}
 
                                     {localCheckpoints.length === 0 && (
                                         <Alert severity="warning">
-                                            Please add at least one checkpoint for the first loop before generating more loops.
+                                            Please add checkpoints for the first loop before generating more loops.
+                                        </Alert>
+                                    )}
+
+                                    {localCheckpoints.length > 0 && loopParams.loopLength <= 0 && (
+                                        <Alert severity="warning">
+                                            Please add checkpoints with distance greater than 0 to define the loop length.
+                                        </Alert>
+                                    )}
+
+                                    {/* Preview of what will be added */}
+                                    {loopParams.maxNewLoops > 0 && drawerLoopInput > 0 && !isAddLoopsDisabled && (
+                                        <Alert severity="info">
+                                            Adding {drawerLoopInput} loop(s) will create checkpoints up to{" "}
+                                            {Math.min(loopParams.loopLength * (loopParams.currentLoopCount + drawerLoopInput), raceDistance)} KM.
+                                            <br />
+                                            Total loops after: {loopParams.currentLoopCount + drawerLoopInput}
                                         </Alert>
                                     )}
                                 </Stack>
@@ -704,36 +909,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                                         variant="contained"
                                         sx={{ minWidth: 120 }}
                                         disabled={!selectedRaceId || loading}
-                                        onClick={async () => {
-                                            if (!eventId || !selectedRaceId || !raceId) return;
-
-                                            setLoading(true);
-                                            try {
-                                                await CheckpointsService.cloneCheckpoints(
-                                                    eventId,
-                                                    selectedRaceId,
-                                                    raceId
-                                                );
-                                                setSnackbar({
-                                                    open: true,
-                                                    message: "Checkpoints cloned successfully!",
-                                                    severity: "success",
-                                                });
-                                                fetchCheckpoints();
-                                                setDrawerOpen(false);
-                                            } catch (err: any) {
-                                                setSnackbar({
-                                                    open: true,
-                                                    message:
-                                                        err.response?.data?.error ||
-                                                        err.response?.data?.message ||
-                                                        "Failed to clone checkpoints.",
-                                                    severity: "error",
-                                                });
-                                            } finally {
-                                                setLoading(false);
-                                            }
-                                        }}
+                                        onClick={handleCloneCheckpoints}
                                     >
                                         {loading ? "Cloning..." : "Clone"}
                                     </Button>
