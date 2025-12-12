@@ -104,7 +104,6 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
             .sort((a, b) => a - b);
 
         const maxCheckpointDistance = sortedDistances[sortedDistances.length - 1];
-        const hasStartCheckpoint = sortedDistances[0] === 0;
 
         // If no start checkpoint or only one checkpoint, can't determine loop pattern
         if (sortedDistances.length < 2) {
@@ -298,7 +297,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
             return;
         }
 
-        const { loopLength, maxNewLoops, currentLoopCount, maxCheckpointDistance } = loopParams;
+        const { loopLength, maxNewLoops, currentLoopCount } = loopParams;
 
         if (loopLength <= 0) {
             setLoopError("Cannot determine loop length. Please add checkpoints with distance > 0.");
@@ -387,7 +386,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
             await CheckpointsService.createCheckpoints(eventId, raceId, newCheckpoints);
             setSnackbar({
                 open: true,
-                message: `Successfully added ${newCheckpoints.length} checkpoint(s) for ${numLoopsToAdd} new loop(s)!`,
+                message: `Successfully added ${newCheckpoints.length} checkpoint(s) for new loop(s)!`,
                 severity: "success",
             });
             fetchCheckpoints();
@@ -527,9 +526,6 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
         if (hasFinishCheckpoint) return true;
         return false;
     }, [selectedRace, raceDistance, localCheckpoints.length, loopParams.loopLength, loopParams.maxNewLoops, hasFinishCheckpoint]);
-
-    // Calculate total loops after adding (for display purposes)
-    const totalLoopsAfterAdding = loopParams.currentLoopCount + loopsToAddInput;
 
     // Define grid columns
     const columnDefs: ColDef<Checkpoint>[] = [
