@@ -118,13 +118,20 @@ export const AddRace: React.FC = () => {
 
         // Set default date from event date (if available)
         if (eventData?.eventDate) {
-          const eventDate = new Date(eventData.eventDate);
-          const dateStr = eventDate.toISOString().split('T')[0]; // Get YYYY-MM-DD format
-
-          // Set default start time to event date at 06:00 AM
-          const defaultStartTime = `${dateStr}T06:00`;
-          // Set default end time to event date at 18:00 (6:00 PM)
-          const defaultEndTime = `${dateStr}T18:00`;
+          const eventDateTime = new Date(eventData.eventDate);
+          const sixAM = new Date(eventDateTime);
+          sixAM.setHours(6, 0, 0, 0);
+          
+          // Use event time if it's at or after 6 AM, otherwise use 6 AM
+          const defaultStartTime = eventDateTime >= sixAM 
+            ? eventDateTime.toISOString().slice(0, 16)
+            : `${eventDateTime.toISOString().split('T')[0]}T06:00`;
+          
+          // Set default end time to 6 hours after start time
+          const startDateTime = eventDateTime >= sixAM ? eventDateTime : sixAM;
+          const endDateTime = new Date(startDateTime);
+          endDateTime.setHours(endDateTime.getHours() + 6);
+          const defaultEndTime = endDateTime.toISOString().slice(0, 16);
 
           setFormData((prev) => ({
             ...prev,
