@@ -21,6 +21,7 @@ import {
   Alert,
   AlertTitle,
   CircularProgress,
+  Snackbar,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { EventService } from "../../../services/EventService";
@@ -55,6 +56,16 @@ export const EditEvent: React.FC = () => {
 
   // Guard to prevent duplicate fetches (React 18 StrictMode)
   const hasFetchedRef = useRef(false);
+
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "info";
+  }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
   // Event Settings state
   const [eventSettings, setEventSettings] = useState<EventSettings>({
@@ -309,7 +320,7 @@ export const EditEvent: React.FC = () => {
       setLeaderBoardSettings(mappedLeaderboardSettings);
     }
   };
-  
+
   // Sync event settings and leaderboard settings with formData
   useEffect(() => {
     setFormData((prev) => ({
@@ -401,9 +412,9 @@ export const EditEvent: React.FC = () => {
     if (!(formData.city ?? "").trim()) {
       newErrors.city = "City is required";
     }
-    if (!(formData.state ?? "").trim()) {
-      newErrors.state = "State is required";
-    }
+    // if (!(formData.state ?? "").trim()) {
+    //   newErrors.state = "State is required";
+    // }
     if (!(formData.country ?? "").trim()) {
       newErrors.country = "Country is required";
     }
@@ -463,11 +474,19 @@ export const EditEvent: React.FC = () => {
 
       const updatedEvent = await EventService.updateEvent(id!, requestPayload);
 
-      if (bannerFile && updatedEvent.id) {
-        await EventService.uploadBannerImage(updatedEvent.id, bannerFile);
-      }
+      setSnackbar({
+        open: true,
+        message: `Event "${requestPayload.name}" updated successfully!`,
+        severity: "success",
+      });
+      // Redirect after 1 second (1000 ms)
+      setTimeout(async () => {
+        if (bannerFile && updatedEvent.id) {
+          await EventService.uploadBannerImage(updatedEvent.id, bannerFile);
+        }
+        navigate("/events/events-dashboard");
+      }, 1000);
 
-      navigate("/events/events-dashboard");
     } catch (error: any) {
       let errorMessage = "Failed to update event. Please try again.";
 
@@ -526,7 +545,7 @@ export const EditEvent: React.FC = () => {
   ];
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ maxWidth: 1200, mx: "auto", p: 3 }}>
       <Button
         variant="outlined"
         startIcon={<ArrowBackIcon />}
@@ -535,11 +554,16 @@ export const EditEvent: React.FC = () => {
       >
         Back
       </Button>
-      <Paper sx={{ p: 4 }}>
-        <Typography variant="h4" gutterBottom>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
           Edit Event
         </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Fill in the details below to update the event
+        </Typography>
+      </Box>
 
+      <Paper elevation={2} sx={{ p: 3 }}>
         {apiError && (
           <Alert severity="error" sx={{ mb: 3 }}>
             <AlertTitle>Error</AlertTitle>
@@ -688,12 +712,12 @@ export const EditEvent: React.FC = () => {
               Event Schedule
             </Typography>
 
-            {isEventInPast && (
+            {/* {isEventInPast && (
               <Alert severity="warning" sx={{ mb: 2 }}>
                 This event is in the past. The event date and time zone cannot
                 be modified.
               </Alert>
-            )}
+            )} */}
 
             <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
               <Stack spacing={3} sx={{ flex: 1 }}>
@@ -705,13 +729,13 @@ export const EditEvent: React.FC = () => {
                   value={formData.eventDate}
                   onChange={handleInputChange}
                   error={!!errors.eventDate}
-                  helperText={
-                    isEventInPast
-                      ? "Cannot modify date for past events"
-                      : errors.eventDate
-                  }
+                  // helperText={
+                  //   isEventInPast
+                  //     ? "Cannot modify date for past events"
+                  //     : errors.eventDate
+                  // }
                   required
-                  disabled={isEventInPast}
+                  // disabled={isEventInPast}
                   InputLabelProps={{ shrink: true }}
                 />
               </Stack>
@@ -721,7 +745,7 @@ export const EditEvent: React.FC = () => {
                   fullWidth
                   error={!!errors.timeZone}
                   required
-                  disabled={isEventInPast}
+                // disabled={isEventInPast}
                 >
                   <InputLabel>Time Zone</InputLabel>
                   <Select
@@ -739,11 +763,11 @@ export const EditEvent: React.FC = () => {
                   {errors.timeZone && (
                     <FormHelperText>{errors.timeZone}</FormHelperText>
                   )}
-                  {isEventInPast && !errors.timeZone && (
+                  {/* {isEventInPast && !errors.timeZone && (
                     <FormHelperText>
                       Cannot modify time zone for past events
                     </FormHelperText>
-                  )}
+                  )} */}
                 </FormControl>
               </Stack>
             </Stack>
@@ -990,28 +1014,55 @@ export const EditEvent: React.FC = () => {
             </Stack>
           </Box>
 
-          {/* Action Buttons */}
-          <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              disabled={isSubmitting}
-              size="large"
-            >
-              {isSubmitting ? "Updating..." : "Update Event"}
-            </Button>
+          {/* Form Actions */}
+          <Box
+            sx={{
+              display: "flex",
+              gap: 2,
+              justifyContent: "flex-end",
+              flexDirection: { xs: "column", sm: "row" },
+            }}
+          >
             <Button
               variant="outlined"
               onClick={() => navigate("/events/events-dashboard")}
               disabled={isSubmitting}
               size="large"
+              fullWidth={false}
+              sx={{ minWidth: { xs: "100%", sm: 120 } }}
             >
               Cancel
             </Button>
-          </Stack>
+
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isSubmitting}
+              size="large"
+              fullWidth={false}
+              sx={{ minWidth: { xs: "100%", sm: 120 } }}
+            >
+              {isSubmitting ? "Updating..." : "Update Event"}
+            </Button>
+          </Box>
         </form>
       </Paper>
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

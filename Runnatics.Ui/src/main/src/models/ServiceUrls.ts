@@ -44,9 +44,15 @@ export const ServiceUrl = {
     //checkpoints
     searchCheckpoints: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,
     addCheckpoint: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,
+    addBulkCheckpoints: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}/bulk`,
     editCheckpoint: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
     deleteCheckpoint: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
     getCheckpointById: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
+    cloneCheckpoints: (eventId: string, sourceRaceId: string, destinationRaceId: string) => `checkpoints/${eventId}/${sourceRaceId}/${destinationRaceId}/clone`,
+
+    //devices
+    getAllDevices: () => "devices",
+
 
     //dashboard
     dashboardStats: () => "dashboard/stats",

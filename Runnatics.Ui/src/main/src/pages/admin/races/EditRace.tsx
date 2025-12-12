@@ -82,6 +82,11 @@ export const EditRace: React.FC = () => {
     leaderboardSettings: undefined, // Will be set when override is enabled
   });
 
+  // Calculate eventDateMin for datetime-local input fields
+  const eventDateMin = formData?.startTime
+    ? new Date(formData.startTime).toISOString().slice(0, 16)
+    : undefined;
+
   // Fetch race data and populate form
   useEffect(() => {
     const fetchRace = async () => {
@@ -435,6 +440,14 @@ export const EditRace: React.FC = () => {
                 helperText={errors.startTime}
                 required
                 InputLabelProps={{ shrink: true }}
+                inputProps={{
+                  min: eventDateMin,
+                }}
+                InputProps={{
+                  inputProps: {
+                    min: eventDateMin,
+                  }
+                }}
               />
               <TextField
                 fullWidth
@@ -447,6 +460,14 @@ export const EditRace: React.FC = () => {
                 helperText={errors.endTime}
                 required
                 InputLabelProps={{ shrink: true }}
+                inputProps={{
+                  min: eventDateMin,
+                }}
+                InputProps={{
+                  inputProps: {
+                    min: eventDateMin,
+                  }
+                }}
               />
             </Stack>
           </Box>
