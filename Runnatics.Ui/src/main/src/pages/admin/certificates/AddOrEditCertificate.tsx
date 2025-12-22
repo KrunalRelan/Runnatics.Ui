@@ -160,7 +160,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
       xCoordinate: 100,
       yCoordinate: 100,
       font: 'Eurostile',
-      fontSize: 24,
+      fontSize: 30,
       fontColor: '000000',
       alignment: 'left',
       fontWeight: 'normal',
@@ -440,7 +440,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
         </Box>
 
         {/* Right Panel - Field Properties */}
-        <Box sx={{ width: 340 }}>
+        <Box sx={{ width: 320 }}>
           <Card sx={{ height: '100%' }}>
             <FieldPropertiesPanel
               field={selectedField}

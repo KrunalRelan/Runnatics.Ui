@@ -19,13 +19,19 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const backgroundCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [scale, setScale] = useState(1);
   const [draggingField, setDraggingField] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
+  // Render background to off-screen canvas once
+  useEffect(() => {
+    renderBackground();
+  }, [template.backgroundImageUrl, template.backgroundImageData, template.width, template.height]);
+
   useEffect(() => {
     renderCertificate();
-  }, [template, selectedFieldId, sampleData]);
+  }, [template.fields, selectedFieldId, sampleData]);
 
   useEffect(() => {
     // Adjust scale to fit container
@@ -42,6 +48,34 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
     return () => window.removeEventListener('resize', updateScale);
   }, [template.width]);
 
+  const renderBackground = () => {
+    // Create off-screen canvas for background
+    if (!backgroundCanvasRef.current) {
+      backgroundCanvasRef.current = document.createElement('canvas');
+    }
+    
+    const bgCanvas = backgroundCanvasRef.current;
+    bgCanvas.width = template.width;
+    bgCanvas.height = template.height;
+    const bgCtx = bgCanvas.getContext('2d');
+    if (!bgCtx) return;
+
+    // Draw background
+    if (template.backgroundImageUrl || template.backgroundImageData) {
+      const img = new Image();
+      img.onload = () => {
+        bgCtx.drawImage(img, 0, 0, template.width, template.height);
+        renderCertificate();
+      };
+      img.src = template.backgroundImageData || template.backgroundImageUrl || '';
+    } else {
+      // Default background
+      bgCtx.fillStyle = '#f5f5f5';
+      bgCtx.fillRect(0, 0, template.width, template.height);
+      renderCertificate();
+    }
+  };
+
   const renderCertificate = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -52,20 +86,13 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw background
-    if (template.backgroundImageUrl || template.backgroundImageData) {
-      const img = new Image();
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, template.width, template.height);
-        drawFields(ctx);
-      };
-      img.src = template.backgroundImageData || template.backgroundImageUrl || '';
-    } else {
-      // Default background
-      ctx.fillStyle = '#f5f5f5';
-      ctx.fillRect(0, 0, template.width, template.height);
-      drawFields(ctx);
+    // Draw cached background from off-screen canvas
+    if (backgroundCanvasRef.current) {
+      ctx.drawImage(backgroundCanvasRef.current, 0, 0);
     }
+    
+    // Draw fields on top
+    drawFields(ctx);
   };
 
   const drawFields = (ctx: CanvasRenderingContext2D) => {
