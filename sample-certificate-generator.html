@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample Certificate Template Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+        .instructions ol {
+            margin: 10px 0 0 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 5px 0;
+        }
+        #certificate {
+            border: 2px solid #ddd;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            display: block;
+        }
+        .buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .download-btn {
+            background: #2196F3;
+        }
+        .download-btn:hover {
+            background: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏃 Sample Certificate Template Generator</h1>
+        
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Click "Generate Certificate" to create the template</li>
+                <li>Click "Download Certificate" to save it as a PNG image</li>
+                <li>Upload the downloaded image to your certificate editor</li>
+                <li>Add dynamic fields (name, bib number, timing, etc.) using the drag-and-drop interface</li>
+            </ol>
+        </div>
+
+        <canvas id="certificate" width="1754" height="1240"></canvas>
+
+        <div class="buttons">
+            <button onclick="generateCertificate()">Generate Certificate</button>
+            <button class="download-btn" onclick="downloadCertificate()">Download Certificate</button>
+        </div>
+    </div>
+
+    <script>
+        function generateCertificate() {
+            const canvas = document.getElementById('certificate');
+            const ctx = canvas.getContext('2d');
+            
+            // Create gradient background
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#e8f5e9');
+            gradient.addColorStop(0.5, '#ffffff');
+            gradient.addColorStop(1, '#fff9c4');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw decorative border
+            ctx.strokeStyle = '#4CAF50';
+            ctx.lineWidth = 20;
+            ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+            
+            // Inner border
+            ctx.strokeStyle = '#FFC107';
+            ctx.lineWidth = 5;
+            ctx.strokeRect(70, 70, canvas.width - 140, canvas.height - 140);
+            
+            // Draw corner decorations
+            drawCornerDecoration(ctx, 100, 100, 'topLeft');
+            drawCornerDecoration(ctx, canvas.width - 100, 100, 'topRight');
+            drawCornerDecoration(ctx, 100, canvas.height - 100, 'bottomLeft');
+            drawCornerDecoration(ctx, canvas.width - 100, canvas.height - 100, 'bottomRight');
+            
+            // Title
+            ctx.fillStyle = '#1B5E20';
+            ctx.font = 'bold 80px Georgia, serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('CERTIFICATE OF ACHIEVEMENT', canvas.width / 2, 180);
+            
+            // Underline
+            ctx.strokeStyle = '#4CAF50';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 - 450, 200);
+            ctx.lineTo(canvas.width / 2 + 450, 200);
+            ctx.stroke();
+            
+            // Subtitle
+            ctx.fillStyle = '#333';
+            ctx.font = 'italic 36px Georgia, serif';
+            ctx.fillText('This is to certify that', canvas.width / 2, 280);
+            
+            // Placeholder for name (this will be replaced by dynamic field)
+            ctx.fillStyle = '#666';
+            ctx.font = 'bold 32px Arial, sans-serif';
+            ctx.fillText('[PARTICIPANT NAME WILL BE PLACED HERE]', canvas.width / 2, 360);
+            
+            // Completion text
+            ctx.fillStyle = '#333';
+            ctx.font = '32px Georgia, serif';
+            ctx.fillText('has successfully completed', canvas.width / 2, 460);
+            
+            // Placeholder for race category
+            ctx.fillStyle = '#666';
+            ctx.font = 'bold 32px Arial, sans-serif';
+            ctx.fillText('[RACE CATEGORY/DISTANCE WILL BE PLACED HERE]', canvas.width / 2, 540);
+            
+            // Event details area
+            ctx.fillStyle = '#333';
+            ctx.font = '28px Georgia, serif';
+            ctx.fillText('Event: [EVENT NAME]', canvas.width / 2, 660);
+            ctx.fillText('Date: [EVENT DATE]', canvas.width / 2, 710);
+            
+            // Results section
+            ctx.font = 'bold 26px Arial, sans-serif';
+            ctx.fillStyle = '#1B5E20';
+            ctx.fillText('Race Results', canvas.width / 2, 800);
+            
+            // Result placeholders
+            ctx.fillStyle = '#666';
+            ctx.font = '24px Arial, sans-serif';
+            ctx.textAlign = 'left';
+            const leftCol = canvas.width / 2 - 300;
+            const rightCol = canvas.width / 2 + 50;
+            
+            ctx.fillText('BIB No: [BIB_NUMBER]', leftCol, 860);
+            ctx.fillText('Chip Time: [CHIP_TIMING]', rightCol, 860);
+            ctx.fillText('Overall Rank: [RANK_OVERALL]', leftCol, 910);
+            ctx.fillText('Category Rank: [RANK_CATEGORY]', rightCol, 910);
+            
+            // Footer
+            ctx.textAlign = 'center';
+            ctx.font = 'italic 22px Georgia, serif';
+            ctx.fillStyle = '#666';
+            ctx.fillText('Congratulations on your achievement!', canvas.width / 2, 1040);
+            
+            // Signature lines
+            const sigY = 1140;
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            
+            // Left signature line
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 - 400, sigY);
+            ctx.lineTo(canvas.width / 2 - 150, sigY);
+            ctx.stroke();
+            ctx.font = '20px Arial, sans-serif';
+            ctx.fillStyle = '#333';
+            ctx.fillText('Race Director', canvas.width / 2 - 275, sigY + 30);
+            
+            // Right signature line
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 + 150, sigY);
+            ctx.lineTo(canvas.width / 2 + 400, sigY);
+            ctx.stroke();
+            ctx.fillText('Event Organizer', canvas.width / 2 + 275, sigY + 30);
+            
+            // Add medal icon
+            drawMedal(ctx, canvas.width / 2, 580, 60);
+        }
+        
+        function drawCornerDecoration(ctx, x, y, position) {
+            ctx.fillStyle = '#4CAF50';
+            ctx.beginPath();
+            
+            const size = 40;
+            switch(position) {
+                case 'topLeft':
+                    ctx.arc(x, y, size, 0, Math.PI / 2);
+                    break;
+                case 'topRight':
+                    ctx.arc(x, y, size, Math.PI / 2, Math.PI);
+                    break;
+                case 'bottomLeft':
+                    ctx.arc(x, y, size, -Math.PI / 2, 0);
+                    break;
+                case 'bottomRight':
+                    ctx.arc(x, y, size, Math.PI, Math.PI * 1.5);
+                    break;
+            }
+            ctx.fill();
+        }
+        
+        function drawMedal(ctx, x, y, radius) {
+            // Medal circle
+            ctx.fillStyle = '#FFC107';
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Inner circle
+            ctx.fillStyle = '#FFD54F';
+            ctx.beginPath();
+            ctx.arc(x, y, radius * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Star
+            ctx.fillStyle = '#F57C00';
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (Math.PI / 2) + (i * 4 * Math.PI / 5);
+                const x1 = x + Math.cos(angle) * radius * 0.5;
+                const y1 = y - Math.sin(angle) * radius * 0.5;
+                if (i === 0) ctx.moveTo(x1, y1);
+                else ctx.lineTo(x1, y1);
+                
+                const angle2 = angle + (2 * Math.PI / 5);
+                const x2 = x + Math.cos(angle2) * radius * 0.2;
+                const y2 = y - Math.sin(angle2) * radius * 0.2;
+                ctx.lineTo(x2, y2);
+            }
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        function downloadCertificate() {
+            const canvas = document.getElementById('certificate');
+            const link = document.createElement('a');
+            link.download = 'sample-certificate-template.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        // Auto-generate on load
+        window.onload = function() {
+            generateCertificate();
+        };
+    </script>
+</body>
+</html>

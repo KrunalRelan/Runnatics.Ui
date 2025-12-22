@@ -28,6 +28,7 @@ import { Race } from "@/main/src/models/races/Race";
 import { RaceService } from "@/main/src/services/RaceService";
 import ViewParticipants from "@/main/src/pages/admin/participants/ViewParticipants";
 import ViewCheckPoints from "@/main/src/pages/admin/checkpoints/ViewCheckPoints";
+import { AddOrEditCertificate } from "../certificates/AddOrEditCertificate";
 
 // Placeholder components for other tabs
 const RaceDashboard: React.FC<{ eventId: string; raceId: string }> = () => (
@@ -41,13 +42,6 @@ const Segments: React.FC<{ eventId: string; raceId: string }> = () => (
   <Card sx={{ p: 3 }}>
     <Typography variant="h6">Segments</Typography>
     <Typography color="text.secondary">Segments content coming soon...</Typography>
-  </Card>
-);
-
-const Certificate: React.FC<{ eventId: string; raceId: string }> = () => (
-  <Card sx={{ p: 3 }}>
-    <Typography variant="h6">Add Certificate</Typography>
-    <Typography color="text.secondary">Certificate content coming soon...</Typography>
   </Card>
 );
 
@@ -188,7 +182,7 @@ const ViewRaces: React.FC = () => {
       case 5:
         return <Segments eventId={eventId} raceId={selectedRaceId} />;
       case 6:
-        return <Certificate eventId={eventId} raceId={selectedRaceId} />;
+        return <AddOrEditCertificate eventId={eventId} raceId={selectedRaceId} />;
       default:
         return null;
     }

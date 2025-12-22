@@ -71,13 +71,18 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
 
     // Initialize formData for edit mode
     useEffect(() => {
-        if (open && checkpointToEdit) {
+        if (open && checkpointToEdit && devices.length > 0) {
+            const checkpoint = checkpointToEdit as any;
+            const device = devices.find(d => d.name === checkpoint.deviceName);
+            const parentDevice = devices.find(d => d.name === checkpoint.parentDeviceName);
             setFormData({
                 ...checkpointToEdit,
+                deviceId: device ? device.id : checkpointToEdit.deviceId || "",
+                parentDeviceId: parentDevice ? parentDevice.id : checkpointToEdit.parentDeviceId || "",
                 // FIX: Ensure distanceFromStart is a number
                 distanceFromStart: Number(checkpointToEdit.distanceFromStart) || 0,
             });
-        } else if (open) {
+        } else if (open && !checkpointToEdit) {
             setFormData({
                 id: "",
                 name: "",
@@ -88,7 +93,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
             });
         }
         setError(null);
-    }, [open, checkpointToEdit]);
+    }, [open, checkpointToEdit, devices]);
 
     // FIX: Proper type handling for different field types
     const handleFormChange = (
