@@ -35,17 +35,17 @@ import { FieldPropertiesPanel } from '../../../components/CertificateEditor/Fiel
 import { v4 as uuidv4 } from 'uuid';
 
 const SAMPLE_DATA = {
-  participant_name: 'Chetan Lohani',
-  bib_number: '2101',
-  race_category: '21.1 KM',
-  race_distance: '21.1 KM',
-  chip_timing: '02:01:58',
-  gun_timing: '02:03:45',
-  rank_overall: '42',
-  rank_category: '5',
-  rank_gender: '38',
-  event_name: '4th Gurugram City Half Marathon 2025',
-  event_date: 'December 21, 2025'
+  participant_name: '[name]',
+  bib_number: '[bib_number]',
+  race_category: '[race_category]',
+  race_distance: '[race_distance]',
+  chip_timing: '[chip_timing]',
+  gun_timing: '[gun_timing]',
+  rank_overall: '[rank_overall]',
+  rank_category: '[rank_category]',
+  rank_gender: '[rank_gender]',
+  event_name: '[event_name]',
+  event_date: '[event_date]'
 };
 
 interface AddOrEditCertificateProps {
@@ -238,8 +238,51 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
   const handlePreview = async () => {
     try {
       setLoading(true);
-      const previewUrl = await CertificateService.previewCertificate(template);
-      window.open(previewUrl, '_blank');
+      
+      // Generate client-side preview
+      const previewCanvas = document.createElement('canvas');
+      previewCanvas.width = template.width;
+      previewCanvas.height = template.height;
+      const ctx = previewCanvas.getContext('2d');
+      
+      if (!ctx) {
+        showSnackbar('Failed to generate preview', 'error');
+        return;
+      }
+
+      // Draw background
+      if (template.backgroundImageData || template.backgroundImageUrl) {
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, template.width, template.height);
+          
+          // Draw all fields
+          template.fields.forEach(field => {
+            const text = (SAMPLE_DATA as Record<string, string>)[field.fieldType] || field.content || `[${field.fieldType}]`;
+            ctx.font = `${field.fontStyle || 'normal'} ${field.fontWeight || 'normal'} ${field.fontSize}px ${field.font}`;
+            ctx.fillStyle = `#${field.fontColor}`;
+            ctx.textAlign = field.alignment || 'left';
+            ctx.fillText(text, field.xCoordinate, field.yCoordinate);
+          });
+
+          // Open preview in new window
+          previewCanvas.toBlob((blob) => {
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              const win = window.open(url, '_blank');
+              if (win) {
+                win.onload = () => URL.revokeObjectURL(url);
+              }
+            }
+          });
+        };
+        img.onerror = () => {
+          showSnackbar('Failed to load background image', 'error');
+        };
+        img.src = template.backgroundImageData || template.backgroundImageUrl || '';
+      } else {
+        showSnackbar('Please upload a background image first', 'error');
+      }
     } catch (error) {
       showSnackbar('Failed to generate preview', 'error');
       console.error('Preview error:', error);
