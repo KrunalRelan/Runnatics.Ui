@@ -24,6 +24,7 @@ import {
   CloudUpload as UploadIcon,
   Visibility as PreviewIcon,
   Add as AddIcon,
+  Remove as RemoveIcon,
   ArrowBack as BackIcon,
   TextFields as TextFieldsIcon
 } from '@mui/icons-material';
@@ -72,6 +73,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     isActive: true
   });
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [selectedFieldType, setSelectedFieldType] = useState<CertificateFieldType | null>(null);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [addFieldMenuAnchor, setAddFieldMenuAnchor] = useState<null | HTMLElement>(null);
@@ -173,6 +175,40 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     setAddFieldMenuAnchor(null);
   };
 
+  const handleRemoveFieldsByType = (fieldType: CertificateFieldType) => {
+    setTemplate(prev => ({
+      ...prev,
+      fields: prev.fields.filter(f => f.fieldType !== fieldType)
+    }));
+    // Clear selection if the selected field was removed
+    if (selectedFieldId) {
+      const selectedField = template.fields.find(f => f.id === selectedFieldId);
+      if (selectedField?.fieldType === fieldType) {
+        setSelectedFieldId(null);
+      }
+    }
+  };
+
+  const handleFieldTypeClick = (fieldType: CertificateFieldType) => {
+    setSelectedFieldType(fieldType);
+    // If this field type is already added, select the first instance on the canvas
+    const addedField = template.fields.find(f => f.fieldType === fieldType);
+    if (addedField) {
+      setSelectedFieldId(addedField.id);
+    } else {
+      setSelectedFieldId(null);
+    }
+  };
+
+  const handleAddOrRemoveField = (e: React.MouseEvent, fieldType: CertificateFieldType, isAdded: boolean) => {
+    e.stopPropagation();
+    if (isAdded) {
+      handleRemoveFieldsByType(fieldType);
+    } else {
+      handleAddField(fieldType);
+    }
+  };
+
   const handleFieldUpdate = (updatedField: CertificateField) => {
     setTemplate(prev => ({
       ...prev,
@@ -220,72 +256,65 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
 
   return (
     <Box>
-      {/* Header */}
-      {!propsEventId && (
-        <Box sx={{ mb: 3 }}>
-          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-            <IconButton onClick={() => navigate('/admin/certificates')}>
-              <BackIcon />
-            </IconButton>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h4" component="h1" gutterBottom>
-                {isEditMode ? 'Edit Certificate Template' : 'Create Certificate Template'}
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Design and customize certificate templates for race participants
-              </Typography>
-            </Box>
+      {/* Header Section - Similar to Participants Tab */}
+      <Box sx={{ mb: 3 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          {/* Left Side - Title */}
+          <Box>
+            {!propsEventId && (
+              <IconButton 
+                onClick={() => navigate('/admin/certificates')} 
+                sx={{ mb: 1 }}
+              >
+                <BackIcon />
+              </IconButton>
+            )}
+            <Typography variant="h4" component="h1">
+              {isEditMode ? 'Edit Certificate Template' : 'Certificate'}
+            </Typography>
+          </Box>
+
+          {/* Right Side - Action Buttons */}
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              startIcon={<UploadIcon />}
+              component="label"
+              disabled={loading}
+            >
+              Upload Background
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={handleBackgroundUpload}
+              />
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<PreviewIcon />}
+              onClick={handlePreview}
+              disabled={!template.backgroundImageData && !template.backgroundImageUrl || loading}
+            >
+              Preview
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<SaveIcon />}
+              onClick={handleSave}
+              disabled={loading}
+            >
+              {isEditMode ? 'Update' : 'Create'}
+            </Button>
           </Stack>
-        </Box>
-      )}
+        </Stack>
+      </Box>
 
-      {/* Action Buttons */}
-      <Stack direction="row" spacing={2} sx={{ mb: 3 }} justifyContent="flex-end">
-        <Button
-          variant="outlined"
-          startIcon={<PreviewIcon />}
-          onClick={handlePreview}
-          disabled={!template.backgroundImageData && !template.backgroundImageUrl}
-        >
-          Preview
-        </Button>
-        <Button
-          variant="contained"
-          startIcon={<SaveIcon />}
-          onClick={handleSave}
-          disabled={loading}
-        >
-          {isEditMode ? 'Update' : 'Create'}
-        </Button>
-      </Stack>
-
-      <Stack direction="row" spacing={3} sx={{ height: 700 }}>
+      <Stack direction="row" spacing={3}>
         {/* Left Panel - Template Info */}
-        <Box sx={{ width: 400 }}>
+        <Box sx={{ width: 320 }}>
           <Card sx={{ height: '100%' }}>
-            <CardContent sx={{ overflow: 'auto', height: '100%' }}>
-              <Typography variant="h6" gutterBottom>Template Settings</Typography>
-              <Divider sx={{ mb: 3 }} />
-
-            <TextField
-              fullWidth
-              label="Template Name"
-              value={template.name}
-              onChange={(e) => setTemplate(prev => ({ ...prev, name: e.target.value }))}
-              sx={{ mb: 2 }}
-              required
-            />
-
-            <TextField
-              fullWidth
-              label="Description"
-              value={template.description || ''}
-              onChange={(e) => setTemplate(prev => ({ ...prev, description: e.target.value }))}
-              multiline
-              rows={2}
-              sx={{ mb: 2 }}
-            />
-
+            <CardContent sx={{ overflow: 'auto', height: '100%', pt: 2 }}>
             {!propsEventId && (
               <TextField
                 fullWidth
@@ -310,90 +339,55 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
               />
             )}
 
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={template.isActive}
-                  onChange={(e) => setTemplate(prev => ({ ...prev, isActive: e.target.checked }))}
-                />
-              }
-              label="Active"
-              sx={{ mb: 2 }}
-            />
+            <Typography variant="h6" gutterBottom>Available Fields</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+              Click + to add field to certificate
+            </Typography>
 
-            <Divider sx={{ my: 2 }} />
-
-            <Typography variant="subtitle2" gutterBottom>Certificate Size</Typography>
-            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Width (px)"
-                value={template.width}
-                onChange={(e) => setTemplate(prev => ({ ...prev, width: parseInt(e.target.value) }))}
-                size="small"
-              />
-              <TextField
-                fullWidth
-                type="number"
-                label="Height (px)"
-                value={template.height}
-                onChange={(e) => setTemplate(prev => ({ ...prev, height: parseInt(e.target.value) }))}
-                size="small"
-              />
+            <Stack spacing={1}>
+              {FIELD_TYPE_METADATA.map(meta => {
+                const isAdded = template.fields.some(f => f.fieldType === meta.type);
+                const isSelected = selectedFieldType === meta.type;
+                return (
+                  <Box
+                    key={meta.type}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      p: 1.5,
+                      border: 1,
+                      borderColor: isAdded ? 'success.main' : isSelected ? 'primary.main' : 'divider',
+                      borderRadius: 1,
+                      bgcolor: isAdded ? 'rgba(46, 125, 50, 0.12)' : isSelected ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+                      '&:hover': {
+                        bgcolor: isAdded ? 'rgba(46, 125, 50, 0.18)' : isSelected ? 'rgba(25, 118, 210, 0.12)' : 'action.hover',
+                        cursor: 'pointer'
+                      }
+                    }}
+                    onClick={() => handleFieldTypeClick(meta.type)}
+                  >
+                    <Box>
+                      <Typography variant="body2" fontWeight="medium" color={isAdded ? 'success.main' : isSelected ? 'primary.main' : 'text.primary'}>
+                        {meta.label}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {meta.placeholder}
+                      </Typography>
+                    </Box>
+                    <IconButton
+                      size="small"
+                      color={isAdded ? 'error' : 'primary'}
+                      onClick={(e) => handleAddOrRemoveField(e, meta.type, isAdded)}
+                    >
+                      {isAdded ? <RemoveIcon /> : <AddIcon />}
+                    </IconButton>
+                  </Box>
+                );
+              })}
             </Stack>
 
-            <Button
-              fullWidth
-              variant="contained"
-              component="label"
-              startIcon={<UploadIcon />}
-            >
-              Upload Background
-              <input
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={handleBackgroundUpload}
-              />
-            </Button>
-
-            {template.backgroundImageData || template.backgroundImageUrl ? (
-              <Alert severity="success" sx={{ mt: 1 }}>
-                Background image uploaded
-              </Alert>
-            ) : null}
-
-            <Divider sx={{ my: 3 }} />
-
-            <Button
-              fullWidth
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={(e) => setAddFieldMenuAnchor(e.currentTarget)}
-            >
-              Add Field
-            </Button>
-
-            <Menu
-              anchorEl={addFieldMenuAnchor}
-              open={Boolean(addFieldMenuAnchor)}
-              onClose={() => setAddFieldMenuAnchor(null)}
-            >
-              {FIELD_TYPE_METADATA.map(meta => (
-                <MenuItem key={meta.type} onClick={() => handleAddField(meta.type)}>
-                  <ListItemIcon>
-                    <TextFieldsIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={meta.label}
-                    secondary={meta.placeholder}
-                  />
-                </MenuItem>
-              ))}
-            </Menu>
-
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+            <Box sx={{ mt: 3, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Fields: {template.fields.length}
               </Typography>
@@ -409,6 +403,31 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
         <Box sx={{ flex: 1, maxWidth: 700 }}>
           <Card sx={{ height: '100%' }}>
             <CardContent sx={{ height: '100%', bgcolor: 'grey.50' }}>
+              {/* Certificate Size Controls */}
+              <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
+                <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>Size:</Typography>
+                <TextField
+                  type="number"
+                  label="Width (px)"
+                  value={template.width}
+                  onChange={(e) => setTemplate(prev => ({ ...prev, width: parseInt(e.target.value) }))}
+                  size="small"
+                  sx={{ width: 100 }}
+                  InputLabelProps={{ sx: { fontSize: '0.75rem' } }}
+                  inputProps={{ sx: { fontSize: '0.75rem' } }}
+                />
+                <TextField
+                  type="number"
+                  label="Height (px)"
+                  value={template.height}
+                  onChange={(e) => setTemplate(prev => ({ ...prev, height: parseInt(e.target.value) }))}
+                  size="small"
+                  sx={{ width: 100 }}
+                  InputLabelProps={{ sx: { fontSize: '0.75rem' } }}
+                  inputProps={{ sx: { fontSize: '0.75rem' } }}
+                />
+              </Stack>
+              
               <CertificateCanvas
                 template={template}
                 selectedFieldId={selectedFieldId || undefined}
