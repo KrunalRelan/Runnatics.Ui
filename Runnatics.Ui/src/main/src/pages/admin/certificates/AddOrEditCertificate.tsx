@@ -8,15 +8,8 @@ import {
   Alert,
   Snackbar,
   IconButton,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
   Card,
   CardContent,
-  Switch,
-  FormControlLabel,
-  Divider,
   Stack
 } from '@mui/material';
 import {
@@ -25,8 +18,7 @@ import {
   Visibility as PreviewIcon,
   Add as AddIcon,
   Remove as RemoveIcon,
-  ArrowBack as BackIcon,
-  TextFields as TextFieldsIcon
+  ArrowBack as BackIcon
 } from '@mui/icons-material';
 import { CertificateTemplate, CertificateField, CertificateFieldType, FIELD_TYPE_METADATA } from '../../../models/Certificate';
 import { CertificateService } from '../../../services/CertificateService';
@@ -76,7 +68,6 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
   const [selectedFieldType, setSelectedFieldType] = useState<CertificateFieldType | null>(null);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
-  const [addFieldMenuAnchor, setAddFieldMenuAnchor] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
     if (isEditMode && id) {
@@ -107,23 +98,30 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
   };
 
   const handleSave = async () => {
-    if (!template.name.trim()) {
-      showSnackbar('Please enter a template name', 'error');
-      return;
-    }
-
     if (!template.eventId) {
       showSnackbar('Please select an event', 'error');
       return;
     }
 
+    if (!template.backgroundImageData && !template.backgroundImageUrl) {
+      showSnackbar('Please upload a background image', 'error');
+      return;
+    }
+
+    // Auto-generate template name if not provided
+    const templateToSave = {
+      ...template,
+      name: template.name || `Certificate_${template.eventId}${template.raceId ? `_${template.raceId}` : ''}_${Date.now()}`,
+      description: template.description || ''
+    };
+
     try {
       setLoading(true);
       if (isEditMode && id) {
-        await CertificateService.updateTemplate(id, template);
+        await CertificateService.updateTemplate(id, templateToSave);
         showSnackbar('Template updated successfully', 'success');
       } else {
-        await CertificateService.createTemplate(template);
+        await CertificateService.createTemplate(templateToSave);
         showSnackbar('Template created successfully', 'success');
         // If embedded in ViewRaces, don't navigate away
         if (!propsEventId && !propsRaceId) {
@@ -345,7 +343,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
               variant="contained"
               startIcon={<SaveIcon />}
               onClick={handleSave}
-              disabled={loading}
+              disabled={!template.backgroundImageData && !template.backgroundImageUrl || loading}
             >
               {isEditMode ? 'Update' : 'Create'}
             </Button>
@@ -386,6 +384,15 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
               Click + to add field to certificate
             </Typography>
+
+            <Box sx={{ mb: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Fields: {template.fields.length}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Click on a field to edit its properties
+              </Typography>
+            </Box>
 
             <Stack spacing={1}>
               {FIELD_TYPE_METADATA.map(meta => {
@@ -429,15 +436,6 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
                 );
               })}
             </Stack>
-
-            <Box sx={{ mt: 3, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Fields: {template.fields.length}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Click on a field to edit its properties
-              </Typography>
-            </Box>
             </CardContent>
           </Card>
         </Box>

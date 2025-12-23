@@ -1,18 +1,18 @@
 // Certificate Template Models
 
 export enum CertificateFieldType {
-  PARTICIPANT_NAME = 'participant_name',
-  BIB_NUMBER = 'bib_number',
-  RACE_CATEGORY = 'race_category',
-  RACE_DISTANCE = 'race_distance',
-  CHIP_TIMING = 'chip_timing',
-  GUN_TIMING = 'gun_timing',
-  RANK_OVERALL = 'rank_overall',
-  RANK_CATEGORY = 'rank_category',
-  RANK_GENDER = 'rank_gender',
-  EVENT_NAME = 'event_name',
-  EVENT_DATE = 'event_date',
-  CUSTOM_TEXT = 'custom_text'
+  PARTICIPANT_NAME = 'ParticipantName',
+  BIB_NUMBER = 'BibNumber',
+  RACE_CATEGORY = 'RaceCategory',
+  RACE_DISTANCE = 'RaceDistance',
+  CHIP_TIMING = 'ChipTiming',
+  GUN_TIMING = 'GunTiming',
+  RANK_OVERALL = 'RankOverall',
+  RANK_CATEGORY = 'RankCategory',
+  RANK_GENDER = 'RankGender',
+  EVENT_NAME = 'EventName',
+  EVENT_DATE = 'EventDate',
+  CUSTOM_TEXT = 'CustomText'
 }
 
 export interface CertificateField {
