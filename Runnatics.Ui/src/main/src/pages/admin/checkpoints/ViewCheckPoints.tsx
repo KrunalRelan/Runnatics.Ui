@@ -536,32 +536,43 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                 const pageNumber = filters.pageNumber || 1;
                 return (pageNumber - 1) * pageSize + (params.node?.rowIndex ?? 0) + 1;
             },
-            width: 80,
+            flex: 0.5,
+            minWidth: 60,
             sortable: false,
             filter: false,
         },
         {
             field: "name",
             headerName: "Name",
-            flex: 1,
-            minWidth: 100,
+            flex: 2,
+            minWidth: 150,
             sortable: true,
             filter: true,
         },
         {
             field: "deviceId",
             headerName: "Device Name",
-            flex: 1,
-            minWidth: 100,
+            flex: 1.5,
+            minWidth: 150,
             sortable: true,
             filter: true,
             valueGetter: (params: any) =>
                 params.data?.deviceName || "N/A",
         },
         {
+            field: "parentDeviceId",
+            headerName: "Parent Device Name",
+            flex: 1.5,
+            minWidth: 150,
+            sortable: true,
+            filter: true,
+            valueGetter: (params: any) =>
+                params.data?.parentDeviceName || "N/A",
+        },
+        {
             headerName: "Is Mandatory",
-            flex: 0.8,
-            minWidth: 80,
+            flex: 1,
+            minWidth: 120,
             sortable: true,
             filter: true,
             cellRenderer: IsMandatoryCellRenderer,
@@ -570,24 +581,23 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
         {
             field: "distanceFromStart",
             headerName: "Distance (KM)",
-            flex: 1,
-            minWidth: 100,
+            flex: 1.2,
+            minWidth: 120,
             sortable: true,
             filter: true,
         },
         {
             headerName: "Last Update Mode",
-            flex: 1,
-            minWidth: 100,
+            flex: 1.5,
+            minWidth: 150,
             sortable: true,
             filter: true,
             valueGetter: () => "N/A",
         },
         {
             headerName: "Actions",
-            flex: 1,
-            minWidth: 100,
-            maxWidth: 120,
+            flex: 1.2,
+            minWidth: 120,
             cellRenderer: (params: any) => (
                 <Stack
                     direction="row"
@@ -627,8 +637,8 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
 
     return (
         <>
-            <Card sx={{ p: 3 }}>
-                <CardContent>
+            <Card sx={{ width: "100%", maxWidth: "100%", p: 3 }}>
+                <CardContent sx={{ p: 0 }}>
                     <Box
                         sx={{
                             display: "flex",

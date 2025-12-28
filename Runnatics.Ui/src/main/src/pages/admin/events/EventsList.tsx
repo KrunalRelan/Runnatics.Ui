@@ -12,7 +12,6 @@ import {
   Button,
   Card,
   CardContent,
-  Container,
   IconButton,
   Typography,
   Chip,
@@ -31,6 +30,7 @@ import {
   Tabs,
   Tab,
 } from "@mui/material";
+import PageContainer from "@/main/src/components/PageContainer";
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -730,17 +730,14 @@ const EventsList: React.FC = () => {
 
   if (loading && events.length === 0) {
     return (
-      <Container
-        maxWidth="xl"
-        sx={{ mt: 4, display: "flex", justifyContent: "center" }}
-      >
+      <PageContainer sx={{ display: "flex", justifyContent: "center" }}>
         <CircularProgress />
-      </Container>
+      </PageContainer>
     );
   }
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+    <PageContainer>
       {/* Header */}
       <Box
         sx={{
@@ -1129,7 +1126,7 @@ const EventsList: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Container>
+    </PageContainer>
   );
 };
 

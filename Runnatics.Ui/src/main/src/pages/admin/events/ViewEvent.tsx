@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   CardContent,
-  Container,
   Typography,
   Divider,
   CircularProgress,
@@ -15,6 +14,7 @@ import {
   Chip,
   Snackbar,
 } from "@mui/material";
+import PageContainer from "@/main/src/components/PageContainer";
 import {
   ArrowBack as ArrowBackIcon,
   Add as AddIcon,
@@ -145,18 +145,15 @@ const ViewEvent: React.FC = () => {
 
   if (loading) {
     return (
-      <Container
-        maxWidth="lg"
-        sx={{ mt: 4, display: "flex", justifyContent: "center" }}
-      >
+      <PageContainer sx={{ display: "flex", justifyContent: "center" }}>
         <CircularProgress />
-      </Container>
+      </PageContainer>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <PageContainer>
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
@@ -167,13 +164,13 @@ const ViewEvent: React.FC = () => {
         >
           Back to Events
         </Button>
-      </Container>
+      </PageContainer>
     );
   }
 
   if (!event) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <PageContainer>
         <Alert severity="warning" sx={{ mb: 3 }}>
           Event not found
         </Alert>
@@ -184,12 +181,12 @@ const ViewEvent: React.FC = () => {
         >
           Back to Events
         </Button>
-      </Container>
+      </PageContainer>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <PageContainer>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
@@ -453,7 +450,7 @@ const ViewEvent: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Container>
+    </PageContainer>
   );
 };
 

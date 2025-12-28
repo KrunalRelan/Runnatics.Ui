@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
-  Container,
   Typography,
   Button,
   Tabs,
@@ -14,6 +13,7 @@ import {
   CircularProgress,
   Alert,
 } from "@mui/material";
+import PageContainer from "@/main/src/components/PageContainer";
 import {
   ArrowBack,
   Dashboard,
@@ -191,19 +191,16 @@ const ViewRaces: React.FC = () => {
   // Loading state
   if (loading && !race) {
     return (
-      <Container
-        maxWidth="lg"
-        sx={{ mt: 4, mb: 4, display: "flex", justifyContent: "center" }}
-      >
+      <PageContainer sx={{ display: "flex", justifyContent: "center" }}>
         <CircularProgress />
-      </Container>
+      </PageContainer>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <PageContainer>
         <Alert severity="error">{error}</Alert>
         <Button
           variant="outlined"
@@ -213,14 +210,14 @@ const ViewRaces: React.FC = () => {
         >
           Back
         </Button>
-      </Container>
+      </PageContainer>
     );
   }
 
   // No race found
   if (!race) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <PageContainer>
         <Alert severity="warning">Race not found</Alert>
         <Button
           variant="outlined"
@@ -230,12 +227,12 @@ const ViewRaces: React.FC = () => {
         >
           Back
         </Button>
-      </Container>
+      </PageContainer>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <PageContainer>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
@@ -341,7 +338,7 @@ const ViewRaces: React.FC = () => {
 
       {/* Content Area */}
       {renderTabContent()}
-    </Container>
+    </PageContainer>
   );
 };
 

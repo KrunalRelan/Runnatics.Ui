@@ -71,14 +71,50 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
 
     // Initialize formData for edit mode
     useEffect(() => {
-        if (open && checkpointToEdit && devices.length > 0) {
-            const checkpoint = checkpointToEdit as any;
-            const device = devices.find(d => d.name === checkpoint.deviceName);
-            const parentDevice = devices.find(d => d.name === checkpoint.parentDeviceName);
+        if (open && checkpointToEdit) {
+            let finalDeviceId = "";
+            let finalParentDeviceId = "";
+
+            // Match devices by name since the API returns deviceName and parentDeviceName
+            // The deviceId from checkpoint API might be different from the devices API IDs
+            if (devices.length > 0) {
+                // Try to find device by name first (most reliable)
+                if (checkpointToEdit.deviceName) {
+                    const device = devices.find(d => d.name === checkpointToEdit.deviceName);
+                    if (device) {
+                        finalDeviceId = device.id;
+                    }
+                }
+
+                // Try to find parent device by name
+                if (checkpointToEdit.parentDeviceName) {
+                    const parentDevice = devices.find(d => d.name === checkpointToEdit.parentDeviceName);
+                    if (parentDevice) {
+                        finalParentDeviceId = parentDevice.id;
+                    }
+                }
+
+                // Fallback: If names didn't work, try matching by ID
+                // (in case API returns matching IDs in the future)
+                if (!finalDeviceId && checkpointToEdit.deviceId) {
+                    const deviceById = devices.find(d => d.id === checkpointToEdit.deviceId);
+                    if (deviceById) {
+                        finalDeviceId = deviceById.id;
+                    }
+                }
+
+                if (!finalParentDeviceId && checkpointToEdit.parentDeviceId) {
+                    const parentDeviceById = devices.find(d => d.id === checkpointToEdit.parentDeviceId);
+                    if (parentDeviceById) {
+                        finalParentDeviceId = parentDeviceById.id;
+                    }
+                }
+            }
+
             setFormData({
                 ...checkpointToEdit,
-                deviceId: device ? device.id : checkpointToEdit.deviceId || "",
-                parentDeviceId: parentDevice ? parentDevice.id : checkpointToEdit.parentDeviceId || "",
+                deviceId: finalDeviceId,
+                parentDeviceId: finalParentDeviceId,
                 // FIX: Ensure distanceFromStart is a number
                 distanceFromStart: Number(checkpointToEdit.distanceFromStart) || 0,
             });

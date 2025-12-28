@@ -91,6 +91,17 @@ const UpdateParticipantsByBib: React.FC<UpdateParticipantsByBibProps> = ({
       );
 
       setUpdateResult(response.message);
+
+      // Immediately refresh the participant list in the background
+      // This ensures the parent component fetches the latest data
+      // without waiting for the user to click "Done"
+      if (onComplete) {
+        // Call onComplete to refresh the data
+        // Using setTimeout to ensure state is updated first
+        setTimeout(() => {
+          onComplete();
+        }, 100);
+      }
     } catch (err: any) {
       const errorMessage = err.response?.data?.error?.message || err.message || "Update failed. Please try again.";
       setError(errorMessage);

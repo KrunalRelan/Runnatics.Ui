@@ -13,8 +13,8 @@ import {
   DialogActions,
   Button,
   Typography,
-  Container,
 } from "@mui/material";
+import PageContainer from "@/main/src/components/PageContainer";
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -416,7 +416,7 @@ export const RaceList: React.FC<RaceListProps> = ({
   );
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+    <PageContainer>
       <Box
         sx={{
           width: "100%",
@@ -495,7 +495,7 @@ export const RaceList: React.FC<RaceListProps> = ({
           </Alert>
         </Snackbar>
       </Box>
-    </Container>
+    </PageContainer>
   );
 };
 

@@ -12,10 +12,10 @@ import {
   Divider,
   Alert,
   CircularProgress,
-  Container,
   Snackbar,
 } from "@mui/material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
+import PageContainer from "@/main/src/components/PageContainer";
 import { RaceService } from "@/main/src/services/RaceService";
 import { CreateRaceRequest } from "@/main/src/models/races/CreateRaceRequest";
 import { LeaderBoardSettings } from "@/main/src/models";
@@ -361,14 +361,14 @@ export const EditRace: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, display: "flex", justifyContent: "center" }}>
+      <PageContainer sx={{ display: "flex", justifyContent: "center" }}>
         <CircularProgress />
-      </Container>
+      </PageContainer>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <PageContainer>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Button
@@ -704,6 +704,6 @@ export const EditRace: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Container>
+    </PageContainer>
   );
 };

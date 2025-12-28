@@ -33,6 +33,8 @@ import {
 } from "@/main/src/models/races/ParticipantFilters";
 import { ParticipantService } from "@/main/src/services/ParticipantService";
 import { Category } from "@/main/src/models/participants/Category";
+import { CheckpointsService } from "@/main/src/services/CheckpointsService";
+import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
 
 // LAZY LOAD DIALOG COMPONENTS - Only loaded when needed
 const AddParticipant = lazy(
@@ -108,6 +110,9 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   const [categoriesLoading, setCategoriesLoading] = useState<boolean>(false);
   const [categoriesLoaded, setCategoriesLoaded] = useState<boolean>(false);
 
+  // Checkpoints state for dynamic columns
+  const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
+
   // Add Participant Dialog State
   const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
   const [openBulkUploadDialog, setOpenBulkUploadDialog] = useState<boolean>(false);
@@ -172,6 +177,32 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       fetchCategories();
     }
   };
+
+  // Fetch checkpoints function
+  const fetchCheckpoints = async () => {
+    if (!eventId || !raceId) return;
+
+    try {
+      const response = await CheckpointsService.getAllCheckpoints({
+        eventId,
+        raceId
+      });
+      const checkpointData = response.message || [];
+      // Sort checkpoints by distance from start
+      const sortedCheckpoints = checkpointData.sort((a, b) =>
+        (a.distanceFromStart || 0) - (b.distanceFromStart || 0)
+      );
+      setCheckpoints(sortedCheckpoints);
+    } catch (err: any) {
+      console.error("Failed to fetch checkpoints:", err);
+      setCheckpoints([]);
+    }
+  };
+
+  // Fetch checkpoints when component mounts or when eventId/raceId changes
+  useEffect(() => {
+    fetchCheckpoints();
+  }, [eventId, raceId]);
 
   // Fetch participants function
   const fetchParticipants = async (currentFilters: ParticipantFilters) => {
@@ -389,13 +420,12 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
 
   const totalPages = totalRecords > 0 ? Math.ceil(totalRecords / filters.pageSize) : 1;
 
-  // Define grid columns
-  const columnDefs: ColDef<Participant>[] = [
+  // Define static grid columns
+  const staticColumns: ColDef<Participant>[] = [
     {
       headerName: "#",
-      flex: 0.5,
-      minWidth: 25,
-      maxWidth: 50,
+      flex: 0.4,
+      minWidth: 50,
       sortable: true,
       filter: true,
       valueGetter: (params: any) => {
@@ -409,15 +439,15 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       field: "bib",
       headerName: "Bib",
       flex: 0.8,
-      minWidth: 80,
+      minWidth: 70,
       sortable: true,
       filter: true,
     },
     {
       field: "fullName",
       headerName: "Name",
-      flex: 1.5,
-      minWidth: 150,
+      flex: 1.8,
+      minWidth: 140,
       sortable: true,
       filter: true,
       valueGetter: (params: any) =>
@@ -426,24 +456,24 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       field: "gender",
       headerName: "Gender",
-      flex: 1,
-      minWidth: 100,
+      flex: 0.9,
+      minWidth: 90,
       sortable: true,
       filter: true,
     },
     {
       field: "category",
       headerName: "Category",
-      flex: 1,
-      minWidth: 100,
+      flex: 1.2,
+      minWidth: 110,
       sortable: true,
       filter: true,
     },
     {
       field: "status",
       headerName: "Status",
-      flex: 1,
-      minWidth: 120,
+      flex: 1.2,
+      minWidth: 110,
       sortable: true,
       filter: true,
       cellRenderer: (params: any) => {
@@ -468,7 +498,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       field: "checkIn",
       headerName: "Check In",
       flex: 0.8,
-      minWidth: 90,
+      minWidth: 80,
       sortable: true,
       filter: true,
       cellRenderer: (params: any) => (params.value ? "Yes" : "No"),
@@ -477,15 +507,14 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       field: "chipId",
       headerName: "Chip ID",
       flex: 1,
-      minWidth: 100,
+      minWidth: 90,
       sortable: true,
       filter: true,
     },
     {
       headerName: "Actions",
-      flex: 0.8,
+      flex: 1,
       minWidth: 100,
-      maxWidth: 120,
       cellRenderer: (params: any) => (
         <Stack
           direction="row"
@@ -522,9 +551,48 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     },
   ];
 
+  // Create dynamic checkpoint columns
+  const checkpointColumns: ColDef<any>[] = checkpoints.map((checkpoint) => ({
+    headerName: checkpoint.name,
+    flex: 0.9,
+    minWidth: 90,
+    sortable: false,
+    filter: false,
+    cellRenderer: () => {
+      // TODO: When participant checkpoint data is available, display it here
+      // For now, show a placeholder
+      return (
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+          <Chip
+            label="—"
+            size="small"
+            variant="outlined"
+            sx={{
+              fontSize: "0.75rem",
+              height: "20px",
+              color: "text.disabled",
+              borderColor: "divider"
+            }}
+          />
+        </Box>
+      );
+    },
+    headerTooltip: `Checkpoint: ${checkpoint.name} (${checkpoint.distanceFromStart} KM)`,
+  }));
+
+  // Combine static columns with dynamic checkpoint columns
+  // Insert checkpoint columns before the Actions column
+  const actionsColumn = staticColumns[staticColumns.length - 1];
+  const columnsBeforeActions = staticColumns.slice(0, -1);
+  const columnDefs: ColDef<Participant>[] = [
+    ...columnsBeforeActions,
+    ...checkpointColumns,
+    actionsColumn,
+  ];
+
   return (
-    <Card>
-      <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
+    <Card sx={{ width: "100%", maxWidth: "100%" }}>
+      <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
         {/* Header and Action Buttons */}
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, flexWrap: "wrap", gap: 2 }}>
           <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
@@ -579,7 +647,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
         </Box>
 
         {/* Filters Section */}
-        <Card sx={{ p: 3, mb: 3 }}>
+        <Card sx={{ p: 2, mb: 2 }}>
           <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
             <TextField
               label="Name or Bib"
@@ -661,25 +729,23 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
         </Card>
 
         {/* DataGrid Component */}
-        <Box sx={{ mt: 0, pb: 3 }}>
-          <DataGrid<Participant>
-            rowData={participants}
-            columnDefs={columnDefs}
-            pagination={false}
-            domLayout="autoHeight"
-            enableSorting={true}
-            enableFiltering={true}
-            animateRows={true}
-            loading={participantsLoading}
-            useCustomPagination={true}
-            pageNumber={filters.pageNumber}
-            totalRecords={totalRecords}
-            totalPages={totalPages}
-            paginationPageSize={filters.pageSize}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-          />
-        </Box>
+        <DataGrid<Participant>
+          rowData={participants}
+          columnDefs={columnDefs}
+          pagination={false}
+          domLayout="autoHeight"
+          enableSorting={true}
+          enableFiltering={true}
+          animateRows={true}
+          loading={participantsLoading}
+          useCustomPagination={true}
+          pageNumber={filters.pageNumber}
+          totalRecords={totalRecords}
+          totalPages={totalPages}
+          paginationPageSize={filters.pageSize}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
       </CardContent>
 
       {/* LAZY LOADED DIALOGS - Only load component when dialog is opened */}
