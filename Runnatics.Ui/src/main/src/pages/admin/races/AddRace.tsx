@@ -21,7 +21,7 @@ import { RaceService } from "../../../services/RaceService";
 import { Event } from "../../../models/Event";
 import { CreateRaceRequest } from "@/main/src/models/races/CreateRaceRequest";
 import { LeaderBoardSettings } from "@/main/src/models";
-import { LeaderboardSettingsComponent } from "../shared/LeaderBoardSettings";
+import { LeaderboardSettingsComponent } from "../shared/LeaderboardSettings";
 
 interface FormErrors {
   [key: string]: string;
@@ -336,10 +336,6 @@ export const AddRace: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleCancel = () => {
-    navigate(`/events/event-details/${eventId}`);
   };
 
   // Calculate eventDateMin for datetime-local input fields

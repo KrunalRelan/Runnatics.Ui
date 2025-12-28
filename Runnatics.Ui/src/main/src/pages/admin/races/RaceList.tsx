@@ -39,15 +39,6 @@ interface RaceListProps {
   onDelete?: (raceId: string) => void;
 }
 
-function formatTimeOnly(dateStr: string) {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function formatDateTime(dateStr: string) {
   if (!dateStr) return "N/A";

@@ -35,7 +35,7 @@ import {
 } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
 import { EventRequest } from "@/main/src/models/EventRequest";
-import { LeaderboardSettingsComponent } from "../shared/LeaderBoardSettings";
+import { LeaderboardSettingsComponent } from "../shared/LeaderboardSettings";
 
 interface FormErrors {
   [key: string]: string;
@@ -52,7 +52,6 @@ export const EditEvent: React.FC = () => {
   const [apiError, setApiError] = useState<string>("");
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
-  const [isEventInPast, setIsEventInPast] = useState(false);
 
   // Guard to prevent duplicate fetches (React 18 StrictMode)
   const hasFetchedRef = useRef(false);
@@ -182,13 +181,6 @@ export const EditEvent: React.FC = () => {
 
   // ✅ Populate form data from event object - use value if exists, otherwise keep blank
   const populateFormData = (event: Event, availableOrgs: EventOrganizer[]) => {
-    // Check if event is in the past
-    if (event.eventDate) {
-      const eventDate = new Date(event.eventDate);
-      const now = new Date();
-      setIsEventInPast(eventDate < now);
-    }
-
     // Find matching organization
     let selectedOrgId = "";
 

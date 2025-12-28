@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { CertificateField, CertificateTemplate } from '../../models/Certificate';
+import { CertificateField, CertificateTemplate, CertificateFieldType } from '../../models/Certificate';
 import { Box, Paper } from '@mui/material';
 
 interface CertificateCanvasProps {
@@ -121,10 +121,10 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
   };
 
   const getFieldText = (field: CertificateField): string => {
-    if (field.fieldType === 'custom_text') {
+    if (field.fieldType === CertificateFieldType.CUSTOM_TEXT) {
       return field.content;
     }
-    
+
     // Get sample data or placeholder
     return sampleData[field.fieldType] || field.content || `[${field.fieldType}]`;
   };

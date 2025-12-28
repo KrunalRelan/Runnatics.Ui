@@ -19,7 +19,7 @@ import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import { RaceService } from "@/main/src/services/RaceService";
 import { CreateRaceRequest } from "@/main/src/models/races/CreateRaceRequest";
 import { LeaderBoardSettings } from "@/main/src/models";
-import { LeaderboardSettingsComponent } from "../shared/LeaderBoardSettings";
+import { LeaderboardSettingsComponent } from "../shared/LeaderboardSettings";
 
 interface FormErrors {
   [key: string]: string;

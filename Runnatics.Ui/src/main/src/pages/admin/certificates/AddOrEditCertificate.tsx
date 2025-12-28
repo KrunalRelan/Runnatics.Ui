@@ -170,7 +170,6 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
       fields: [...prev.fields, newField]
     }));
     setSelectedFieldId(newField.id);
-    setAddFieldMenuAnchor(null);
   };
 
   const handleRemoveFieldsByType = (fieldType: CertificateFieldType) => {

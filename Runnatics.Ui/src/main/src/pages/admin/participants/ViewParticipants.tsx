@@ -20,7 +20,6 @@ import {
   Add,
   FileUpload,
   FileDownload,
-  Refresh,
   Edit,
   Delete,
   ViewWeek,
@@ -50,6 +49,9 @@ const BulkUploadParticipants = lazy(
 );
 const AddParticipantRangeDialog = lazy(
   () => import("@/main/src/pages/admin/participants/AddParticipantRangeDialog")
+);
+const UpdateParticipantsByBib = lazy(
+  () => import("@/main/src/pages/admin/participants/UpdateParticipantsByBib")
 );
 
 // Loading fallback component for dialogs
@@ -110,6 +112,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
   const [openBulkUploadDialog, setOpenBulkUploadDialog] = useState<boolean>(false);
   const [openAddRangeDialog, setOpenAddRangeDialog] = useState<boolean>(false);
+  const [openUpdateByBibDialog, setOpenUpdateByBibDialog] = useState<boolean>(false);
 
   // Edit Participant Dialog State
   const [openEditDialog, setOpenEditDialog] = useState<boolean>(false);
@@ -371,6 +374,19 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     handleCloseAddRangeDialog();
   };
 
+  const handleOpenUpdateByBibDialog = () => {
+    setOpenUpdateByBibDialog(true);
+  };
+
+  const handleCloseUpdateByBibDialog = () => {
+    setOpenUpdateByBibDialog(false);
+  };
+
+  const handleUpdateByBibComplete = async () => {
+    await fetchParticipants(filters);
+    handleCloseUpdateByBibDialog();
+  };
+
   const totalPages = totalRecords > 0 ? Math.ceil(totalRecords / filters.pageSize) : 1;
 
   // Define grid columns
@@ -543,6 +559,14 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               onClick={handleOpenBulkUploadDialog}
             >
               Bulk Upload
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<FileUpload />}
+              sx={{ textTransform: "none", fontWeight: 500 }}
+              onClick={handleOpenUpdateByBibDialog}
+            >
+              Update by Bib
             </Button>
             <Button
               variant="outlined"
@@ -719,6 +743,19 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
             open={openAddRangeDialog}
             onClose={handleCloseAddRangeDialog}
             onComplete={handleAddRangeComplete}
+            eventId={eventId}
+            raceId={raceId}
+          />
+        </Suspense>
+      )}
+
+      {/* Update Participants by Bib Dialog */}
+      {openUpdateByBibDialog && (
+        <Suspense fallback={<DialogLoader />}>
+          <UpdateParticipantsByBib
+            open={openUpdateByBibDialog}
+            onClose={handleCloseUpdateByBibDialog}
+            onComplete={handleUpdateByBibComplete}
             eventId={eventId}
             raceId={raceId}
           />

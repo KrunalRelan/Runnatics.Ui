@@ -1,5 +1,3 @@
-import { get } from "http";
-
 export const ServiceUrl = {
     login: () => "authentication/login",
     register: () => "authentication/register",
@@ -41,6 +39,7 @@ export const ServiceUrl = {
     deleteParticipant: (participantId: string) => `participants/${participantId}/delete-participant`,
     getParticipantCategories: (eventId: string, raceId?: string) => `participants/${eventId}/${raceId}/categories`,
     addParticipantRange: (eventId: string, raceId: string) => `participants/${eventId}/${raceId}/add-participant-range`,
+    updateParticipantsByBib: (eventId: string, raceId: string) => `participants/${eventId}/${raceId}/update-by-bib`,
     //checkpoints
     searchCheckpoints: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,
     addCheckpoint: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,
