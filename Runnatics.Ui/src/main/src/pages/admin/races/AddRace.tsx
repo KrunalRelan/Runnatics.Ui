@@ -310,7 +310,7 @@ export const AddRace: React.FC = () => {
 
       console.log("Creating race with payload:", requestPayload);
 
-      const response = await RaceService.createRace(eventId!, requestPayload);
+      await RaceService.createRace(eventId!, requestPayload);
 
       setSnackbar({
         open: true,
