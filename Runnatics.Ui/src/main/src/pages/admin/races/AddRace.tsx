@@ -12,16 +12,16 @@ import {
   Divider,
   Alert,
   CircularProgress,
-  Container,
   Snackbar,
 } from "@mui/material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
+import PageContainer from "@/main/src/components/PageContainer";
 import { EventService } from "../../../services/EventService";
 import { RaceService } from "../../../services/RaceService";
 import { Event } from "../../../models/Event";
 import { CreateRaceRequest } from "@/main/src/models/races/CreateRaceRequest";
 import { LeaderBoardSettings } from "@/main/src/models";
-import { LeaderboardSettingsComponent } from "../shared/LeaderBoardSettings";
+import { LeaderboardSettingsComponent } from "../shared/LeaderboardSettings";
 
 interface FormErrors {
   [key: string]: string;
@@ -310,7 +310,7 @@ export const AddRace: React.FC = () => {
 
       console.log("Creating race with payload:", requestPayload);
 
-      const response = await RaceService.createRace(eventId!, requestPayload);
+      await RaceService.createRace(eventId!, requestPayload);
 
       setSnackbar({
         open: true,
@@ -338,10 +338,6 @@ export const AddRace: React.FC = () => {
     }
   };
 
-  const handleCancel = () => {
-    navigate(`/events/event-details/${eventId}`);
-  };
-
   // Calculate eventDateMin for datetime-local input fields
   const eventDateMin = event?.eventDate
     ? new Date(event.eventDate).toISOString().slice(0, 16)
@@ -349,27 +345,27 @@ export const AddRace: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, display: "flex", justifyContent: "center" }}>
+      <PageContainer sx={{ display: "flex", justifyContent: "center" }}>
         <CircularProgress />
-      </Container>
+      </PageContainer>
     );
   }
 
   if (error && !event) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <PageContainer>
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
         <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={handleBack}>
           Back to Event
         </Button>
-      </Container>
+      </PageContainer>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <PageContainer>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Button
@@ -721,6 +717,6 @@ export const AddRace: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Container>
+    </PageContainer>
   );
 };

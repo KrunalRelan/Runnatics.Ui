@@ -13,8 +13,8 @@ import {
   DialogActions,
   Button,
   Typography,
-  Container,
 } from "@mui/material";
+import PageContainer from "@/main/src/components/PageContainer";
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -39,15 +39,6 @@ interface RaceListProps {
   onDelete?: (raceId: string) => void;
 }
 
-function formatTimeOnly(dateStr: string) {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function formatDateTime(dateStr: string) {
   if (!dateStr) return "N/A";
@@ -425,7 +416,7 @@ export const RaceList: React.FC<RaceListProps> = ({
   );
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+    <PageContainer>
       <Box
         sx={{
           width: "100%",
@@ -504,7 +495,7 @@ export const RaceList: React.FC<RaceListProps> = ({
           </Alert>
         </Snackbar>
       </Box>
-    </Container>
+    </PageContainer>
   );
 };
 

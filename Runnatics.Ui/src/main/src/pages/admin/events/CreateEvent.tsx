@@ -41,7 +41,7 @@ import {
   CreateEventRequest,
 } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
-import { LeaderboardSettingsComponent } from "../shared/LeaderBoardSettings";
+import { LeaderboardSettingsComponent } from "../shared/LeaderboardSettings";
 
 interface FormErrors {
   [key: string]: string;
@@ -254,7 +254,7 @@ export const CreateEvent: React.FC = () => {
 
   // Handle organization selection
   const handleOrganizationChange = (
-    event: any,
+    _event: any,
     newValue: EventOrganizer | null
   ) => {
     setSelectedOrganization(newValue);

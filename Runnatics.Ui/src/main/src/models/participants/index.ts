@@ -10,3 +10,5 @@ export * from './ParticipantRequest';
 export * from './AddParticipantRangeDialogProps';
 export * from './AddParticipantRangeRequest';
 export * from './AddParticipantRangeResponse';
+export * from './UpdateParticipantsByBibRequest';
+export * from './UpdateParticipantsByBibResponse';

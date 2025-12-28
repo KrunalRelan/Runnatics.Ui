@@ -1,7 +1,7 @@
 import { ServiceUrl } from '../models';
 import { apiClient } from '../utils/axios.config';
 import { AxiosResponse } from 'axios';
-import { UploadResponse, ProcessResponse, ProcessImportRequest, ParticipantSearchRequest, ParticipantSearchResponse, ParticipantRequest, AddParticipantRangeRequest, AddParticipantRangeResponse } from '../models/participants';
+import { UploadResponse, ProcessResponse, ProcessImportRequest, ParticipantSearchRequest, ParticipantSearchResponse, ParticipantRequest, AddParticipantRangeRequest, AddParticipantRangeResponse, UpdateParticipantsByBibResponse } from '../models/participants';
 import { ResponseBase } from '../models/ResponseBase';
 import { Category } from '../models/participants/Category';
 
@@ -132,6 +132,33 @@ export class ParticipantService {
             await apiClient.post(
                 ServiceUrl.addParticipantRange(eventId, raceId),
                 request
+            );
+
+        return response.data;
+    }
+
+    /**
+     * Update participants by bib number from CSV file
+     * This updates existing participants (created via AddParticipantRange) with their details
+     * Note: JWT token is automatically included via interceptor
+     */
+    static async updateParticipantsByBib(
+        eventId: string,
+        raceId: string,
+        file: File
+    ): Promise<ResponseBase<UpdateParticipantsByBibResponse>> {
+        const formData = new FormData();
+        formData.append('File', file);
+
+        const response: AxiosResponse<ResponseBase<UpdateParticipantsByBibResponse>> =
+            await apiClient.post(
+                ServiceUrl.updateParticipantsByBib(eventId, raceId),
+                formData,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                }
             );
 
         return response.data;
