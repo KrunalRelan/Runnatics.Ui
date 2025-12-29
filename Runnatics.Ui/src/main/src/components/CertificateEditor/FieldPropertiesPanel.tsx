@@ -24,15 +24,21 @@ interface FieldPropertiesPanelProps {
 
 const FONT_OPTIONS = [
     'Arial',
-    'Helvetica',
-    'Times New Roman',
-    'Georgia',
-    'Verdana',
-    'Courier New',
-    'Trebuchet MS',
-    'Impact',
+    'Arial Black',
+    'Brush Script MT',
     'Comic Sans MS',
-    'Eurostile'
+    'Courier New',
+    'Eurostile',
+    'Georgia',
+    'Helvetica',
+    'Impact',
+    'Lucida Console',
+    'Lucida Sans',
+    'Palatino',
+    'Tahoma',
+    'Times New Roman',
+    'Trebuchet MS',
+    'Verdana'
 ];
 
 export const FieldPropertiesPanel: React.FC<FieldPropertiesPanelProps> = ({
@@ -64,23 +70,23 @@ export const FieldPropertiesPanel: React.FC<FieldPropertiesPanelProps> = ({
     const fieldMetadata = FIELD_TYPE_METADATA.find(m => m.type === field.fieldType);
 
     return (
-        <CardContent sx={{ height: '100%', overflow: 'auto' }}>
+        <CardContent sx={{ height: '100%', overflow: 'auto', p: 2 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                <Typography variant="h6">Field Properties</Typography>
+                <Typography variant="h6" sx={{ fontSize: '1rem' }}>Field Properties</Typography>
                 <IconButton
                     color="error"
                     onClick={() => onFieldDelete(field.id)}
                     title="Delete Field"
                     size="small"
                 >
-                    <DeleteIcon />
+                    <DeleteIcon fontSize="small" />
                 </IconButton>
             </Stack>
 
-            <Divider sx={{ mb: 3 }} />
+            <Divider sx={{ mb: 2 }} />
 
             {/* Field Type */}
-            <FormControl fullWidth sx={{ mb: 2 }}>
+            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
                 <InputLabel>Field Type</InputLabel>
                 <Select
                     name="fieldType"
@@ -99,6 +105,7 @@ export const FieldPropertiesPanel: React.FC<FieldPropertiesPanelProps> = ({
             {/* Content */}
             <TextField
                 fullWidth
+                size="small"
                 label="Content"
                 value={field.content}
                 onChange={(e) => handleChange('content', e.target.value)}
@@ -106,28 +113,40 @@ export const FieldPropertiesPanel: React.FC<FieldPropertiesPanelProps> = ({
                 sx={{ mb: 2 }}
             />
 
-            {/* Position */}
-            {/* <Stack direction="row" spacing={2} sx={{ mb: 2 }}> */}
+            {/* Position - X and Y in one row */}
+            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="X Coordinate"
+                    value={field.xCoordinate}
+                    onChange={(e) => handleChange('xCoordinate', parseFloat(e.target.value))}
+                />
+                <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="Y Coordinate"
+                    value={field.yCoordinate}
+                    onChange={(e) => handleChange('yCoordinate', parseFloat(e.target.value))}
+                />
+            </Stack>
+
+            {/* Font Size */}
             <TextField
                 fullWidth
+                size="small"
                 type="number"
-                label="X Coordinate"
-                value={field.xCoordinate}
-                onChange={(e) => handleChange('xCoordinate', parseFloat(e.target.value))}
+                label="Font Size"
+                value={field.fontSize}
+                onChange={(e) => handleChange('fontSize', parseFloat(e.target.value))}
+                inputProps={{ min: 8, max: 200, step: 1 }}
                 sx={{ mb: 2 }}
             />
-            <TextField
-                fullWidth
-                type="number"
-                label="Y Coordinate"
-                value={field.yCoordinate}
-                onChange={(e) => handleChange('yCoordinate', parseFloat(e.target.value))}
-                sx={{ mb: 2 }}
-            />
-            {/* </Stack> */}
 
             {/* Font */}
-            <FormControl fullWidth sx={{ mb: 2 }}>
+            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
                 <InputLabel>Font</InputLabel>
                 <Select
                     name="font"
@@ -143,21 +162,11 @@ export const FieldPropertiesPanel: React.FC<FieldPropertiesPanelProps> = ({
                 </Select>
             </FormControl>
 
-            {/* Font Size */}
-            <TextField
-                fullWidth
-                type="number"
-                label="Font Size"
-                value={field.fontSize}
-                onChange={(e) => handleChange('fontSize', parseFloat(e.target.value))}
-                inputProps={{ min: 8, max: 200, step: 1 }}
-                sx={{ mb: 2 }}
-            />
-
             {/* Font Color */}
             <Box sx={{ mb: 2 }}>
                 <TextField
                     fullWidth
+                    size="small"
                     label="Font Color (HEX)"
                     value={field.fontColor}
                     onChange={(e) => handleChange('fontColor', e.target.value.replace('#', ''))}
@@ -166,8 +175,8 @@ export const FieldPropertiesPanel: React.FC<FieldPropertiesPanelProps> = ({
                         startAdornment: (
                             <Box
                                 sx={{
-                                    width: 30,
-                                    height: 30,
+                                    width: 24,
+                                    height: 24,
                                     backgroundColor: `#${field.fontColor}`,
                                     border: '1px solid #ccc',
                                     borderRadius: 1,
@@ -181,72 +190,60 @@ export const FieldPropertiesPanel: React.FC<FieldPropertiesPanelProps> = ({
                     type="color"
                     value={`#${field.fontColor}`}
                     onChange={(e) => handleChange('fontColor', e.target.value.replace('#', ''))}
-                    style={{ width: '100%', height: 40, marginTop: 8, cursor: 'pointer' }}
+                    style={{ width: '100%', height: 36, marginTop: 8, cursor: 'pointer', borderRadius: '4px' }}
                 />
             </Box>
 
-            {/* Alignment */}
-            <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Alignment</InputLabel>
-                <Select
-                    name="alignment"
-                    value={field.alignment || 'left'}
-                    label="Alignment"
-                    onChange={handleSelectChange}
-                >
-                    <MenuItem value="left">Left</MenuItem>
-                    <MenuItem value="center">Center</MenuItem>
-                    <MenuItem value="right">Right</MenuItem>
-                </Select>
-            </FormControl>
+            {/* Font Weight and Font Style in one row */}
+            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                <FormControl fullWidth size="small">
+                    <InputLabel>Weight</InputLabel>
+                    <Select
+                        name="fontWeight"
+                        value={field.fontWeight || 'normal'}
+                        label="Weight"
+                        onChange={handleSelectChange}
+                    >
+                        <MenuItem value="normal">Normal</MenuItem>
+                        <MenuItem value="bold">Bold</MenuItem>
+                    </Select>
+                </FormControl>
+                <FormControl fullWidth size="small">
+                    <InputLabel>Style</InputLabel>
+                    <Select
+                        name="fontStyle"
+                        value={field.fontStyle || 'normal'}
+                        label="Style"
+                        onChange={handleSelectChange}
+                    >
+                        <MenuItem value="normal">Normal</MenuItem>
+                        <MenuItem value="italic">Italic</MenuItem>
+                    </Select>
+                </FormControl>
+            </Stack>
 
-            {/* Font Weight */}
-            <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Font Weight</InputLabel>
-                <Select
-                    name="fontWeight"
-                    value={field.fontWeight || 'normal'}
-                    label="Font Weight"
-                    onChange={handleSelectChange}
-                >
-                    <MenuItem value="normal">Normal</MenuItem>
-                    <MenuItem value="bold">Bold</MenuItem>
-                </Select>
-            </FormControl>
-
-            {/* Font Style */}
-            <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Font Style</InputLabel>
-                <Select
-                    name="fontStyle"
-                    value={field.fontStyle || 'normal'}
-                    label="Font Style"
-                    onChange={handleSelectChange}
-                >
-                    <MenuItem value="normal">Normal</MenuItem>
-                    <MenuItem value="italic">Italic</MenuItem>
-                </Select>
-            </FormControl>
-
-            {/* Dimensions (Optional) */}
-            {/* <Stack direction="row" spacing={2}> */}
-            <TextField
-                fullWidth
-                type="number"
-                label="Width (optional)"
-                value={field.width || ''}
-                onChange={(e) => handleChange('width', e.target.value ? parseFloat(e.target.value) : undefined)}
-                sx={{ mb: 2 }}
-            />
-            <TextField
-                fullWidth
-                type="number"
-                label="Height (optional)"
-                value={field.height || ''}
-                onChange={(e) => handleChange('height', e.target.value ? parseFloat(e.target.value) : undefined)}
-                sx={{ mb: 2 }}
-            />
-            {/* </Stack> */}
+            {/* Dimensions (Optional) - Width and Height in one row */}
+            <Stack direction="row" spacing={1}>
+                <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="Width"
+                    value={field.width || ''}
+                    onChange={(e) => handleChange('width', e.target.value ? parseFloat(e.target.value) : undefined)}
+                    placeholder="Optional"
+                />
+                
+                <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="Height"
+                    value={field.height || ''}
+                    onChange={(e) => handleChange('height', e.target.value ? parseFloat(e.target.value) : undefined)}
+                    placeholder="Optional"
+                />
+            </Stack>
         </CardContent>
     );
 };

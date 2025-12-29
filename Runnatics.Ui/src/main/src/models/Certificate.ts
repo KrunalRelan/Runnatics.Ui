@@ -2,14 +2,20 @@
 
 export enum CertificateFieldType {
   PARTICIPANT_NAME = 'ParticipantName',
+  CHIP_TIME = 'ChipTime',
+  GUN_TIME = 'GunTime',
   BIB_NUMBER = 'BibNumber',
+  OVERALL_GENDER_RANK = 'GenderRank',
+  OVERALL_RANK = 'OverallRank',
+  CATEGORY_RANK = 'CategoryRank',
   RACE_CATEGORY = 'RaceCategory',
-  RACE_DISTANCE = 'RaceDistance',
-  CHIP_TIMING = 'ChipTiming',
-  GUN_TIMING = 'GunTiming',
-  RANK_OVERALL = 'RankOverall',
-  RANK_CATEGORY = 'RankCategory',
-  RANK_GENDER = 'RankGender',
+  CATEGORY = 'Category',
+  GENDER = 'Gender',
+  TIME_HRS = 'TimeHrs',
+  TIME_MINS = 'TimeMins',
+  TIME_SECS = 'TimeSecs',
+  DISTANCE = 'Distance',
+  PHOTO = 'Photo',
   EVENT_NAME = 'EventName',
   EVENT_DATE = 'EventDate',
   CUSTOM_TEXT = 'CustomText'
@@ -78,7 +84,7 @@ export const FIELD_TYPE_METADATA: FieldTypeMetadata[] = [
   {
     type: CertificateFieldType.BIB_NUMBER,
     label: 'BIB Number',
-    placeholder: '[bib_number]',
+    placeholder: '[bib]',
     description: 'Participant\'s bib number',
     sampleValue: '2101'
   },
@@ -90,46 +96,88 @@ export const FIELD_TYPE_METADATA: FieldTypeMetadata[] = [
     sampleValue: '21.1 KM'
   },
   {
-    type: CertificateFieldType.RACE_DISTANCE,
-    label: 'Race Distance',
-    placeholder: '[race_distance]',
-    description: 'Distance of the race',
-    sampleValue: '21.1 KM'
+    type: CertificateFieldType.CATEGORY,
+    label: 'Category',
+    placeholder: '[category]',
+    description: 'Participant category',
+    sampleValue: 'Open'
   },
   {
-    type: CertificateFieldType.CHIP_TIMING,
-    label: 'Chip Timing',
-    placeholder: '[chip_timing]',
+    type: CertificateFieldType.CHIP_TIME,
+    label: 'Chip Time',
+    placeholder: '[chip_time]',
     description: 'Chip-based finish time',
     sampleValue: '02:01:58'
   },
   {
-    type: CertificateFieldType.GUN_TIMING,
-    label: 'Gun Timing',
-    placeholder: '[gun_timing]',
+    type: CertificateFieldType.GUN_TIME,
+    label: 'Gun Time',
+    placeholder: '[gun_time]',
     description: 'Gun time from race start',
     sampleValue: '02:03:45'
   },
   {
-    type: CertificateFieldType.RANK_OVERALL,
+    type: CertificateFieldType.TIME_HRS,
+    label: 'Time (Hours)',
+    placeholder: '[time_hrs]',
+    description: 'Hours component of time',
+    sampleValue: '02'
+  },
+  {
+    type: CertificateFieldType.TIME_MINS,
+    label: 'Time (Minutes)',
+    placeholder: '[time_mins]',
+    description: 'Minutes component of time',
+    sampleValue: '01'
+  },
+  {
+    type: CertificateFieldType.TIME_SECS,
+    label: 'Time (Seconds)',
+    placeholder: '[time_secs]',
+    description: 'Seconds component of time',
+    sampleValue: '58'
+  },
+  {
+    type: CertificateFieldType.OVERALL_RANK,
     label: 'Overall Rank',
-    placeholder: '[rank_overall]',
+    placeholder: '[overall_rank]',
     description: 'Overall position in the race',
     sampleValue: '42'
   },
   {
-    type: CertificateFieldType.RANK_CATEGORY,
+    type: CertificateFieldType.CATEGORY_RANK,
     label: 'Category Rank',
-    placeholder: '[rank_category]',
+    placeholder: '[category_rank]',
     description: 'Position within age/category',
     sampleValue: '5'
   },
   {
-    type: CertificateFieldType.RANK_GENDER,
-    label: 'Gender Rank',
-    placeholder: '[rank_gender]',
-    description: 'Position within gender',
+    type: CertificateFieldType.OVERALL_GENDER_RANK,
+    label: 'Overall Gender Rank',
+    placeholder: '[overall_gender_rank]',
+    description: 'Overall position within gender',
     sampleValue: '38'
+  },
+  {
+    type: CertificateFieldType.GENDER,
+    label: 'Gender',
+    placeholder: '[gender]',
+    description: 'Participant gender',
+    sampleValue: 'Male'
+  },
+  {
+    type: CertificateFieldType.DISTANCE,
+    label: 'Distance',
+    placeholder: '[distance]',
+    description: 'Distance covered by runner (for time bound races)',
+    sampleValue: '18.5 KM'
+  },
+  {
+    type: CertificateFieldType.PHOTO,
+    label: 'Photo',
+    placeholder: '[photo]',
+    description: 'Participant photo',
+    sampleValue: 'photo.jpg'
   },
   {
     type: CertificateFieldType.EVENT_NAME,
