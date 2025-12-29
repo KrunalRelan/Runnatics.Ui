@@ -420,37 +420,50 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
                         sx={{
                           display: 'flex',
                           flexDirection: 'column',
-                          alignItems: 'flex-start',
-                          justifyContent: 'space-between',
                           p: 1,
                           border: 1,
-                          borderColor: isAdded ? 'success.main' : isSelected ? 'primary.main' : 'divider',
+                          borderColor: isAdded ? 'success.main' : isSelected ? 'primary.main' : 'grey.300',
                           borderRadius: 1,
-                          bgcolor: isAdded ? 'rgba(46, 125, 50, 0.12)' : isSelected ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+                          bgcolor: isAdded ? 'rgba(46, 125, 50, 0.08)' : isSelected ? 'rgba(25, 118, 210, 0.05)' : 'grey.50',
                           '&:hover': {
-                            bgcolor: isAdded ? 'rgba(46, 125, 50, 0.18)' : isSelected ? 'rgba(25, 118, 210, 0.12)' : 'action.hover',
-                            cursor: 'pointer'
+                            bgcolor: isAdded ? 'rgba(46, 125, 50, 0.15)' : isSelected ? 'rgba(25, 118, 210, 0.10)' : 'rgba(0, 0, 0, 0.04)',
+                            cursor: 'pointer',
+                            borderColor: isAdded ? 'success.dark' : isSelected ? 'primary.dark' : 'grey.400',
                           },
-                          minHeight: '65px'
+                          minHeight: '50px',
+                          transition: 'all 0.2s ease-in-out'
                         }}
                         onClick={() => handleFieldTypeClick(meta.type)}
                       >
-                        <Box sx={{ flex: 1, mb: 0.5 }}>
-                          <Typography variant="body2" fontWeight="medium" color={isAdded ? 'success.main' : isSelected ? 'primary.main' : 'text.primary'} sx={{ fontSize: '0.8rem', lineHeight: 1.3 }}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
+                          <Typography 
+                            variant="body2" 
+                            fontWeight="600" 
+                            color={isAdded ? 'success.main' : isSelected ? 'primary.main' : 'text.primary'} 
+                            sx={{ fontSize: '0.8rem', lineHeight: 1.3 }}
+                          >
                             {meta.label}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem', lineHeight: 1.2 }}>
-                            {meta.placeholder}
-                          </Typography>
-                        </Box>
-                        <IconButton
-                          size="small"
-                          color={isAdded ? 'error' : 'primary'}
-                          onClick={(e) => handleAddOrRemoveField(e, meta.type, isAdded)}
-                          sx={{ alignSelf: 'flex-end', p: 0.5 }}
+                          <IconButton
+                            size="small"
+                            color={isAdded ? 'error' : 'primary'}
+                            onClick={(e) => handleAddOrRemoveField(e, meta.type, isAdded)}
+                            sx={{ p: 0.25 }}
+                          >
+                            {isAdded ? <RemoveIcon fontSize="small" /> : <AddIcon fontSize="small" />}
+                          </IconButton>
+                        </Stack>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            fontSize: '0.68rem', 
+                            lineHeight: 1.2,
+                            color: isAdded ? 'success.dark' : isSelected ? 'primary.dark' : 'text.secondary',
+                            fontStyle: 'italic'
+                          }}
                         >
-                          {isAdded ? <RemoveIcon fontSize="small" /> : <AddIcon fontSize="small" />}
-                        </IconButton>
+                          {meta.placeholder}
+                        </Typography>
                       </Box>
                     );
                   })}
