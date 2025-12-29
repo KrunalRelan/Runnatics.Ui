@@ -192,25 +192,43 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
   };
 
   const handleRemoveFieldsByType = (fieldType: CertificateFieldType) => {
-    setTemplate(prev => ({
-      ...prev,
-      fields: prev.fields.filter(f => f.fieldType !== fieldType)
-    }));
-    // Clear selection if the selected field was removed
-    if (selectedFieldId) {
-      const selectedField = template.fields.find(f => f.id === selectedFieldId);
-      if (selectedField?.fieldType === fieldType) {
-        setSelectedFieldId(null);
+    // For custom text, only remove the last added instance
+    if (fieldType === CertificateFieldType.CUSTOM_TEXT) {
+      const customTextFields = template.fields.filter(f => f.fieldType === CertificateFieldType.CUSTOM_TEXT);
+      if (customTextFields.length > 0) {
+        const lastField = customTextFields[customTextFields.length - 1];
+        setTemplate(prev => ({
+          ...prev,
+          fields: prev.fields.filter(f => f.id !== lastField.id)
+        }));
+        // Clear selection if the removed field was selected
+        if (selectedFieldId === lastField.id) {
+          setSelectedFieldId(null);
+        }
+      }
+    } else {
+      // For other field types, remove all instances (though there should only be one)
+      setTemplate(prev => ({
+        ...prev,
+        fields: prev.fields.filter(f => f.fieldType !== fieldType)
+      }));
+      // Clear selection if the selected field was removed
+      if (selectedFieldId) {
+        const selectedField = template.fields.find(f => f.id === selectedFieldId);
+        if (selectedField?.fieldType === fieldType) {
+          setSelectedFieldId(null);
+        }
       }
     }
   };
 
   const handleFieldTypeClick = (fieldType: CertificateFieldType) => {
     setSelectedFieldType(fieldType);
-    // If this field type is already added, select the first instance on the canvas
-    const addedField = template.fields.find(f => f.fieldType === fieldType);
-    if (addedField) {
-      setSelectedFieldId(addedField.id);
+    // If this field type is already added, select the last instance on the canvas
+    const fieldsOfType = template.fields.filter(f => f.fieldType === fieldType);
+    if (fieldsOfType.length > 0) {
+      // Select the last added field of this type
+      setSelectedFieldId(fieldsOfType[fieldsOfType.length - 1].id);
     } else {
       setSelectedFieldId(null);
     }
@@ -445,8 +463,14 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
                   gap: 1 
                 }}>
                   {FIELD_TYPE_METADATA.map(meta => {
-                    const isAdded = template.fields.some(f => f.fieldType === meta.type);
+                    // Allow multiple custom text fields, but only one of each other type
+                    const isAdded = meta.type !== CertificateFieldType.CUSTOM_TEXT 
+                      ? template.fields.some(f => f.fieldType === meta.type)
+                      : false;
                     const isSelected = selectedFieldType === meta.type;
+                    const fieldCount = template.fields.filter(f => f.fieldType === meta.type).length;
+                    const showCount = meta.type === CertificateFieldType.CUSTOM_TEXT && fieldCount > 0;
+                    
                     return (
                       <Box
                         key={meta.type}
@@ -476,6 +500,11 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
                             sx={{ fontSize: '0.8rem', lineHeight: 1.3 }}
                           >
                             {meta.label}
+                            {showCount && (
+                              <Typography component="span" variant="caption" sx={{ ml: 0.5, color: 'primary.main', fontWeight: 'bold' }}>
+                                ({fieldCount})
+                              </Typography>
+                            )}
                           </Typography>
                           <IconButton
                             size="small"
