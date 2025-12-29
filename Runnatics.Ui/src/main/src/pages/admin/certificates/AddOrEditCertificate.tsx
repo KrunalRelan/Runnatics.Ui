@@ -122,6 +122,11 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
       return;
     }
 
+    if (!template.fields || template.fields.length === 0) {
+      showSnackbar('Please add at least one field to the certificate', 'error');
+      return;
+    }
+
     // Auto-generate template name if not provided
     const templateToSave = {
       ...template,
