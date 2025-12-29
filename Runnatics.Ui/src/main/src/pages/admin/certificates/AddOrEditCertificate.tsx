@@ -10,7 +10,11 @@ import {
   IconButton,
   Card,
   CardContent,
-  Stack
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -77,6 +81,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
   const [selectedFieldType, setSelectedFieldType] = useState<CertificateFieldType | null>(null);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [showClearAllDialog, setShowClearAllDialog] = useState(false);
 
   useEffect(() => {
     if (isEditMode && id) {
@@ -301,6 +306,14 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     setSnackbar({ open: true, message, severity });
   };
 
+  const handleClearAllFields = () => {
+    setTemplate(prev => ({ ...prev, fields: [] }));
+    setSelectedFieldId(null);
+    setSelectedFieldType(null);
+    setShowClearAllDialog(false);
+    showSnackbar('All fields removed', 'success');
+  };
+
   const selectedField = template.fields.find(f => f.id === selectedFieldId) || null;
 
   return (
@@ -398,12 +411,27 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
                 </Typography>
 
                 <Box sx={{ mb: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Fields: {template.fields.length}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Click on a field to edit its properties
-                  </Typography>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Box>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Fields: {template.fields.length}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Click on a field to edit its properties
+                      </Typography>
+                    </Box>
+                    {template.fields.length > 0 && (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        onClick={() => setShowClearAllDialog(true)}
+                        sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+                      >
+                        Clear All
+                      </Button>
+                    )}
+                  </Stack>
                 </Box>
 
                 <Box sx={{ 
@@ -530,6 +558,27 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Clear All Fields Confirmation Dialog */}
+      <Dialog
+        open={showClearAllDialog}
+        onClose={() => setShowClearAllDialog(false)}
+      >
+        <DialogTitle>Clear All Fields?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to remove all {template.fields.length} field{template.fields.length !== 1 ? 's' : ''} from the certificate? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowClearAllDialog(false)} variant="outlined">
+            Cancel
+          </Button>
+          <Button onClick={handleClearAllFields} variant="contained" color="error">
+            Clear All
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
