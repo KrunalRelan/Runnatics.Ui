@@ -14,6 +14,27 @@ export class CertificateService {
   }
 
   /**
+   * Get certificate template for an event and optionally a race
+   */
+  static async getTemplateByEventAndRace(eventId: string, raceId?: string): Promise<CertificateTemplate | null> {
+    try {
+      const url = raceId 
+        ? `${API_BASE}/templates/event/${eventId}/race/${raceId}`
+        : `${API_BASE}/templates/event/${eventId}`;
+      const response = await apiClient.get(url);
+      
+      // If multiple templates, return the first active one
+      if (Array.isArray(response.data)) {
+        return response.data.find((t: CertificateTemplate) => t.isActive) || response.data[0] || null;
+      }
+      return response.data || null;
+    } catch (error) {
+      // Return null if no template found
+      return null;
+    }
+  }
+
+  /**
    * Get a specific certificate template
    */
   static async getTemplate(templateId: string): Promise<CertificateTemplate> {

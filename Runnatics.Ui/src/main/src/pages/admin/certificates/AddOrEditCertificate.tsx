@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -14,7 +14,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  CircularProgress,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -82,27 +83,54 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [showClearAllDialog, setShowClearAllDialog] = useState(false);
+  const [existingTemplateId, setExistingTemplateId] = useState<string | null>(null);
+  const [showBackgroundChangeDialog, setShowBackgroundChangeDialog] = useState(false);
+  const [pendingBackgroundFile, setPendingBackgroundFile] = useState<File | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const hasLoadedRef = useRef(false);
 
+  // Load template on mount
   useEffect(() => {
+    // Prevent double loading in React Strict Mode
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+
     if (isEditMode && id) {
       loadTemplate(id);
+    } else if (eventId) {
+      // Load existing template for this event/race if available
+      loadExistingTemplate();
     }
-  }, [id, isEditMode]);
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Update template when eventId or raceId change
-  useEffect(() => {
-    setTemplate(prev => ({
-      ...prev,
-      eventId: eventId,
-      raceId: raceId
-    }));
-  }, [eventId, raceId]);
+  const loadExistingTemplate = async () => {
+    if (!eventId) return;
+
+    try {
+      setLoading(true);
+      const existingTemplate = await CertificateService.getTemplateByEventAndRace(eventId, raceId);
+      
+      if (existingTemplate) {
+        setTemplate(existingTemplate);
+        setExistingTemplateId(existingTemplate.id || null);
+        showSnackbar('Existing template loaded. You can edit and update it.', 'success');
+      }
+    } catch (error) {
+      console.log('No existing template found, starting fresh');
+      // No error message needed - it's normal to not have a template yet
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadTemplate = async (templateId: string) => {
     try {
       setLoading(true);
       const data = await CertificateService.getTemplate(templateId);
       setTemplate(data);
+      setExistingTemplateId(templateId);
     } catch (error) {
       showSnackbar('Failed to load template', 'error');
       console.error('Load template error:', error);
@@ -139,8 +167,14 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
       if (isEditMode && id) {
         await CertificateService.updateTemplate(id, templateToSave);
         showSnackbar('Template updated successfully', 'success');
+      } else if (existingTemplateId) {
+        // Update existing template
+        await CertificateService.updateTemplate(existingTemplateId, templateToSave);
+        showSnackbar('Template updated successfully', 'success');
       } else {
-        await CertificateService.createTemplate(templateToSave);
+        // Create new template
+        const created = await CertificateService.createTemplate(templateToSave);
+        setExistingTemplateId(created.id || null);
         showSnackbar('Template created successfully', 'success');
         // If embedded in ViewRaces, don't navigate away
         if (!propsEventId && !propsRaceId) {
@@ -159,12 +193,44 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Check if background exists and fields are added
+    const hasBackground = !!(template.backgroundImageData || template.backgroundImageUrl);
+    const hasFields = template.fields.length > 0;
+
+    if (hasBackground && hasFields) {
+      // Show warning dialog
+      setPendingBackgroundFile(file);
+      setShowBackgroundChangeDialog(true);
+    } else {
+      // Proceed with upload
+      processBackgroundUpload(file);
+    }
+
+    // Reset the input to allow selecting the same file again
+    event.target.value = '';
+  };
+
+  const processBackgroundUpload = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result as string;
       setTemplate(prev => ({ ...prev, backgroundImageData: result }));
+      showSnackbar('Background image updated', 'success');
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleConfirmBackgroundChange = () => {
+    if (pendingBackgroundFile) {
+      processBackgroundUpload(pendingBackgroundFile);
+      setPendingBackgroundFile(null);
+    }
+    setShowBackgroundChangeDialog(false);
+  };
+
+  const handleCancelBackgroundChange = () => {
+    setPendingBackgroundFile(null);
+    setShowBackgroundChangeDialog(false);
   };
 
   const handleAddField = (fieldType: CertificateFieldType) => {
@@ -337,6 +403,37 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     showSnackbar('All fields removed', 'success');
   };
 
+  const handleDeleteTemplate = async () => {
+    if (!existingTemplateId) return;
+
+    try {
+      setLoading(true);
+      await CertificateService.deleteTemplate(existingTemplateId);
+      
+      // Reset template to initial state
+      setTemplate({
+        eventId: eventId,
+        raceId: raceId,
+        name: '',
+        description: '',
+        width: 1754,
+        height: 1240,
+        fields: [],
+        isActive: true
+      });
+      setExistingTemplateId(null);
+      setSelectedFieldId(null);
+      setSelectedFieldType(null);
+      setShowDeleteDialog(false);
+      showSnackbar('Template deleted successfully', 'success');
+    } catch (error) {
+      showSnackbar('Failed to delete template', 'error');
+      console.error('Delete template error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const selectedField = template.fields.find(f => f.id === selectedFieldId) || null;
 
   return (
@@ -367,7 +464,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
               disabled={loading}
               sx={{ textTransform: "none", fontWeight: 500 }}
             >
-              Upload Background
+              {template.backgroundImageData || template.backgroundImageUrl ? 'Change Background' : 'Upload Background'}
               <input
                 type="file"
                 hidden
@@ -384,6 +481,17 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
             >
               Preview
             </Button>
+            {existingTemplateId && (
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={loading}
+                sx={{ textTransform: "none", fontWeight: 500 }}
+              >
+                Delete
+              </Button>
+            )}
             <Button
               variant="contained"
               startIcon={<SaveIcon />}
@@ -391,19 +499,43 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
               disabled={!template.backgroundImageData && !template.backgroundImageUrl || loading}
               sx={{ textTransform: "none", fontWeight: 500 }}
             >
-              {isEditMode ? 'Update' : 'Create'}
+              {isEditMode || existingTemplateId ? 'Update' : 'Create'}
             </Button>
           </Stack>
         </Stack>
       </Box>
 
       {/* Main Content in Card */}
-      <Card>
+      <Card sx={{ position: 'relative' }}>
+        {/* Loading Overlay */}
+        {loading && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              bgcolor: 'rgba(255, 255, 255, 0.9)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 1
+            }}
+          >
+            <Stack alignItems="center" spacing={2}>
+              <CircularProgress />
+              <Typography variant="h6" color="text.primary">Loading certificate template...</Typography>
+            </Stack>
+          </Box>
+        )}
+        
         <CardContent>
           <Stack direction="row" spacing={3}>
             {/* Left Panel - Template Info */}
-            <Box sx={{ width: 380, flexShrink: 0 }}>
-              <Box sx={{ maxHeight: '600px', overflow: 'auto', pt: 2, pr: 1 }}>
+            <Box sx={{ width: 380, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+              <Box sx={{ overflow: 'auto', pt: 2, pr: 1, flex: 1 }}>
                 {!propsEventId && (
                   <TextField
                     fullWidth
@@ -572,7 +704,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
             </Box>
 
             {/* Right Panel - Field Properties */}
-            <Box sx={{ width: 320, flexShrink: 0 }}>
+            <Box sx={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
               <FieldPropertiesPanel
                 field={selectedField}
                 onFieldUpdate={handleFieldUpdate}
@@ -587,11 +719,65 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert severity={snackbar.severity} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Delete Template Confirmation Dialog */}
+      <Dialog
+        open={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Delete Certificate Template?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            Are you sure you want to delete this certificate template?
+          </Typography>
+          <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+            <strong>Warning:</strong> This action cannot be undone. All {template.fields.length} field{template.fields.length !== 1 ? 's' : ''} and the background image will be permanently deleted.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowDeleteDialog(false)} variant="outlined">
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteTemplate} variant="contained" color="error">
+            Delete Template
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Background Change Warning Dialog */}
+      <Dialog
+        open={showBackgroundChangeDialog}
+        onClose={handleCancelBackgroundChange}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Change Background Image?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            You are about to change the background image. Your existing fields will remain at their current positions.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+            <strong>Note:</strong> If the new background has different dimensions ({template.width} x {template.height} px), 
+            you may need to reposition your {template.fields.length} field{template.fields.length !== 1 ? 's' : ''}.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelBackgroundChange} variant="outlined">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmBackgroundChange} variant="contained" color="primary">
+            Continue
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Clear All Fields Confirmation Dialog */}
       <Dialog
