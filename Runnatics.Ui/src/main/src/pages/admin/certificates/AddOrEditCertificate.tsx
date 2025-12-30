@@ -10,7 +10,11 @@ import {
   IconButton,
   Card,
   CardContent,
-  Stack
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -27,17 +31,26 @@ import { FieldPropertiesPanel } from '../../../components/CertificateEditor/Fiel
 import { v4 as uuidv4 } from 'uuid';
 
 const SAMPLE_DATA = {
-  participant_name: '[name]',
-  bib_number: '[bib_number]',
-  race_category: '[race_category]',
-  race_distance: '[race_distance]',
-  chip_timing: '[chip_timing]',
-  gun_timing: '[gun_timing]',
-  rank_overall: '[rank_overall]',
-  rank_category: '[rank_category]',
-  rank_gender: '[rank_gender]',
-  event_name: '[event_name]',
-  event_date: '[event_date]'
+  ParticipantName: '[name]',
+  BibNumber: '[bib]',
+  RaceCategory: '[race_category]',
+  Category: '[category]',
+  RaceDistance: '[race_distance]',
+  ChipTiming: '[chip_time]',
+  GunTiming: '[gun_time]',
+  TimeHrs: '[time_hrs]',
+  TimeMins: '[time_mins]',
+  TimeSecs: '[time_secs]',
+  RankOverall: '[overall_rank]',
+  RankCategory: '[category_rank]',
+  RankGender: '[gender_rank]',
+  OverallGenderRank: '[overall_gender_rank]',
+  Gender: '[gender]',
+  Distance: '[distance]',
+  Photo: '[photo]',
+  EventName: '[event_name]',
+  EventDate: '[event_date]',
+  CustomText: ''
 };
 
 interface AddOrEditCertificateProps {
@@ -68,6 +81,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
   const [selectedFieldType, setSelectedFieldType] = useState<CertificateFieldType | null>(null);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [showClearAllDialog, setShowClearAllDialog] = useState(false);
 
   useEffect(() => {
     if (isEditMode && id) {
@@ -105,6 +119,11 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
 
     if (!template.backgroundImageData && !template.backgroundImageUrl) {
       showSnackbar('Please upload a background image', 'error');
+      return;
+    }
+
+    if (!template.fields || template.fields.length === 0) {
+      showSnackbar('Please add at least one field to the certificate', 'error');
       return;
     }
 
@@ -173,25 +192,43 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
   };
 
   const handleRemoveFieldsByType = (fieldType: CertificateFieldType) => {
-    setTemplate(prev => ({
-      ...prev,
-      fields: prev.fields.filter(f => f.fieldType !== fieldType)
-    }));
-    // Clear selection if the selected field was removed
-    if (selectedFieldId) {
-      const selectedField = template.fields.find(f => f.id === selectedFieldId);
-      if (selectedField?.fieldType === fieldType) {
-        setSelectedFieldId(null);
+    // For custom text, only remove the last added instance
+    if (fieldType === CertificateFieldType.CUSTOM_TEXT) {
+      const customTextFields = template.fields.filter(f => f.fieldType === CertificateFieldType.CUSTOM_TEXT);
+      if (customTextFields.length > 0) {
+        const lastField = customTextFields[customTextFields.length - 1];
+        setTemplate(prev => ({
+          ...prev,
+          fields: prev.fields.filter(f => f.id !== lastField.id)
+        }));
+        // Clear selection if the removed field was selected
+        if (selectedFieldId === lastField.id) {
+          setSelectedFieldId(null);
+        }
+      }
+    } else {
+      // For other field types, remove all instances (though there should only be one)
+      setTemplate(prev => ({
+        ...prev,
+        fields: prev.fields.filter(f => f.fieldType !== fieldType)
+      }));
+      // Clear selection if the selected field was removed
+      if (selectedFieldId) {
+        const selectedField = template.fields.find(f => f.id === selectedFieldId);
+        if (selectedField?.fieldType === fieldType) {
+          setSelectedFieldId(null);
+        }
       }
     }
   };
 
   const handleFieldTypeClick = (fieldType: CertificateFieldType) => {
     setSelectedFieldType(fieldType);
-    // If this field type is already added, select the first instance on the canvas
-    const addedField = template.fields.find(f => f.fieldType === fieldType);
-    if (addedField) {
-      setSelectedFieldId(addedField.id);
+    // If this field type is already added, select the last instance on the canvas
+    const fieldsOfType = template.fields.filter(f => f.fieldType === fieldType);
+    if (fieldsOfType.length > 0) {
+      // Select the last added field of this type
+      setSelectedFieldId(fieldsOfType[fieldsOfType.length - 1].id);
     } else {
       setSelectedFieldId(null);
     }
@@ -292,27 +329,34 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     setSnackbar({ open: true, message, severity });
   };
 
+  const handleClearAllFields = () => {
+    setTemplate(prev => ({ ...prev, fields: [] }));
+    setSelectedFieldId(null);
+    setSelectedFieldType(null);
+    setShowClearAllDialog(false);
+    showSnackbar('All fields removed', 'success');
+  };
+
   const selectedField = template.fields.find(f => f.id === selectedFieldId) || null;
 
   return (
     <Box>
-      {/* Header Section - Similar to Participants Tab */}
-      <Box sx={{ mb: 3 }}>
+      {/* Header Section with Title and Action Buttons */}
+      {!propsEventId && (
+        <IconButton 
+          onClick={() => navigate('/admin/certificates')} 
+          sx={{ mb: 1 }}
+        >
+          <BackIcon />
+        </IconButton>
+      )}
+      
+      <Box sx={{ mb: 2 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           {/* Left Side - Title */}
-          <Box>
-            {!propsEventId && (
-              <IconButton 
-                onClick={() => navigate('/admin/certificates')} 
-                sx={{ mb: 1 }}
-              >
-                <BackIcon />
-              </IconButton>
-            )}
-            <Typography variant="h4" component="h1">
-              {isEditMode ? 'Edit Certificate Template' : 'Certificate'}
-            </Typography>
-          </Box>
+          <Typography variant="h4" component="h1">
+            {isEditMode ? 'Edit Certificate Template' : 'Certificate'}
+          </Typography>
 
           {/* Right Side - Action Buttons */}
           <Stack direction="row" spacing={2}>
@@ -321,6 +365,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
               startIcon={<UploadIcon />}
               component="label"
               disabled={loading}
+              sx={{ textTransform: "none", fontWeight: 500 }}
             >
               Upload Background
               <input
@@ -335,6 +380,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
               startIcon={<PreviewIcon />}
               onClick={handlePreview}
               disabled={!template.backgroundImageData && !template.backgroundImageUrl || loading}
+              sx={{ textTransform: "none", fontWeight: 500 }}
             >
               Preview
             </Button>
@@ -343,6 +389,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
               startIcon={<SaveIcon />}
               onClick={handleSave}
               disabled={!template.backgroundImageData && !template.backgroundImageUrl || loading}
+              sx={{ textTransform: "none", fontWeight: 500 }}
             >
               {isEditMode ? 'Update' : 'Create'}
             </Button>
@@ -350,146 +397,191 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
         </Stack>
       </Box>
 
-      <Stack direction="row" spacing={3}>
-        {/* Left Panel - Template Info */}
-        <Box sx={{ width: 320 }}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent sx={{ overflow: 'auto', height: '100%', pt: 2 }}>
-            {!propsEventId && (
-              <TextField
-                fullWidth
-                label="Event ID"
-                value={template.eventId}
-                onChange={(e) => setTemplate(prev => ({ ...prev, eventId: e.target.value }))}
-                sx={{ mb: 2 }}
-                required
-                disabled={!!propsEventId}
-              />
-            )}
+      {/* Main Content in Card */}
+      <Card>
+        <CardContent>
+          <Stack direction="row" spacing={3}>
+            {/* Left Panel - Template Info */}
+            <Box sx={{ width: 380, flexShrink: 0 }}>
+              <Box sx={{ maxHeight: '600px', overflow: 'auto', pt: 2, pr: 1 }}>
+                {!propsEventId && (
+                  <TextField
+                    fullWidth
+                    label="Event ID"
+                    value={template.eventId}
+                    onChange={(e) => setTemplate(prev => ({ ...prev, eventId: e.target.value }))}
+                    sx={{ mb: 2 }}
+                    required
+                    disabled={!!propsEventId}
+                  />
+                )}
 
-            {!propsRaceId && (
-              <TextField
-                fullWidth
-                label="Race ID"
-                value={template.raceId || ''}
-                onChange={(e) => setTemplate(prev => ({ ...prev, raceId: e.target.value }))}
-                sx={{ mb: 2 }}
-                required={!propsRaceId}
-                disabled={!!propsRaceId}
-              />
-            )}
+                {!propsRaceId && (
+                  <TextField
+                    fullWidth
+                    label="Race ID"
+                    value={template.raceId || ''}
+                    onChange={(e) => setTemplate(prev => ({ ...prev, raceId: e.target.value }))}
+                    sx={{ mb: 2 }}
+                    required={!propsRaceId}
+                    disabled={!!propsRaceId}
+                  />
+                )}
 
-            <Typography variant="h6" gutterBottom>Available Fields</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-              Click + to add field to certificate
-            </Typography>
+                <Typography variant="h6" gutterBottom>Available Fields</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                  Click + to add field to certificate
+                </Typography>
 
-            <Box sx={{ mb: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Fields: {template.fields.length}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Click on a field to edit its properties
-              </Typography>
-            </Box>
-
-            <Stack spacing={1}>
-              {FIELD_TYPE_METADATA.map(meta => {
-                const isAdded = template.fields.some(f => f.fieldType === meta.type);
-                const isSelected = selectedFieldType === meta.type;
-                return (
-                  <Box
-                    key={meta.type}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.5,
-                      border: 1,
-                      borderColor: isAdded ? 'success.main' : isSelected ? 'primary.main' : 'divider',
-                      borderRadius: 1,
-                      bgcolor: isAdded ? 'rgba(46, 125, 50, 0.12)' : isSelected ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
-                      '&:hover': {
-                        bgcolor: isAdded ? 'rgba(46, 125, 50, 0.18)' : isSelected ? 'rgba(25, 118, 210, 0.12)' : 'action.hover',
-                        cursor: 'pointer'
-                      }
-                    }}
-                    onClick={() => handleFieldTypeClick(meta.type)}
-                  >
+                <Box sx={{ mb: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Box>
-                      <Typography variant="body2" fontWeight="medium" color={isAdded ? 'success.main' : isSelected ? 'primary.main' : 'text.primary'}>
-                        {meta.label}
+                      <Typography variant="subtitle2" gutterBottom>
+                        Fields: {template.fields.length}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {meta.placeholder}
+                        Click on a field to edit its properties
                       </Typography>
                     </Box>
-                    <IconButton
-                      size="small"
-                      color={isAdded ? 'error' : 'primary'}
-                      onClick={(e) => handleAddOrRemoveField(e, meta.type, isAdded)}
-                    >
-                      {isAdded ? <RemoveIcon /> : <AddIcon />}
-                    </IconButton>
-                  </Box>
-                );
-              })}
-            </Stack>
-            </CardContent>
-          </Card>
-        </Box>
+                    {template.fields.length > 0 && (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        onClick={() => setShowClearAllDialog(true)}
+                        sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+                      >
+                        Clear All
+                      </Button>
+                    )}
+                  </Stack>
+                </Box>
 
-        {/* Center Panel - Canvas */}
-        <Box sx={{ flex: 1, maxWidth: 700 }}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent sx={{ height: '100%', bgcolor: 'grey.50' }}>
-              {/* Certificate Size Controls */}
-              <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
-                <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>Size:</Typography>
-                <TextField
-                  type="number"
-                  label="Width (px)"
-                  value={template.width}
-                  onChange={(e) => setTemplate(prev => ({ ...prev, width: parseInt(e.target.value) }))}
-                  size="small"
-                  sx={{ width: 100 }}
-                  InputLabelProps={{ sx: { fontSize: '0.75rem' } }}
-                  inputProps={{ sx: { fontSize: '0.75rem' } }}
+                <Box sx={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(2, 1fr)', 
+                  gap: 1 
+                }}>
+                  {FIELD_TYPE_METADATA.map(meta => {
+                    // Allow multiple custom text fields, but only one of each other type
+                    const isAdded = meta.type !== CertificateFieldType.CUSTOM_TEXT 
+                      ? template.fields.some(f => f.fieldType === meta.type)
+                      : false;
+                    const isSelected = selectedFieldType === meta.type;
+                    const fieldCount = template.fields.filter(f => f.fieldType === meta.type).length;
+                    const showCount = meta.type === CertificateFieldType.CUSTOM_TEXT && fieldCount > 0;
+                    
+                    return (
+                      <Box
+                        key={meta.type}
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          p: 1,
+                          border: 1,
+                          borderColor: isAdded ? 'success.main' : isSelected ? 'primary.main' : 'grey.300',
+                          borderRadius: 1,
+                          bgcolor: isAdded ? 'rgba(46, 125, 50, 0.08)' : isSelected ? 'rgba(25, 118, 210, 0.05)' : 'grey.50',
+                          '&:hover': {
+                            bgcolor: isAdded ? 'rgba(46, 125, 50, 0.15)' : isSelected ? 'rgba(25, 118, 210, 0.10)' : 'rgba(0, 0, 0, 0.04)',
+                            cursor: 'pointer',
+                            borderColor: isAdded ? 'success.dark' : isSelected ? 'primary.dark' : 'grey.400',
+                          },
+                          minHeight: '50px',
+                          transition: 'all 0.2s ease-in-out'
+                        }}
+                        onClick={() => handleFieldTypeClick(meta.type)}
+                      >
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
+                          <Typography 
+                            variant="body2" 
+                            fontWeight="600" 
+                            color={isAdded ? 'success.main' : isSelected ? 'primary.main' : 'text.primary'} 
+                            sx={{ fontSize: '0.8rem', lineHeight: 1.3 }}
+                          >
+                            {meta.label}
+                            {showCount && (
+                              <Typography component="span" variant="caption" sx={{ ml: 0.5, color: 'primary.main', fontWeight: 'bold' }}>
+                                ({fieldCount})
+                              </Typography>
+                            )}
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            color={isAdded ? 'error' : 'primary'}
+                            onClick={(e) => handleAddOrRemoveField(e, meta.type, isAdded)}
+                            sx={{ p: 0.25 }}
+                          >
+                            {isAdded ? <RemoveIcon fontSize="small" /> : <AddIcon fontSize="small" />}
+                          </IconButton>
+                        </Stack>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            fontSize: '0.68rem', 
+                            lineHeight: 1.2,
+                            color: isAdded ? 'success.dark' : isSelected ? 'primary.dark' : 'text.secondary',
+                            fontStyle: 'italic'
+                          }}
+                        >
+                          {meta.placeholder}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Center Panel - Canvas */}
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Box sx={{ height: '100%', bgcolor: 'grey.50', borderRadius: 1, p: 2 }}>
+                {/* Certificate Size Controls */}
+                <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
+                  <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>Size:</Typography>
+                  <TextField
+                    type="number"
+                    label="Width (px)"
+                    value={template.width}
+                    onChange={(e) => setTemplate(prev => ({ ...prev, width: parseInt(e.target.value) }))}
+                    size="small"
+                    sx={{ width: 100 }}
+                    InputLabelProps={{ sx: { fontSize: '0.75rem' } }}
+                    inputProps={{ sx: { fontSize: '0.75rem' } }}
+                  />
+                  <TextField
+                    type="number"
+                    label="Height (px)"
+                    value={template.height}
+                    onChange={(e) => setTemplate(prev => ({ ...prev, height: parseInt(e.target.value) }))}
+                    size="small"
+                    sx={{ width: 100 }}
+                    InputLabelProps={{ sx: { fontSize: '0.75rem' } }}
+                    inputProps={{ sx: { fontSize: '0.75rem' } }}
+                  />
+                </Stack>
+                
+                <CertificateCanvas
+                  template={template}
+                  selectedFieldId={selectedFieldId || undefined}
+                  onFieldSelect={setSelectedFieldId}
+                  onFieldMove={handleFieldMove}
+                  sampleData={SAMPLE_DATA}
                 />
-                <TextField
-                  type="number"
-                  label="Height (px)"
-                  value={template.height}
-                  onChange={(e) => setTemplate(prev => ({ ...prev, height: parseInt(e.target.value) }))}
-                  size="small"
-                  sx={{ width: 100 }}
-                  InputLabelProps={{ sx: { fontSize: '0.75rem' } }}
-                  inputProps={{ sx: { fontSize: '0.75rem' } }}
-                />
-              </Stack>
-              
-              <CertificateCanvas
-                template={template}
-                selectedFieldId={selectedFieldId || undefined}
-                onFieldSelect={setSelectedFieldId}
-                onFieldMove={handleFieldMove}
-                sampleData={SAMPLE_DATA}
+              </Box>
+            </Box>
+
+            {/* Right Panel - Field Properties */}
+            <Box sx={{ width: 320, flexShrink: 0 }}>
+              <FieldPropertiesPanel
+                field={selectedField}
+                onFieldUpdate={handleFieldUpdate}
+                onFieldDelete={handleFieldDelete}
               />
-            </CardContent>
-          </Card>
-        </Box>
-
-        {/* Right Panel - Field Properties */}
-        <Box sx={{ width: 320 }}>
-          <Card sx={{ height: '100%' }}>
-            <FieldPropertiesPanel
-              field={selectedField}
-              onFieldUpdate={handleFieldUpdate}
-              onFieldDelete={handleFieldDelete}
-            />
-          </Card>
-        </Box>
-      </Stack>
+            </Box>
+          </Stack>
+        </CardContent>
+      </Card>
 
       <Snackbar
         open={snackbar.open}
@@ -500,6 +592,27 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Clear All Fields Confirmation Dialog */}
+      <Dialog
+        open={showClearAllDialog}
+        onClose={() => setShowClearAllDialog(false)}
+      >
+        <DialogTitle>Clear All Fields?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to remove all {template.fields.length} field{template.fields.length !== 1 ? 's' : ''} from the certificate? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowClearAllDialog(false)} variant="outlined">
+            Cancel
+          </Button>
+          <Button onClick={handleClearAllFields} variant="contained" color="error">
+            Clear All
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
