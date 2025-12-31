@@ -611,7 +611,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
               variant="outlined"
               startIcon={<UploadIcon />}
               component="label"
-              disabled={loading}
+              disabled={loading || isViewingDefaultTemplate}
               sx={{ textTransform: "none", fontWeight: 500 }}
             >
               {template.backgroundImageData || template.backgroundImageUrl ? 'Change Background' : 'Upload Background'}
@@ -636,7 +636,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
                 variant="outlined"
                 color="error"
                 onClick={() => setShowDeleteDialog(true)}
-                disabled={loading}
+                disabled={loading || isViewingDefaultTemplate}
                 sx={{ textTransform: "none", fontWeight: 500 }}
               >
                 Delete
@@ -646,7 +646,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
               variant="contained"
               startIcon={<SaveIcon />}
               onClick={handleSave}
-              disabled={!template.backgroundImageData && !template.backgroundImageUrl || loading}
+              disabled={!template.backgroundImageData && !template.backgroundImageUrl || loading || isViewingDefaultTemplate}
               sx={{ textTransform: "none", fontWeight: 500 }}
             >
               {isEditMode || existingTemplateId ? 'Update' : 'Create'}
