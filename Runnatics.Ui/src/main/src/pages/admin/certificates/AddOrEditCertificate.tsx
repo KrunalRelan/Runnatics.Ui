@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -14,7 +14,11 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  CircularProgress,
+  Checkbox,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -22,7 +26,8 @@ import {
   Visibility as PreviewIcon,
   Add as AddIcon,
   Remove as RemoveIcon,
-  ArrowBack as BackIcon
+  ArrowBack as BackIcon,
+  EmojiEvents
 } from '@mui/icons-material';
 import { CertificateTemplate, CertificateField, CertificateFieldType, FIELD_TYPE_METADATA } from '../../../models/Certificate';
 import { CertificateService } from '../../../services/CertificateService';
@@ -75,34 +80,161 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     width: 1754, // A4 landscape at 150 DPI
     height: 1240,
     fields: [],
-    isActive: true
+    isActive: true,
+    isDefault: false
   });
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [selectedFieldType, setSelectedFieldType] = useState<CertificateFieldType | null>(null);
   const [loading, setLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [loadingMessage, setLoadingMessage] = useState('Loading certificate template...');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' });
   const [showClearAllDialog, setShowClearAllDialog] = useState(false);
+  const [existingTemplateId, setExistingTemplateId] = useState<string | null>(null);
+  const [showBackgroundChangeDialog, setShowBackgroundChangeDialog] = useState(false);
+  const [pendingBackgroundFile, setPendingBackgroundFile] = useState<File | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isViewingDefaultTemplate, setIsViewingDefaultTemplate] = useState(false);
+  const hasLoadedRef = useRef(false);
+  const currentLoadingRaceRef = useRef<string | undefined>(raceId);
 
+  // Load template on mount
   useEffect(() => {
+    // Prevent double loading in React Strict Mode
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+
     if (isEditMode && id) {
       loadTemplate(id);
+    } else if (eventId) {
+      // Load existing template for this event/race if available
+      currentLoadingRaceRef.current = raceId;
+      loadExistingTemplate(raceId);
     }
-  }, [id, isEditMode]);
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Update template when eventId or raceId change
+  // Reload template when raceId changes (when user switches race from dropdown)
   useEffect(() => {
-    setTemplate(prev => ({
-      ...prev,
+    // Skip on initial mount (handled by the above useEffect)
+    if (!hasLoadedRef.current) return;
+    
+    console.log('Race ID changed, resetting template...', { newRaceId: raceId });
+    
+    // Only reload if not in edit mode (edit mode loads specific template by ID)
+    if (!isEditMode && eventId) {
+      resetAndLoadTemplate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raceId, propsRaceId]); // Include propsRaceId to ensure effect triggers
+
+  const resetAndLoadTemplate = async () => {
+    // Track which race we're loading
+    const targetRaceId = raceId;
+    currentLoadingRaceRef.current = targetRaceId;
+    
+    console.log('Resetting and loading template for race:', targetRaceId);
+    
+    // Reset ALL state to initial values
+    setSelectedFieldId(null);
+    setSelectedFieldType(null);
+    setExistingTemplateId(null);
+    setIsViewingDefaultTemplate(false);
+    
+    // Reset template to initial blank state
+    const initialTemplate = {
       eventId: eventId,
-      raceId: raceId
-    }));
-  }, [eventId, raceId]);
+      raceId: targetRaceId,
+      name: '',
+      description: '',
+      width: 1754,
+      height: 1240,
+      fields: [],
+      isActive: true,
+      isDefault: false
+    };
+    setTemplate(initialTemplate);
+
+    // Use the existing loadExistingTemplate function which has all the default template logic
+    await loadExistingTemplate(targetRaceId);
+  };
+
+  const loadExistingTemplate = async (targetRaceId: string | undefined) => {
+    if (!eventId) return;
+
+    console.log('loadExistingTemplate called with:', { eventId, targetRaceId });
+
+    try {
+      setLoadingMessage('Loading certificate template...');
+      setLoading(true);
+      const existingTemplate = await CertificateService.getTemplateByEventAndRace(eventId, targetRaceId);
+      
+      console.log('Backend returned template:', existingTemplate);
+      
+      // Only update if we're still loading this race
+      if (currentLoadingRaceRef.current === targetRaceId) {
+        if (existingTemplate) {
+          // Check if this is the race's own template or a default template from another race/event
+          const isOwnTemplate = existingTemplate.raceId === targetRaceId;
+          const isDefaultTemplate = existingTemplate.isDefault && !isOwnTemplate;
+          
+          console.log('Template analysis:', {
+            templateRaceId: existingTemplate.raceId,
+            targetRaceId,
+            isOwnTemplate,
+            isDefaultTemplate,
+            templateIsDefault: existingTemplate.isDefault,
+            willSetViewingDefault: isDefaultTemplate
+          });
+          
+          // Set template with correct raceId for current race
+          const templateToSet = {
+            ...existingTemplate,
+            raceId: targetRaceId, // Always use the current race ID
+            id: isDefaultTemplate ? undefined : existingTemplate.id, // Clear ID if it's a default template
+            isDefault: isDefaultTemplate ? false : existingTemplate.isDefault // Keep isDefault for own template, clear for default template
+          };
+          
+          setTemplate(templateToSet);
+          
+          if (isDefaultTemplate) {
+            // Viewing default template - don't set existingTemplateId so saving creates new
+            setExistingTemplateId(null);
+            setIsViewingDefaultTemplate(true);
+            console.log('✅ SET isViewingDefaultTemplate to TRUE');
+            showSnackbar('Showing default template. Click Update to create a copy for this race.', 'info');
+          } else {
+            // Viewing own template
+            setExistingTemplateId(existingTemplate.id || null);
+            setIsViewingDefaultTemplate(false);
+            console.log('❌ SET isViewingDefaultTemplate to FALSE - own template');
+            showSnackbar('Existing template loaded. You can edit and update it.', 'success');
+          }
+        } else {
+          console.log('No template returned from backend');
+          setIsViewingDefaultTemplate(false);
+        }
+      }
+    } catch (error) {
+      if (currentLoadingRaceRef.current === targetRaceId) {
+        console.log('Error loading template:', error);
+        setIsViewingDefaultTemplate(false);
+        // No error message needed - it's normal to not have a template yet
+      }
+    } finally {
+      if (currentLoadingRaceRef.current === targetRaceId) {
+        setLoading(false);
+      }
+    }
+  };
 
   const loadTemplate = async (templateId: string) => {
     try {
+      setLoadingMessage('Loading certificate template...');
       setLoading(true);
       const data = await CertificateService.getTemplate(templateId);
       setTemplate(data);
+      setExistingTemplateId(templateId);
     } catch (error) {
       showSnackbar('Failed to load template', 'error');
       console.error('Load template error:', error);
@@ -130,17 +262,31 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     // Auto-generate template name if not provided
     const templateToSave = {
       ...template,
+      raceId: raceId, // Ensure we use the current race ID, not from a default template
       name: template.name || `Certificate_${template.eventId}${template.raceId ? `_${template.raceId}` : ''}_${Date.now()}`,
-      description: template.description || ''
+      description: template.description || '',
+      isDefault: template.isDefault || false
     };
 
     try {
-      setLoading(true);
       if (isEditMode && id) {
+        setLoadingMessage('Updating certificate template...');
+        setLoading(true);
         await CertificateService.updateTemplate(id, templateToSave);
         showSnackbar('Template updated successfully', 'success');
+      } else if (existingTemplateId && !isViewingDefaultTemplate) {
+        // Update existing template ONLY if not viewing default
+        setLoadingMessage('Updating certificate template...');
+        setLoading(true);
+        await CertificateService.updateTemplate(existingTemplateId, templateToSave);
+        showSnackbar('Template updated successfully', 'success');
       } else {
-        await CertificateService.createTemplate(templateToSave);
+        // Create new template (includes when viewing default template)
+        setLoadingMessage('Creating certificate template...');
+        setLoading(true);
+        const created = await CertificateService.createTemplate(templateToSave);
+        setExistingTemplateId(created.id || null);
+        setIsViewingDefaultTemplate(false);
         showSnackbar('Template created successfully', 'success');
         // If embedded in ViewRaces, don't navigate away
         if (!propsEventId && !propsRaceId) {
@@ -155,16 +301,67 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     }
   };
 
+  const handleCreateCustomTemplate = () => {
+    // Clear the default template flag and allow user to create new
+    setIsViewingDefaultTemplate(false);
+    setExistingTemplateId(null);
+    // Reset to blank template for this race
+    setTemplate({
+      eventId: eventId,
+      raceId: raceId,
+      name: '',
+      description: '',
+      width: 1754,
+      height: 1240,
+      fields: [],
+      isActive: true,
+      isDefault: false
+    });
+    showSnackbar('Ready to create custom template. Upload a background to begin.', 'info');
+  };
+
   const handleBackgroundUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Check if background exists and fields are added
+    const hasBackground = !!(template.backgroundImageData || template.backgroundImageUrl);
+    const hasFields = template.fields.length > 0;
+
+    if (hasBackground && hasFields) {
+      // Show warning dialog
+      setPendingBackgroundFile(file);
+      setShowBackgroundChangeDialog(true);
+    } else {
+      // Proceed with upload
+      processBackgroundUpload(file);
+    }
+
+    // Reset the input to allow selecting the same file again
+    event.target.value = '';
+  };
+
+  const processBackgroundUpload = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result as string;
       setTemplate(prev => ({ ...prev, backgroundImageData: result }));
+      showSnackbar('Background image updated', 'success');
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleConfirmBackgroundChange = () => {
+    if (pendingBackgroundFile) {
+      processBackgroundUpload(pendingBackgroundFile);
+      setPendingBackgroundFile(null);
+    }
+    setShowBackgroundChangeDialog(false);
+  };
+
+  const handleCancelBackgroundChange = () => {
+    setPendingBackgroundFile(null);
+    setShowBackgroundChangeDialog(false);
   };
 
   const handleAddField = (fieldType: CertificateFieldType) => {
@@ -325,7 +522,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     }
   };
 
-  const showSnackbar = (message: string, severity: 'success' | 'error') => {
+  const showSnackbar = (message: string, severity: 'success' | 'error' | 'info') => {
     setSnackbar({ open: true, message, severity });
   };
 
@@ -335,6 +532,38 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     setSelectedFieldType(null);
     setShowClearAllDialog(false);
     showSnackbar('All fields removed', 'success');
+  };
+
+  const handleDeleteTemplate = async () => {
+    if (!existingTemplateId) return;
+
+    try {
+      setLoading(true);
+      await CertificateService.deleteTemplate(existingTemplateId);
+      
+      // Reset template to initial state
+      setTemplate({
+        eventId: eventId,
+        raceId: raceId,
+        name: '',
+        description: '',
+        width: 1754,
+        height: 1240,
+        fields: [],
+        isActive: true,
+        isDefault: false
+      });
+      setExistingTemplateId(null);
+      setSelectedFieldId(null);
+      setSelectedFieldType(null);
+      setShowDeleteDialog(false);
+      showSnackbar('Template deleted successfully', 'success');
+    } catch (error) {
+      showSnackbar('Failed to delete template', 'error');
+      console.error('Delete template error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const selectedField = template.fields.find(f => f.id === selectedFieldId) || null;
@@ -354,9 +583,27 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
       <Box sx={{ mb: 2 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           {/* Left Side - Title */}
-          <Typography variant="h4" component="h1">
-            {isEditMode ? 'Edit Certificate Template' : 'Certificate'}
-          </Typography>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Typography variant="h4" component="h1">
+              {isEditMode ? 'Edit Certificate Template' : 'Certificate'}
+            </Typography>
+            {template.isDefault && (
+              <Box
+                sx={{
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: 1,
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  textTransform: 'uppercase'
+                }}
+              >
+                Default
+              </Box>
+            )}
+          </Stack>
 
           {/* Right Side - Action Buttons */}
           <Stack direction="row" spacing={2}>
@@ -364,10 +611,10 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
               variant="outlined"
               startIcon={<UploadIcon />}
               component="label"
-              disabled={loading}
+              disabled={loading || isViewingDefaultTemplate}
               sx={{ textTransform: "none", fontWeight: 500 }}
             >
-              Upload Background
+              {template.backgroundImageData || template.backgroundImageUrl ? 'Change Background' : 'Upload Background'}
               <input
                 type="file"
                 hidden
@@ -384,26 +631,101 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
             >
               Preview
             </Button>
+            {existingTemplateId && (
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={loading || isViewingDefaultTemplate}
+                sx={{ textTransform: "none", fontWeight: 500 }}
+              >
+                Delete
+              </Button>
+            )}
             <Button
               variant="contained"
               startIcon={<SaveIcon />}
               onClick={handleSave}
-              disabled={!template.backgroundImageData && !template.backgroundImageUrl || loading}
+              disabled={!template.backgroundImageData && !template.backgroundImageUrl || loading || isViewingDefaultTemplate}
               sx={{ textTransform: "none", fontWeight: 500 }}
             >
-              {isEditMode ? 'Update' : 'Create'}
+              {isEditMode || existingTemplateId ? 'Update' : 'Create'}
             </Button>
           </Stack>
         </Stack>
       </Box>
 
       {/* Main Content in Card */}
-      <Card>
+      <Card sx={{ position: 'relative' }}>
+        {/* Loading Overlay */}
+        {loading && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              bgcolor: 'rgba(255, 255, 255, 0.9)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 1
+            }}
+          >
+            <Stack alignItems="center" spacing={2}>
+              <CircularProgress />
+              <Typography variant="h6" color="text.primary">{loadingMessage}</Typography>
+            </Stack>
+          </Box>
+        )}
+        
         <CardContent>
+          {/* Show message when viewing default template instead of the actual template */}
+          {isViewingDefaultTemplate ? (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '500px',
+                p: 4
+              }}
+            >
+              <Card sx={{ maxWidth: 600, textAlign: 'center', p: 4, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
+                <EmojiEvents sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
+                <Typography variant="h5" fontWeight="600" gutterBottom>
+                  No Custom Certificate Template
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                  This race doesn't have a specific certificate template yet.
+                </Typography>
+                <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
+                  <Typography variant="body2">
+                    <strong>Default template will be used:</strong> When certificates are generated for this race,
+                    the default template from this event will be automatically applied.
+                  </Typography>
+                </Alert>
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<UploadIcon />}
+                  onClick={handleCreateCustomTemplate}
+                  sx={{ textTransform: 'none', fontWeight: 500 }}
+                >
+                  Create Custom Template for This Race
+                </Button>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+                  Creating a custom template will override the default for this race only
+                </Typography>
+              </Card>
+            </Box>
+          ) : (
           <Stack direction="row" spacing={3}>
             {/* Left Panel - Template Info */}
-            <Box sx={{ width: 380, flexShrink: 0 }}>
-              <Box sx={{ maxHeight: '600px', overflow: 'auto', pt: 2, pr: 1 }}>
+            <Box sx={{ width: 380, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+              <Box sx={{ overflow: 'auto', pt: 2, pr: 1, flex: 1 }}>
                 {!propsEventId && (
                   <TextField
                     fullWidth
@@ -433,7 +755,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
                   Click + to add field to certificate
                 </Typography>
 
-                <Box sx={{ mb: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                <Box sx={{ mb: 2, p: 2, bgcolor: 'background.default', borderRadius: 1, border: 1, borderColor: 'divider' }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Box>
                       <Typography variant="subtitle2" gutterBottom>
@@ -479,13 +801,13 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
                           flexDirection: 'column',
                           p: 1,
                           border: 1,
-                          borderColor: isAdded ? 'success.main' : isSelected ? 'primary.main' : 'grey.300',
+                          borderColor: isAdded ? 'success.main' : isSelected ? 'primary.main' : 'divider',
                           borderRadius: 1,
-                          bgcolor: isAdded ? 'rgba(46, 125, 50, 0.08)' : isSelected ? 'rgba(25, 118, 210, 0.05)' : 'grey.50',
+                          bgcolor: isAdded ? 'rgba(46, 125, 50, 0.15)' : isSelected ? 'rgba(25, 118, 210, 0.12)' : 'background.paper',
                           '&:hover': {
-                            bgcolor: isAdded ? 'rgba(46, 125, 50, 0.15)' : isSelected ? 'rgba(25, 118, 210, 0.10)' : 'rgba(0, 0, 0, 0.04)',
+                            bgcolor: isAdded ? 'rgba(46, 125, 50, 0.25)' : isSelected ? 'rgba(25, 118, 210, 0.20)' : 'action.hover',
                             cursor: 'pointer',
-                            borderColor: isAdded ? 'success.dark' : isSelected ? 'primary.dark' : 'grey.400',
+                            borderColor: isAdded ? 'success.light' : isSelected ? 'primary.light' : 'primary.main',
                           },
                           minHeight: '50px',
                           transition: 'all 0.2s ease-in-out'
@@ -535,7 +857,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
 
             {/* Center Panel - Canvas */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Box sx={{ height: '100%', bgcolor: 'grey.50', borderRadius: 1, p: 2 }}>
+              <Box sx={{ height: '100%', bgcolor: 'background.default', borderRadius: 1, p: 2 }}>
                 {/* Certificate Size Controls */}
                 <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
                   <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>Size:</Typography>
@@ -560,6 +882,27 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
                     inputProps={{ sx: { fontSize: '0.75rem' } }}
                   />
                 </Stack>
+
+                {/* Default Template Toggle - Show only when background is uploaded */}
+                {(template.backgroundImageData || template.backgroundImageUrl) && (
+                  <Box sx={{ mb: 1, mt: 2, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={template.isDefault || false}
+                          onChange={(e) => setTemplate(prev => ({ ...prev, isDefault: e.target.checked }))}
+                          color="primary"
+                          size="small"
+                        />
+                      }
+                      label={
+                        <Typography variant="caption" fontWeight="600" sx={{ fontSize: '0.75rem' }}>
+                          Set as Default Template
+                        </Typography>
+                      }
+                    />
+                  </Box>
+                )}
                 
                 <CertificateCanvas
                   template={template}
@@ -572,7 +915,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
             </Box>
 
             {/* Right Panel - Field Properties */}
-            <Box sx={{ width: 320, flexShrink: 0 }}>
+            <Box sx={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
               <FieldPropertiesPanel
                 field={selectedField}
                 onFieldUpdate={handleFieldUpdate}
@@ -580,6 +923,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
               />
             </Box>
           </Stack>
+          )}
         </CardContent>
       </Card>
 
@@ -587,11 +931,65 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert severity={snackbar.severity} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Delete Template Confirmation Dialog */}
+      <Dialog
+        open={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Delete Certificate Template?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            Are you sure you want to delete this certificate template?
+          </Typography>
+          <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+            <strong>Warning:</strong> This action cannot be undone. All {template.fields.length} field{template.fields.length !== 1 ? 's' : ''} and the background image will be permanently deleted.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowDeleteDialog(false)} variant="outlined">
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteTemplate} variant="contained" color="error">
+            Delete Template
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Background Change Warning Dialog */}
+      <Dialog
+        open={showBackgroundChangeDialog}
+        onClose={handleCancelBackgroundChange}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Change Background Image?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            You are about to change the background image. Your existing fields will remain at their current positions.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+            <strong>Note:</strong> If the new background has different dimensions ({template.width} x {template.height} px), 
+            you may need to reposition your {template.fields.length} field{template.fields.length !== 1 ? 's' : ''}.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelBackgroundChange} variant="outlined">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmBackgroundChange} variant="contained" color="primary">
+            Continue
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Clear All Fields Confirmation Dialog */}
       <Dialog

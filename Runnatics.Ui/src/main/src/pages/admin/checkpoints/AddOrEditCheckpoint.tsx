@@ -26,6 +26,7 @@ interface AddOrEditCheckpointProps {
     eventId?: string;
     raceId?: string;
     checkpointToEdit?: Checkpoint; // Optional for edit mode
+    existingCheckpoints?: Checkpoint[]; // Existing checkpoints for parent selection
 }
 
 const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
@@ -35,6 +36,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
     eventId,
     raceId,
     checkpointToEdit,
+    existingCheckpoints = [],
 }) => {
     const [formData, setFormData] = useState<Checkpoint>({
         id: "",
@@ -46,6 +48,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
     });
     const [devices, setDevices] = useState<Device[]>([]);
     const [loadingDevices, setLoadingDevices] = useState(false);
+    const [selectedParentCheckpoint, setSelectedParentCheckpoint] = useState<Checkpoint | null>(null);
 
     // FIX: Only fetch devices when dialog is open
     useEffect(() => {
@@ -131,6 +134,33 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
         setError(null);
     }, [open, checkpointToEdit, devices]);
 
+    // Handle parent checkpoint selection
+    const handleParentCheckpointChange = (checkpointId: string) => {
+        if (!checkpointId) {
+            setSelectedParentCheckpoint(null);
+            setFormData((prev) => ({
+                ...prev,
+                parentDeviceId: "",
+                // Keep other fields as they are
+            }));
+            return;
+        }
+
+        const parentCheckpoint = existingCheckpoints.find(cp => cp.id === checkpointId);
+        if (parentCheckpoint) {
+            setSelectedParentCheckpoint(parentCheckpoint);
+            // Copy fields from parent checkpoint
+            setFormData((prev) => ({
+                ...prev,
+                deviceId: parentCheckpoint.deviceId,
+                parentDeviceId: checkpointId, // Store checkpoint ID as parent
+                isMandatory: parentCheckpoint.isMandatory,
+                distanceFromStart: parentCheckpoint.distanceFromStart || 0,
+                name: "", // Clear name as it's optional when parent is selected
+            }));
+        }
+    };
+
     // FIX: Proper type handling for different field types
     const handleFormChange = (
         field: keyof Checkpoint,
@@ -155,6 +185,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
             isMandatory: false,
             distanceFromStart: 0,
         });
+        setSelectedParentCheckpoint(null);
         setError(null);
     };
 
@@ -166,12 +197,17 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
 
     // FIX: Consistent validation logic - extracted to reusable function
     const isFormValid = (): boolean => {
-        // Name is required if no parent device is selected
-        const hasValidName = formData.name && formData.name.trim() !== "";
-        const hasParentDevice = formData.parentDeviceId && formData.parentDeviceId.trim() !== "";
+        // Device is always required
+        if (!formData.deviceId || formData.deviceId.trim() === "") {
+            return false;
+        }
 
-        // Either name OR parent device must be provided
-        if (!hasValidName && !hasParentDevice) {
+        // Name is required if no parent checkpoint is selected
+        const hasValidName = formData.name && formData.name.trim() !== "";
+        const hasParentCheckpoint = formData.parentDeviceId && formData.parentDeviceId.trim() !== "";
+
+        // Either name OR parent checkpoint must be provided
+        if (!hasValidName && !hasParentCheckpoint) {
             return false;
         }
 
@@ -185,11 +221,16 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
 
     const handleSubmit = async () => {
         // Validate required fields
-        const hasValidName = formData.name && formData.name.trim() !== "";
-        const hasParentDevice = formData.parentDeviceId && formData.parentDeviceId.trim() !== "";
+        if (!formData.deviceId || formData.deviceId.trim() === "") {
+            setError("Device Name is required");
+            return;
+        }
 
-        if (!hasValidName && !hasParentDevice) {
-            setError("Please enter Checkpoint Name or select Parent Device Name");
+        const hasValidName = formData.name && formData.name.trim() !== "";
+        const hasParentCheckpoint = formData.parentDeviceId && formData.parentDeviceId.trim() !== "";
+
+        if (!hasValidName && !hasParentCheckpoint) {
+            setError("Please enter Checkpoint Name or select Parent Checkpoint");
             return;
         }
 
@@ -265,8 +306,13 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
         }
     };
 
-    // Determine if name is required based on parent device selection
+    // Determine if name is required based on parent checkpoint selection
     const isNameRequired = !formData.parentDeviceId || formData.parentDeviceId.trim() === "";
+    
+    // Get available parent checkpoints (exclude the one being edited)
+    const availableParentCheckpoints = checkpointToEdit 
+        ? existingCheckpoints.filter(cp => cp.id !== checkpointToEdit.id)
+        : existingCheckpoints;
 
     return (
         <Dialog
@@ -291,17 +337,18 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                         <strong>Error:</strong> {error}
                     </Alert>
                 )}
-                <Stack direction="row" spacing={2} sx={{ mt: error ? 0 : 2 }}>
+                <Stack spacing={2} sx={{ mt: error ? 0 : 2 }}>
                     <TextField
                         select
                         label="Device Name"
                         value={formData.deviceId}
                         onChange={(e) => handleFormChange("deviceId", e.target.value)}
                         fullWidth
+                        required
                         size="small"
-                        // FIX: Changed from "Required field" since device is optional
-                        helperText="Optional - Select a device for this checkpoint"
-                        disabled={loadingDevices}
+                        helperText="Required - Select a device for this checkpoint"
+                        disabled={loadingDevices || !!selectedParentCheckpoint}
+                        error={!formData.deviceId && error !== null}
                     >
                         <MenuItem value="">Select Device</MenuItem>
                         {devices.map((device) => (
@@ -310,17 +357,19 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                     </TextField>
                     <TextField
                         select
-                        label="Parent Device Name"
+                        label="Parent Checkpoint"
                         value={formData.parentDeviceId}
-                        onChange={(e) => handleFormChange("parentDeviceId", e.target.value)}
+                        onChange={(e) => handleParentCheckpointChange(e.target.value)}
                         fullWidth
                         size="small"
-                        helperText="Optional - Select a parent device"
+                        helperText="Optional - Select an existing checkpoint to copy its settings"
                         disabled={loadingDevices}
                     >
-                        <MenuItem value="">Select Parent Device</MenuItem>
-                        {devices.map((device) => (
-                            <MenuItem key={device.id} value={device.id}>{device.name}</MenuItem>
+                        <MenuItem value="">None (New Checkpoint)</MenuItem>
+                        {availableParentCheckpoints.map((checkpoint) => (
+                            <MenuItem key={checkpoint.id} value={checkpoint.id}>
+                                {checkpoint.name || checkpoint.deviceName || checkpoint.deviceId}
+                            </MenuItem>
                         ))}
                     </TextField>
                 </Stack>
@@ -337,12 +386,12 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                             helperText={
                                 isNameRequired
                                     ? "Required field"
-                                    : "Optional if Parent Device is selected"
+                                    : "Optional when Parent Checkpoint is selected"
                             }
                             error={isNameRequired && !formData.name.trim() && error !== null}
                         />
                         <TextField
-                            label="Distance From Start"
+                            label="Distance From Start (km)"
                             type="number"
                             // FIX: Changed min to 0 since distance can be 0 for start checkpoint
                             // Added step for decimal values
@@ -350,8 +399,10 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                             value={formData.distanceFromStart}
                             onChange={(e) => handleFormChange("distanceFromStart", e.target.value)}
                             fullWidth
+                            required
                             size="small"
-                            helperText="Distance in kilometers"
+                            helperText={selectedParentCheckpoint ? "Copied from parent checkpoint" : "Required field"}
+                            disabled={!!selectedParentCheckpoint}
                         />
                     </Stack>
 
@@ -360,9 +411,10 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                             <Checkbox
                                 checked={formData.isMandatory}
                                 onChange={(e) => handleFormChange("isMandatory", e.target.checked)}
+                                disabled={!!selectedParentCheckpoint}
                             />
                         }
-                        label="Is Mandatory"
+                        label={selectedParentCheckpoint ? "Is Mandatory (copied from parent)" : "Is Mandatory"}
                     />
                 </Stack>
             </DialogContent>

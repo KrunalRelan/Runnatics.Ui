@@ -961,6 +961,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                 eventId={eventId}
                 raceId={raceId}
                 checkpointToEdit={checkpointToEdit ?? undefined}
+                existingCheckpoints={localCheckpoints}
             />
 
             {/* Delete Confirmation Dialog */}

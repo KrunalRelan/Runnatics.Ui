@@ -69,9 +69,16 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
       };
       img.src = template.backgroundImageData || template.backgroundImageUrl || '';
     } else {
-      // Default background
-      bgCtx.fillStyle = '#f5f5f5';
-      bgCtx.fillRect(0, 0, template.width, template.height);
+      // Clear background (transparent)
+      bgCtx.clearRect(0, 0, template.width, template.height);
+      
+      // Draw "No background added" text
+      bgCtx.fillStyle = '#999';
+      bgCtx.font = '32px Arial';
+      bgCtx.textAlign = 'center';
+      bgCtx.textBaseline = 'middle';
+      bgCtx.fillText('No background added', template.width / 2, template.height / 2);
+      
       renderCertificate();
     }
   };
@@ -105,10 +112,12 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
       
       ctx.fillText(text, field.xCoordinate, field.yCoordinate);
 
-      // Highlight selected field
+      // Highlight selected field with bright, visible border
       if (field.id === selectedFieldId) {
-        ctx.strokeStyle = '#1976d2';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#2196f3';
+        ctx.lineWidth = 5;
+        ctx.shadowColor = 'rgba(33, 150, 243, 0.5)';
+        ctx.shadowBlur = 8;
         const metrics = ctx.measureText(text);
         ctx.strokeRect(
           field.xCoordinate - 5,
@@ -116,6 +125,9 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
           metrics.width + 10,
           field.fontSize + 10
         );
+        // Reset shadow
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
       }
     });
   };
@@ -207,13 +219,11 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
   return (
     <Box ref={containerRef} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 500 }}>
       <Paper
-        elevation={2}
+        elevation={0}
         sx={{
           display: 'inline-block',
-          backgroundColor: '#fff',
-          cursor: draggingField ? 'grabbing' : 'default',
-          border: 1,
-          borderColor: 'divider'
+          backgroundColor: 'background.default',
+          cursor: draggingField ? 'grabbing' : 'default'
         }}
       >
         <canvas

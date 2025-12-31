@@ -49,6 +49,7 @@ export interface CertificateTemplate {
   height: number; // Certificate height in pixels
   fields: CertificateField[];
   isActive: boolean;
+  isDefault?: boolean; // Mark as default template for the event
   createdAt?: Date;
   updatedAt?: Date;
 }
