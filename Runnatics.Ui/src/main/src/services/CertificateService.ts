@@ -56,6 +56,7 @@ export class CertificateService {
       Width: template.width,
       Height: template.height,
       IsActive: template.isActive,
+      IsDefault: template.isDefault || false,
       Fields: template.fields.map(field => ({
         FieldType: field.fieldType,
         Content: field.content,
@@ -77,6 +78,7 @@ export class CertificateService {
 
   /**
    * Update an existing certificate template
+   * Backend will mark existing fields as deleted and insert all fields as new
    */
   static async updateTemplate(templateId: string, template: CertificateTemplate): Promise<CertificateTemplate> {
     // Transform to match C# PascalCase contract
@@ -89,7 +91,9 @@ export class CertificateService {
       Width: template.width,
       Height: template.height,
       IsActive: template.isActive,
+      IsDefault: template.isDefault || false,
       Fields: template.fields.map(field => ({
+        // Don't send ID - backend will soft-delete old fields and insert these as new
         FieldType: field.fieldType,
         Content: field.content,
         XCoordinate: field.xCoordinate,

@@ -16,6 +16,9 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
+  Checkbox,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -23,7 +26,8 @@ import {
   Visibility as PreviewIcon,
   Add as AddIcon,
   Remove as RemoveIcon,
-  ArrowBack as BackIcon
+  ArrowBack as BackIcon,
+  EmojiEvents
 } from '@mui/icons-material';
 import { CertificateTemplate, CertificateField, CertificateFieldType, FIELD_TYPE_METADATA } from '../../../models/Certificate';
 import { CertificateService } from '../../../services/CertificateService';
@@ -76,18 +80,22 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     width: 1754, // A4 landscape at 150 DPI
     height: 1240,
     fields: [],
-    isActive: true
+    isActive: true,
+    isDefault: false
   });
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [selectedFieldType, setSelectedFieldType] = useState<CertificateFieldType | null>(null);
   const [loading, setLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [loadingMessage, setLoadingMessage] = useState('Loading certificate template...');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' });
   const [showClearAllDialog, setShowClearAllDialog] = useState(false);
   const [existingTemplateId, setExistingTemplateId] = useState<string | null>(null);
   const [showBackgroundChangeDialog, setShowBackgroundChangeDialog] = useState(false);
   const [pendingBackgroundFile, setPendingBackgroundFile] = useState<File | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isViewingDefaultTemplate, setIsViewingDefaultTemplate] = useState(false);
   const hasLoadedRef = useRef(false);
+  const currentLoadingRaceRef = useRef<string | undefined>(raceId);
 
   // Load template on mount
   useEffect(() => {
@@ -99,34 +107,130 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
       loadTemplate(id);
     } else if (eventId) {
       // Load existing template for this event/race if available
-      loadExistingTemplate();
+      currentLoadingRaceRef.current = raceId;
+      loadExistingTemplate(raceId);
     }
     // Only run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadExistingTemplate = async () => {
+  // Reload template when raceId changes (when user switches race from dropdown)
+  useEffect(() => {
+    // Skip on initial mount (handled by the above useEffect)
+    if (!hasLoadedRef.current) return;
+    
+    console.log('Race ID changed, resetting template...', { newRaceId: raceId });
+    
+    // Only reload if not in edit mode (edit mode loads specific template by ID)
+    if (!isEditMode && eventId) {
+      resetAndLoadTemplate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raceId, propsRaceId]); // Include propsRaceId to ensure effect triggers
+
+  const resetAndLoadTemplate = async () => {
+    // Track which race we're loading
+    const targetRaceId = raceId;
+    currentLoadingRaceRef.current = targetRaceId;
+    
+    console.log('Resetting and loading template for race:', targetRaceId);
+    
+    // Reset ALL state to initial values
+    setSelectedFieldId(null);
+    setSelectedFieldType(null);
+    setExistingTemplateId(null);
+    setIsViewingDefaultTemplate(false);
+    
+    // Reset template to initial blank state
+    const initialTemplate = {
+      eventId: eventId,
+      raceId: targetRaceId,
+      name: '',
+      description: '',
+      width: 1754,
+      height: 1240,
+      fields: [],
+      isActive: true,
+      isDefault: false
+    };
+    setTemplate(initialTemplate);
+
+    // Use the existing loadExistingTemplate function which has all the default template logic
+    await loadExistingTemplate(targetRaceId);
+  };
+
+  const loadExistingTemplate = async (targetRaceId: string | undefined) => {
     if (!eventId) return;
 
+    console.log('loadExistingTemplate called with:', { eventId, targetRaceId });
+
     try {
+      setLoadingMessage('Loading certificate template...');
       setLoading(true);
-      const existingTemplate = await CertificateService.getTemplateByEventAndRace(eventId, raceId);
+      const existingTemplate = await CertificateService.getTemplateByEventAndRace(eventId, targetRaceId);
       
-      if (existingTemplate) {
-        setTemplate(existingTemplate);
-        setExistingTemplateId(existingTemplate.id || null);
-        showSnackbar('Existing template loaded. You can edit and update it.', 'success');
+      console.log('Backend returned template:', existingTemplate);
+      
+      // Only update if we're still loading this race
+      if (currentLoadingRaceRef.current === targetRaceId) {
+        if (existingTemplate) {
+          // Check if this is the race's own template or a default template from another race/event
+          const isOwnTemplate = existingTemplate.raceId === targetRaceId;
+          const isDefaultTemplate = existingTemplate.isDefault && !isOwnTemplate;
+          
+          console.log('Template analysis:', {
+            templateRaceId: existingTemplate.raceId,
+            targetRaceId,
+            isOwnTemplate,
+            isDefaultTemplate,
+            templateIsDefault: existingTemplate.isDefault,
+            willSetViewingDefault: isDefaultTemplate
+          });
+          
+          // Set template with correct raceId for current race
+          const templateToSet = {
+            ...existingTemplate,
+            raceId: targetRaceId, // Always use the current race ID
+            id: isDefaultTemplate ? undefined : existingTemplate.id, // Clear ID if it's a default template
+            isDefault: isDefaultTemplate ? false : existingTemplate.isDefault // Keep isDefault for own template, clear for default template
+          };
+          
+          setTemplate(templateToSet);
+          
+          if (isDefaultTemplate) {
+            // Viewing default template - don't set existingTemplateId so saving creates new
+            setExistingTemplateId(null);
+            setIsViewingDefaultTemplate(true);
+            console.log('✅ SET isViewingDefaultTemplate to TRUE');
+            showSnackbar('Showing default template. Click Update to create a copy for this race.', 'info');
+          } else {
+            // Viewing own template
+            setExistingTemplateId(existingTemplate.id || null);
+            setIsViewingDefaultTemplate(false);
+            console.log('❌ SET isViewingDefaultTemplate to FALSE - own template');
+            showSnackbar('Existing template loaded. You can edit and update it.', 'success');
+          }
+        } else {
+          console.log('No template returned from backend');
+          setIsViewingDefaultTemplate(false);
+        }
       }
     } catch (error) {
-      console.log('No existing template found, starting fresh');
-      // No error message needed - it's normal to not have a template yet
+      if (currentLoadingRaceRef.current === targetRaceId) {
+        console.log('Error loading template:', error);
+        setIsViewingDefaultTemplate(false);
+        // No error message needed - it's normal to not have a template yet
+      }
     } finally {
-      setLoading(false);
+      if (currentLoadingRaceRef.current === targetRaceId) {
+        setLoading(false);
+      }
     }
   };
 
   const loadTemplate = async (templateId: string) => {
     try {
+      setLoadingMessage('Loading certificate template...');
       setLoading(true);
       const data = await CertificateService.getTemplate(templateId);
       setTemplate(data);
@@ -158,23 +262,31 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     // Auto-generate template name if not provided
     const templateToSave = {
       ...template,
+      raceId: raceId, // Ensure we use the current race ID, not from a default template
       name: template.name || `Certificate_${template.eventId}${template.raceId ? `_${template.raceId}` : ''}_${Date.now()}`,
-      description: template.description || ''
+      description: template.description || '',
+      isDefault: template.isDefault || false
     };
 
     try {
-      setLoading(true);
       if (isEditMode && id) {
+        setLoadingMessage('Updating certificate template...');
+        setLoading(true);
         await CertificateService.updateTemplate(id, templateToSave);
         showSnackbar('Template updated successfully', 'success');
-      } else if (existingTemplateId) {
-        // Update existing template
+      } else if (existingTemplateId && !isViewingDefaultTemplate) {
+        // Update existing template ONLY if not viewing default
+        setLoadingMessage('Updating certificate template...');
+        setLoading(true);
         await CertificateService.updateTemplate(existingTemplateId, templateToSave);
         showSnackbar('Template updated successfully', 'success');
       } else {
-        // Create new template
+        // Create new template (includes when viewing default template)
+        setLoadingMessage('Creating certificate template...');
+        setLoading(true);
         const created = await CertificateService.createTemplate(templateToSave);
         setExistingTemplateId(created.id || null);
+        setIsViewingDefaultTemplate(false);
         showSnackbar('Template created successfully', 'success');
         // If embedded in ViewRaces, don't navigate away
         if (!propsEventId && !propsRaceId) {
@@ -187,6 +299,25 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCreateCustomTemplate = () => {
+    // Clear the default template flag and allow user to create new
+    setIsViewingDefaultTemplate(false);
+    setExistingTemplateId(null);
+    // Reset to blank template for this race
+    setTemplate({
+      eventId: eventId,
+      raceId: raceId,
+      name: '',
+      description: '',
+      width: 1754,
+      height: 1240,
+      fields: [],
+      isActive: true,
+      isDefault: false
+    });
+    showSnackbar('Ready to create custom template. Upload a background to begin.', 'info');
   };
 
   const handleBackgroundUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -391,7 +522,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     }
   };
 
-  const showSnackbar = (message: string, severity: 'success' | 'error') => {
+  const showSnackbar = (message: string, severity: 'success' | 'error' | 'info') => {
     setSnackbar({ open: true, message, severity });
   };
 
@@ -419,7 +550,8 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
         width: 1754,
         height: 1240,
         fields: [],
-        isActive: true
+        isActive: true,
+        isDefault: false
       });
       setExistingTemplateId(null);
       setSelectedFieldId(null);
@@ -451,9 +583,27 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
       <Box sx={{ mb: 2 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           {/* Left Side - Title */}
-          <Typography variant="h4" component="h1">
-            {isEditMode ? 'Edit Certificate Template' : 'Certificate'}
-          </Typography>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Typography variant="h4" component="h1">
+              {isEditMode ? 'Edit Certificate Template' : 'Certificate'}
+            </Typography>
+            {template.isDefault && (
+              <Box
+                sx={{
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: 1,
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  textTransform: 'uppercase'
+                }}
+              >
+                Default
+              </Box>
+            )}
+          </Stack>
 
           {/* Right Side - Action Buttons */}
           <Stack direction="row" spacing={2}>
@@ -526,12 +676,52 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
           >
             <Stack alignItems="center" spacing={2}>
               <CircularProgress />
-              <Typography variant="h6" color="text.primary">Loading certificate template...</Typography>
+              <Typography variant="h6" color="text.primary">{loadingMessage}</Typography>
             </Stack>
           </Box>
         )}
         
         <CardContent>
+          {/* Show message when viewing default template instead of the actual template */}
+          {isViewingDefaultTemplate ? (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '500px',
+                p: 4
+              }}
+            >
+              <Card sx={{ maxWidth: 600, textAlign: 'center', p: 4 }}>
+                <EmojiEvents sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
+                <Typography variant="h5" fontWeight="600" gutterBottom>
+                  No Custom Certificate Template
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                  This race doesn't have a specific certificate template yet.
+                </Typography>
+                <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
+                  <Typography variant="body2">
+                    <strong>Default template will be used:</strong> When certificates are generated for this race,
+                    the default template from this event will be automatically applied.
+                  </Typography>
+                </Alert>
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<UploadIcon />}
+                  onClick={handleCreateCustomTemplate}
+                  sx={{ textTransform: 'none', fontWeight: 500 }}
+                >
+                  Create Custom Template for This Race
+                </Button>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+                  Creating a custom template will override the default for this race only
+                </Typography>
+              </Card>
+            </Box>
+          ) : (
           <Stack direction="row" spacing={3}>
             {/* Left Panel - Template Info */}
             <Box sx={{ width: 380, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
@@ -692,6 +882,27 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
                     inputProps={{ sx: { fontSize: '0.75rem' } }}
                   />
                 </Stack>
+
+                {/* Default Template Toggle - Show only when background is uploaded */}
+                {(template.backgroundImageData || template.backgroundImageUrl) && (
+                  <Box sx={{ mb: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={template.isDefault || false}
+                          onChange={(e) => setTemplate(prev => ({ ...prev, isDefault: e.target.checked }))}
+                          color="primary"
+                          size="small"
+                        />
+                      }
+                      label={
+                        <Typography variant="caption" fontWeight="600" sx={{ fontSize: '0.75rem' }}>
+                          Set as Default Template
+                        </Typography>
+                      }
+                    />
+                  </Box>
+                )}
                 
                 <CertificateCanvas
                   template={template}
@@ -712,6 +923,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
               />
             </Box>
           </Stack>
+          )}
         </CardContent>
       </Card>
 
