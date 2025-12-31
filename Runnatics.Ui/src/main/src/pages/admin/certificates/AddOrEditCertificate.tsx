@@ -693,7 +693,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
                 p: 4
               }}
             >
-              <Card sx={{ maxWidth: 600, textAlign: 'center', p: 4 }}>
+              <Card sx={{ maxWidth: 600, textAlign: 'center', p: 4, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
                 <EmojiEvents sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
                 <Typography variant="h5" fontWeight="600" gutterBottom>
                   No Custom Certificate Template
@@ -755,7 +755,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
                   Click + to add field to certificate
                 </Typography>
 
-                <Box sx={{ mb: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                <Box sx={{ mb: 2, p: 2, bgcolor: 'background.default', borderRadius: 1, border: 1, borderColor: 'divider' }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Box>
                       <Typography variant="subtitle2" gutterBottom>
@@ -801,13 +801,13 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
                           flexDirection: 'column',
                           p: 1,
                           border: 1,
-                          borderColor: isAdded ? 'success.main' : isSelected ? 'primary.main' : 'grey.300',
+                          borderColor: isAdded ? 'success.main' : isSelected ? 'primary.main' : 'divider',
                           borderRadius: 1,
-                          bgcolor: isAdded ? 'rgba(46, 125, 50, 0.08)' : isSelected ? 'rgba(25, 118, 210, 0.05)' : 'grey.50',
+                          bgcolor: isAdded ? 'rgba(46, 125, 50, 0.15)' : isSelected ? 'rgba(25, 118, 210, 0.12)' : 'background.paper',
                           '&:hover': {
-                            bgcolor: isAdded ? 'rgba(46, 125, 50, 0.15)' : isSelected ? 'rgba(25, 118, 210, 0.10)' : 'rgba(0, 0, 0, 0.04)',
+                            bgcolor: isAdded ? 'rgba(46, 125, 50, 0.25)' : isSelected ? 'rgba(25, 118, 210, 0.20)' : 'action.hover',
                             cursor: 'pointer',
-                            borderColor: isAdded ? 'success.dark' : isSelected ? 'primary.dark' : 'grey.400',
+                            borderColor: isAdded ? 'success.light' : isSelected ? 'primary.light' : 'primary.main',
                           },
                           minHeight: '50px',
                           transition: 'all 0.2s ease-in-out'
@@ -857,7 +857,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
 
             {/* Center Panel - Canvas */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Box sx={{ height: '100%', bgcolor: 'grey.50', borderRadius: 1, p: 2 }}>
+              <Box sx={{ height: '100%', bgcolor: 'background.default', borderRadius: 1, p: 2 }}>
                 {/* Certificate Size Controls */}
                 <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
                   <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>Size:</Typography>
@@ -885,7 +885,7 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
 
                 {/* Default Template Toggle - Show only when background is uploaded */}
                 {(template.backgroundImageData || template.backgroundImageUrl) && (
-                  <Box sx={{ mb: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                  <Box sx={{ mb: 1, mt: 2, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                     <FormControlLabel
                       control={
                         <Switch
