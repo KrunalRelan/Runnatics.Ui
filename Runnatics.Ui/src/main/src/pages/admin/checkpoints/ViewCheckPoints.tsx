@@ -253,7 +253,14 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                 raceId
             });
             const checkpoints = response.message || [];
-            setLocalCheckpoints(checkpoints);
+            // Sort checkpoints by distance from start, then by ID for stable ordering
+            const sortedCheckpoints = [...checkpoints].sort((a, b) => {
+                const distDiff = Number(a.distanceFromStart) - Number(b.distanceFromStart);
+                if (distDiff !== 0) return distDiff;
+                // Secondary sort by ID to maintain consistent order
+                return a.id.localeCompare(b.id);
+            });
+            setLocalCheckpoints(sortedCheckpoints);
             setTotalCount(checkpoints.length);
             setTotalPages(1);
         } catch (err) {
@@ -547,7 +554,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
             });
 
             // Reload checkpoints
-            loadCheckpoints();
+            fetchCheckpoints();
         } catch (error) {
             console.error("Failed to delete all checkpoints:", error);
             setSnackbar({
