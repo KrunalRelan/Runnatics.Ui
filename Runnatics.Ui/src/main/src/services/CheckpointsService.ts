@@ -61,4 +61,12 @@ export class CheckpointsService {
             ServiceUrl.deleteCheckpoint(eventId, raceId, checkpointId)
         );
     }
+
+    static async deleteAllCheckpoints(eventId: string, raceId: string): Promise<void> {
+        await apiClient.delete(
+            ServiceUrl.deleteAllCheckpoints(eventId, raceId)
+        );
+    }
+
+    
 }

@@ -46,6 +46,7 @@ export const ServiceUrl = {
     addBulkCheckpoints: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}/bulk`,
     editCheckpoint: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
     deleteCheckpoint: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
+    deleteAllCheckpoints: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}/all`,
     getCheckpointById: (eventId: string, raceId: string, checkpointId: string) => `checkpoints/${eventId}/${raceId}/${checkpointId}`,
     cloneCheckpoints: (eventId: string, sourceRaceId: string, destinationRaceId: string) => `checkpoints/${eventId}/${sourceRaceId}/${destinationRaceId}/clone`,
 
