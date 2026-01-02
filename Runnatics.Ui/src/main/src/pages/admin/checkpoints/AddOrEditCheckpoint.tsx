@@ -322,6 +322,15 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
     // Determine if name is required based on parent checkpoint selection
     const isNameRequired = !formData.parentDeviceId || formData.parentDeviceId.trim() === "";
     
+    // Get available devices (exclude already used devices, but allow current device in edit mode)
+    // Match by device name since API returns deviceName, not the encrypted ID
+    const usedDeviceNames = new Set(
+        existingCheckpoints
+            .filter(cp => !checkpointToEdit || cp.id !== checkpointToEdit.id)
+            .map(cp => cp.deviceName)
+            .filter(name => name && name.trim() !== "")
+    );
+    
     // Get available parent checkpoints
     // Show only root checkpoints (those without a parent)
     const availableParentCheckpoints = existingCheckpoints.filter(cp => {
@@ -377,9 +386,18 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                         error={!formData.deviceId && error !== null}
                     >
                         <MenuItem value="">Select Device</MenuItem>
-                        {devices.map((device) => (
-                            <MenuItem key={device.id} value={device.id}>{device.name}</MenuItem>
-                        ))}
+                        {devices.map((device) => {
+                            const isUsed = usedDeviceNames.has(device.name);
+                            return (
+                                <MenuItem 
+                                    key={device.id} 
+                                    value={device.id}
+                                    disabled={isUsed}
+                                >
+                                    {device.name}{isUsed ? " (Already Used)" : ""}
+                                </MenuItem>
+                            );
+                        })}
                     </TextField>
                     <TextField
                         select
