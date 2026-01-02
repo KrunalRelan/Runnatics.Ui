@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   TextField,
@@ -154,40 +154,49 @@ export const CreateEvent: React.FC = () => {
   const userRole =
     typeof window !== "undefined" ? localStorage.getItem("userRole") || "" : "";
 
+  // Use ref to track if organizations have been fetched
+  const hasLoadedOrgs = useRef(false);
+
   // Fetch organizations on component mount
   useEffect(() => {
     let isMounted = true;
+    let timeoutId: NodeJS.Timeout;
 
     const fetchOrganizations = async () => {
+      if (hasLoadedOrgs.current) return;
+      hasLoadedOrgs.current = true;
+      setIsLoadingOrgs(true);
+
       console.log("🚀 Starting to fetch organizations...");
 
       try {
-        setIsLoadingOrgs(true);
         const response = await EventOrganizerService.getOrganizations();
+        console.log("Fetched organizations:", response);
 
-        if (isMounted) {
-          // Map API response to dropdown format
-          const mappedOrgs = response.map((org) => ({
-            id: org.id,
-            tenantId: org.tenantId,
-            name: org.organizerName || org.name || "",
-            organizerName: org.organizerName || org.name || "",
-          }));
+        // Always update state when we get a response, even if component unmounted
+        const mappedOrgs = response.map((org) => ({
+          id: org.id,
+          tenantId: org.tenantId,
+          name: org.organizerName || org.name || "",
+          organizerName: org.organizerName || org.name || "",
+        }));
 
-          setOrganizations(mappedOrgs);
-        }
+        setOrganizations(mappedOrgs);
+        setIsLoadingOrgs(false);
       } catch (error) {
-        if (isMounted) {
-          setErrors((prev) => ({
-            ...prev,
-            tenantId: "Failed to load organizations",
-          }));
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingOrgs(false);
-        }
+        console.error("Error loading organizations:", error);
+        setErrors((prev) => ({
+          ...prev,
+          tenantId: "Failed to load organizations",
+        }));
+        setIsLoadingOrgs(false);
       }
+      
+      // Failsafe: ensure loading is cleared after 30 seconds
+      timeoutId = setTimeout(() => {
+        console.warn("Timeout: Clearing loading state after 30s");
+        setIsLoadingOrgs(false);
+      }, 30000);
     };
 
     fetchOrganizations();
@@ -195,6 +204,7 @@ export const CreateEvent: React.FC = () => {
     return () => {
       console.log("🧹 Cleanup - component unmounting");
       isMounted = false;
+      clearTimeout(timeoutId);
     };
   }, []);
 
