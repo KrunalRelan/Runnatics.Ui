@@ -122,6 +122,23 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                 // FIX: Ensure distanceFromStart is a number
                 distanceFromStart: Number(checkpointToEdit.distanceFromStart) || 0,
             });
+            
+            // Find and set the parent checkpoint for edit mode
+            if (checkpointToEdit.parentDeviceName && existingCheckpoints.length > 0) {
+                const parentCheckpoint = existingCheckpoints.find(cp => 
+                    cp.deviceName === checkpointToEdit.parentDeviceName
+                );
+                if (parentCheckpoint) {
+                    setSelectedParentCheckpoint(parentCheckpoint);
+                    setSelectedParentCheckpointId(parentCheckpoint.id);
+                } else {
+                    setSelectedParentCheckpoint(null);
+                    setSelectedParentCheckpointId("");
+                }
+            } else {
+                setSelectedParentCheckpoint(null);
+                setSelectedParentCheckpointId("");
+            }
         } else if (open && !checkpointToEdit) {
             setFormData({
                 id: "",
@@ -131,9 +148,13 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                 isMandatory: false,
                 distanceFromStart: 0,
             });
+            
+            // Reset parent checkpoint selection for add mode
+            setSelectedParentCheckpoint(null);
+            setSelectedParentCheckpointId("");
         }
         setError(null);
-    }, [open, checkpointToEdit, devices]);
+    }, [open, checkpointToEdit, devices, existingCheckpoints]);
 
     // Handle parent checkpoint selection
     const handleParentCheckpointChange = (checkpointId: string) => {
@@ -322,15 +343,6 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
     // Determine if name is required based on parent checkpoint selection
     const isNameRequired = !formData.parentDeviceId || formData.parentDeviceId.trim() === "";
     
-    // Get available devices (exclude already used devices, but allow current device in edit mode)
-    // Match by device name since API returns deviceName, not the encrypted ID
-    const usedDeviceNames = new Set(
-        existingCheckpoints
-            .filter(cp => !checkpointToEdit || cp.id !== checkpointToEdit.id)
-            .map(cp => cp.deviceName)
-            .filter(name => name && name.trim() !== "")
-    );
-    
     // Get available parent checkpoints
     // Show only root checkpoints (those without a parent)
     const availableParentCheckpoints = existingCheckpoints.filter(cp => {
@@ -386,18 +398,9 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                         error={!formData.deviceId && error !== null}
                     >
                         <MenuItem value="">Select Device</MenuItem>
-                        {devices.map((device) => {
-                            const isUsed = usedDeviceNames.has(device.name);
-                            return (
-                                <MenuItem 
-                                    key={device.id} 
-                                    value={device.id}
-                                    disabled={isUsed}
-                                >
-                                    {device.name}{isUsed ? " (Already Used)" : ""}
-                                </MenuItem>
-                            );
-                        })}
+                        {devices.map((device) => (
+                            <MenuItem key={device.id} value={device.id}>{device.name}</MenuItem>
+                        ))}
                     </TextField>
                     <TextField
                         select
