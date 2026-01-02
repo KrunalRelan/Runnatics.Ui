@@ -45,16 +45,38 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
     const [activeDrawerTab, setActiveDrawerTab] = useState(0);
     const [selectedRaceId, setSelectedRaceId] = useState("");
     const [drawerLoopInput, setDrawerLoopInput] = useState<number>(1);
+    const [raceCheckpointCounts, setRaceCheckpointCounts] = useState<Record<string, number>>({});
 
     const handleOpenDrawer = (tab: number) => {
         setDrawerOpen(true);
         setActiveDrawerTab(tab);
         if (tab === 1) {
             setSelectedRaceId("");
+            // Fetch checkpoint counts for all races
+            fetchRaceCheckpointCounts();
         }
         if (tab === 0) {
             setDrawerLoopInput(loopsToAddInput);
         }
+    };
+
+    const fetchRaceCheckpointCounts = async () => {
+        if (!eventId) return;
+        
+        const counts: Record<string, number> = {};
+        for (const race of races) {
+            try {
+                const response = await CheckpointsService.getAllCheckpoints({
+                    eventId,
+                    raceId: race.id
+                });
+                counts[race.id] = response.message?.length || 0;
+            } catch (error) {
+                console.error(`Failed to fetch checkpoints for race ${race.id}:`, error);
+                counts[race.id] = 0;
+            }
+        }
+        setRaceCheckpointCounts(counts);
     };
 
     const [loading, setLoading] = useState<boolean>(false);
@@ -66,6 +88,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
     const [checkpointToEdit, setCheckpointToEdit] = useState<Checkpoint | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [checkpointToDelete, setCheckpointToDelete] = useState<Checkpoint | null>(null);
+    const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
     const [filters, setFilters] = useState<CheckpointFilters>(defaultCheckpointFilters);
     const handleOpenAddDialog = () => setOpenAddDialog(true);
     const handleCloseAddDialog = () => setOpenAddDialog(false);
@@ -88,83 +111,114 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
     }, [selectedRace]);
 
     /**
-     * Detect loop length by finding the repeating checkpoint pattern
-     * Loop length = smallest distance d where:
-     * 1. Checkpoint exists at d
-     * 2. At least one checkpoint exists in (0, d) - meaning first loop has multiple checkpoints
-     * 3. The pattern of checkpoints repeats for subsequent loops
+     * Detect loop length by finding the repeating checkpoint pattern based on device IDs
+     * Scenarios:
+     * 1. Single checkpoint (stadium track): loop length = checkpoint distance
+     * 2. Multiple checkpoints with device repetition: loop ends when first device appears again
      */
     const loopParams = useMemo(() => {
         if (!raceDistance || localCheckpoints.length === 0) {
             return { loopLength: 0, maxNewLoops: 0, currentLoopCount: 0, maxCheckpointDistance: 0 };
         }
 
-        // Get sorted unique distances
-        const sortedDistances = [...new Set(localCheckpoints.map(cp => Number(cp.distanceFromStart)))]
-            .sort((a, b) => a - b);
+        // Sort checkpoints by distance
+        const sortedCheckpoints = [...localCheckpoints].sort((a, b) => 
+            Number(a.distanceFromStart) - Number(b.distanceFromStart)
+        );
 
+        const sortedDistances = sortedCheckpoints.map(cp => Number(cp.distanceFromStart));
         const maxCheckpointDistance = sortedDistances[sortedDistances.length - 1];
 
-        // If no start checkpoint or only one checkpoint, can't determine loop pattern
-        if (sortedDistances.length < 2) {
+        // Case 1: Single checkpoint - stadium/track scenario
+        // The checkpoint distance is the loop length
+        if (sortedCheckpoints.length === 1) {
+            const loopLength = Number(sortedCheckpoints[0].distanceFromStart);
+            const currentLoopCount = maxCheckpointDistance > 0 
+                ? Math.ceil(maxCheckpointDistance / loopLength)
+                : 1;
+            
+            let maxNewLoops = 0;
+            if (maxCheckpointDistance < raceDistance && loopLength > 0) {
+                const maxTotalLoops = Math.floor(raceDistance / loopLength);
+                maxNewLoops = Math.max(0, maxTotalLoops - currentLoopCount);
+            }
+            
+            return { 
+                loopLength, 
+                maxNewLoops, 
+                currentLoopCount,
+                maxCheckpointDistance 
+            };
+        }
+
+        // Case 2: Two checkpoints
+        // Only allow loops if both checkpoints use the SAME device (valid for stadium/track)
+        // If different devices, it's not a valid loop pattern
+        if (sortedCheckpoints.length === 2) {
+            const firstDeviceId = sortedCheckpoints[0].deviceId;
+            const secondDeviceId = sortedCheckpoints[1].deviceId;
+            
+            // Different devices = not a valid loop, can't add more
+            if (firstDeviceId !== secondDeviceId) {
+                return { 
+                    loopLength: maxCheckpointDistance, 
+                    maxNewLoops: 0, 
+                    currentLoopCount: 1,
+                    maxCheckpointDistance 
+                };
+            }
+            
+            // Same device = valid loop pattern
+            const loopLength = maxCheckpointDistance;
+            const currentLoopCount = 1;
+            
+            let maxNewLoops = 0;
+            if (maxCheckpointDistance < raceDistance && loopLength > 0) {
+                const maxTotalLoops = Math.floor(raceDistance / loopLength);
+                maxNewLoops = Math.max(0, maxTotalLoops - currentLoopCount);
+            }
+            
+            return { 
+                loopLength, 
+                maxNewLoops, 
+                currentLoopCount,
+                maxCheckpointDistance 
+            };
+        }
+
+        // Case 3: Three or more checkpoints - detect loop by device repetition
+        let detectedLoopLength = 0; // Start with 0 instead of maxCheckpointDistance
+        let loopDetected = false;
+        const firstDeviceId = sortedCheckpoints[0].deviceId;
+        
+        // Look for the first occurrence where the first device appears again
+        for (let i = 2; i < sortedCheckpoints.length; i++) {
+            if (sortedCheckpoints[i].deviceId === firstDeviceId) {
+                const candidateLength = Number(sortedCheckpoints[i].distanceFromStart);
+                
+                // Verify there's at least one different device between start and this point
+                const hasIntermediateDevice = sortedCheckpoints
+                    .slice(1, i)
+                    .some(cp => cp.deviceId !== firstDeviceId);
+                
+                if (hasIntermediateDevice) {
+                    // Found a valid loop pattern - device repeats with different device(s) in between
+                    detectedLoopLength = candidateLength;
+                    loopDetected = true;
+                    break;
+                }
+            }
+        }
+
+        // If no valid loop pattern was found (no device repetition detected)
+        // Return maxNewLoops = 0 to disable Add Loops button
+        if (!loopDetected) {
             return { 
                 loopLength: maxCheckpointDistance, 
                 maxNewLoops: 0, 
                 currentLoopCount: 1,
                 maxCheckpointDistance 
             };
-        }
-
-        // Detect loop length by finding repeating pattern
-        let detectedLoopLength = maxCheckpointDistance;
-        
-        // Try each distance as potential loop length
-        for (let i = 1; i < sortedDistances.length; i++) {
-            const candidateLength = sortedDistances[i];
-            if (candidateLength <= 0) continue;
-            
-            // Check if there's at least one checkpoint between 0 and candidateLength
-            // This ensures the first loop has multiple checkpoints
-            const checkpointsInFirstLoop = sortedDistances.filter(d => d > 0 && d < candidateLength);
-            if (checkpointsInFirstLoop.length === 0 && i < sortedDistances.length - 1) {
-                continue; // Try next candidate - first loop should have interior checkpoints
-            }
-            
-            // Get the offsets within the first loop (excluding 0, including the end)
-            const firstLoopOffsets = sortedDistances.filter(d => d > 0 && d <= candidateLength);
-            
-            // Calculate how many full loops we'd have with this loop length
-            const numFullLoops = Math.floor(maxCheckpointDistance / candidateLength);
-            
-            if (numFullLoops < 1) continue;
-            
-            // Verify the pattern repeats for all subsequent loops
-            let patternRepeats = true;
-            
-            for (let loop = 1; loop < numFullLoops; loop++) {
-                const baseOffset = candidateLength * loop;
-                for (const offset of firstLoopOffsets) {
-                    const expectedDist = baseOffset + offset;
-                    // Check if checkpoint exists at expected distance (within tolerance for floating point)
-                    const exists = sortedDistances.some(d => Math.abs(d - expectedDist) < 0.001);
-                    if (expectedDist <= maxCheckpointDistance && !exists) {
-                        patternRepeats = false;
-                        break;
-                    }
-                }
-                if (!patternRepeats) break;
-            }
-            
-            // Also check the last partial loop (if checkpoint at maxCheckpointDistance matches pattern)
-            if (patternRepeats && maxCheckpointDistance % candidateLength === 0) {
-                // Last checkpoint should be at a multiple of loop length
-                detectedLoopLength = candidateLength;
-                break;
-            } else if (patternRepeats && numFullLoops >= 2) {
-                // Pattern repeats for at least 2 full loops
-                detectedLoopLength = candidateLength;
-                break;
-            }
         }
 
         // Calculate current loop count based on detected loop length
@@ -199,7 +253,14 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                 raceId
             });
             const checkpoints = response.message || [];
-            setLocalCheckpoints(checkpoints);
+            // Sort checkpoints by distance from start, then by ID for stable ordering
+            const sortedCheckpoints = [...checkpoints].sort((a, b) => {
+                const distDiff = Number(a.distanceFromStart) - Number(b.distanceFromStart);
+                if (distDiff !== 0) return distDiff;
+                // Secondary sort by ID to maintain consistent order
+                return a.id.localeCompare(b.id);
+            });
+            setLocalCheckpoints(sortedCheckpoints);
             setTotalCount(checkpoints.length);
             setTotalPages(1);
         } catch (err) {
@@ -473,6 +534,44 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
         setCheckpointToDelete(null);
     };
 
+    const handleDeleteAll = () => {
+        setDeleteAllDialogOpen(true);
+    };
+
+    const handleDeleteAllConfirm = async () => {
+        if (!eventId || !raceId || localCheckpoints.length === 0) return;
+
+        setLoading(true);
+        try {
+            // Delete all checkpoints using the bulk delete endpoint
+            await CheckpointsService.deleteAllCheckpoints(eventId, raceId);
+
+            setDeleteAllDialogOpen(false);
+            setSnackbar({
+                open: true,
+                message: `All ${localCheckpoints.length} checkpoints deleted successfully!`,
+                severity: "success",
+            });
+
+            // Reload checkpoints
+            fetchCheckpoints();
+        } catch (error) {
+            console.error("Failed to delete all checkpoints:", error);
+            setSnackbar({
+                open: true,
+                message: "Failed to delete all checkpoints. Please try again.",
+                severity: "error",
+            });
+            setDeleteAllDialogOpen(false);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteAllCancel = () => {
+        setDeleteAllDialogOpen(false);
+    };
+
     const IsMandatoryCellRenderer = useCallback((props: any) => {
         const isMandatory = props.value;
         return (
@@ -514,7 +613,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
     // Calculate missing distance
     const missingDistance = useMemo(() => {
         if (!isMissingFinish) return 0;
-        return raceDistance - loopParams.maxCheckpointDistance;
+        return Number((raceDistance - loopParams.maxCheckpointDistance).toFixed(2));
     }, [isMissingFinish, raceDistance, loopParams.maxCheckpointDistance]);
 
     // Check if Add Loops should be disabled
@@ -651,19 +750,11 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                     >
                         <Typography variant="h6">Checkpoints</Typography>
                         <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="flex-start">
-                            <IconButton
-                                color="primary"
-                                title="Refresh"
-                                onClick={handleRefresh}
-                                disabled={loading}
-                                sx={{ mt: 0.5 }}
-                            >
-                                <Refresh />
-                            </IconButton>
                             <Button
                                 variant="contained"
                                 startIcon={<AddIcon />}
                                 onClick={handleOpenAddDialog}
+                                disabled={hasFinishCheckpoint || loading}
                                 sx={{ mt: 0.5 }}
                             >
                                 Add Checkpoint
@@ -715,7 +806,19 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
 
                             <Button
                                 variant="outlined"
+                                color="error"
+                                startIcon={<Delete />}
+                                onClick={handleDeleteAll}
+                                disabled={localCheckpoints.length === 0 || loading}
+                                sx={{ mt: 0.5 }}
+                            >
+                                Delete All
+                            </Button>
+
+                            <Button
+                                variant="outlined"
                                 onClick={() => handleOpenDrawer(1)}
+                                disabled={hasFinishCheckpoint || loading}
                                 sx={{ minWidth: 160, mt: 0.5 }}
                             >
                                 Clone Checkpoints
@@ -903,11 +1006,24 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                                     size="small"
                                     sx={{ minWidth: 220, mb: 2 }}
                                     displayEmpty
-                                    renderValue={selected => selected ? races.find(r => r.id === selected)?.title : "Select Source Race"}
+                                    renderValue={selected => {
+                                        if (!selected) return "Select Source Race";
+                                        const race = races.find(r => r.id === selected);
+                                        const count = raceCheckpointCounts[selected] || 0;
+                                        return race ? `${race.title} (${count})` : "Select Source Race";
+                                    }}
                                 >
-                                    {races.filter(race => race.id !== raceId).map(race => (
-                                        <MenuItem key={race.id} value={race.id}>{race.title}</MenuItem>
-                                    ))}
+                                    {races
+                                        .filter(race => race.id !== raceId && (raceCheckpointCounts[race.id] || 0) > 0)
+                                        .map(race => {
+                                            const count = raceCheckpointCounts[race.id] || 0;
+                                            return (
+                                                <MenuItem key={race.id} value={race.id}>
+                                                    {race.title} ({count})
+                                                </MenuItem>
+                                            );
+                                        })
+                                    }
                                 </Select>
 
                                 <Box>
@@ -990,6 +1106,35 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                         disabled={loading}
                     >
                         {loading ? "Deleting..." : "Delete"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete All Confirmation Dialog */}
+            <Dialog
+                open={deleteAllDialogOpen}
+                onClose={handleDeleteAllCancel}
+                aria-labelledby="delete-all-dialog-title"
+                aria-describedby="delete-all-dialog-description"
+            >
+                <DialogTitle id="delete-all-dialog-title">Confirm Delete All</DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="delete-all-dialog-description">
+                        Are you sure you want to delete all {localCheckpoints.length} checkpoint{localCheckpoints.length !== 1 ? 's' : ''}? This action cannot be undone.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleDeleteAllCancel} color="primary">
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleDeleteAllConfirm}
+                        color="error"
+                        variant="contained"
+                        autoFocus
+                        disabled={loading}
+                    >
+                        {loading ? "Deleting..." : "Delete All"}
                     </Button>
                 </DialogActions>
             </Dialog>

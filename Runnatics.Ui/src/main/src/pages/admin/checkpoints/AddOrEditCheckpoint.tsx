@@ -49,6 +49,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
     const [devices, setDevices] = useState<Device[]>([]);
     const [loadingDevices, setLoadingDevices] = useState(false);
     const [selectedParentCheckpoint, setSelectedParentCheckpoint] = useState<Checkpoint | null>(null);
+    const [selectedParentCheckpointId, setSelectedParentCheckpointId] = useState<string>("");
 
     // FIX: Only fetch devices when dialog is open
     useEffect(() => {
@@ -138,6 +139,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
     const handleParentCheckpointChange = (checkpointId: string) => {
         if (!checkpointId) {
             setSelectedParentCheckpoint(null);
+            setSelectedParentCheckpointId("");
             setFormData((prev) => ({
                 ...prev,
                 parentDeviceId: "",
@@ -149,11 +151,22 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
         const parentCheckpoint = existingCheckpoints.find(cp => cp.id === checkpointId);
         if (parentCheckpoint) {
             setSelectedParentCheckpoint(parentCheckpoint);
-            // Copy fields from parent checkpoint
+            setSelectedParentCheckpointId(checkpointId); // Track checkpoint ID for dropdown
+            
+            // Find the encrypted device ID from the devices list by matching the device name
+            let parentDeviceId = "";
+            if (parentCheckpoint.deviceName && devices.length > 0) {
+                const device = devices.find(d => d.name === parentCheckpoint.deviceName);
+                if (device) {
+                    parentDeviceId = device.id; // This is the encrypted ID
+                }
+            }
+            
+            // Copy only distance and isMandatory from parent checkpoint
+            // Keep the user's device selection intact
             setFormData((prev) => ({
                 ...prev,
-                deviceId: parentCheckpoint.deviceId,
-                parentDeviceId: checkpointId, // Store checkpoint ID as parent
+                parentDeviceId: parentDeviceId, // Store parent's encrypted device ID for API
                 isMandatory: parentCheckpoint.isMandatory,
                 distanceFromStart: parentCheckpoint.distanceFromStart || 0,
                 name: "", // Clear name as it's optional when parent is selected
@@ -309,10 +322,32 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
     // Determine if name is required based on parent checkpoint selection
     const isNameRequired = !formData.parentDeviceId || formData.parentDeviceId.trim() === "";
     
-    // Get available parent checkpoints (exclude the one being edited)
-    const availableParentCheckpoints = checkpointToEdit 
-        ? existingCheckpoints.filter(cp => cp.id !== checkpointToEdit.id)
-        : existingCheckpoints;
+    // Get available devices (exclude already used devices, but allow current device in edit mode)
+    // Match by device name since API returns deviceName, not the encrypted ID
+    const usedDeviceNames = new Set(
+        existingCheckpoints
+            .filter(cp => !checkpointToEdit || cp.id !== checkpointToEdit.id)
+            .map(cp => cp.deviceName)
+            .filter(name => name && name.trim() !== "")
+    );
+    
+    // Get available parent checkpoints
+    // Show only root checkpoints (those without a parent)
+    const availableParentCheckpoints = existingCheckpoints.filter(cp => {
+        // Exclude the checkpoint being edited
+        if (checkpointToEdit && cp.id === checkpointToEdit.id) {
+            return false;
+        }
+        // Include checkpoints that don't have a parent
+        // Parent is considered absent if it's null, undefined, empty string, "0", or "N/A"
+        const hasParent = cp.parentDeviceId && 
+                         cp.parentDeviceId.trim() !== "" && 
+                         cp.parentDeviceId !== "0" &&
+                         cp.parentDeviceId.toUpperCase() !== "N/A";
+        
+        // Return true only if it doesn't have a parent
+        return !hasParent;
+    });
 
     return (
         <Dialog
@@ -347,18 +382,27 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                         required
                         size="small"
                         helperText="Required - Select a device for this checkpoint"
-                        disabled={loadingDevices || !!selectedParentCheckpoint}
+                        disabled={loadingDevices}
                         error={!formData.deviceId && error !== null}
                     >
                         <MenuItem value="">Select Device</MenuItem>
-                        {devices.map((device) => (
-                            <MenuItem key={device.id} value={device.id}>{device.name}</MenuItem>
-                        ))}
+                        {devices.map((device) => {
+                            const isUsed = usedDeviceNames.has(device.name);
+                            return (
+                                <MenuItem 
+                                    key={device.id} 
+                                    value={device.id}
+                                    disabled={isUsed}
+                                >
+                                    {device.name}{isUsed ? " (Already Used)" : ""}
+                                </MenuItem>
+                            );
+                        })}
                     </TextField>
                     <TextField
                         select
                         label="Parent Checkpoint"
-                        value={formData.parentDeviceId}
+                        value={selectedParentCheckpointId}
                         onChange={(e) => handleParentCheckpointChange(e.target.value)}
                         fullWidth
                         size="small"
