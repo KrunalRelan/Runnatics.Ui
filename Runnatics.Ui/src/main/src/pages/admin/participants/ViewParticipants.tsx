@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
@@ -23,6 +24,7 @@ import {
   Edit,
   Delete,
   ViewWeek,
+  Visibility,
 } from "@mui/icons-material";
 import DataGrid from "@/main/src/components/DataGrid";
 import type { ColDef } from "ag-grid-community";
@@ -99,6 +101,9 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   eventId,
   raceId,
 }) => {
+  // Navigation
+  const navigate = useNavigate();
+
   // State
   const [participantsLoading, setParticipantsLoading] = useState<boolean>(false);
   const [filters, setFilters] = useState<ParticipantFilters>(defaultParticipantFilters);
@@ -339,6 +344,13 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     }));
   };
 
+  // Handler to view participant details
+  const handleViewParticipant = (participant: Participant) => {
+    if (participant.id) {
+      navigate(`/events/event-details/${eventId}/race/${raceId}/participant/${participant.id}`);
+    }
+  };
+
    const handleEditParticipant = (participant: Participant) => {
     setSelectedParticipant(participant);
     setOpenEditDialog(true);
@@ -513,8 +525,8 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     },
     {
       headerName: "Actions",
-      flex: 1,
-      minWidth: 100,
+      flex: 1.2,
+      minWidth: 130,
       cellRenderer: (params: any) => (
         <Stack
           direction="row"
@@ -522,6 +534,17 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           justifyContent="center"
           sx={{ height: "100%", alignItems: "center" }}
         >
+          <IconButton
+            size="small"
+            color="info"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewParticipant(params.data);
+            }}
+            title="View Details"
+          >
+            <Visibility fontSize="small" />
+          </IconButton>
           <IconButton
             size="small"
             color="primary"
@@ -745,6 +768,11 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           paginationPageSize={filters.pageSize}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
+          onRowClicked={(event) => {
+            if (event.data) {
+              handleViewParticipant(event.data);
+            }
+          }}
         />
       </CardContent>
 

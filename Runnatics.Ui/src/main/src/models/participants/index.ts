@@ -8,6 +8,11 @@ export * from './ParticipantSearchRequest';
 export * from './ParticipantSearchResponse';
 export * from './ParticipantRequest';
 export * from './AddParticipantRangeDialogProps';
+
+// Participant Detail Models
+export * from './Split';
+export * from './PerformanceMetrics';
+export * from './ParticipantDetailData';
 export * from './AddParticipantRangeRequest';
 export * from './AddParticipantRangeResponse';
 export * from './UpdateParticipantsByBibRequest';
