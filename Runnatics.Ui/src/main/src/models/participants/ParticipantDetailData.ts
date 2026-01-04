@@ -2,6 +2,7 @@
 
 import { Split } from './Split';
 import { PerformanceMetrics } from './PerformanceMetrics';
+import { RfidReading } from './RfidReading';
 
 export interface ParticipantDetailData {
   id: string;
@@ -35,6 +36,7 @@ export interface ParticipantDetailData {
     pace: string;
     speed: number;
   }[];
+  rfidReadings?: RfidReading[];
 }
 
 

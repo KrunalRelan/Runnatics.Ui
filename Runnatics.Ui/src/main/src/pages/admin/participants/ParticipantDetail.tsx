@@ -22,6 +22,7 @@ import {
   alpha,
   Tooltip,
   CircularProgress,
+  IconButton,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -43,9 +44,16 @@ import {
   PlayArrow,
   Person,
   Warning,
+  Nfc,
+  Edit,
+  Schedule,
+  Error,
+  Pending,
+  ContentCopy,
+  Refresh,
 } from "@mui/icons-material";
 import PageContainer from "@/main/src/components/PageContainer";
-import { ParticipantDetailData, Split, SplitTimeInfo, PaceProgressionInfo } from "@/main/src/models/participants";
+import { ParticipantDetailData, Split, SplitTimeInfo, PaceProgressionInfo, RfidReading } from "@/main/src/models/participants";
 import { ParticipantService } from "@/main/src/services";
 import { getColorPalette } from "@/main/src/theme";
 
@@ -124,6 +132,78 @@ const MOCK_SPLITS: Split[] = [
     rank: 42,
     genderRank: 28,
     categoryRank: 15,
+  },
+];
+
+const MOCK_RFID_READINGS: RfidReading[] = [
+  {
+    id: "rfid1",
+    bibNumber: "42",
+    checkpointId: "cp1",
+    checkpointName: "5K",
+    readTime: "2026-01-03T08:24:15.000Z",
+    readDate: "2026-01-03",
+    processResult: "Success",
+    chipId: "E200001A950000001234",
+    deviceId: "dev1",
+    deviceName: "Reader-01",
+    isManualEntry: false,
+    notes: "Clean read",
+  },
+  {
+    id: "rfid2",
+    bibNumber: "42",
+    checkpointId: "cp2",
+    checkpointName: "10K",
+    readTime: "2026-01-03T08:48:13.000Z",
+    readDate: "2026-01-03",
+    processResult: "Success",
+    chipId: "E200001A950000001234",
+    deviceId: "dev2",
+    deviceName: "Reader-02",
+    isManualEntry: false,
+  },
+  {
+    id: "rfid3",
+    bibNumber: "42",
+    checkpointId: "cp3",
+    checkpointName: "15K",
+    readTime: "2026-01-03T09:12:48.000Z",
+    readDate: "2026-01-03",
+    processResult: "Success",
+    manualTime: "1:12:50",
+    chipId: "E200001A950000001234",
+    deviceId: "dev3",
+    deviceName: "Reader-03",
+    isManualEntry: false,
+    notes: "Manual time adjustment applied",
+  },
+  {
+    id: "rfid4",
+    bibNumber: "42",
+    checkpointId: "cp4",
+    checkpointName: "20K",
+    readTime: "2026-01-03T09:37:00.000Z",
+    readDate: "2026-01-03",
+    processResult: "Duplicate",
+    chipId: "E200001A950000001234",
+    deviceId: "dev4",
+    deviceName: "Reader-04",
+    isManualEntry: false,
+    notes: "Duplicate reading filtered",
+  },
+  {
+    id: "rfid5",
+    bibNumber: "42",
+    checkpointId: "cp5",
+    checkpointName: "Finish",
+    readTime: "2026-01-03T09:42:18.000Z",
+    readDate: "2026-01-03",
+    processResult: "Success",
+    chipId: "E200001A950000001234",
+    deviceId: "dev5",
+    deviceName: "Reader-05 (Finish)",
+    isManualEntry: false,
   },
 ];
 
@@ -473,6 +553,9 @@ const ParticipantDetail: React.FC = () => {
               }))
             : MOCK_SPLITS;
           
+          // Use mock RFID readings for now - in production this would come from API
+          const rfidReadingsData = apiData.rfidReadings || MOCK_RFID_READINGS;
+          
           // Map API response to ParticipantDetailData
           const mappedData: ParticipantDetailData = {
             id: apiData.id || "",
@@ -515,6 +598,7 @@ const ParticipantDetail: React.FC = () => {
               pace: pace.pace || "",
               speed: pace.speed || 0,
             })),
+            rfidReadings: rfidReadingsData,
           };
           
           if (isMounted) {
@@ -796,7 +880,7 @@ const ParticipantDetail: React.FC = () => {
 
             {/* Bottom Section */}
             <Grid container spacing={3}>
-              <Grid size={{ xs: 6, sm: 3 }}>
+              <Grid size={{ xs: 6, md: 2.4 }}>
                 <Typography
                   variant="caption"
                   sx={{ 
@@ -813,7 +897,7 @@ const ParticipantDetail: React.FC = () => {
                   {participant.email}
                 </Typography>
               </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
+              <Grid size={{ xs: 6, md: 2.4 }}>
                 <Typography
                   variant="caption"
                   sx={{ 
@@ -830,7 +914,7 @@ const ParticipantDetail: React.FC = () => {
                   {participant.phone}
                 </Typography>
               </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
+              <Grid size={{ xs: 6, md: 2.4 }}>
                 <Typography
                   variant="caption"
                   sx={{ 
@@ -841,13 +925,30 @@ const ParticipantDetail: React.FC = () => {
                     fontWeight: 600,
                   }}
                 >
-                  Nationality
+                  Age Category
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 500, mt: 0.5 }}>
-                  {participant.nationality}
+                  {participant.category}
                 </Typography>
               </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
+              <Grid size={{ xs: 6, md: 2.4 }}>
+                <Typography
+                  variant="caption"
+                  sx={{ 
+                    color: alpha("#fff", 0.6), 
+                    textTransform: "uppercase", 
+                    letterSpacing: 0.8,
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  Net Time (Chip)
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500, mt: 0.5 }}>
+                  {participant.chipTime || "-"}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 6, md: 2.4 }}>
                 <Typography
                   variant="caption"
                   sx={{ 
@@ -1185,6 +1286,271 @@ const ParticipantDetail: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
+      </Card>
+
+      {/* RFID Tag Readings Section */}
+      <Typography 
+        variant="h6" 
+        sx={{ 
+          fontWeight: 700, 
+          mb: 2.5,
+          color: colors.text.primary,
+          fontSize: '1.25rem',
+        }}
+      >
+        <Nfc sx={{ mr: 1, verticalAlign: "middle" }} />
+        RFID Tag Readings
+      </Typography>
+      <Card sx={{ 
+        mb: 4,
+        border: `1px solid ${colors.border.light}`,
+        background: colors.background.paper,
+        borderRadius: '12px',
+        boxShadow: isDark 
+          ? `0 4px 20px ${alpha('#000', 0.3)}`
+          : `0 2px 12px ${alpha('#000', 0.08)}`,
+        overflow: 'hidden',
+      }}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow
+                sx={{
+                  bgcolor: alpha(colors.primary.main, isDark ? 0.1 : 0.06),
+                }}
+              >
+                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Read Time</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Date</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Bib</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Checkpoint</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Device</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Process Result</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Manual Time</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Chip ID</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 700, color: colors.text.primary }}>
+                  Actions
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {(participant.rfidReadings || MOCK_RFID_READINGS).map((reading: RfidReading, index: number) => {
+                // Helper to get process result styling
+                const getProcessResultConfig = (result: RfidReading['processResult']) => {
+                  const configs = {
+                    Success: {
+                      color: colors.success.main,
+                      icon: <CheckCircle sx={{ fontSize: 16 }} />,
+                      bgColor: alpha(colors.success.main, isDark ? 0.2 : 0.1),
+                    },
+                    Failed: {
+                      color: colors.error.main,
+                      icon: <Error sx={{ fontSize: 16 }} />,
+                      bgColor: alpha(colors.error.main, isDark ? 0.2 : 0.1),
+                    },
+                    Pending: {
+                      color: colors.warning.main,
+                      icon: <Pending sx={{ fontSize: 16 }} />,
+                      bgColor: alpha(colors.warning.main, isDark ? 0.2 : 0.1),
+                    },
+                    Duplicate: {
+                      color: colors.warning.main,
+                      icon: <ContentCopy sx={{ fontSize: 16 }} />,
+                      bgColor: alpha(colors.warning.main, isDark ? 0.2 : 0.1),
+                    },
+                    Invalid: {
+                      color: colors.error.main,
+                      icon: <Warning sx={{ fontSize: 16 }} />,
+                      bgColor: alpha(colors.error.main, isDark ? 0.2 : 0.1),
+                    },
+                  };
+                  return configs[result] || configs.Pending;
+                };
+
+                const processConfig = getProcessResultConfig(reading.processResult);
+                const readDateTime = new Date(reading.readTime);
+
+                return (
+                  <TableRow
+                    key={reading.id}
+                    sx={{
+                      "&:hover": {
+                        bgcolor: alpha(colors.primary.main, 0.05),
+                      },
+                      bgcolor: reading.isManualEntry 
+                        ? alpha(colors.warning.main, isDark ? 0.05 : 0.02) 
+                        : "inherit",
+                    }}
+                  >
+                    <TableCell>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <AccessTime
+                          sx={{
+                            fontSize: 18,
+                            color: colors.primary.main,
+                          }}
+                        />
+                        <Typography variant="body2" fontWeight={600}>
+                          {readDateTime.toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit', 
+                            second: '2-digit' 
+                          })}
+                        </Typography>
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={500}>
+                        {readDateTime.toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={`#${reading.bibNumber}`}
+                        size="small"
+                        sx={{
+                          fontWeight: 700,
+                          bgcolor: alpha(colors.primary.main, isDark ? 0.2 : 0.1),
+                          color: colors.primary.main,
+                          border: `1px solid ${alpha(colors.primary.main, 0.3)}`,
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <LocationOn
+                          sx={{
+                            fontSize: 18,
+                            color: colors.pace.main,
+                          }}
+                        />
+                        <Typography variant="body2" fontWeight={600}>
+                          {reading.checkpointName}
+                        </Typography>
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={500} sx={{ color: colors.text.secondary }}>
+                        {reading.deviceName || 'N/A'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        icon={processConfig.icon as React.ReactElement}
+                        label={reading.processResult}
+                        size="small"
+                        sx={{
+                          fontWeight: 700,
+                          bgcolor: processConfig.bgColor,
+                          color: processConfig.color,
+                          border: `1px solid ${alpha(processConfig.color, 0.3)}`,
+                          '& .MuiChip-icon': {
+                            color: processConfig.color,
+                          },
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {reading.manualTime ? (
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                          <Schedule sx={{ fontSize: 16, color: colors.warning.main }} />
+                          <Typography 
+                            variant="body2" 
+                            fontWeight={600}
+                            sx={{ color: colors.warning.main }}
+                          >
+                            {reading.manualTime}
+                          </Typography>
+                        </Stack>
+                      ) : (
+                        <Typography variant="body2" sx={{ color: colors.text.secondary }}>
+                          -
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          fontFamily: 'monospace',
+                          color: colors.text.secondary,
+                          fontSize: '0.7rem',
+                        }}
+                      >
+                        {reading.chipId || 'N/A'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Stack direction="row" spacing={0.5} justifyContent="center">
+                        <Tooltip title="Process/Reprocess reading">
+                          <IconButton
+                            size="small"
+                            sx={{
+                              color: colors.success.main,
+                              '&:hover': {
+                                bgcolor: alpha(colors.success.main, 0.1),
+                              },
+                            }}
+                            onClick={() => {
+                              // TODO: Implement process/reprocess functionality
+                              console.log('Process RFID reading:', reading.id);
+                            }}
+                          >
+                            <Refresh sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit reading">
+                          <IconButton
+                            size="small"
+                            sx={{
+                              color: colors.primary.main,
+                              '&:hover': {
+                                bgcolor: alpha(colors.primary.main, 0.1),
+                              },
+                            }}
+                            onClick={() => {
+                              // TODO: Implement edit functionality
+                              console.log('Edit RFID reading:', reading.id);
+                            }}
+                          >
+                            <Edit sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        
+        {/* Notes Section */}
+        {participant.rfidReadings?.some(r => r.notes) && (
+          <Box sx={{ p: 2, bgcolor: colors.background.subtle, borderTop: `1px solid ${colors.border.light}` }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: colors.text.primary }}>
+              Notes:
+            </Typography>
+            {participant.rfidReadings
+              .filter(r => r.notes)
+              .map((reading) => (
+                <Typography 
+                  key={reading.id} 
+                  variant="caption" 
+                  sx={{ 
+                    display: 'block',
+                    color: colors.text.secondary,
+                    mb: 0.5,
+                  }}
+                >
+                  • <strong>{reading.checkpointName}:</strong> {reading.notes}
+                </Typography>
+              ))}
+          </Box>
+        )}
       </Card>
 
       {/* Pace Chart Visualization */}

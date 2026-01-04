@@ -18,6 +18,7 @@ export * from './RankingInfo';
 export * from './SplitTimeInfo';
 export * from './PaceProgressionInfo';
 export * from './ParticipantDetailsResponse';
+export * from './RfidReading';
 export * from './AddParticipantRangeRequest';
 export * from './AddParticipantRangeResponse';
 export * from './UpdateParticipantsByBibRequest';
