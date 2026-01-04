@@ -1453,7 +1453,7 @@ const ParticipantDetail: React.FC = () => {
             })}
           </Box>
 
-          {/* Visual Bar Chart */}
+          {/* Visual Pace Path Visualization */}
           <Box>
             <Typography 
               variant="subtitle2" 
@@ -1463,135 +1463,239 @@ const ParticipantDetail: React.FC = () => {
                 color: colors.text.primary,
               }}
             >
-              Pace Comparison Chart
+              Pace Journey Visualization
             </Typography>
             <Box sx={{ 
-              display: "flex", 
-              alignItems: "flex-end", 
-              gap: 2, 
-              height: 200, 
-              px: 3,
-              py: 3,
+              position: 'relative',
+              height: 250, 
+              px: 4,
+              py: 4,
               bgcolor: colors.background.subtle,
               borderRadius: 3,
               border: `1px solid ${colors.border.light}`,
+              overflow: 'visible',
             }}>
-            {participant.splits.map((split: Split, index: number) => {
-              const paceMinutes = convertPaceToMinutes(split.pace);
-              
-              const minPace = 4.5;
-              const maxPace = 6.0;
-              const clampedPace = Math.max(minPace, Math.min(maxPace, paceMinutes));
-              const barHeight = ((maxPace - clampedPace) / (maxPace - minPace)) * 100;
-              const finalHeight = Math.max(20, barHeight);
-
-              return (
-                <Tooltip
-                  key={split.checkpointId}
-                  title={
-                    <Box sx={{ p: 0.5 }}>
-                      <Typography variant="body2" fontWeight={700}>
-                        {split.checkpointName} ({split.distance}km)
-                      </Typography>
-                      <Divider sx={{ my: 0.5 }} />
-                      <Typography variant="caption" display="block">
-                        <strong>Pace:</strong> {split.pace}
-                      </Typography>
-                      <Typography variant="caption" display="block">
-                        <strong>Speed:</strong> {split.speed.toFixed(1)} km/h
-                      </Typography>
-                      <Typography variant="caption" display="block">
-                        <strong>Split Time:</strong> {split.splitTime}
-                      </Typography>
-                      <Typography variant="caption" display="block">
-                        <strong>Cumulative Time:</strong> {split.cumulativeTime}
-                      </Typography>
-                    </Box>
-                  }
-                  arrow
-                >
-                  <Box
-                    sx={{
-                      flex: 1,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      height: "100%",
-                      justifyContent: "flex-end",
-                    }}
-                  >
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
-                        fontWeight: 700, 
-                        mb: 1,
-                        color: index === participant.splits.length - 1 
-                          ? colors.success.main 
-                          : colors.primary.main,
-                        fontSize: '0.75rem',
-                      }}
-                    >
-                      {split.pace}
-                    </Typography>
-                    
-                    <Box
-                      sx={{
-                        width: "100%",
-                        maxWidth: 60,
-                        height: `${finalHeight}%`,
-                        minHeight: 40,
-                        background: index === participant.splits.length - 1
-                          ? `linear-gradient(180deg, ${colors.success.main} 0%, ${colors.success.light} 100%)`
-                          : `linear-gradient(180deg, ${colors.primary.main} 0%, ${colors.primary.light} 100%)`,
-                        borderRadius: "10px 10px 0 0",
-                        transition: "all 0.3s ease",
-                        cursor: "pointer",
-                        boxShadow: `0 -4px 12px ${alpha(
-                          index === participant.splits.length - 1
-                            ? colors.success.main
-                            : colors.primary.main,
-                          0.3
-                        )}`,
-                        "&:hover": {
-                          transform: "scaleY(1.05) scaleX(1.1)",
-                          transformOrigin: "bottom",
-                          boxShadow: `0 -8px 24px ${alpha(
-                            index === participant.splits.length - 1
-                              ? colors.success.main
-                              : colors.primary.main,
-                            0.5
-                          )}`,
-                        },
-                      }}
+              {/* Draw connecting path/line */}
+              <svg
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  pointerEvents: 'none',
+                }}
+              >
+                <defs>
+                  <linearGradient id="pathGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor={colors.primary.main} stopOpacity="0.3" />
+                    <stop offset="100%" stopColor={colors.success.main} stopOpacity="0.3" />
+                  </linearGradient>
+                </defs>
+                {participant.splits.map((split: Split, index: number) => {
+                  if (index === participant.splits.length - 1) return null;
+                  
+                  const totalCheckpoints = participant.splits.length;
+                  const x1 = ((index + 1) / (totalCheckpoints + 1)) * 100;
+                  const x2 = ((index + 2) / (totalCheckpoints + 1)) * 100;
+                  
+                  const currentPace = convertPaceToMinutes(split.pace);
+                  const nextPace = convertPaceToMinutes(participant.splits[index + 1].pace);
+                  
+                  // Map pace to vertical position (faster = higher)
+                  const minPace = 4.0;
+                  const maxPace = 6.5;
+                  const y1 = 80 - (((Math.min(Math.max(currentPace, minPace), maxPace) - minPace) / (maxPace - minPace)) * 60);
+                  const y2 = 80 - (((Math.min(Math.max(nextPace, minPace), maxPace) - minPace) / (maxPace - minPace)) * 60);
+                  
+                  return (
+                    <line
+                      key={`line-${index}`}
+                      x1={`${x1}%`}
+                      y1={`${y1}%`}
+                      x2={`${x2}%`}
+                      y2={`${y2}%`}
+                      stroke="url(#pathGradient)"
+                      strokeWidth="3"
+                      strokeLinecap="round"
                     />
-                    
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontWeight: 700,
-                        color: colors.text.secondary,
-                        textAlign: "center",
-                        fontSize: "0.65rem",
-                        mt: 1.5,
-                      }}
+                  );
+                })}
+              </svg>
+
+              {/* Checkpoints with runner icons */}
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-around',
+                alignItems: 'flex-end',
+                height: '100%',
+                position: 'relative',
+              }}>
+                {participant.splits.map((split: Split, index: number) => {
+                  const paceMinutes = convertPaceToMinutes(split.pace);
+                  const prevPace = index > 0 ? convertPaceToMinutes(participant.splits[index - 1].pace) : null;
+                  const isFaster = prevPace !== null && paceMinutes < prevPace;
+                  const isSlower = prevPace !== null && paceMinutes > prevPace;
+                  
+                  // Map pace to vertical position (faster = higher up)
+                  const minPace = 4.0;
+                  const maxPace = 6.5;
+                  const normalizedPace = (Math.min(Math.max(paceMinutes, minPace), maxPace) - minPace) / (maxPace - minPace);
+                  const verticalPosition = (1 - normalizedPace) * 60; // 0-60% range
+                  
+                  const isFinish = index === participant.splits.length - 1;
+                  
+                  return (
+                    <Tooltip
+                      key={split.checkpointId}
+                      title={
+                        <Box sx={{ p: 0.5 }}>
+                          <Typography variant="body2" fontWeight={700}>
+                            {split.checkpointName} ({split.distance}km)
+                          </Typography>
+                          <Divider sx={{ my: 0.5 }} />
+                          <Typography variant="caption" display="block">
+                            <strong>Pace:</strong> {split.pace}
+                          </Typography>
+                          <Typography variant="caption" display="block">
+                            <strong>Speed:</strong> {split.speed.toFixed(1)} km/h
+                          </Typography>
+                          <Typography variant="caption" display="block">
+                            <strong>Split Time:</strong> {split.splitTime}
+                          </Typography>
+                          <Typography variant="caption" display="block">
+                            <strong>Cumulative Time:</strong> {split.cumulativeTime}
+                          </Typography>
+                        </Box>
+                      }
+                      arrow
                     >
-                      {split.checkpointName}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontWeight: 500,
-                        color: colors.text.secondary,
-                        textAlign: "center",
-                        fontSize: "0.6rem",
-                      }}
-                    >
-                      {split.distance}km
-                    </Typography>
-                  </Box>
-                </Tooltip>
-              );
-            })}
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          bottom: `${verticalPosition}%`,
+                          left: `${((index + 1) / (participant.splits.length + 1)) * 100}%`,
+                          transform: 'translateX(-50%)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'translateX(-50%) scale(1.15)',
+                          },
+                        }}
+                      >
+                        {/* Runner icon with pace-based styling */}
+                        <Box
+                          sx={{
+                            width: 50,
+                            height: 50,
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            bgcolor: isFinish 
+                              ? colors.warning.main
+                              : isFaster 
+                                ? colors.success.main 
+                                : isSlower 
+                                  ? colors.error.main 
+                                  : colors.primary.main,
+                            boxShadow: `0 4px 16px ${alpha(
+                              isFinish 
+                                ? colors.warning.main
+                                : isFaster 
+                                  ? colors.success.main 
+                                  : isSlower 
+                                    ? colors.error.main 
+                                    : colors.primary.main,
+                              0.4
+                            )}`,
+                            border: `3px solid ${colors.background.paper}`,
+                            position: 'relative',
+                            '&::after': isFinish ? {
+                              content: '""',
+                              position: 'absolute',
+                              width: '100%',
+                              height: '100%',
+                              borderRadius: '50%',
+                              border: `2px solid ${colors.warning.main}`,
+                              animation: 'ripple 1.5s infinite',
+                            } : {},
+                            '@keyframes ripple': {
+                              '0%': {
+                                transform: 'scale(1)',
+                                opacity: 1,
+                              },
+                              '100%': {
+                                transform: 'scale(1.5)',
+                                opacity: 0,
+                              },
+                            },
+                          }}
+                        >
+                          {isFinish ? (
+                            <Flag sx={{ fontSize: 24, color: 'white' }} />
+                          ) : (
+                            <DirectionsRun sx={{ fontSize: 24, color: 'white' }} />
+                          )}
+                        </Box>
+                        
+                        {/* Pace label */}
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            mt: 1,
+                            fontWeight: 800,
+                            color: isFinish 
+                              ? colors.warning.main
+                              : isFaster 
+                                ? colors.success.main 
+                                : isSlower 
+                                  ? colors.error.main 
+                                  : colors.primary.main,
+                            fontSize: '0.7rem',
+                            bgcolor: colors.background.paper,
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 1,
+                            boxShadow: `0 2px 8px ${alpha('#000', 0.1)}`,
+                          }}
+                        >
+                          {split.pace}
+                        </Typography>
+                        
+                        {/* Checkpoint name */}
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            mt: 0.5,
+                            fontWeight: 600,
+                            color: colors.text.secondary,
+                            fontSize: '0.65rem',
+                            textAlign: 'center',
+                          }}
+                        >
+                          {split.checkpointName}
+                        </Typography>
+                        
+                        {/* Distance */}
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontWeight: 500,
+                            color: colors.text.secondary,
+                            fontSize: '0.6rem',
+                          }}
+                        >
+                          {split.distance}km
+                        </Typography>
+                      </Box>
+                    </Tooltip>
+                  );
+                })}
+              </Box>
             </Box>
           </Box>
           
