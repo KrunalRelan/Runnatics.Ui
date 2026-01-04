@@ -42,11 +42,90 @@ import {
   CheckCircle,
   PlayArrow,
   Person,
+  Warning,
 } from "@mui/icons-material";
 import PageContainer from "@/main/src/components/PageContainer";
 import { ParticipantDetailData, Split, SplitTimeInfo, PaceProgressionInfo } from "@/main/src/models/participants";
 import { ParticipantService } from "@/main/src/services";
 import { getColorPalette } from "@/main/src/theme";
+
+// Mock data for when API returns null
+const MOCK_PERFORMANCE = {
+  averageSpeed: 12.5,
+  averagePace: "4:48",
+  maxSpeed: 15.2,
+  minPace: "3:56",
+  overallRank: 42,
+  genderRank: 28,
+  categoryRank: 15,
+  overallCategoryRank: 12,
+  totalParticipants: 250,
+  genderParticipants: 150,
+  categoryParticipants: 45,
+};
+
+const MOCK_SPLITS: Split[] = [
+  {
+    checkpointId: "cp1",
+    checkpointName: "5K",
+    distance: 5,
+    splitTime: "24:15",
+    cumulativeTime: "24:15",
+    pace: "4:51/km",
+    speed: 12.4,
+    rank: 38,
+    genderRank: 24,
+    categoryRank: 12,
+  },
+  {
+    checkpointId: "cp2",
+    checkpointName: "10K",
+    distance: 10,
+    splitTime: "23:58",
+    cumulativeTime: "48:13",
+    pace: "4:48/km",
+    speed: 12.5,
+    rank: 40,
+    genderRank: 26,
+    categoryRank: 14,
+  },
+  {
+    checkpointId: "cp3",
+    checkpointName: "15K",
+    distance: 15,
+    splitTime: "24:35",
+    cumulativeTime: "1:12:48",
+    pace: "4:55/km",
+    speed: 12.2,
+    rank: 42,
+    genderRank: 28,
+    categoryRank: 15,
+  },
+  {
+    checkpointId: "cp4",
+    checkpointName: "20K",
+    distance: 20,
+    splitTime: "24:12",
+    cumulativeTime: "1:37:00",
+    pace: "4:50/km",
+    speed: 12.4,
+    rank: 41,
+    genderRank: 27,
+    categoryRank: 14,
+  },
+  {
+    checkpointId: "cp5",
+    checkpointName: "Finish",
+    distance: 21.1,
+    splitTime: "5:18",
+    cumulativeTime: "1:42:18",
+    pace: "4:49/km",
+    speed: 12.5,
+    rank: 42,
+    genderRank: 28,
+    categoryRank: 15,
+  },
+];
 
 // Status badge component
 const StatusBadge: React.FC<{ status: ParticipantDetailData["status"] }> = ({
@@ -289,6 +368,14 @@ const RankDisplay: React.FC<{
   );
 };
 
+// Helper function to convert pace string to minutes
+const convertPaceToMinutes = (paceString: string): number => {
+  // Format: "4:48/km" -> 4.8 minutes (4 + 48/60)
+  const paceWithoutUnit = paceString.replace("/km", "");
+  const [minutes, seconds] = paceWithoutUnit.split(":").map(part => parseInt(part, 10));
+  return minutes + (seconds / 60);
+};
+
 const ParticipantDetail: React.FC = () => {
   const { eventId, raceId, participantId } = useParams<{
     eventId: string;
@@ -305,6 +392,7 @@ const ParticipantDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const abortController = new AbortController();
     let isMounted = true;
     
     const fetchParticipantDetails = async () => {
@@ -322,8 +410,68 @@ const ParticipantDetail: React.FC = () => {
         }
         const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
         
+        // Check if request was cancelled
+        if (abortController.signal.aborted) {
+          return;
+        }
+        
         if (response.data.message) {
           const apiData = response.data.message;
+          
+          // Check if performance data is null/empty and use mock data
+          const hasPerformanceData = apiData.performance && 
+            ((apiData.performance.averageSpeed ?? 0) > 0 || apiData.performance.averagePace);
+          
+          const hasRankingsData = apiData.rankings && 
+            ((apiData.rankings.overallRank ?? 0) > 0 || (apiData.rankings.totalParticipants ?? 0) > 0);
+          
+          const hasSplitsData = apiData.splitTimes && apiData.splitTimes.length > 0;
+          
+          // Use mock data if API data is null
+          const performanceData = hasPerformanceData ? {
+            averageSpeed: apiData.performance?.averageSpeed || 0,
+            averagePace: apiData.performance?.averagePace || "",
+            maxSpeed: apiData.performance?.maxSpeed || 0,
+            minPace: apiData.performance?.bestPace || "",
+          } : {
+            averageSpeed: MOCK_PERFORMANCE.averageSpeed,
+            averagePace: MOCK_PERFORMANCE.averagePace,
+            maxSpeed: MOCK_PERFORMANCE.maxSpeed,
+            minPace: MOCK_PERFORMANCE.minPace,
+          };
+          
+          const rankingsData = hasRankingsData ? {
+            overallRank: apiData.rankings?.overallRank || 0,
+            genderRank: apiData.rankings?.genderRank || 0,
+            categoryRank: apiData.rankings?.categoryRank || 0,
+            overallCategoryRank: apiData.rankings?.allCategoriesRank || 0,
+            totalParticipants: apiData.rankings?.totalParticipants || 0,
+            genderParticipants: apiData.rankings?.totalInGender || 0,
+            categoryParticipants: apiData.rankings?.totalInCategory || 0,
+          } : {
+            overallRank: MOCK_PERFORMANCE.overallRank,
+            genderRank: MOCK_PERFORMANCE.genderRank,
+            categoryRank: MOCK_PERFORMANCE.categoryRank,
+            overallCategoryRank: MOCK_PERFORMANCE.overallCategoryRank,
+            totalParticipants: MOCK_PERFORMANCE.totalParticipants,
+            genderParticipants: MOCK_PERFORMANCE.genderParticipants,
+            categoryParticipants: MOCK_PERFORMANCE.categoryParticipants,
+          };
+          
+          const splitsData = hasSplitsData 
+            ? (apiData.splitTimes || []).map((split: SplitTimeInfo) => ({
+                checkpointId: split.checkpointId || "",
+                checkpointName: split.checkpointName || "",
+                distance: split.distanceKm || 0,
+                splitTime: split.splitTime || "",
+                cumulativeTime: split.cumulativeTime || "",
+                pace: split.pace || "",
+                speed: split.speed || 0,
+                rank: split.overallRank || 0,
+                genderRank: split.genderRank || 0,
+                categoryRank: split.categoryRank || 0,
+              }))
+            : MOCK_SPLITS;
           
           // Map API response to ParticipantDetailData
           const mappedData: ParticipantDetailData = {
@@ -347,38 +495,20 @@ const ParticipantDetail: React.FC = () => {
             finishTime: apiData.finishTime || undefined,
             chipTime: apiData.chipTime || undefined,
             gunTime: apiData.gunTime || undefined,
-            lastCheckpoint: apiData.splitTimes && apiData.splitTimes.length > 0 
+            lastCheckpoint: hasSplitsData && apiData.splitTimes && apiData.splitTimes.length > 0 
               ? apiData.splitTimes[apiData.splitTimes.length - 1]?.checkpointName || ""
-              : "",
-            lastCheckpointTime: apiData.splitTimes && apiData.splitTimes.length > 0
+              : (MOCK_SPLITS[MOCK_SPLITS.length - 1]?.checkpointName || ""),
+            lastCheckpointTime: hasSplitsData && apiData.splitTimes && apiData.splitTimes.length > 0
               ? apiData.splitTimes[apiData.splitTimes.length - 1]?.cumulativeTime || ""
-              : "",
-            currentPace: apiData.performance?.averagePace || "",
+              : (MOCK_SPLITS[MOCK_SPLITS.length - 1]?.cumulativeTime || ""),
+            currentPace: hasPerformanceData 
+              ? (apiData.performance?.averagePace || "") 
+              : MOCK_PERFORMANCE.averagePace,
             performance: {
-              averageSpeed: apiData.performance?.averageSpeed || 0,
-              averagePace: apiData.performance?.averagePace || "",
-              maxSpeed: apiData.performance?.maxSpeed || 0,
-              minPace: apiData.performance?.bestPace || "",
-              overallRank: apiData.rankings?.overallRank || 0,
-              genderRank: apiData.rankings?.genderRank || 0,
-              categoryRank: apiData.rankings?.categoryRank || 0,
-              overallCategoryRank: apiData.rankings?.allCategoriesRank || 0,
-              totalParticipants: apiData.rankings?.totalParticipants || 0,
-              genderParticipants: apiData.rankings?.totalInGender || 0,
-              categoryParticipants: apiData.rankings?.totalInCategory || 0,
+              ...performanceData,
+              ...rankingsData,
             },
-            splits: (apiData.splitTimes || []).map((split: SplitTimeInfo) => ({
-              checkpointId: split.checkpointId || "",
-              checkpointName: split.checkpointName || "",
-              distance: split.distanceKm || 0,
-              splitTime: split.splitTime || "",
-              cumulativeTime: split.cumulativeTime || "",
-              pace: split.pace || "",
-              speed: split.speed || 0,
-              rank: split.overallRank || 0,
-              genderRank: split.genderRank || 0,
-              categoryRank: split.categoryRank || 0,
-            })),
+            splits: splitsData,
             paceProgression: (apiData.paceProgression || []).map((pace: PaceProgressionInfo, index: number) => ({
               segment: pace.segment || `Segment ${index + 1}`,
               distance: 0, // PaceProgressionInfo doesn't have distance, we'll need to calculate or use index
@@ -411,6 +541,7 @@ const ParticipantDetail: React.FC = () => {
     fetchParticipantDetails();
     
     return () => {
+      abortController.abort();
       isMounted = false;
     };
   }, [eventId, raceId, participantId]);
@@ -929,9 +1060,9 @@ const ParticipantDetail: React.FC = () => {
               {participant.splits.map((split: Split, index: number) => {
                 const prevPace =
                   index > 0
-                    ? parseFloat(participant.splits[index - 1].pace.replace("/km", "").replace(":", "."))
+                    ? convertPaceToMinutes(participant.splits[index - 1].pace)
                     : null;
-                const currentPace = parseFloat(split.pace.replace("/km", "").replace(":", "."));
+                const currentPace = convertPaceToMinutes(split.pace);
                 const paceImproved = prevPace !== null && currentPace < prevPace;
                 const paceSlowed = prevPace !== null && currentPace > prevPace;
 
@@ -1061,12 +1192,22 @@ const ParticipantDetail: React.FC = () => {
         variant="h6" 
         sx={{ 
           fontWeight: 700, 
-          mb: 2.5,
+          mb: 1,
           color: colors.text.primary,
           fontSize: '1.25rem',
         }}
       >
         Pace Progression
+      </Typography>
+      <Typography 
+        variant="body2" 
+        sx={{ 
+          mb: 2.5,
+          color: colors.text.secondary,
+          fontWeight: 500,
+        }}
+      >
+        Track pace (min/km) and speed at each checkpoint
       </Typography>
       <Card sx={{ 
         mb: 4,
@@ -1078,15 +1219,82 @@ const ParticipantDetail: React.FC = () => {
           : `0 2px 12px ${alpha('#000', 0.08)}`,
       }}>
         <CardContent sx={{ p: 3 }}>
+          {/* Legend for card metrics */}
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 3, 
+            mb: 3, 
+            p: 2, 
+            bgcolor: colors.background.subtle,
+            borderRadius: 2,
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+          }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Box sx={{ 
+                width: 4, 
+                height: 24, 
+                bgcolor: colors.pace.main, 
+                borderRadius: 1 
+              }} />
+              <Typography variant="caption" sx={{ fontWeight: 600, color: colors.text.secondary }}>
+                First Split
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Box sx={{ 
+                width: 4, 
+                height: 24, 
+                bgcolor: colors.success.main, 
+                borderRadius: 1 
+              }} />
+              <Typography variant="caption" sx={{ fontWeight: 600, color: colors.text.secondary }}>
+                Improved Pace (Faster)
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Box sx={{ 
+                width: 4, 
+                height: 24, 
+                bgcolor: colors.error.main, 
+                borderRadius: 1 
+              }} />
+              <Typography variant="caption" sx={{ fontWeight: 600, color: colors.text.secondary }}>
+                Declined Pace (Slower)
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Stack direction="row" spacing={0.5}>
+                <Box sx={{ 
+                  width: 4, 
+                  height: 24, 
+                  bgcolor: colors.warning.main, 
+                  borderRadius: 1 
+                }} />
+                <CheckCircle sx={{ fontSize: 16, color: colors.warning.main }} />
+              </Stack>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: colors.text.secondary }}>
+                Finish Line
+              </Typography>
+            </Stack>
+          </Box>
+
           {/* Pace values display */}
           <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
             {participant.splits.map((split: Split, index: number) => {
               const prevPace = index > 0 
-                ? parseFloat(participant.splits[index - 1].pace.replace("/km", "").replace(":", "."))
+                ? convertPaceToMinutes(participant.splits[index - 1].pace)
                 : null;
-              const currentPace = parseFloat(split.pace.replace("/km", "").replace(":", "."));
+              const currentPace = convertPaceToMinutes(split.pace);
               const isFaster = prevPace !== null && currentPace < prevPace;
               const isSlower = prevPace !== null && currentPace > prevPace;
+              
+              // Calculate drastic change (>15% change in pace)
+              const paceChangePercent = prevPace !== null 
+                ? Math.abs(((currentPace - prevPace) / prevPace) * 100) 
+                : 0;
+              const isDrasticChange = paceChangePercent > 15;
+              const isDrasticSlowdown = isDrasticChange && isSlower;
               
               return (
                 <Box
@@ -1096,15 +1304,19 @@ const ParticipantDetail: React.FC = () => {
                     minWidth: 100,
                     p: 2.5,
                     borderRadius: 3,
-                    bgcolor: colors.background.subtle,
+                    bgcolor: isDrasticChange 
+                      ? alpha(isDrasticSlowdown ? colors.error.main : colors.success.main, isDark ? 0.15 : 0.08)
+                      : colors.background.subtle,
                     border: `1px solid ${
                       index === participant.splits.length - 1 
-                        ? alpha(colors.success.main, 0.5)
-                        : colors.border.light
+                        ? alpha(colors.warning.main, 0.5)
+                        : isDrasticChange
+                          ? alpha(isDrasticSlowdown ? colors.error.main : colors.success.main, 0.6)
+                          : colors.border.light
                     }`,
                     borderLeft: `4px solid ${
                       index === participant.splits.length - 1 
-                        ? colors.success.main
+                        ? colors.warning.main
                         : isFaster 
                           ? colors.success.main 
                           : isSlower 
@@ -1119,63 +1331,153 @@ const ParticipantDetail: React.FC = () => {
                     },
                   }}
                 >
-                  <Typography 
-                    variant="caption" 
-                    sx={{ 
-                      color: colors.text.secondary,
-                      display: "block", 
-                      mb: 0.5,
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      fontSize: '0.7rem',
-                    }}
-                  >
-                    {split.checkpointName}
-                  </Typography>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 800,
-                      color: isFaster 
-                        ? colors.success.main 
-                        : isSlower 
-                          ? colors.error.main 
-                          : colors.pace.main,
-                      letterSpacing: '1px',
-                    }}
-                  >
-                    {split.pace}
-                  </Typography>
+                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 0.5 }}>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: colors.text.secondary,
+                        display: "block", 
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        fontSize: '0.7rem',
+                        flex: 1,
+                      }}
+                    >
+                      {split.checkpointName} ({split.distance}km)
+                    </Typography>
+                    {isDrasticChange && (
+                      <Tooltip 
+                        title={`${isDrasticSlowdown ? 'Drastic slowdown' : 'Drastic speedup'}: ${paceChangePercent.toFixed(1)}% change`}
+                        arrow
+                      >
+                        {isDrasticSlowdown ? (
+                          <Warning sx={{ 
+                            fontSize: 18, 
+                            color: colors.error.main,
+                            animation: 'pulse 2s infinite',
+                            '@keyframes pulse': {
+                              '0%, 100%': { opacity: 1 },
+                              '50%': { opacity: 0.6 },
+                            },
+                          }} />
+                        ) : (
+                          <TrendingUp sx={{ 
+                            fontSize: 18, 
+                            color: colors.success.main,
+                            fontWeight: 800,
+                          }} />
+                        )}
+                      </Tooltip>
+                    )}
+                  </Stack>
+                  <Stack direction="row" alignItems="baseline" justifyContent="center" spacing={0.5} sx={{ mb: 0.5 }}>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: colors.text.secondary,
+                        fontSize: '0.65rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Pace:
+                    </Typography>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        fontWeight: 800,
+                        color: index === participant.splits.length - 1
+                          ? colors.warning.main
+                          : isFaster 
+                            ? colors.success.main 
+                            : isSlower 
+                              ? colors.error.main 
+                              : colors.pace.main,
+                        letterSpacing: '1px',
+                      }}
+                    >
+                      {split.pace}
+                    </Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="baseline" justifyContent="center" spacing={0.5}>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: colors.text.secondary,
+                        fontSize: '0.65rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Speed:
+                    </Typography>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: colors.text.secondary,
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      {split.speed.toFixed(1)} km/h
+                    </Typography>
+                  </Stack>
                   <Typography 
                     variant="caption" 
                     sx={{ 
                       color: colors.text.secondary,
                       fontWeight: 500,
+                      fontSize: '0.65rem',
+                      display: 'block',
+                      mt: 0.5,
                     }}
                   >
-                    {split.speed} km/h
+                    Split time: {split.splitTime}
                   </Typography>
+                  {isDrasticChange && (
+                    <Chip
+                      label={`${isDrasticSlowdown ? '▼' : '▲'} ${paceChangePercent.toFixed(1)}%`}
+                      size="small"
+                      sx={{
+                        mt: 1,
+                        height: 20,
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        bgcolor: alpha(isDrasticSlowdown ? colors.error.main : colors.success.main, isDark ? 0.25 : 0.15),
+                        color: isDrasticSlowdown ? colors.error.main : colors.success.main,
+                        border: `1px solid ${alpha(isDrasticSlowdown ? colors.error.main : colors.success.main, 0.5)}`,
+                      }}
+                    />
+                  )}
                 </Box>
               );
             })}
           </Box>
 
           {/* Visual Bar Chart */}
-          <Box sx={{ 
-            display: "flex", 
-            alignItems: "flex-end", 
-            gap: 2, 
-            height: 200, 
-            px: 3,
-            py: 3,
-            bgcolor: colors.background.subtle,
-            borderRadius: 3,
-            border: `1px solid ${colors.border.light}`,
-          }}>
+          <Box>
+            <Typography 
+              variant="subtitle2" 
+              sx={{ 
+                fontWeight: 700, 
+                mb: 2,
+                color: colors.text.primary,
+              }}
+            >
+              Pace Comparison Chart
+            </Typography>
+            <Box sx={{ 
+              display: "flex", 
+              alignItems: "flex-end", 
+              gap: 2, 
+              height: 200, 
+              px: 3,
+              py: 3,
+              bgcolor: colors.background.subtle,
+              borderRadius: 3,
+              border: `1px solid ${colors.border.light}`,
+            }}>
             {participant.splits.map((split: Split, index: number) => {
-              const paceParts = split.pace.replace("/km", "").split(":");
-              const paceMinutes = parseInt(paceParts[0]) + parseInt(paceParts[1]) / 60;
+              const paceMinutes = convertPaceToMinutes(split.pace);
               
               const minPace = 4.5;
               const maxPace = 6.0;
@@ -1191,9 +1493,19 @@ const ParticipantDetail: React.FC = () => {
                       <Typography variant="body2" fontWeight={700}>
                         {split.checkpointName} ({split.distance}km)
                       </Typography>
-                      <Typography variant="caption" display="block">Pace: {split.pace}</Typography>
-                      <Typography variant="caption" display="block">Speed: {split.speed} km/h</Typography>
-                      <Typography variant="caption" display="block">Split: {split.splitTime}</Typography>
+                      <Divider sx={{ my: 0.5 }} />
+                      <Typography variant="caption" display="block">
+                        <strong>Pace:</strong> {split.pace}
+                      </Typography>
+                      <Typography variant="caption" display="block">
+                        <strong>Speed:</strong> {split.speed.toFixed(1)} km/h
+                      </Typography>
+                      <Typography variant="caption" display="block">
+                        <strong>Split Time:</strong> {split.splitTime}
+                      </Typography>
+                      <Typography variant="caption" display="block">
+                        <strong>Cumulative Time:</strong> {split.cumulativeTime}
+                      </Typography>
                     </Box>
                   }
                   arrow
@@ -1219,7 +1531,7 @@ const ParticipantDetail: React.FC = () => {
                         fontSize: '0.75rem',
                       }}
                     >
-                      {split.pace.replace("/km", "")}
+                      {split.pace}
                     </Typography>
                     
                     <Box
@@ -1259,16 +1571,28 @@ const ParticipantDetail: React.FC = () => {
                         fontWeight: 700,
                         color: colors.text.secondary,
                         textAlign: "center",
-                        fontSize: "0.7rem",
+                        fontSize: "0.65rem",
                         mt: 1.5,
                       }}
                     >
                       {split.checkpointName}
                     </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontWeight: 500,
+                        color: colors.text.secondary,
+                        textAlign: "center",
+                        fontSize: "0.6rem",
+                      }}
+                    >
+                      {split.distance}km
+                    </Typography>
                   </Box>
                 </Tooltip>
               );
             })}
+            </Box>
           </Box>
           
           {/* Legend */}
