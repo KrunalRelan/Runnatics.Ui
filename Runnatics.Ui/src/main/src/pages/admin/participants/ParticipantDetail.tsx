@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -21,6 +21,7 @@ import {
   useTheme,
   alpha,
   Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -43,192 +44,9 @@ import {
   Person,
 } from "@mui/icons-material";
 import PageContainer from "@/main/src/components/PageContainer";
-import { ParticipantDetailData, Split } from "@/main/src/models/participants";
-
-// Mock data for demonstration
-const mockParticipantData: ParticipantDetailData = {
-  id: "p-001",
-  bib: "1042",
-  firstName: "Rahul",
-  lastName: "Sharma",
-  fullName: "Rahul Sharma",
-  email: "rahul.sharma@email.com",
-  phone: "+91 98765 43210",
-  gender: "Male",
-  category: "M35-39",
-  age: 37,
-  nationality: "India",
-  club: "Delhi Runners Club",
-  raceName: "Half Marathon",
-  raceDistance: 21.1,
-  eventName: "Mumbai Marathon 2026",
-  status: "Finished",
-  startTime: "2026-01-03T06:00:00",
-  finishTime: "2026-01-03T07:52:34",
-  chipTime: "01:52:34",
-  gunTime: "01:53:12",
-  lastCheckpoint: "Finish Line",
-  lastCheckpointTime: "07:52:34",
-  currentPace: "5:20/km",
-  performance: {
-    averageSpeed: 11.25,
-    averagePace: "5:20/km",
-    maxSpeed: 14.2,
-    minPace: "4:45/km",
-    overallRank: 156,
-    genderRank: 142,
-    categoryRank: 28,
-    overallCategoryRank: 45,
-    totalParticipants: 2450,
-    genderParticipants: 1890,
-    categoryParticipants: 312,
-  },
-  splits: [
-    {
-      checkpointId: "cp-1",
-      checkpointName: "5K",
-      distance: 5,
-      splitTime: "00:25:30",
-      cumulativeTime: "00:25:30",
-      pace: "5:06/km",
-      speed: 11.76,
-      rank: 198,
-      genderRank: 182,
-      categoryRank: 38,
-    },
-    {
-      checkpointId: "cp-2",
-      checkpointName: "10K",
-      distance: 10,
-      splitTime: "00:26:00",
-      cumulativeTime: "00:51:30",
-      pace: "5:12/km",
-      speed: 11.54,
-      rank: 185,
-      genderRank: 168,
-      categoryRank: 35,
-    },
-    {
-      checkpointId: "cp-3",
-      checkpointName: "15K",
-      distance: 15,
-      splitTime: "00:27:30",
-      cumulativeTime: "01:19:00",
-      pace: "5:30/km",
-      speed: 10.91,
-      rank: 172,
-      genderRank: 158,
-      categoryRank: 31,
-    },
-    {
-      checkpointId: "cp-4",
-      checkpointName: "20K",
-      distance: 20,
-      splitTime: "00:28:15",
-      cumulativeTime: "01:47:15",
-      pace: "5:39/km",
-      speed: 10.62,
-      rank: 162,
-      genderRank: 148,
-      categoryRank: 29,
-    },
-    {
-      checkpointId: "cp-5",
-      checkpointName: "Finish",
-      distance: 21.1,
-      splitTime: "00:05:19",
-      cumulativeTime: "01:52:34",
-      pace: "4:50/km",
-      speed: 12.41,
-      rank: 156,
-      genderRank: 142,
-      categoryRank: 28,
-    },
-  ],
-};
-
-// Professional Color Palette
-const getColorPalette = (isDark: boolean) => ({
-  // Primary brand colors
-  primary: {
-    main: isDark ? '#60A5FA' : '#2563EB',
-    light: isDark ? '#93C5FD' : '#3B82F6',
-    dark: isDark ? '#3B82F6' : '#1D4ED8',
-  },
-  
-  // Semantic colors
-  success: {
-    main: isDark ? '#34D399' : '#10B981',
-    light: isDark ? '#6EE7B7' : '#34D399',
-    dark: isDark ? '#10B981' : '#059669',
-  },
-  
-  warning: {
-    main: isDark ? '#FBBF24' : '#F59E0B',
-    light: isDark ? '#FCD34D' : '#FBBF24',
-    dark: isDark ? '#F59E0B' : '#D97706',
-  },
-  
-  error: {
-    main: isDark ? '#F87171' : '#EF4444',
-    light: isDark ? '#FCA5A5' : '#F87171',
-    dark: isDark ? '#EF4444' : '#DC2626',
-  },
-  
-  // Specialty colors for metrics
-  speed: {
-    main: isDark ? '#A78BFA' : '#8B5CF6',
-    light: isDark ? '#C4B5FD' : '#A78BFA',
-    dark: isDark ? '#8B5CF6' : '#7C3AED',
-  },
-  
-  pace: {
-    main: isDark ? '#2DD4BF' : '#14B8A6',
-    light: isDark ? '#5EEAD4' : '#2DD4BF',
-    dark: isDark ? '#14B8A6' : '#0D9488',
-  },
-  
-  rank: {
-    main: isDark ? '#60A5FA' : '#3B82F6',
-    light: isDark ? '#93C5FD' : '#60A5FA',
-    dark: isDark ? '#3B82F6' : '#2563EB',
-  },
-  
-  gender: {
-    male: isDark ? '#60A5FA' : '#3B82F6',
-    female: isDark ? '#F472B6' : '#EC4899',
-  },
-  
-  // Background colors
-  background: {
-    paper: isDark ? '#1E293B' : '#FFFFFF',
-    default: isDark ? '#0F172A' : '#F8FAFC',
-    elevated: isDark ? '#334155' : '#FFFFFF',
-    subtle: isDark ? alpha('#1E293B', 0.6) : '#F1F5F9',
-  },
-  
-  // Border colors
-  border: {
-    main: isDark ? alpha('#60A5FA', 0.2) : alpha('#CBD5E1', 1),
-    light: isDark ? alpha('#475569', 0.5) : alpha('#E2E8F0', 1),
-    focus: isDark ? alpha('#60A5FA', 0.5) : alpha('#3B82F6', 0.5),
-  },
-  
-  // Text colors
-  text: {
-    primary: isDark ? '#F1F5F9' : '#0F172A',
-    secondary: isDark ? '#94A3B8' : '#64748B',
-    disabled: isDark ? '#475569' : '#CBD5E1',
-  },
-  
-  // Chart colors
-  chart: {
-    gradient1: isDark ? ['#60A5FA', '#3B82F6'] : ['#3B82F6', '#2563EB'],
-    gradient2: isDark ? ['#34D399', '#10B981'] : ['#10B981', '#059669'],
-    gradient3: isDark ? ['#A78BFA', '#8B5CF6'] : ['#8B5CF6', '#7C3AED'],
-    gradient4: isDark ? ['#FBBF24', '#F59E0B'] : ['#F59E0B', '#D97706'],
-  },
-});
+import { ParticipantDetailData, Split, SplitTimeInfo, PaceProgressionInfo } from "@/main/src/models/participants";
+import { ParticipantService } from "@/main/src/services";
+import { getColorPalette } from "@/main/src/theme";
 
 // Status badge component
 const StatusBadge: React.FC<{ status: ParticipantDetailData["status"] }> = ({
@@ -472,7 +290,7 @@ const RankDisplay: React.FC<{
 };
 
 const ParticipantDetail: React.FC = () => {
-  const { eventId, raceId, participantId: _participantId } = useParams<{
+  const { eventId, raceId, participantId } = useParams<{
     eventId: string;
     raceId: string;
     participantId: string;
@@ -482,9 +300,120 @@ const ParticipantDetail: React.FC = () => {
   const isDark = theme.palette.mode === 'dark';
   const colors = getColorPalette(isDark);
 
-  // In real implementation, fetch data from API using participantId
-  // For now using mock data
-  const [participant] = useState<ParticipantDetailData>(mockParticipantData);
+  const [participant, setParticipant] = useState<ParticipantDetailData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchParticipantDetails = async () => {
+      if (!eventId || !raceId || !participantId) {
+        if (isMounted) {
+          setError("Missing required parameters");
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        if (isMounted) {
+          setLoading(true);
+        }
+        const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
+        
+        if (response.data.message) {
+          const apiData = response.data.message;
+          
+          // Map API response to ParticipantDetailData
+          const mappedData: ParticipantDetailData = {
+            id: apiData.id || "",
+            bib: apiData.bibNumber || "",
+            firstName: apiData.firstName || "",
+            lastName: apiData.lastName || "",
+            fullName: apiData.fullName || `${apiData.firstName} ${apiData.lastName}`,
+            email: apiData.email || "",
+            phone: apiData.phone || "",
+            gender: (apiData.gender as "Male" | "Female") || "Male",
+            category: apiData.ageCategory || "",
+            age: apiData.age || 0,
+            nationality: apiData.country || "",
+            club: apiData.club || undefined,
+            raceName: apiData.raceName || "",
+            raceDistance: apiData.raceDistance || 0,
+            eventName: apiData.eventName || "",
+            status: (apiData.status as any) || "Registered",
+            startTime: apiData.startTime || "",
+            finishTime: apiData.finishTime || undefined,
+            chipTime: apiData.chipTime || undefined,
+            gunTime: apiData.gunTime || undefined,
+            lastCheckpoint: apiData.splitTimes && apiData.splitTimes.length > 0 
+              ? apiData.splitTimes[apiData.splitTimes.length - 1]?.checkpointName || ""
+              : "",
+            lastCheckpointTime: apiData.splitTimes && apiData.splitTimes.length > 0
+              ? apiData.splitTimes[apiData.splitTimes.length - 1]?.cumulativeTime || ""
+              : "",
+            currentPace: apiData.performance?.averagePace || "",
+            performance: {
+              averageSpeed: apiData.performance?.averageSpeed || 0,
+              averagePace: apiData.performance?.averagePace || "",
+              maxSpeed: apiData.performance?.maxSpeed || 0,
+              minPace: apiData.performance?.bestPace || "",
+              overallRank: apiData.rankings?.overallRank || 0,
+              genderRank: apiData.rankings?.genderRank || 0,
+              categoryRank: apiData.rankings?.categoryRank || 0,
+              overallCategoryRank: apiData.rankings?.allCategoriesRank || 0,
+              totalParticipants: apiData.rankings?.totalParticipants || 0,
+              genderParticipants: apiData.rankings?.totalInGender || 0,
+              categoryParticipants: apiData.rankings?.totalInCategory || 0,
+            },
+            splits: (apiData.splitTimes || []).map((split: SplitTimeInfo) => ({
+              checkpointId: split.checkpointId || "",
+              checkpointName: split.checkpointName || "",
+              distance: split.distanceKm || 0,
+              splitTime: split.splitTime || "",
+              cumulativeTime: split.cumulativeTime || "",
+              pace: split.pace || "",
+              speed: split.speed || 0,
+              rank: split.overallRank || 0,
+              genderRank: split.genderRank || 0,
+              categoryRank: split.categoryRank || 0,
+            })),
+            paceProgression: (apiData.paceProgression || []).map((pace: PaceProgressionInfo, index: number) => ({
+              segment: pace.segment || `Segment ${index + 1}`,
+              distance: 0, // PaceProgressionInfo doesn't have distance, we'll need to calculate or use index
+              pace: pace.pace || "",
+              speed: pace.speed || 0,
+            })),
+          };
+          
+          if (isMounted) {
+            setParticipant(mappedData);
+            setError(null);
+          }
+        } else {
+          if (isMounted) {
+            setError("Failed to load participant details");
+          }
+        }
+      } catch (err: any) {
+        console.error("Error fetching participant details:", err);
+        if (isMounted) {
+          setError(err.response?.data?.message || "Failed to load participant details");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchParticipantDetails();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId, raceId, participantId]);
 
   const handleBack = () => {
     if (eventId && raceId) {
@@ -493,6 +422,36 @@ const ParticipantDetail: React.FC = () => {
       navigate(-1);
     }
   };
+
+  if (loading) {
+    return (
+      <PageContainer>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+          <CircularProgress />
+        </Box>
+      </PageContainer>
+    );
+  }
+
+  if (error || !participant) {
+    return (
+      <PageContainer>
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <Typography variant="h5" color="error" gutterBottom>
+            {error || "Participant not found"}
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBack />}
+            onClick={handleBack}
+            sx={{ mt: 2 }}
+          >
+            Back to Participants
+          </Button>
+        </Box>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>

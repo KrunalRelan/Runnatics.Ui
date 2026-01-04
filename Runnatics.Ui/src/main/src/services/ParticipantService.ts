@@ -1,7 +1,7 @@
 import { ServiceUrl } from '../models';
 import { apiClient } from '../utils/axios.config';
 import { AxiosResponse } from 'axios';
-import { UploadResponse, ProcessResponse, ProcessImportRequest, ParticipantSearchRequest, ParticipantSearchResponse, ParticipantRequest, AddParticipantRangeRequest, AddParticipantRangeResponse, UpdateParticipantsByBibResponse } from '../models/participants';
+import { UploadResponse, ProcessResponse, ProcessImportRequest, ParticipantSearchRequest, ParticipantSearchResponse, ParticipantRequest, AddParticipantRangeRequest, AddParticipantRangeResponse, UpdateParticipantsByBibResponse, ParticipantDetailsResponse } from '../models/participants';
 import { ResponseBase } from '../models/ResponseBase';
 import { Category } from '../models/participants/Category';
 
@@ -162,6 +162,11 @@ export class ParticipantService {
             );
 
         return response.data;
+    }
+
+    public static async getParticipantDetails(eventId: string, raceId: string, participantId: string): Promise<AxiosResponse<ResponseBase<ParticipantDetailsResponse>>> {
+        const url = ServiceUrl.getParticipantDetails(eventId, raceId, participantId);
+        return await apiClient.get<ResponseBase<ParticipantDetailsResponse>>(url);
     }
 
 }

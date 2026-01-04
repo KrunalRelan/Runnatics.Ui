@@ -464,6 +464,12 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       filter: true,
       valueGetter: (params: any) =>
         params.data?.fullName || params.data?.name || "",
+      cellStyle: {
+        color: '#1976d2',
+        cursor: 'pointer',
+        textDecoration: 'none',
+      },
+      cellClass: 'participant-name-cell',
     },
     {
       field: "gender",
@@ -614,7 +620,13 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   ];
 
   return (
-    <Card sx={{ width: "100%", maxWidth: "100%" }}>
+    <Card sx={{ 
+      width: "100%", 
+      maxWidth: "100%",
+      '& .participant-name-cell:hover': {
+        textDecoration: 'underline',
+      }
+    }}>
       <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
         {/* Header and Action Buttons */}
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, flexWrap: "wrap", gap: 2 }}>

@@ -29,4 +29,12 @@ export interface ParticipantDetailData {
   currentPace: string;
   performance: PerformanceMetrics;
   splits: Split[];
+  paceProgression?: {
+    segment: string;
+    distance: number;
+    pace: string;
+    speed: number;
+  }[];
 }
+
+
