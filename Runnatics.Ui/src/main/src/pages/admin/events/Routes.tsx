@@ -8,6 +8,7 @@ import { AddRace } from "../races/AddRace";
 import { EditRace } from "../races/EditRace";
 import ViewRaces from "../races/ViewRaces";
 import ParticipantDetail from "../participants/ParticipantDetail";
+import RfidFileUploadPage from "../../rfid/RfidFileUploadPage";
 
 export const eventsRoutes: RouteObject[] = [
   {
@@ -74,6 +75,14 @@ export const eventsRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <ParticipantDetail />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "event-details/:eventId/race/:raceId/rfid-upload",
+        element: (
+          <ProtectedRoute>
+            <RfidFileUploadPage />
           </ProtectedRoute>
         ),
       },

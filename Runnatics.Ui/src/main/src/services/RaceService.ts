@@ -10,16 +10,16 @@ import { CreateRaceRequest } from '../models/races/CreateRaceRequest';
 
 export class RaceService {
     /**
-     * Get all events with optional filters
+     * Get all races with optional filters
      * Note: JWT token is automatically included via interceptor
      */
-    static async getAllRaces(params?: {
+    static async getAllRaces(params: {
         eventId: string;
         searchCriteria?: RaceSearchRequest;
     }): Promise<SearchResponse<Race>> {
         const response = await apiClient.post<SearchResponse<Race>>(
-            ServiceUrl.searchRaceService(params?.eventId!),
-            params?.searchCriteria
+            ServiceUrl.searchRaceService(params.eventId),
+            params.searchCriteria || {}
         );
         return response.data;
     }

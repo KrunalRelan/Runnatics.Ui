@@ -21,6 +21,7 @@ import {
   Sms as SmsIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
+  CloudUpload as UploadIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import type { ColDef } from "ag-grid-community";
@@ -246,6 +247,17 @@ export const RaceList: React.FC<RaceListProps> = ({
           alignItems="center"
           sx={{ height: "100%" }}
         >
+          <Tooltip title="Upload RFID Data">
+            <IconButton
+              color="info"
+              size="small"
+              onClick={() => {
+                navigate(`/events/event-details/${race.eventId}/race/${race.id}/rfid-upload`);
+              }}
+            >
+              <UploadIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Edit">
             <IconButton
               color="primary"
@@ -279,7 +291,7 @@ export const RaceList: React.FC<RaceListProps> = ({
         </Stack>
       );
     },
-    [onEdit, onDelete]
+    [onEdit, onDelete, navigate]
   );
 
   // Column Definitions

@@ -1,6 +1,6 @@
 import DataGrid from "@/main/src/components/DataGrid";
 import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
-import { Edit, Delete, Add as AddIcon, Refresh } from "@mui/icons-material";
+import { Edit, Delete, Add as AddIcon } from "@mui/icons-material";
 import {
     Box,
     Button,
@@ -483,10 +483,6 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
         } else {
             setLoopsToAddInput(value);
         }
-    };
-
-    const handleRefresh = () => {
-        fetchCheckpoints();
     };
 
     const handleDelete = (checkpoint: Checkpoint) => {

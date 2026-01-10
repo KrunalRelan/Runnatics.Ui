@@ -554,7 +554,7 @@ const ParticipantDetail: React.FC = () => {
             : MOCK_SPLITS;
           
           // Use mock RFID readings for now - in production this would come from API
-          const rfidReadingsData = apiData.rfidReadings || MOCK_RFID_READINGS;
+          const rfidReadingsData = MOCK_RFID_READINGS;
           
           // Map API response to ParticipantDetailData
           const mappedData: ParticipantDetailData = {
@@ -1333,7 +1333,7 @@ const ParticipantDetail: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {(participant.rfidReadings || MOCK_RFID_READINGS).map((reading: RfidReading, index: number) => {
+              {(participant.rfidReadings || MOCK_RFID_READINGS).map((reading: RfidReading) => {
                 // Helper to get process result styling
                 const getProcessResultConfig = (result: RfidReading['processResult']) => {
                   const configs = {

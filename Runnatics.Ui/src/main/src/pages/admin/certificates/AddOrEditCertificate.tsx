@@ -16,7 +16,6 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
-  Checkbox,
   FormControlLabel,
   Switch,
 } from '@mui/material';

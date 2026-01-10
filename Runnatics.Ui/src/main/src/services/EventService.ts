@@ -22,7 +22,7 @@ export class EventService {
     }): Promise<SearchResponse<Event>> {
         const response = await apiClient.post<SearchResponse<Event>>(
             ServiceUrl.searchEventService(), 
-            params?.searchCriteria
+            params?.searchCriteria || {}
         );
         return response.data;
     }
@@ -30,7 +30,7 @@ export class EventService {
      static async getPastEvents(searchCriteria?: EventSearchRequest): Promise<SearchResponse<Event>> {
         const response = await apiClient.post<SearchResponse<Event>>(
             ServiceUrl.searchPastEvents(), 
-            searchCriteria
+            searchCriteria || {}
         );
         return response.data;
     }
@@ -41,7 +41,7 @@ export class EventService {
     static async getFutureEvents(searchCriteria?: EventSearchRequest): Promise<SearchResponse<Event>> {
         const response = await apiClient.post<SearchResponse<Event>>(
             ServiceUrl.searchFutureEvents(), 
-            searchCriteria
+            searchCriteria || {}
         );
         return response.data;
     }
