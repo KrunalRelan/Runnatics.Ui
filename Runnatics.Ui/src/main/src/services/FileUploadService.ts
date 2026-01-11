@@ -25,7 +25,7 @@ export const FileUploadService = {
     if (description) formData.append('description', description);
 
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`${API_BASE_URL}/fileupload/upload`, {
+    const response = await fetch(`${API_BASE_URL}/FileUpload/upload`, {
       method: 'POST',
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       body: formData,
@@ -53,7 +53,7 @@ export const FileUploadService = {
     if (checkpointId) formData.append('checkpointId', checkpointId.toString());
 
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`${API_BASE_URL}/fileupload/upload-multiple`, {
+    const response = await fetch(`${API_BASE_URL}/FileUpload/upload-multiple`, {
       method: 'POST',
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       body: formData,
@@ -72,7 +72,7 @@ export const FileUploadService = {
    */
   async getBatchStatus(batchId: number): Promise<FileUploadStatusDto> {
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`${API_BASE_URL}/fileupload/batch/${batchId}`, {
+    const response = await fetch(`${API_BASE_URL}/FileUpload/batch/${batchId}`, {
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
     if (!response.ok) throw new Error('Failed to get batch status');
@@ -89,7 +89,7 @@ export const FileUploadService = {
   ): Promise<RaceBatchesResponse> {
     const token = localStorage.getItem('authToken');
     const response = await fetch(
-      `${API_BASE_URL}/fileupload/race/${raceId}/batches?page=${page}&pageSize=${pageSize}`,
+      `${API_BASE_URL}/FileUpload/race/${raceId}/batches?page=${page}&pageSize=${pageSize}`,
       { headers: token ? { 'Authorization': `Bearer ${token}` } : {} }
     );
     if (!response.ok) throw new Error('Failed to get batches');
@@ -106,7 +106,7 @@ export const FileUploadService = {
   ): Promise<FileUploadRecordDto[]> {
     const token = localStorage.getItem('authToken');
     const response = await fetch(
-      `${API_BASE_URL}/fileupload/batch/${batchId}/records?page=${page}&pageSize=${pageSize}`,
+      `${API_BASE_URL}/FileUpload/batch/${batchId}/records?page=${page}&pageSize=${pageSize}`,
       { headers: token ? { 'Authorization': `Bearer ${token}` } : {} }
     );
     if (!response.ok) throw new Error('Failed to get records');
@@ -118,7 +118,7 @@ export const FileUploadService = {
    */
   async processBatch(batchId: number): Promise<void> {
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`${API_BASE_URL}/fileupload/batch/${batchId}/process`, {
+    const response = await fetch(`${API_BASE_URL}/FileUpload/batch/${batchId}/process`, {
       method: 'POST',
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
@@ -130,7 +130,7 @@ export const FileUploadService = {
    */
   async reprocessBatch(batchId: number, reprocessAll = false): Promise<void> {
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`${API_BASE_URL}/fileupload/batch/${batchId}/reprocess`, {
+    const response = await fetch(`${API_BASE_URL}/FileUpload/batch/${batchId}/reprocess`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ export const FileUploadService = {
    */
   async deleteBatch(batchId: number): Promise<void> {
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`${API_BASE_URL}/fileupload/batch/${batchId}`, {
+    const response = await fetch(`${API_BASE_URL}/FileUpload/batch/${batchId}`, {
       method: 'DELETE',
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
@@ -162,7 +162,7 @@ export const FileUploadService = {
    */
   async cancelBatch(batchId: number): Promise<void> {
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`${API_BASE_URL}/fileupload/batch/${batchId}/cancel`, {
+    const response = await fetch(`${API_BASE_URL}/FileUpload/batch/${batchId}/cancel`, {
       method: 'POST',
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });

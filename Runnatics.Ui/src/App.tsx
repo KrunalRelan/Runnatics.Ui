@@ -7,6 +7,7 @@ import LoginPage from "./main/src/pages/auth/LoginPage";
 import Dashboard from "./main/src/pages/Dashboard";
 import { eventsRoutes } from "./main/src/pages/admin/events/Routes";
 import { uploadsRoutes } from "./main/src/pages/uploads/Routes";
+import { rfidRoutes } from "./main/src/pages/rfid/Routes";
 
 // Layout wrapper for auth pages (header only, no side nav)
 const AuthLayoutWrapper = () => {
@@ -61,6 +62,11 @@ function App() {
               {/* Uploads routes */}
               {uploadsRoutes.map((route, index) => (
                 <Route key={`upload-${index}`} path={route.path} element={route.element} />
+              ))}
+
+              {/* RFID routes */}
+              {rfidRoutes.map((route, index) => (
+                <Route key={`rfid-${index}`} path={route.path} element={route.element} />
               ))}
             </Route>
           </Routes>

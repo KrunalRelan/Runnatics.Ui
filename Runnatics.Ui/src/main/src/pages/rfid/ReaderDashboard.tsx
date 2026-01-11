@@ -18,12 +18,9 @@ import {
 } from 'lucide-react';
 import * as signalR from '@microsoft/signalr';
 import { ReaderService } from '../../services/ReaderService';
-import {
-  ReaderStatusDto,
-  ReaderAlertDto,
-  RfidDashboardDto,
-  AlertSeverity
-} from '../../models/Reader';
+import { ReaderStatusDto } from '../../models/ReaderStatus';
+import { ReaderAlertDto, AlertSeverity } from '../../models/ReaderAlert';
+import { RfidDashboardDto } from '../../models/RfidDashboard';
 
 // Utility functions
 const formatTimeAgo = (dateString: string | null): string => {

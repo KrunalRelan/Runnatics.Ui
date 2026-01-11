@@ -153,11 +153,11 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: <DashboardIcon />,
       path: "/dashboard",
     },
-    {
-      text: "Support",
-      icon: <DashboardIcon />,
-      path: "/support",
-    },
+    // {
+    //   text: "Support",
+    //   icon: <DashboardIcon />,
+    //   path: "/support",
+    // },
    
     {
       text: "Events",
@@ -181,40 +181,45 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
         // },
       ],
     },
-    {
-      text: "Participants",
-      icon: <PeopleIcon />,
-      path: "/participants",
-    },
+    // {
+    //   text: "Participants",
+    //   icon: <PeopleIcon />,
+    //   path: "/participants",
+    // },
     {
       text: "Uploads",
       icon: <UploadIcon />,
       path: "/uploads",
     },
-    {
-      text: "Tags & Readers",
-      icon: <LabelIcon />,
-      path: "/tags",
-    },
-    {
-      text: "Users",
-      icon: <PeopleIcon />,
-      path: "/users",
-    },
-    {
-      text: "Analytics",
-      icon: <BarChartIcon />,
-      path: "/analytics",
-      submenu: [
-        { text: "Reports", icon: <SendIcon />, path: "/analytics/reports" },
-        { text: "Statistics", icon: <StarIcon />, path: "/analytics/stats" },
-      ],
-    },
-    {
-      text: "Settings",
-      icon: <SettingsIcon />,
-      path: "/settings",
-    },
+    // {
+    //   text: "RFID Readers",
+    //   icon: <LabelIcon />,
+    //   path: "/rfid/readers",
+    // },
+    // {
+    //   text: "Tags & Readers",
+    //   icon: <LabelIcon />,
+    //   path: "/tags",
+    // },
+    // {
+    //   text: "Users",
+    //   icon: <PeopleIcon />,
+    //   path: "/users",
+    // },
+    // {
+    //   text: "Analytics",
+    //   icon: <BarChartIcon />,
+    //   path: "/analytics",
+    //   submenu: [
+    //     { text: "Reports", icon: <SendIcon />, path: "/analytics/reports" },
+    //     { text: "Statistics", icon: <StarIcon />, path: "/analytics/stats" },
+    //   ],
+    // },
+    // {
+    //   text: "Settings",
+    //   icon: <SettingsIcon />,
+    //   path: "/settings",
+    // },
   ];
 
   // Check if current path matches menu item

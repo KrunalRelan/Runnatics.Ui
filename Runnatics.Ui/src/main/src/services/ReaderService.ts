@@ -1,17 +1,18 @@
-import { 
-  ReaderStatusDto, 
-  ReaderAlertDto, 
-  RfidDashboardDto 
-} from '../models/Reader';
+import { ReaderStatusDto } from '../models/ReaderStatus';
+import { ReaderAlertDto } from '../models/ReaderAlert';
+import { RfidDashboardDto } from '../models/RfidDashboard';
+import config from '../config/environment';
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = config.apiBaseUrl;
 
 export const ReaderService = {
   /**
    * Get the RFID reader dashboard overview
    */
   async getDashboard(): Promise<RfidDashboardDto> {
-    const response = await fetch(`${API_BASE_URL}/reader/dashboard`, {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${API_BASE_URL}/Reader/dashboard`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to get dashboard');
@@ -22,7 +23,9 @@ export const ReaderService = {
    * Get all readers
    */
   async getReaders(): Promise<ReaderStatusDto[]> {
-    const response = await fetch(`${API_BASE_URL}/reader`, {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${API_BASE_URL}/Reader`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to get readers');
@@ -33,9 +36,13 @@ export const ReaderService = {
    * Get reader alerts
    */
   async getAlerts(unacknowledgedOnly = true): Promise<ReaderAlertDto[]> {
+    const token = localStorage.getItem('authToken');
     const response = await fetch(
-      `${API_BASE_URL}/reader/alerts?unacknowledgedOnly=${unacknowledgedOnly}`,
-      { credentials: 'include' }
+      `${API_BASE_URL}/Reader/alerts?unacknowledgedOnly=${unacknowledgedOnly}`,
+      { 
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include' 
+      }
     );
     if (!response.ok) throw new Error('Failed to get alerts');
     return response.json();
@@ -45,9 +52,13 @@ export const ReaderService = {
    * Acknowledge an alert
    */
   async acknowledgeAlert(alertId: number, notes?: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/reader/alerts/${alertId}/acknowledge`, {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${API_BASE_URL}/Reader/alerts/${alertId}/acknowledge`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
       body: JSON.stringify(notes || ''),
       credentials: 'include'
     });

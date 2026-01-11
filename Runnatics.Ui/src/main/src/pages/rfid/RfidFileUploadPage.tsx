@@ -1,1166 +1,443 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   Box,
-  Card,
-  CardContent,
+  Paper,
   Typography,
-  Button,
-  IconButton,
-  Stack,
-  Chip,
-  TextField,
-  Select,
-  MenuItem,
   FormControl,
   InputLabel,
-  LinearProgress,
+  Select,
+  MenuItem,
   CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  Collapse,
   Alert,
-  Tooltip,
-  alpha,
-  useTheme,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
+  IconButton,
+  Chip,
 } from '@mui/material';
-import Grid from '@mui/material/Grid';
-import {
-  ArrowBack,
-  CloudUpload,
-  InsertDriveFile,
-  CheckCircle,
-  Cancel,
-  AccessTime,
-  Warning,
-  Delete,
-  Refresh,
-  Visibility,
-  Close,
-  ExpandMore,
-  ExpandLess,
-  ErrorOutline,
-} from '@mui/icons-material';
-import * as signalR from '@microsoft/signalr';
-import PageContainer from '../../components/PageContainer';
-import { getColorPalette } from '../../theme/colorPalette';
-import { FileUploadService } from '../../services/FileUploadService';
+import { Upload, RefreshCw, AlertCircle, X } from 'lucide-react';
+import { UploadProgress } from '../../components/rfid/UploadProgress';
+import { BatchListItem } from '../../components/rfid/BatchListItem';
+import { RecordsModal } from '../../components/rfid/RecordsModal';
+import { FileUploadStatusDto, FileUploadRecordDto } from '../../models/FileUpload';
 import config from '../../config/environment';
-import {
-  FileUploadStatusDto,
-  FileUploadRecordDto,
-  FileProcessingStatus,
-  ReadRecordStatus,
-} from '../../models/FileUpload';
 
-// Utility functions
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
+const API_BASE_URL = config.apiBaseUrl;
 
-const formatDuration = (duration: string | null): string => {
-  if (!duration) return '-';
-  const parts = duration.split(':');
-  if (parts.length >= 3) {
-    const hours = parseInt(parts[0]);
-    const minutes = parseInt(parts[1]);
-    const seconds = parseFloat(parts[2]);
-    if (hours > 0) return `${hours}h ${minutes}m ${seconds.toFixed(0)}s`;
-    if (minutes > 0) return `${minutes}m ${seconds.toFixed(0)}s`;
-    return `${seconds.toFixed(1)}s`;
-  }
-  return duration;
-};
-
-// File Drop Zone Component
-interface FileDropZoneProps {
-  onFilesSelected: (files: File[]) => void;
-  isUploading: boolean;
-  acceptedFormats?: string[];
-  isDark: boolean;
-  colors: ReturnType<typeof getColorPalette>;
+interface Checkpoint {
+  id: string;
+  name: string;
+  distance?: number;
+  distanceUnit?: string;
+  sequenceNumber: number;
 }
 
-const FileDropZone: React.FC<FileDropZoneProps> = ({
-  onFilesSelected,
-  isUploading,
-  acceptedFormats = ['.csv', '.json', '.txt'],
-  isDark,
-  colors,
-}) => {
-  const [isDragOver, setIsDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragOver(false);
-
-      const files = Array.from(e.dataTransfer.files).filter((file) => {
-        const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-        return acceptedFormats.includes(ext);
-      });
-
-      if (files.length > 0) {
-        onFilesSelected(files);
-      }
-    },
-    [onFilesSelected, acceptedFormats]
-  );
-
-  const handleFileInput = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []);
-      if (files.length > 0) {
-        onFilesSelected(files);
-      }
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    },
-    [onFilesSelected]
-  );
-
-  return (
-    <Box
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      onClick={() => !isUploading && fileInputRef.current?.click()}
-      sx={{
-        border: `2px dashed ${isDragOver ? colors.primary.main : colors.border.main}`,
-        borderRadius: '16px',
-        p: 6,
-        textAlign: 'center',
-        cursor: isUploading ? 'not-allowed' : 'pointer',
-        transition: 'all 0.3s ease',
-        bgcolor: isDragOver
-          ? alpha(colors.primary.main, isDark ? 0.15 : 0.08)
-          : colors.background.subtle,
-        opacity: isUploading ? 0.5 : 1,
-        '&:hover': {
-          borderColor: colors.primary.main,
-          bgcolor: alpha(colors.primary.main, isDark ? 0.1 : 0.05),
-        },
-      }}
-    >
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept={acceptedFormats.join(',')}
-        onChange={handleFileInput}
-        style={{ display: 'none' }}
-        disabled={isUploading}
-      />
-
-      <CloudUpload
-        sx={{
-          fontSize: 64,
-          color: isDragOver ? colors.primary.main : colors.text.secondary,
-          mb: 2,
-        }}
-      />
-
-      <Typography
-        variant="h6"
-        sx={{ fontWeight: 600, color: colors.text.primary, mb: 1 }}
-      >
-        {isDragOver ? 'Drop files here' : 'Drag & drop RFID read files'}
-      </Typography>
-      <Typography variant="body2" sx={{ color: colors.text.secondary, mb: 2 }}>
-        or click to browse
-      </Typography>
-      <Typography variant="caption" sx={{ color: colors.text.disabled }}>
-        Supported formats: {acceptedFormats.join(', ')}
-      </Typography>
-    </Box>
-  );
-};
-
-// Upload Progress Component
-interface UploadProgressProps {
-  files: File[];
-  uploadProgress: Map<string, number>;
-  onRemove: (fileName: string) => void;
-  colors: ReturnType<typeof getColorPalette>;
-}
-
-const UploadProgress: React.FC<UploadProgressProps> = ({
-  files,
-  uploadProgress,
-  onRemove,
-  colors,
-}) => {
-  return (
-    <Stack spacing={1.5} sx={{ mt: 3 }}>
-      {files.map((file) => {
-        const progress = uploadProgress.get(file.name) || 0;
-        const isComplete = progress === 100;
-
-        return (
-          <Box
-            key={file.name}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              p: 2,
-              bgcolor: colors.background.subtle,
-              borderRadius: '12px',
-              border: `1px solid ${colors.border.light}`,
-            }}
-          >
-            <InsertDriveFile sx={{ color: colors.text.secondary, fontSize: 28 }} />
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 600,
-                  color: colors.text.primary,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {file.name}
-              </Typography>
-              <Typography variant="caption" sx={{ color: colors.text.secondary }}>
-                {formatFileSize(file.size)}
-              </Typography>
-              <LinearProgress
-                variant="determinate"
-                value={progress}
-                sx={{
-                  mt: 1,
-                  height: 6,
-                  borderRadius: 3,
-                  bgcolor: alpha(colors.primary.main, 0.15),
-                  '& .MuiLinearProgress-bar': {
-                    borderRadius: 3,
-                    bgcolor: isComplete ? colors.success.main : colors.primary.main,
-                  },
-                }}
-              />
-            </Box>
-            {isComplete ? (
-              <CheckCircle sx={{ color: colors.success.main, fontSize: 24 }} />
-            ) : (
-              <IconButton
-                size="small"
-                onClick={() => onRemove(file.name)}
-                sx={{
-                  color: colors.text.secondary,
-                  '&:hover': { bgcolor: alpha(colors.error.main, 0.1) },
-                }}
-              >
-                <Close fontSize="small" />
-              </IconButton>
-            )}
-          </Box>
-        );
-      })}
-    </Stack>
-  );
-};
-
-// Batch List Item Component
-interface BatchListItemProps {
-  batch: FileUploadStatusDto;
-  onView: (batchId: number) => void;
-  onReprocess: (batchId: number) => void;
-  onDelete: (batchId: number) => void;
-  onCancel: (batchId: number) => void;
-  isDark: boolean;
-  colors: ReturnType<typeof getColorPalette>;
-}
-
-const BatchListItem: React.FC<BatchListItemProps> = ({
-  batch,
-  onView,
-  onReprocess,
-  onDelete,
-  onCancel,
-  isDark,
-  colors,
-}) => {
-  const [expanded, setExpanded] = useState(false);
-
-  const getStatusConfig = (status: FileProcessingStatus) => {
-    switch (status) {
-      case FileProcessingStatus.Completed:
-        return { color: colors.success.main, icon: <CheckCircle sx={{ fontSize: 16 }} />, label: 'Completed' };
-      case FileProcessingStatus.PartiallyCompleted:
-        return { color: colors.warning.main, icon: <Warning sx={{ fontSize: 16 }} />, label: 'Partial' };
-      case FileProcessingStatus.Failed:
-        return { color: colors.error.main, icon: <Cancel sx={{ fontSize: 16 }} />, label: 'Failed' };
-      case FileProcessingStatus.Processing:
-        return { color: colors.primary.main, icon: <CircularProgress size={14} />, label: 'Processing' };
-      case FileProcessingStatus.Cancelled:
-        return { color: colors.text.secondary, icon: <Cancel sx={{ fontSize: 16 }} />, label: 'Cancelled' };
-      default:
-        return { color: colors.text.secondary, icon: <AccessTime sx={{ fontSize: 16 }} />, label: 'Pending' };
-    }
-  };
-
-  const statusConfig = getStatusConfig(batch.status);
-
-  return (
-    <Card
-      sx={{
-        border: `1px solid ${colors.border.light}`,
-        borderRadius: '12px',
-        bgcolor: colors.background.paper,
-        overflow: 'hidden',
-        boxShadow: isDark
-          ? `0 4px 20px ${alpha('#000', 0.3)}`
-          : `0 2px 12px ${alpha('#000', 0.08)}`,
-      }}
-    >
-      <Box
-        onClick={() => setExpanded(!expanded)}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          p: 2.5,
-          cursor: 'pointer',
-          '&:hover': { bgcolor: alpha(colors.primary.main, 0.03) },
-        }}
-      >
-        <Stack direction="row" spacing={2} alignItems="center">
-          <InsertDriveFile sx={{ color: colors.text.secondary }} />
-          <Box>
-            <Typography variant="body1" sx={{ fontWeight: 600, color: colors.text.primary }}>
-              {batch.originalFileName}
-            </Typography>
-            <Typography variant="caption" sx={{ color: colors.text.secondary }}>
-              {new Date(batch.createdAt).toLocaleString()}
-              {batch.uploadedByUserName && ` • ${batch.uploadedByUserName}`}
-            </Typography>
-          </Box>
-        </Stack>
-
-        <Stack direction="row" spacing={2} alignItems="center">
-          <Chip
-            icon={statusConfig.icon as React.ReactElement}
-            label={batch.statusText || statusConfig.label}
-            size="small"
-            sx={{
-              fontWeight: 600,
-              bgcolor: alpha(statusConfig.color, isDark ? 0.2 : 0.1),
-              color: statusConfig.color,
-              border: `1px solid ${alpha(statusConfig.color, 0.3)}`,
-              '& .MuiChip-icon': { color: statusConfig.color },
-            }}
-          />
-
-          {batch.status === FileProcessingStatus.Processing && (
-            <Typography variant="body2" sx={{ color: colors.text.secondary, fontWeight: 600 }}>
-              {batch.progressPercent.toFixed(0)}%
-            </Typography>
-          )}
-
-          <IconButton size="small">
-            {expanded ? <ExpandLess /> : <ExpandMore />}
-          </IconButton>
-        </Stack>
-      </Box>
-
-      <Collapse in={expanded}>
-        <Box sx={{ px: 2.5, pb: 2.5, bgcolor: colors.background.subtle }}>
-          <Grid container spacing={2} sx={{ mb: 2.5 }}>
-            <Grid size={{ xs: 6, md: 2.4 }}>
-              <Typography variant="caption" sx={{ color: colors.text.secondary, fontWeight: 600 }}>
-                Total Records
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: colors.text.primary }}>
-                {batch.totalRecords.toLocaleString()}
-              </Typography>
-            </Grid>
-            <Grid size={{ xs: 6, md: 2.4 }}>
-              <Typography variant="caption" sx={{ color: colors.text.secondary, fontWeight: 600 }}>
-                Processed
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: colors.primary.main }}>
-                {batch.processedRecords.toLocaleString()}
-              </Typography>
-            </Grid>
-            <Grid size={{ xs: 6, md: 2.4 }}>
-              <Typography variant="caption" sx={{ color: colors.text.secondary, fontWeight: 600 }}>
-                Matched
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: colors.success.main }}>
-                {batch.matchedRecords.toLocaleString()}
-              </Typography>
-            </Grid>
-            <Grid size={{ xs: 6, md: 2.4 }}>
-              <Typography variant="caption" sx={{ color: colors.text.secondary, fontWeight: 600 }}>
-                Duplicates
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: colors.warning.main }}>
-                {batch.duplicateRecords.toLocaleString()}
-              </Typography>
-            </Grid>
-            <Grid size={{ xs: 6, md: 2.4 }}>
-              <Typography variant="caption" sx={{ color: colors.text.secondary, fontWeight: 600 }}>
-                Errors
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: colors.error.main }}>
-                {batch.errorRecords.toLocaleString()}
-              </Typography>
-            </Grid>
-          </Grid>
-
-          {batch.status === FileProcessingStatus.Processing && (
-            <LinearProgress
-              variant="determinate"
-              value={batch.progressPercent}
-              sx={{
-                mb: 2,
-                height: 8,
-                borderRadius: 4,
-                bgcolor: alpha(colors.primary.main, 0.15),
-                '& .MuiLinearProgress-bar': {
-                  borderRadius: 4,
-                  bgcolor: colors.primary.main,
-                },
-              }}
-            />
-          )}
-
-          {batch.errorMessage && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {batch.errorMessage}
-            </Alert>
-          )}
-
-          {batch.processingDuration && (
-            <Typography variant="caption" sx={{ color: colors.text.secondary, display: 'block', mb: 2 }}>
-              Processing time: {formatDuration(batch.processingDuration)}
-            </Typography>
-          )}
-
-          <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<Visibility />}
-              onClick={(e) => {
-                e.stopPropagation();
-                onView(batch.batchId);
-              }}
-              sx={{
-                borderColor: colors.border.main,
-                color: colors.text.primary,
-                '&:hover': {
-                  borderColor: colors.primary.main,
-                  bgcolor: alpha(colors.primary.main, 0.08),
-                },
-              }}
-            >
-              View Records
-            </Button>
-
-            {batch.status === FileProcessingStatus.Processing ? (
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<Cancel />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCancel(batch.batchId);
-                }}
-                sx={{
-                  borderColor: colors.warning.main,
-                  color: colors.warning.main,
-                  '&:hover': {
-                    borderColor: colors.warning.main,
-                    bgcolor: alpha(colors.warning.main, 0.1),
-                  },
-                }}
-              >
-                Cancel
-              </Button>
-            ) : (
-              <>
-                {(batch.status === FileProcessingStatus.Failed ||
-                  batch.status === FileProcessingStatus.PartiallyCompleted) && (
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<Refresh />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onReprocess(batch.batchId);
-                    }}
-                    sx={{
-                      borderColor: colors.primary.main,
-                      color: colors.primary.main,
-                      '&:hover': {
-                        borderColor: colors.primary.main,
-                        bgcolor: alpha(colors.primary.main, 0.1),
-                      },
-                    }}
-                  >
-                    Reprocess
-                  </Button>
-                )}
-
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<Delete />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(batch.batchId);
-                  }}
-                  sx={{
-                    borderColor: colors.error.main,
-                    color: colors.error.main,
-                    '&:hover': {
-                      borderColor: colors.error.main,
-                      bgcolor: alpha(colors.error.main, 0.1),
-                    },
-                  }}
-                >
-                  Delete
-                </Button>
-              </>
-            )}
-          </Stack>
-        </Box>
-      </Collapse>
-    </Card>
-  );
-};
-
-// Records Modal Component
-interface RecordsModalProps {
-  batchId: number;
-  onClose: () => void;
-  isDark: boolean;
-  colors: ReturnType<typeof getColorPalette>;
-}
-
-const RecordsModal: React.FC<RecordsModalProps> = ({ batchId, onClose, isDark, colors }) => {
-  const [records, setRecords] = useState<FileUploadRecordDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-
-  useEffect(() => {
-    loadRecords();
-  }, [batchId, page]);
-
-  const loadRecords = async () => {
-    setLoading(true);
-    try {
-      const data = await FileUploadService.getBatchRecords(batchId, page, 100);
-      setRecords((prev) => (page === 1 ? data : [...prev, ...data]));
-      setHasMore(data.length === 100);
-    } catch (error) {
-      console.error('Failed to load records:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getRecordStatusConfig = (status: ReadRecordStatus) => {
-    switch (status) {
-      case ReadRecordStatus.Processed:
-        return { color: colors.success.main, label: 'Processed' };
-      case ReadRecordStatus.Valid:
-        return { color: colors.primary.main, label: 'Valid' };
-      case ReadRecordStatus.Duplicate:
-        return { color: colors.warning.main, label: 'Duplicate' };
-      case ReadRecordStatus.UnknownChip:
-        return { color: colors.warning.dark, label: 'Unknown Chip' };
-      case ReadRecordStatus.InvalidEpc:
-      case ReadRecordStatus.InvalidTimestamp:
-      case ReadRecordStatus.OutOfRaceWindow:
-        return { color: colors.error.main, label: status };
-      default:
-        return { color: colors.text.secondary, label: 'Pending' };
-    }
-  };
-
-  return (
-    <Dialog
-      open
-      onClose={onClose}
-      maxWidth="xl"
-      fullWidth
-      PaperProps={{
-        sx: {
-          bgcolor: colors.background.paper,
-          borderRadius: '16px',
-          maxHeight: '90vh',
-        },
-      }}
-    >
-      <DialogTitle
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: `1px solid ${colors.border.light}`,
-        }}
-      >
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-          Upload Records - Batch #{batchId}
-        </Typography>
-        <IconButton onClick={onClose}>
-          <Close />
-        </IconButton>
-      </DialogTitle>
-
-      <DialogContent sx={{ p: 0 }}>
-        <TableContainer>
-          <Table stickyHeader>
-            <TableHead>
-              <TableRow
-                sx={{
-                  '& th': {
-                    bgcolor: colors.background.subtle,
-                    fontWeight: 700,
-                    color: colors.text.primary,
-                  },
-                }}
-              >
-                <TableCell>Row</TableCell>
-                <TableCell>EPC</TableCell>
-                <TableCell>Timestamp</TableCell>
-                <TableCell>Antenna</TableCell>
-                <TableCell>RSSI</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Matched Participant</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {records.map((record) => {
-                const statusConfig = getRecordStatusConfig(record.status);
-                return (
-                  <TableRow
-                    key={record.id}
-                    sx={{ '&:hover': { bgcolor: alpha(colors.primary.main, 0.05) } }}
-                  >
-                    <TableCell>{record.rowNumber}</TableCell>
-                    <TableCell>
-                      <Typography
-                        variant="caption"
-                        sx={{ fontFamily: 'monospace', color: colors.text.secondary }}
-                      >
-                        {record.epc}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{new Date(record.readTimestamp).toLocaleString()}</TableCell>
-                    <TableCell>{record.antennaPort ?? '-'}</TableCell>
-                    <TableCell>{record.rssiDbm?.toFixed(1) ?? '-'} dBm</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={record.statusText || statusConfig.label}
-                        size="small"
-                        sx={{
-                          fontWeight: 600,
-                          fontSize: '0.7rem',
-                          bgcolor: alpha(statusConfig.color, isDark ? 0.2 : 0.1),
-                          color: statusConfig.color,
-                          border: `1px solid ${alpha(statusConfig.color, 0.3)}`,
-                        }}
-                      />
-                      {record.errorMessage && (
-                        <Typography
-                          variant="caption"
-                          sx={{ display: 'block', color: colors.error.main, mt: 0.5 }}
-                        >
-                          {record.errorMessage}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {record.matchedParticipantName ? (
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            {record.matchedParticipantName}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: colors.text.secondary }}>
-                            Bib: {record.matchedBibNumber}
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <Typography variant="body2" sx={{ color: colors.text.disabled }}>
-                          -
-                        </Typography>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-            <CircularProgress />
-          </Box>
-        )}
-
-        {!loading && hasMore && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-            <Button
-              variant="outlined"
-              onClick={() => setPage((p) => p + 1)}
-              sx={{
-                borderColor: colors.border.main,
-                color: colors.text.primary,
-                '&:hover': {
-                  borderColor: colors.primary.main,
-                  bgcolor: alpha(colors.primary.main, 0.08),
-                },
-              }}
-            >
-              Load More
-            </Button>
-          </Box>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// Main File Upload Page Component
 export const RfidFileUploadPage: React.FC = () => {
   const { eventId, raceId } = useParams<{ eventId: string; raceId: string }>();
-  const navigate = useNavigate();
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  const colors = getColorPalette(isDark);
-  const raceIdNum = raceId ? parseInt(raceId) : 0;
-
-  // TODO: Load checkpoints from API
-  const checkpoints: Array<{ id: number; name: string }> = [];
-  const [selectedCheckpoint, setSelectedCheckpoint] = useState<number | string>('');
-  const [description, setDescription] = useState('');
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<Map<string, number>>(new Map());
-  const [isUploading, setIsUploading] = useState(false);
+  
+  const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
+  const [selectedCheckpoint, setSelectedCheckpoint] = useState<string>('');
+  const [loadingCheckpoints, setLoadingCheckpoints] = useState(true);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasLoadedCheckpoints = useRef(false);
+  
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentFileName, setCurrentFileName] = useState('');
+  
   const [batches, setBatches] = useState<FileUploadStatusDto[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
-  const [viewingBatchId, setViewingBatchId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  
+  const [selectedBatch, setSelectedBatch] = useState<FileUploadStatusDto | null>(null);
+  const [records, setRecords] = useState<FileUploadRecordDto[]>([]);
+  const [showRecordsModal, setShowRecordsModal] = useState(false);
 
-  const hubConnectionRef = useRef<signalR.HubConnection | null>(null);
-
-  // Setup SignalR on mount (batches load only after upload or manual request)
+  // Load checkpoints on mount
   useEffect(() => {
-    if (raceIdNum) {
-      setupSignalR();
+    if (eventId && raceId && !hasLoadedCheckpoints.current) {
+      hasLoadedCheckpoints.current = true;
+      loadCheckpoints();
+      // TODO: Enable when backend batches endpoint is configured for this raceId format
+      // loadBatches();
     }
+  }, [eventId, raceId]);
 
-    return () => {
-      hubConnectionRef.current?.stop();
-    };
-  }, [raceIdNum]);
-
-  const setupSignalR = async () => {
-    const connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${config.apiBaseUrl.replace('/api', '')}/hubs/race`, {
-        accessTokenFactory: () => localStorage.getItem('authToken') || ''
-      })
-      .withAutomaticReconnect()
-      .build();
-
-    connection.on('FileUploaded', () => {
-      loadBatches();
-    });
-
-    connection.on('FileProcessingProgress', (status: FileUploadStatusDto) => {
-      setBatches((prev) => prev.map((b) => (b.batchId === status.batchId ? status : b)));
-    });
-
-    connection.on('FileProcessingComplete', (status: FileUploadStatusDto) => {
-      setBatches((prev) => prev.map((b) => (b.batchId === status.batchId ? status : b)));
-    });
-
+  const loadCheckpoints = async () => {
     try {
-      await connection.start();
-      await connection.invoke('JoinRace', raceIdNum);
-      hubConnectionRef.current = connection;
-    } catch (err) {
-      console.error('SignalR connection failed:', err);
+      setLoadingCheckpoints(true);
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${API_BASE_URL}/Checkpoints/${eventId}/${raceId}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+
+      if (!response.ok) throw new Error('Failed to load checkpoints');
+      
+      const data = await response.json();
+      console.log('Checkpoint API response:', data);
+      
+      // Try multiple possible response structures
+      let checkpointList = [];
+      if (data.message?.items) {
+        checkpointList = data.message.items;
+      } else if (data.message) {
+        checkpointList = Array.isArray(data.message) ? data.message : [];
+      } else if (Array.isArray(data)) {
+        checkpointList = data;
+      }
+      
+      console.log('Parsed checkpoints:', checkpointList);
+      
+      const sortedCheckpoints = checkpointList.sort((a: Checkpoint, b: Checkpoint) => 
+        a.sequenceNumber - b.sequenceNumber
+      );
+      
+      setCheckpoints(sortedCheckpoints);
+      
+      if (sortedCheckpoints.length > 0) {
+        setSelectedCheckpoint(sortedCheckpoints[0].id);
+      }
+    } catch (error) {
+      console.error('Error loading checkpoints:', error);
+    } finally {
+      setLoadingCheckpoints(false);
     }
   };
 
   const loadBatches = async () => {
-    if (!raceIdNum) return;
-    setLoadingBatches(true);
     try {
-      const data = await FileUploadService.getRaceBatches(raceIdNum, 1, 50);
-      setBatches(data.batches);
-    } catch (err) {
-      console.error('Failed to load batches:', err);
+      setLoadingBatches(true);
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${API_BASE_URL}/FileUpload/race/${raceId}/batches`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Batches API error:', response.status, errorText);
+        throw new Error(`Failed to load batches: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Batches API response:', data);
+      
+      // Handle different response structures
+      if (data.message?.items) {
+        setBatches(data.message.items);
+      } else if (Array.isArray(data.message)) {
+        setBatches(data.message);
+      } else if (Array.isArray(data)) {
+        setBatches(data);
+      } else {
+        setBatches([]);
+      }
+    } catch (error) {
+      console.error('Error loading batches:', error);
+      // Don't fail silently - batches is optional, just show empty
+      setBatches([]);
     } finally {
       setLoadingBatches(false);
     }
   };
 
-  const handleFilesSelected = (files: File[]) => {
-    setPendingFiles((prev) => [...prev, ...files]);
-    setError(null);
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      setSelectedFiles(Array.from(files));
+    }
   };
 
-  const handleRemoveFile = (fileName: string) => {
-    setPendingFiles((prev) => prev.filter((f) => f.name !== fileName));
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleUpload = async () => {
-    if (pendingFiles.length === 0) return;
+    if (!selectedCheckpoint) {
+      alert('Please select a checkpoint first');
+      return;
+    }
 
-    setIsUploading(true);
-    setError(null);
+    if (selectedFiles.length === 0) {
+      alert('Please select files to upload');
+      return;
+    }
 
-    try {
-      for (const file of pendingFiles) {
-        setUploadProgress((prev) => new Map(prev).set(file.name, 0));
+    setUploading(true);
+    setUploadProgress(0);
 
-        const progressInterval = setInterval(() => {
-          setUploadProgress((prev) => {
-            const current = prev.get(file.name) || 0;
-            if (current < 90) {
-              return new Map(prev).set(file.name, current + 10);
-            }
-            return prev;
-          });
-        }, 200);
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+      setCurrentFileName(file.name);
 
-        try {
-          await FileUploadService.uploadFile(
-            file,
-            raceIdNum,
-            selectedCheckpoint ? Number(selectedCheckpoint) : undefined,
-            description
-          );
-          setUploadProgress((prev) => new Map(prev).set(file.name, 100));
-        } finally {
-          clearInterval(progressInterval);
-        }
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('raceId', raceId!);
+        formData.append('eventId', eventId!);
+        formData.append('checkpointId', selectedCheckpoint);
+
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`${API_BASE_URL}/FileUpload/upload`, {
+          method: 'POST',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          body: formData
+        });
+
+        if (!response.ok) throw new Error('Upload failed');
+
+        setUploadProgress(((i + 1) / selectedFiles.length) * 100);
+      } catch (error) {
+        console.error('Upload error:', error);
+        alert(`Failed to upload ${file.name}`);
       }
+    }
 
-      setTimeout(() => {
-        setPendingFiles([]);
-        setUploadProgress(new Map());
-        setDescription('');
-        loadBatches();
-      }, 1000);
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Upload failed';
-      setError(errorMessage);
-    } finally {
-      setIsUploading(false);
+    setUploading(false);
+    setCurrentFileName('');
+    setSelectedFiles([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    loadBatches();
+  };
+
+  const handleViewRecords = async (batch: FileUploadStatusDto) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${API_BASE_URL}/FileUpload/batch/${batch.id}/records`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+
+      if (!response.ok) throw new Error('Failed to load records');
+      
+      const data = await response.json();
+      setRecords(data);
+      setSelectedBatch(batch);
+      setShowRecordsModal(true);
+    } catch (error) {
+      console.error('Error loading records:', error);
     }
   };
 
-  const handleReprocess = async (batchId: number) => {
+  const handleDeleteBatch = async (batchId: number) => {
+    if (!confirm('Are you sure you want to delete this batch?')) return;
+
     try {
-      await FileUploadService.reprocessBatch(batchId);
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${API_BASE_URL}/FileUpload/batch/${batchId}`, {
+        method: 'DELETE',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+
+      if (!response.ok) throw new Error('Delete failed');
+      
       loadBatches();
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Reprocess failed';
-      setError(errorMessage);
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Failed to delete batch');
     }
   };
 
-  const handleDelete = async (batchId: number) => {
-    if (!window.confirm('Are you sure you want to delete this batch?')) return;
-
-    try {
-      await FileUploadService.deleteBatch(batchId);
-      setBatches((prev) => prev.filter((b) => b.batchId !== batchId));
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Delete failed';
-      setError(errorMessage);
-    }
-  };
-
-  const handleCancel = async (batchId: number) => {
-    try {
-      await FileUploadService.cancelBatch(batchId);
-      loadBatches();
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Cancel failed';
-      setError(errorMessage);
-    }
-  };
-
-  const handleBack = () => {
-    navigate(`/events/event-details/${eventId}/race/${raceId}`);
-  };
+  if (!eventId || !raceId) {
+    return (
+      <Box display="flex" alignItems="center" justifyContent="center" minHeight="400px">
+        <Box textAlign="center">
+          <AlertCircle style={{ width: 48, height: 48, color: '#f44336', margin: '0 auto 16px' }} />
+          <Typography color="text.secondary">Invalid event or race ID</Typography>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
-    <PageContainer>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBack />}
-          onClick={handleBack}
-          sx={{
-            mb: 3,
-            borderColor: colors.border.main,
-            color: colors.text.primary,
-            '&:hover': {
-              borderColor: colors.primary.main,
-              bgcolor: alpha(colors.primary.main, 0.08),
-            },
-          }}
-        >
-          Back to Race
-        </Button>
-
-        <Typography
-          variant="h4"
-          sx={{
-            fontWeight: 700,
-            color: colors.text.primary,
-            mb: 1,
-          }}
-        >
-          RFID Data Upload
+      <Box mb={3}>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          RFID File Upload
         </Typography>
-        <Typography variant="body1" sx={{ color: colors.text.secondary }}>
-          Upload offline RFID read files for processing
+        <Typography variant="body2" color="text.secondary">
+          Upload RFID read files for offline data import
         </Typography>
       </Box>
 
-      {/* Upload Section */}
-      <Card
-        sx={{
-          mb: 4,
-          border: `1px solid ${colors.border.light}`,
-          background: colors.background.paper,
-          borderRadius: '16px',
-          boxShadow: isDark
-            ? `0 8px 32px ${alpha('#000', 0.4)}`
-            : `0 4px 24px ${alpha('#000', 0.1)}`,
-        }}
-      >
-        <CardContent sx={{ p: 4 }}>
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: 700, color: colors.text.primary, mb: 3 }}
+      {/* Checkpoint Selection */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <FormControl fullWidth disabled={loadingCheckpoints}>
+          <InputLabel id="checkpoint-label">
+            Select Checkpoint <span style={{ color: '#f44336' }}>*</span>
+          </InputLabel>
+          
+          <Select
+            labelId="checkpoint-label"
+            value={selectedCheckpoint}
+            onChange={(e) => setSelectedCheckpoint(e.target.value)}
+            label="Select Checkpoint *"
+            disabled={loadingCheckpoints}
           >
-            Upload Offline Data
+            {loadingCheckpoints ? [
+              <MenuItem key="loading" value="">
+                <em>Loading checkpoints...</em>
+              </MenuItem>
+            ] : checkpoints.length === 0 ? [
+              <MenuItem key="empty" value="">
+                <em>No checkpoints available - please create checkpoints first</em>
+              </MenuItem>
+            ] : [
+              <MenuItem key="placeholder" value="">
+                <em>Select a checkpoint...</em>
+              </MenuItem>,
+              ...checkpoints.map(cp => (
+                <MenuItem key={cp.id} value={cp.id}>
+                  {cp.sequenceNumber}. {cp.name}
+                  {cp.distance && ` (${cp.distance} ${cp.distanceUnit || 'km'})`}
+                </MenuItem>
+              ))
+            ]}
+          </Select>
+        </FormControl>
+        
+        {!loadingCheckpoints && checkpoints.length === 0 && (
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            No checkpoints configured for this race. Please create checkpoints first.
+          </Alert>
+        )}
+      </Paper>
+
+      {/* File Upload Zone */}
+      {!uploading && checkpoints.length > 0 && (
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Select Files
           </Typography>
-
-          <Grid container spacing={3} sx={{ mb: 3 }}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <FormControl fullWidth>
-                <InputLabel>Checkpoint (Optional)</InputLabel>
-                <Select
-                  value={selectedCheckpoint}
-                  onChange={(e) => setSelectedCheckpoint(e.target.value)}
-                  label="Checkpoint (Optional)"
-                  sx={{
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: colors.border.main,
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: colors.primary.main,
-                    },
-                  }}
-                >
-                  <MenuItem value="">All Checkpoints</MenuItem>
-                  {checkpoints.map((cp) => (
-                    <MenuItem key={cp.id} value={cp.id}>
-                      {cp.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Description (Optional)"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g., Start line backup data"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': {
-                      borderColor: colors.border.main,
-                    },
-                    '&:hover fieldset': {
-                      borderColor: colors.primary.main,
-                    },
-                  },
-                }}
-              />
-            </Grid>
-          </Grid>
-
-          <FileDropZone
-            onFilesSelected={handleFilesSelected}
-            isUploading={isUploading}
-            isDark={isDark}
-            colors={colors}
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".csv,.txt"
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+            id="file-upload-input"
           />
-
-          {pendingFiles.length > 0 && (
-            <>
-              <UploadProgress
-                files={pendingFiles}
-                uploadProgress={uploadProgress}
-                onRemove={handleRemoveFile}
-                colors={colors}
-              />
-
-              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-                <Button
-                  variant="contained"
-                  startIcon={
-                    isUploading ? (
-                      <CircularProgress size={20} color="inherit" />
-                    ) : (
-                      <CloudUpload />
-                    )
-                  }
-                  onClick={handleUpload}
-                  disabled={isUploading}
-                  sx={{
-                    px: 4,
-                    py: 1.5,
-                    bgcolor: colors.primary.main,
-                    '&:hover': {
-                      bgcolor: colors.primary.dark,
-                    },
-                    '&:disabled': {
-                      bgcolor: alpha(colors.primary.main, 0.5),
-                    },
-                  }}
-                >
-                  {isUploading
-                    ? 'Uploading...'
-                    : `Upload ${pendingFiles.length} File${pendingFiles.length > 1 ? 's' : ''}`}
-                </Button>
-              </Box>
-            </>
-          )}
-
-          {error && (
-            <Alert
-              severity="error"
-              sx={{ mt: 3 }}
-              icon={<ErrorOutline />}
-              onClose={() => setError(null)}
-            >
-              {error}
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Batches List */}
-      <Card
-        sx={{
-          border: `1px solid ${colors.border.light}`,
-          background: colors.background.paper,
-          borderRadius: '16px',
-          boxShadow: isDark
-            ? `0 8px 32px ${alpha('#000', 0.4)}`
-            : `0 4px 24px ${alpha('#000', 0.1)}`,
-        }}
-      >
-        <CardContent sx={{ p: 4 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              mb: 3,
-            }}
-          >
-            <Typography variant="h6" sx={{ fontWeight: 700, color: colors.text.primary }}>
-              Upload History
-            </Typography>
-            <Tooltip title="Refresh">
-              <IconButton
-                onClick={loadBatches}
-                sx={{
-                  color: colors.text.secondary,
-                  '&:hover': { bgcolor: alpha(colors.primary.main, 0.1) },
-                }}
+          
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <label htmlFor="file-upload-input">
+              <Button
+                variant="outlined"
+                component="span"
+                startIcon={<Upload size={20} />}
+                disabled={!selectedCheckpoint}
               >
-                <Refresh />
-              </IconButton>
-            </Tooltip>
+                Choose Files
+              </Button>
+            </label>
+            
+            {selectedFiles.length > 0 && (
+              <Button
+                variant="contained"
+                onClick={handleUpload}
+                disabled={!selectedCheckpoint}
+                startIcon={<Upload size={20} />}
+              >
+                Upload {selectedFiles.length} File{selectedFiles.length > 1 ? 's' : ''}
+              </Button>
+            )}
           </Box>
 
-          {loadingBatches ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-              <CircularProgress />
-            </Box>
-          ) : batches.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 8 }}>
-              <InsertDriveFile
-                sx={{ fontSize: 64, color: colors.text.disabled, mb: 2 }}
-              />
-              <Typography variant="body1" sx={{ color: colors.text.secondary }}>
-                No uploads yet
+          {selectedFiles.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Selected Files:
               </Typography>
+              <List dense>
+                {selectedFiles.map((file, index) => (
+                  <ListItem
+                    key={index}
+                    secondaryAction={
+                      <IconButton edge="end" onClick={() => handleRemoveFile(index)} size="small">
+                        <X size={16} />
+                      </IconButton>
+                    }
+                    sx={{ bgcolor: 'action.hover', borderRadius: 1, mb: 0.5 }}
+                  >
+                    <ListItemText
+                      primary={file.name}
+                      secondary={`${(file.size / 1024).toFixed(2)} KB`}
+                    />
+                  </ListItem>
+                ))}
+              </List>
             </Box>
-          ) : (
-            <Stack spacing={2}>
-              {batches.map((batch) => (
-                <BatchListItem
-                  key={batch.batchId}
-                  batch={batch}
-                  onView={setViewingBatchId}
-                  onReprocess={handleReprocess}
-                  onDelete={handleDelete}
-                  onCancel={handleCancel}
-                  isDark={isDark}
-                  colors={colors}
-                />
-              ))}
-            </Stack>
           )}
-        </CardContent>
-      </Card>
+          
+          {!selectedCheckpoint && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Please select a checkpoint before choosing files
+            </Alert>
+          )}
+        </Paper>
+      )}
 
-      {/* Records Modal */}
-      {viewingBatchId && (
-        <RecordsModal
-          batchId={viewingBatchId}
-          onClose={() => setViewingBatchId(null)}
-          isDark={isDark}
-          colors={colors}
+      {/* Upload Progress */}
+      {uploading && (
+        <UploadProgress 
+          progress={uploadProgress}
+          fileName={currentFileName}
+          status="uploading"
         />
       )}
-    </PageContainer>
+
+      {/* Batches List */}
+      <Box mt={4}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h6" fontWeight="600">
+            Upload History
+          </Typography>
+          <Button
+            size="small"
+            startIcon={loadingBatches ? <CircularProgress size={16} /> : <RefreshCw size={16} />}
+            onClick={loadBatches}
+            disabled={loadingBatches}
+          >
+            {loadingBatches ? 'Loading...' : 'Refresh'}
+          </Button>
+        </Box>
+
+        {batches.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <Upload style={{ width: 48, height: 48, margin: '0 auto 16px', opacity: 0.5 }} />
+            <Typography color="text.secondary">No uploads yet</Typography>
+          </Paper>
+        ) : (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {batches.map(batch => (
+              <BatchListItem
+                key={batch.id}
+                batch={batch}
+                onViewDetails={() => handleViewRecords(batch)}
+                onDelete={() => handleDeleteBatch(batch.id)}
+              />
+            ))}
+          </Box>
+        )}
+      </Box>
+
+      {/* Records Modal */}
+      {showRecordsModal && selectedBatch && (
+        <RecordsModal
+          fileName={selectedBatch.fileName}
+          records={records}
+          onClose={() => {
+            setShowRecordsModal(false);
+            setSelectedBatch(null);
+            setRecords([]);
+          }}
+        />
+      )}
+    </Box>
   );
 };
 
