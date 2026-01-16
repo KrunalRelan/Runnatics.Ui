@@ -6,7 +6,7 @@ import {
   Loader2,
   Clock
 } from 'lucide-react';
-import { FileProcessingStatus, ReadRecordStatus } from '../models/FileUpload';
+import { FileProcessingStatus, ReadRecordStatus } from '../models';
 import { AlertSeverity } from '../models/ReaderAlert';
 
 /**

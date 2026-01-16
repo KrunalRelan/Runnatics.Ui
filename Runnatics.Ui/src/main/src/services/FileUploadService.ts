@@ -2,11 +2,22 @@ import {
   FileUploadResponse, 
   FileUploadStatusDto, 
   FileUploadRecordDto,
-  RaceBatchesResponse
-} from '../models/FileUpload';
+  RaceBatchesResponse,
+  FileFormat
+} from '../models';
 import config from '../config/environment';
 
 const API_BASE_URL = config.apiBaseUrl;
+
+export interface FileUploadParams {
+  raceId: string;
+  eventId?: string;
+  readerDeviceId?: string;
+  checkpointId?: string;
+  description?: string;
+  fileFormat?: FileFormat;
+  mappingId?: string;
+}
 
 export const FileUploadService = {
   /**
@@ -14,15 +25,18 @@ export const FileUploadService = {
    */
   async uploadFile(
     file: File, 
-    raceId: number, 
-    checkpointId?: number, 
-    description?: string
+    params: FileUploadParams
   ): Promise<FileUploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('raceId', raceId.toString());
-    if (checkpointId) formData.append('checkpointId', checkpointId.toString());
-    if (description) formData.append('description', description);
+    formData.append('raceId', params.raceId);
+    
+    if (params.eventId) formData.append('eventId', params.eventId);
+    if (params.readerDeviceId) formData.append('readerDeviceId', params.readerDeviceId);
+    if (params.checkpointId) formData.append('checkpointId', params.checkpointId);
+    if (params.description) formData.append('description', params.description);
+    if (params.fileFormat !== undefined) formData.append('fileFormat', params.fileFormat.toString());
+    if (params.mappingId) formData.append('mappingId', params.mappingId);
 
     const token = localStorage.getItem('authToken');
     const response = await fetch(`${API_BASE_URL}/FileUpload/upload`, {
@@ -44,13 +58,18 @@ export const FileUploadService = {
    */
   async uploadMultipleFiles(
     files: File[], 
-    raceId: number, 
-    checkpointId?: number
+    params: FileUploadParams
   ): Promise<FileUploadResponse[]> {
     const formData = new FormData();
     files.forEach(file => formData.append('files', file));
-    formData.append('raceId', raceId.toString());
-    if (checkpointId) formData.append('checkpointId', checkpointId.toString());
+    formData.append('raceId', params.raceId);
+    
+    if (params.eventId) formData.append('eventId', params.eventId);
+    if (params.readerDeviceId) formData.append('readerDeviceId', params.readerDeviceId);
+    if (params.checkpointId) formData.append('checkpointId', params.checkpointId);
+    if (params.description) formData.append('description', params.description);
+    if (params.fileFormat !== undefined) formData.append('fileFormat', params.fileFormat.toString());
+    if (params.mappingId) formData.append('mappingId', params.mappingId);
 
     const token = localStorage.getItem('authToken');
     const response = await fetch(`${API_BASE_URL}/FileUpload/upload-multiple`, {

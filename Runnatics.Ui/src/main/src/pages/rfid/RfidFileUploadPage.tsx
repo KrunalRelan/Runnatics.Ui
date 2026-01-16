@@ -17,11 +17,11 @@ import {
   IconButton,
   Chip,
 } from '@mui/material';
-import { Upload, RefreshCw, AlertCircle, X } from 'lucide-react';
+import { Upload, RefreshCw, AlertCircle, X, Database, FileText, FileJson } from 'lucide-react';
 import { UploadProgress } from '../../components/rfid/UploadProgress';
 import { BatchListItem } from '../../components/rfid/BatchListItem';
 import { RecordsModal } from '../../components/rfid/RecordsModal';
-import { FileUploadStatusDto, FileUploadRecordDto } from '../../models/FileUpload';
+import { FileUploadStatusDto, FileUploadRecordDto } from '../../models';
 import config from '../../config/environment';
 
 const API_BASE_URL = config.apiBaseUrl;
@@ -33,6 +33,40 @@ interface Checkpoint {
   distanceUnit?: string;
   sequenceNumber: number;
 }
+
+// ============================================
+// FIX: Helper functions for file type display
+// ============================================
+const getFileIcon = (fileName: string) => {
+  const ext = fileName.toLowerCase().split('.').pop();
+  switch (ext) {
+    case 'db':
+      return <Database size={16} style={{ marginRight: 8, color: '#2196f3' }} />;
+    case 'json':
+      return <FileJson size={16} style={{ marginRight: 8, color: '#ff9800' }} />;
+    default:
+      return <FileText size={16} style={{ marginRight: 8, color: '#757575' }} />;
+  }
+};
+
+const getFileTypeChip = (fileName: string) => {
+  const ext = fileName.toLowerCase().split('.').pop();
+  switch (ext) {
+    case 'db':
+      return <Chip label="SQLite" size="small" color="primary" sx={{ ml: 1 }} />;
+    case 'json':
+      return <Chip label="JSON" size="small" color="warning" sx={{ ml: 1 }} />;
+    case 'csv':
+      return <Chip label="CSV" size="small" color="success" sx={{ ml: 1 }} />;
+    default:
+      return <Chip label="TXT" size="small" sx={{ ml: 1 }} />;
+  }
+};
+
+// ============================================
+// FIX: Allowed file extensions
+// ============================================
+const ALLOWED_EXTENSIONS = ['.csv', '.txt', '.db', '.json'];
 
 export const RfidFileUploadPage: React.FC = () => {
   const { eventId, raceId } = useParams<{ eventId: string; raceId: string }>();
@@ -60,8 +94,7 @@ export const RfidFileUploadPage: React.FC = () => {
     if (eventId && raceId && !hasLoadedCheckpoints.current) {
       hasLoadedCheckpoints.current = true;
       loadCheckpoints();
-      // TODO: Enable when backend batches endpoint is configured for this raceId format
-      // loadBatches();
+      loadBatches();
     }
   }, [eventId, raceId]);
 
@@ -142,10 +175,29 @@ export const RfidFileUploadPage: React.FC = () => {
     }
   };
 
+  // ============================================
+  // FIX: Validate file extensions on selection
+  // ============================================
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      setSelectedFiles(Array.from(files));
+      const validFiles: File[] = [];
+      const invalidFiles: string[] = [];
+
+      Array.from(files).forEach(file => {
+        const ext = '.' + file.name.toLowerCase().split('.').pop();
+        if (ALLOWED_EXTENSIONS.includes(ext)) {
+          validFiles.push(file);
+        } else {
+          invalidFiles.push(file.name);
+        }
+      });
+
+      if (invalidFiles.length > 0) {
+        alert(`Invalid file type(s): ${invalidFiles.join(', ')}\n\nAllowed types: ${ALLOWED_EXTENSIONS.join(', ')}`);
+      }
+
+      setSelectedFiles(validFiles);
     }
   };
 
@@ -167,6 +219,9 @@ export const RfidFileUploadPage: React.FC = () => {
     setUploading(true);
     setUploadProgress(0);
 
+    let successCount = 0;
+    let errorCount = 0;
+
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
       setCurrentFileName(file.name);
@@ -175,8 +230,9 @@ export const RfidFileUploadPage: React.FC = () => {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('raceId', raceId!);
-        formData.append('eventId', eventId!);
-        formData.append('checkpointId', selectedCheckpoint);
+        
+        if (eventId) formData.append('eventId', eventId);
+        if (selectedCheckpoint) formData.append('checkpointId', selectedCheckpoint);
 
         const token = localStorage.getItem('authToken');
         const response = await fetch(`${API_BASE_URL}/FileUpload/upload`, {
@@ -185,12 +241,21 @@ export const RfidFileUploadPage: React.FC = () => {
           body: formData
         });
 
-        if (!response.ok) throw new Error('Upload failed');
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error('Upload error response:', errorData);
+          throw new Error(errorData || 'Upload failed');
+        }
 
+        const result = await response.json();
+        console.log('Upload result:', result);
+        
+        successCount++;
         setUploadProgress(((i + 1) / selectedFiles.length) * 100);
       } catch (error) {
         console.error('Upload error:', error);
-        alert(`Failed to upload ${file.name}`);
+        errorCount++;
+        alert(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
 
@@ -200,13 +265,19 @@ export const RfidFileUploadPage: React.FC = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+
+    // Show summary if multiple files
+    if (selectedFiles.length > 1) {
+      alert(`Upload complete: ${successCount} succeeded, ${errorCount} failed`);
+    }
+
     loadBatches();
   };
 
   const handleViewRecords = async (batch: FileUploadStatusDto) => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`${API_BASE_URL}/FileUpload/batch/${batch.id}/records`, {
+      const response = await fetch(`${API_BASE_URL}/FileUpload/batch/${batch.batchId}/records`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
 
@@ -259,7 +330,7 @@ export const RfidFileUploadPage: React.FC = () => {
           RFID File Upload
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Upload RFID read files for offline data import
+          Upload RFID read files for offline data import. Supports <strong>.db</strong> (SQLite from R700), <strong>.csv</strong>, <strong>.json</strong>, and <strong>.txt</strong> files.
         </Typography>
       </Box>
 
@@ -313,11 +384,14 @@ export const RfidFileUploadPage: React.FC = () => {
             Select Files
           </Typography>
           
+          {/* ============================================
+              FIX: Added .db and .json to accepted file types
+              ============================================ */}
           <input
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".csv,.txt"
+            accept=".csv,.txt,.db,.json"
             onChange={handleFileChange}
             style={{ display: 'none' }}
             id="file-upload-input"
@@ -347,6 +421,17 @@ export const RfidFileUploadPage: React.FC = () => {
             )}
           </Box>
 
+          {/* Supported formats info */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" color="text.secondary" component="span">
+              Supported formats:{' '}
+            </Typography>
+            <Chip label=".db (SQLite)" size="small" color="primary" sx={{ ml: 0.5 }} />
+            <Chip label=".csv" size="small" color="success" sx={{ ml: 0.5 }} />
+            <Chip label=".json" size="small" color="warning" sx={{ ml: 0.5 }} />
+            <Chip label=".txt" size="small" sx={{ ml: 0.5 }} />
+          </Box>
+
           {selectedFiles.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -364,7 +449,13 @@ export const RfidFileUploadPage: React.FC = () => {
                     sx={{ bgcolor: 'action.hover', borderRadius: 1, mb: 0.5 }}
                   >
                     <ListItemText
-                      primary={file.name}
+                      primary={
+                        <Box display="flex" alignItems="center">
+                          {getFileIcon(file.name)}
+                          <span>{file.name}</span>
+                          {getFileTypeChip(file.name)}
+                        </Box>
+                      }
                       secondary={`${(file.size / 1024).toFixed(2)} KB`}
                     />
                   </ListItem>
@@ -408,17 +499,20 @@ export const RfidFileUploadPage: React.FC = () => {
 
         {batches.length === 0 ? (
           <Paper sx={{ p: 4, textAlign: 'center' }}>
-            <Upload style={{ width: 48, height: 48, margin: '0 auto 16px', opacity: 0.5 }} />
+            <Database style={{ width: 48, height: 48, margin: '0 auto 16px', opacity: 0.5, color: '#2196f3' }} />
             <Typography color="text.secondary">No uploads yet</Typography>
+            <Typography variant="caption" color="text.secondary" display="block" mt={1}>
+              Upload .db files from your Impinj R700 readers to import offline data
+            </Typography>
           </Paper>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {batches.map(batch => (
               <BatchListItem
-                key={batch.id}
+                key={batch.batchId}
                 batch={batch}
                 onViewDetails={() => handleViewRecords(batch)}
-                onDelete={() => handleDeleteBatch(batch.id)}
+                onDelete={() => handleDeleteBatch(batch.batchId)}
               />
             ))}
           </Box>
@@ -428,7 +522,7 @@ export const RfidFileUploadPage: React.FC = () => {
       {/* Records Modal */}
       {showRecordsModal && selectedBatch && (
         <RecordsModal
-          fileName={selectedBatch.fileName}
+          fileName={selectedBatch.originalFileName}
           records={records}
           onClose={() => {
             setShowRecordsModal(false);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileUploadRecordDto } from '../../models/FileUpload';
+import { FileUploadRecordDto } from '../../models';
 import { getRecordStatusColor } from '../../utils/rfidUtils';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
 
