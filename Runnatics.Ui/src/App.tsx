@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Suspense } from "react";
 import { ThemeProvider } from "./main/src/theme";
 import { AuthProvider } from "./main/src/contexts/AuthContext";
 import DashboardLayout from "./main/src/components/DashboardLayout";
@@ -6,6 +7,9 @@ import AuthLayout from "./main/src/components/AuthLayout";
 import LoginPage from "./main/src/pages/auth/LoginPage";
 import Dashboard from "./main/src/pages/Dashboard";
 import { eventsRoutes } from "./main/src/pages/admin/events/Routes";
+import { rfidRoutes } from "./main/src/pages/admin/rfid/Routes";
+import { ProtectedRoute } from "./main/src/components/auth/ProtectedRoute";
+import { CircularProgress, Box } from "@mui/material";
 
 // Layout wrapper for auth pages (header only, no side nav)
 const AuthLayoutWrapper = () => {
@@ -55,6 +59,27 @@ function App() {
                     />
                   ))}
                 </Route>
+              ))}
+
+              {/* RFID routes */}
+              {rfidRoutes.map((route, index) => (
+                <Route
+                  key={`rfid-${index}`}
+                  path={`/${route.path}`}
+                  element={
+                    <ProtectedRoute>
+                      <Suspense
+                        fallback={
+                          <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+                            <CircularProgress />
+                          </Box>
+                        }
+                      >
+                        {route.element}
+                      </Suspense>
+                    </ProtectedRoute>
+                  }
+                />
               ))}
             </Route>
           </Routes>

@@ -54,6 +54,9 @@ export const ServiceUrl = {
     getAllDevices: () => "devices",
 
 
+  //rfid
+    uploadRFIDFileAuto: () => "rfid/import-auto",
+
     //dashboard
     dashboardStats: () => "dashboard/stats",
 };
