@@ -587,13 +587,15 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     },
   ];
 
-  // Create dynamic checkpoint columns
-  const checkpointColumns: ColDef<any>[] = checkpoints.map((checkpoint) => ({
-    headerName: checkpoint.name,
-    flex: 0.9,
-    minWidth: 90,
-    sortable: false,
-    filter: false,
+  // Create dynamic checkpoint columns - only for parent checkpoints (those with parentDeviceName as "N/A")
+  const checkpointColumns: ColDef<any>[] = checkpoints
+    .filter((checkpoint) => !checkpoint.parentDeviceName || checkpoint.parentDeviceName === "N/A")
+    .map((checkpoint) => ({
+      headerName: checkpoint.name,
+      flex: 0.9,
+      minWidth: 90,
+      sortable: false,
+      filter: false,
     cellRenderer: (params: any) => {
       // Get checkpoint time from participant's checkpointTimes object
       const checkpointTimes = params.data?.checkpointTimes;
