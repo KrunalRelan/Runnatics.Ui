@@ -249,9 +249,10 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
         phone: p.phone || "",
         gender: p.gender || "",
         category: p.category || "",
-        status: "Registered" as const,
-        checkIn: false,
-        chipId: "",
+        status: p.status || "Registered" as const,
+        checkIn: p.checkedIn || false,
+        chipId: p.chipId || "",
+        checkpointTimes: p.checkpointTimes || null,
       }));
 
       setParticipants(mappedParticipants);
@@ -558,9 +559,30 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     minWidth: 90,
     sortable: false,
     filter: false,
-    cellRenderer: () => {
-      // TODO: When participant checkpoint data is available, display it here
-      // For now, show a placeholder
+    cellRenderer: (params: any) => {
+      // Get checkpoint time from participant's checkpointTimes object
+      const checkpointTimes = params.data?.checkpointTimes;
+      const time = checkpointTimes && checkpointTimes[checkpoint.name];
+      
+      if (time) {
+        return (
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+            <Chip
+              label={time}
+              size="small"
+              color="success"
+              variant="outlined"
+              sx={{
+                fontSize: "0.75rem",
+                height: "22px",
+                fontWeight: 500,
+              }}
+            />
+          </Box>
+        );
+      }
+      
+      // Show placeholder for no data
       return (
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
           <Chip

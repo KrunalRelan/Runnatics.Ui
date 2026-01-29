@@ -16,4 +16,6 @@ export interface Participant {
   eventId?: string;
   createdAt?: Date | string;
   updatedAt?: Date | string;
+  // Checkpoint times - key is checkpoint name, value is time string (HH:MM:SS) or null
+  checkpointTimes?: Record<string, string | null> | null;
 }
