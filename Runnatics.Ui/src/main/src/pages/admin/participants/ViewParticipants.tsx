@@ -35,6 +35,7 @@ import { ParticipantService } from "@/main/src/services/ParticipantService";
 import { Category } from "@/main/src/models/participants/Category";
 import { CheckpointsService } from "@/main/src/services/CheckpointsService";
 import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
+import { RFIDService } from "@/main/src/services/RFIDService";
 
 // LAZY LOAD DIALOG COMPONENTS - Only loaded when needed
 const AddParticipant = lazy(
@@ -126,6 +127,10 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   // Delete Participant Dialog State
   const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
   const [participantToDelete, setParticipantToDelete] = useState<Participant | null>(null);
+
+  // Process Results State
+  const [processingResults, setProcessingResults] = useState<boolean>(false);
+  const [hasProcessedResults, setHasProcessedResults] = useState<boolean>(false);
 
   // Refs to track initial mount and prevent duplicate calls
   const isInitialMount = useRef(true);
@@ -257,9 +262,16 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
 
       setParticipants(mappedParticipants);
       setTotalRecords(total);
+
+      // Check if any participant has processed checkpoint times
+      const hasResults = mappedParticipants.some(
+        (p) => p.checkpointTimes && Object.keys(p.checkpointTimes).length > 0
+      );
+      setHasProcessedResults(hasResults);
     } catch (err: any) {
       setParticipants([]);
       setTotalRecords(0);
+      setHasProcessedResults(false);
     } finally {
       setParticipantsLoading(false);
     }
@@ -417,6 +429,29 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   const handleUpdateByBibComplete = async () => {
     await fetchParticipants(filters);
     handleCloseUpdateByBibDialog();
+  };
+
+  const handleProcessResults = async () => {
+    try {
+      setProcessingResults(true);
+      // Pass forceReprocess=true if results have already been processed
+      const forceReprocess = hasProcessedResults;
+      const response = await RFIDService.processAllResults(eventId, raceId, forceReprocess);
+      
+      // Assuming a successful response is indicated by response.message === true
+      if (response.message === true) {
+        // Refresh participants data after processing
+        await fetchParticipants(filters);
+        alert(hasProcessedResults ? "Results reprocessed successfully!" : "Results processed successfully!");
+      } else {
+        alert(`Failed to process results: ${response.message || "Unknown error"}`);
+      }
+    } catch (error: any) {
+      console.error("Error processing results:", error);
+      alert(`Error processing results: ${error.message || "Unknown error"}`);
+    } finally {
+      setProcessingResults(false);
+    }
   };
 
   const totalPages = totalRecords > 0 ? Math.ceil(totalRecords / filters.pageSize) : 1;
@@ -664,6 +699,17 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               sx={{ textTransform: "none", fontWeight: 500 }}
             >
               Export
+            </Button>
+            <Button
+              variant="contained"
+              color="success"
+              sx={{ textTransform: "none", fontWeight: 500 }}
+              onClick={handleProcessResults}
+              disabled={processingResults}
+            >
+              {processingResults 
+                ? (hasProcessedResults ? "Reprocessing..." : "Processing...") 
+                : (hasProcessedResults ? "Reprocess Result" : "Process Result")}
             </Button>
           </Stack>
         </Box>

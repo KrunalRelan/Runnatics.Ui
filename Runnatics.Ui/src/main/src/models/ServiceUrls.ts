@@ -56,6 +56,7 @@ export const ServiceUrl = {
 
   //rfid
     uploadRFIDFileAuto: () => "rfid/import-auto",
+    processAllRFIDResults: (eventId: string, raceId: string) => `RFID/${eventId}/${raceId}/process-all`,
 
     //dashboard
     dashboardStats: () => "dashboard/stats",

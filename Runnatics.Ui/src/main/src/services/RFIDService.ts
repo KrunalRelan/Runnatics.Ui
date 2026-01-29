@@ -131,4 +131,29 @@ export class RFIDService {
         if (!timestamp) return 'N/A';
         return new Date(timestamp).toLocaleString();
     }
+
+    /**
+     * Process all RFID results for a specific event and race
+     * Triggers backend processing of all RFID data
+     * 
+     * @param eventId - The ID of the event
+     * @param raceId - The ID of the race
+     * @param forceReprocess - Force reprocessing of already processed data (default: false)
+     * @returns Promise with the processing response
+     */
+    static async processAllResults(
+        eventId: string,
+        raceId: string,
+        forceReprocess: boolean = false
+    ): Promise<ResponseBase<any>> {
+        const response: AxiosResponse<ResponseBase<any>> = await apiClient.post(
+            ServiceUrl.processAllRFIDResults(eventId, raceId),
+            null,
+            {
+                params: { forceReprocess }
+            }
+        );
+
+        return response.data;
+    }
 }
