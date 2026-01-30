@@ -156,4 +156,26 @@ export class RFIDService {
 
         return response.data;
     }
+
+    /**
+     * Clear processed RFID data for a race
+     * @param eventId - The ID of the event
+     * @param raceId - The ID of the race
+     * @param keepUploads - Keep uploaded data while clearing processed results (default: true)
+     * @returns Promise with the clear response
+     */
+    static async clearProcessedData(
+        eventId: string,
+        raceId: string,
+        keepUploads: boolean = true
+    ): Promise<ResponseBase<any>> {
+        const response: AxiosResponse<ResponseBase<any>> = await apiClient.delete(
+            ServiceUrl.clearProcessedData(eventId, raceId),
+            {
+                params: { keepUploads }
+            }
+        );
+
+        return response.data;
+    }
 }

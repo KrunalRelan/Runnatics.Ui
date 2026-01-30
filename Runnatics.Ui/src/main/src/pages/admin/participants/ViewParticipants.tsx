@@ -434,15 +434,13 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   const handleProcessResults = async () => {
     try {
       setProcessingResults(true);
-      // Pass forceReprocess=true if results have already been processed
-      const forceReprocess = hasProcessedResults;
-      const response = await RFIDService.processAllResults(eventId, raceId, forceReprocess);
+      const response = await RFIDService.processAllResults(eventId, raceId, false);
       
       // Assuming a successful response is indicated by response.message === true
       if (response.message === true) {
         // Refresh participants data after processing
         await fetchParticipants(filters);
-        alert(hasProcessedResults ? "Results reprocessed successfully!" : "Results processed successfully!");
+        alert("Results processed successfully!");
       } else {
         alert(`Failed to process results: ${response.message || "Unknown error"}`);
       }
@@ -451,6 +449,32 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       alert(`Error processing results: ${error.message || "Unknown error"}`);
     } finally {
       setProcessingResults(false);
+    }
+  };
+
+  const [clearingResults, setClearingResults] = useState<boolean>(false);
+
+  const handleClearProcessedResults = async () => {
+    if (!window.confirm("Are you sure you want to clear all processed results? This action cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      setClearingResults(true);
+      const response = await RFIDService.clearProcessedData(eventId, raceId, true);
+      
+      if (response.message) {
+        // Refresh participants data after clearing
+        await fetchParticipants(filters);
+        alert("Processed results cleared successfully!");
+      } else {
+        alert(`Failed to clear results: ${response.message || "Unknown error"}`);
+      }
+    } catch (error: any) {
+      console.error("Error clearing results:", error);
+      alert(`Error clearing results: ${error.message || "Unknown error"}`);
+    } finally {
+      setClearingResults(false);
     }
   };
 
@@ -709,9 +733,16 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               onClick={handleProcessResults}
               disabled={processingResults}
             >
-              {processingResults 
-                ? (hasProcessedResults ? "Reprocessing..." : "Processing...") 
-                : (hasProcessedResults ? "Reprocess Result" : "Process Result")}
+              {processingResults ? "Processing..." : "Process Result"}
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              sx={{ textTransform: "none", fontWeight: 500 }}
+              onClick={handleClearProcessedResults}
+              disabled={clearingResults}
+            >
+              {clearingResults ? "Clearing..." : "Clear Processed Result"}
             </Button>
           </Stack>
         </Box>
