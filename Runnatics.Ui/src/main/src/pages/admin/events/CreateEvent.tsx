@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   TextField,
@@ -154,47 +154,49 @@ export const CreateEvent: React.FC = () => {
   const userRole =
     typeof window !== "undefined" ? localStorage.getItem("userRole") || "" : "";
 
-  // Fetch organizations on component mount
-  useEffect(() => {
-    let isMounted = true;
+  // Fetch organizations (reusable) and manage mounted state
+  const isMountedRef = useRef(true);
 
-    const fetchOrganizations = async () => {
-      console.log("🚀 Starting to fetch organizations...");
+  const fetchOrganizations = async (): Promise<EventOrganizer[]> => {
+    console.log("🚀 Starting to fetch organizations...");
+    try {
+      setIsLoadingOrgs(true);
+      const response = await EventOrganizerService.getOrganizations();
 
-      try {
-        setIsLoadingOrgs(true);
-        const response = await EventOrganizerService.getOrganizations();
+      const mappedOrgs = response.map((org) => ({
+        id: org.id,
+        tenantId: org.tenantId,
+        name: org.organizerName || org.name || "",
+        organizerName: org.organizerName || org.name || "",
+      }));
 
-        if (isMounted) {
-          // Map API response to dropdown format
-          const mappedOrgs = response.map((org) => ({
-            id: org.id,
-            tenantId: org.tenantId,
-            name: org.organizerName || org.name || "",
-            organizerName: org.organizerName || org.name || "",
-          }));
-
-          setOrganizations(mappedOrgs);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setErrors((prev) => ({
-            ...prev,
-            tenantId: "Failed to load organizations",
-          }));
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingOrgs(false);
-        }
+      if (isMountedRef.current) {
+        setOrganizations(mappedOrgs);
       }
-    };
 
+      return mappedOrgs;
+    } catch {
+      if (isMountedRef.current) {
+        setErrors((prev) => ({
+          ...prev,
+          tenantId: "Failed to load organizations",
+        }));
+      }
+      return [];
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoadingOrgs(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    isMountedRef.current = true;
     fetchOrganizations();
 
     return () => {
       console.log("🧹 Cleanup - component unmounting");
-      isMounted = false;
+      isMountedRef.current = false;
     };
   }, []);
 
@@ -305,13 +307,40 @@ export const CreateEvent: React.FC = () => {
         organizerName: response.organizerName || newOrgName.trim(),
       };
 
-      setOrganizations((prev) => [...prev, newOrg]);
-      setSelectedOrganization(newOrg);
+      // Refresh organizations from server and try to find the newly created org (retry a few times for eventual consistency)
+      let foundOrg: EventOrganizer | undefined;
+      const maxRetries = 3;
+
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        const updatedOrgs = await fetchOrganizations();
+
+        foundOrg = updatedOrgs.find(
+          (o) => (response && response.id && o.id === response.id) ||
+                 (o.organizerName && o.organizerName === (response?.organizerName || newOrgName.trim())) ||
+                 (o.name && o.name === (response?.organizerName || newOrgName.trim()))
+        );
+
+        if (foundOrg) break;
+
+        // wait briefly before retrying
+        await new Promise((res) => setTimeout(res, 500));
+      }
+
+      const createdOrgToUse: EventOrganizer =
+        foundOrg || newOrg;
+
+      // If we couldn't find the created org on the server, ensure it's present locally so user can still submit
+      setOrganizations((prev) => {
+        const exists = prev.some((o) => o.id === createdOrgToUse.id);
+        return exists ? prev : [...prev, createdOrgToUse];
+      });
+
+      setSelectedOrganization(createdOrgToUse);
 
       setFormData((prev) => ({
         ...prev,
-        tenantId: newOrg.tenantId,
-        eventOrganizerId: newOrg.id,
+        tenantId: createdOrgToUse.tenantId,
+        eventOrganizerId: createdOrgToUse.id,
       }));
 
       setErrors((prev) => {
@@ -322,6 +351,12 @@ export const CreateEvent: React.FC = () => {
 
       setOpenAddOrgDialog(false);
       setNewOrgName("");
+
+      setSnackbar({
+        open: true,
+        message: `Organization "${createdOrgToUse.name}" added`,
+        severity: "success",
+      });
     } catch (error: any) {
       const errorMessage =
         error?.response?.data?.message ||
@@ -350,8 +385,16 @@ export const CreateEvent: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    if (!formData.eventOrganizerId || formData.eventOrganizerId === "") {
+    // Accept selectedOrganization as a valid source if formData.eventOrganizerId wasn't updated yet
+    if ((!formData.eventOrganizerId || formData.eventOrganizerId === "") && !selectedOrganization?.id) {
       newErrors.tenantId = "Event organizer is required";
+    } else if ((!formData.eventOrganizerId || formData.eventOrganizerId === "") && selectedOrganization?.id) {
+      // Sync form data from selection to avoid race conditions
+      setFormData((prev) => ({
+        ...prev,
+        tenantId: selectedOrganization.tenantId || prev.tenantId,
+        eventOrganizerId: selectedOrganization.id as any,
+      }));
     }
 
     if (!formData.name.trim()) {
@@ -391,6 +434,14 @@ export const CreateEvent: React.FC = () => {
     const isValid = validateForm();
 
     if (!isValid) {
+      // Debug: log current organization states when validation fails
+      console.warn("CreateEvent: validation failed - tenantId/eventOrganizerId missing", {
+        formDataEventOrganizerId: formData.eventOrganizerId,
+        formDataTenantId: formData.tenantId,
+        selectedOrganization,
+        organizationsCount: organizations.length,
+      });
+
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -719,6 +770,14 @@ export const CreateEvent: React.FC = () => {
                             {params.InputProps.endAdornment}
                           </>
                         ),
+                      }}
+                      onKeyDown={(e: React.KeyboardEvent) => {
+                        // When user presses Enter while typing a new org, open Add dialog instead of submitting the form
+                        const inputValue = (params.inputProps && (params.inputProps as any).value) || "";
+                        if (e.key === "Enter" && inputValue && !selectedOrganization) {
+                          e.preventDefault();
+                          handleAddNewOrganization(String(inputValue));
+                        }
                       }}
                     />
                   )}
@@ -1133,7 +1192,7 @@ export const CreateEvent: React.FC = () => {
             <Button
               type="submit"
               variant="contained"
-              disabled={isSubmitting || isLoadingOrgs}
+              disabled={isSubmitting || isLoadingOrgs || isCreatingOrg}
               size="large"
               fullWidth={false}
               sx={{ minWidth: { xs: "100%", sm: 120 } }}
