@@ -26,6 +26,7 @@ import {
 } from "@mui/icons-material";
 import DataGrid from "@/main/src/components/DataGrid";
 import type { ColDef } from "ag-grid-community";
+import { DataGridRef } from "@/main/src/models/dataGrid";
 import { Participant } from "@/main/src/models/races/Participant";
 import {
   ParticipantFilters,
@@ -137,6 +138,9 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   const prevEventId = useRef<string | undefined>(undefined);
   const prevRaceId = useRef<string | undefined>(undefined);
   const prevFiltersRef = useRef<string>("");
+  
+  // Grid ref for export functionality
+  const gridRef = useRef<DataGridRef>(null);
 
   const genderMap: Record<string, number> = {
     male: 1,
@@ -429,6 +433,13 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   const handleUpdateByBibComplete = async () => {
     await fetchParticipants(filters);
     handleCloseUpdateByBibDialog();
+  };
+
+  const handleExportCsv = () => {
+    if (gridRef.current) {
+      const timestamp = new Date().toISOString().slice(0, 10);
+      gridRef.current.exportToCsv(`participants_${timestamp}.csv`);
+    }
   };
 
   const handleProcessResults = async () => {
@@ -733,6 +744,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               variant="outlined"
               startIcon={<FileDownload />}
               sx={{ textTransform: "none", fontWeight: 500 }}
+              onClick={handleExportCsv}
             >
               Export
             </Button>
@@ -856,6 +868,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           paginationPageSize={filters.pageSize}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
+          gridRef={gridRef}
         />
       </CardContent>
 

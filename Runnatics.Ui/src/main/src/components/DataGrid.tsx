@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useRef, useImperativeHandle } from "react";
 import { AgGridReact } from "ag-grid-react";
 import {
   Box,
@@ -16,9 +16,10 @@ import type {
   ColDef,
   GridOptions,
   SortChangedEvent,
+  GridApi,
 } from "ag-grid-community";
 import { ModuleRegistry, AllCommunityModule } from "ag-grid-community";
-import { DataGridProps } from "@/main/src/models/dataGrid";
+import { DataGridProps, DataGridRef } from "@/main/src/models/dataGrid";
 import { lightTheme, darkTheme } from "@/main/src/styles/dataGrid";
 
 // Register AG Grid modules
@@ -58,11 +59,54 @@ export const DataGrid = <T extends any>({
   totalPages = 0,
   onPageChange,
   onPageSizeChange,
+  // Export functionality
+  gridRef,
 }: DataGridProps<T>) => {
   const muiTheme = useMuiTheme();
   const isDarkMode = muiTheme.palette.mode === "dark";
+  const gridApiRef = useRef<GridApi | null>(null);
 
   const agGridTheme = theme || (isDarkMode ? darkTheme : lightTheme);
+
+  // Expose export functionality via ref
+  useImperativeHandle(gridRef, () => ({
+    exportToCsv: (fileName?: string) => {
+      if (gridApiRef.current) {
+        // Get all displayed columns from the grid, excluding Actions
+        const displayedColumns = gridApiRef.current.getAllDisplayedColumns();
+        const columnKeys = displayedColumns
+          .map((col) => col.getColId())
+          .filter((colId) => colId !== "Actions" && !colId.includes("actions"));
+
+        gridApiRef.current.exportDataAsCsv({
+          fileName: fileName || "export.csv",
+          columnKeys: columnKeys,
+          processCellCallback: (params) => {
+            // Handle checkpoint columns that use checkpointTimes object
+            if (params.column.getColDef().headerName && !params.column.getColDef().field) {
+              const headerName = params.column.getColDef().headerName;
+              const checkpointTimes = params.node?.data?.checkpointTimes;
+              if (checkpointTimes && headerName && checkpointTimes[headerName]) {
+                return checkpointTimes[headerName];
+              }
+              return "";
+            }
+            return params.value;
+          },
+        });
+      }
+    },
+    getGridApi: () => gridApiRef.current,
+  }));
+
+  // Store grid API on ready
+  const handleGridReady = useCallback(
+    (event: any) => {
+      gridApiRef.current = event.api;
+      onGridReady?.(event);
+    },
+    [onGridReady]
+  );
   
   const defaultColumnDef = useMemo<ColDef>(
     () => ({
@@ -97,6 +141,8 @@ export const DataGrid = <T extends any>({
       suppressRowClickSelection: true,
       animateRows,
       suppressCellFocus: true,
+      enableCellTextSelection: true,
+      ensureDomOrder: true,
       onSortChanged: handleSortChanged,
       ...gridOptions,
     }),
@@ -137,7 +183,7 @@ export const DataGrid = <T extends any>({
             suppressPaginationPanel={suppressPaginationPanel}
             onRowClicked={onRowClicked}
             onCellClicked={onCellClicked}
-            onGridReady={onGridReady}
+            onGridReady={handleGridReady}
             rowSelection={rowSelection}
             rowHeight={rowHeight}
             headerHeight={headerHeight}

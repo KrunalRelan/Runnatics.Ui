@@ -338,11 +338,6 @@ export const AddRace: React.FC = () => {
     }
   };
 
-  // Calculate eventDateMin for datetime-local input fields
-  const eventDateMin = event?.eventDate
-    ? new Date(event.eventDate).toISOString().slice(0, 16)
-    : undefined;
-
   if (loading) {
     return (
       <PageContainer sx={{ display: "flex", justifyContent: "center" }}>
@@ -444,14 +439,6 @@ export const AddRace: React.FC = () => {
                 helperText={errors.startTime}
                 required
                 InputLabelProps={{ shrink: true }}
-                inputProps={{
-                  min: eventDateMin, // Prevent picking before event date
-                }}
-                InputProps={{
-                  inputProps: {
-                    min: eventDateMin,
-                  }
-                }}
               />
 
               {/* End Time */}
@@ -466,14 +453,6 @@ export const AddRace: React.FC = () => {
                 helperText={errors.endTime}
                 required
                 InputLabelProps={{ shrink: true }}
-                inputProps={{
-                  min: eventDateMin, // Prevent picking before event date
-                }}
-                InputProps={{
-                  inputProps: {
-                    min: eventDateMin,
-                  }
-                }}
               />
             </Stack>
           </Box>
