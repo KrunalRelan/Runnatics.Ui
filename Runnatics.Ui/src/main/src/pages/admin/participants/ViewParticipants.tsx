@@ -262,6 +262,11 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
         checkIn: p.checkedIn || false,
         chipId: p.chipId || "",
         checkpointTimes: p.checkpointTimes || null,
+        gunTime: p.gunTime || null,
+        netTime: p.netTime || null,
+        overallRank: p.overallRank ?? null,
+        genderRank: p.genderRank ?? null,
+        categoryRank: p.categoryRank ?? null,
       }));
 
       setParticipants(mappedParticipants);
@@ -559,18 +564,26 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       filter: true,
       cellRenderer: (params: any) => {
         if (!params.value) return null;
-        const statusColors: Record<string, "success" | "warning" | "error"> = {
-          Registered: "success",
-          Pending: "warning",
-          Cancelled: "error",
+        const statusConfig: Record<string, { color: string; bgColor: string }> = {
+          Finished: { color: "#2e7d32", bgColor: "#e8f5e9" },
+          DNF: { color: "#d32f2f", bgColor: "#ffebee" },
+          DNS: { color: "#ed6c02", bgColor: "#fff3e0" },
+          Registered: { color: "#1976d2", bgColor: "#e3f2fd" },
+          Pending: { color: "#ed6c02", bgColor: "#fff3e0" },
+          Cancelled: { color: "#d32f2f", bgColor: "#ffebee" },
         };
-        const color = statusColors[params.value] || "default";
+        const config = statusConfig[params.value] || { color: "#757575", bgColor: "#f5f5f5" };
         return (
           <Chip
             label={params.value}
-            color={color}
             size="small"
-            sx={{ fontWeight: 500 }}
+            sx={{
+              fontWeight: 600,
+              color: config.color,
+              backgroundColor: config.bgColor,
+              borderColor: config.color,
+              border: "1px solid",
+            }}
           />
         );
       },
@@ -684,12 +697,35 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     headerTooltip: `Checkpoint: ${checkpoint.name} (${checkpoint.distanceFromStart} KM)`,
   }));
 
+  // Timing columns (Gun Time & Chip Time)
+  const timingColumns: ColDef<Participant>[] = [
+    {
+      field: "netTime",
+      headerName: "Chip Time",
+      flex: 0.9,
+      minWidth: 90,
+      sortable: true,
+      filter: true,
+      valueGetter: (params: any) => params.data?.netTime || "—",
+    },
+    {
+      field: "gunTime",
+      headerName: "Gun Time",
+      flex: 0.9,
+      minWidth: 90,
+      sortable: true,
+      filter: true,
+      valueGetter: (params: any) => params.data?.gunTime || "—",
+    }
+  ];
+
   // Combine static columns with dynamic checkpoint columns
   // Insert checkpoint columns before the Actions column
   const actionsColumn = staticColumns[staticColumns.length - 1];
   const columnsBeforeActions = staticColumns.slice(0, -1);
   const columnDefs: ColDef<Participant>[] = [
     ...columnsBeforeActions,
+    ...timingColumns,
     ...checkpointColumns,
     actionsColumn,
   ];

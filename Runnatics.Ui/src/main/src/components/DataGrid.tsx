@@ -149,6 +149,143 @@ export const DataGrid = <T extends any>({
     [animateRows, handleSortChanged, gridOptions]
   );
 
+  const paginationPanel = (position: "top" | "bottom") => (
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        px: 3,
+        py: 2,
+        backgroundColor: "background.paper",
+        ...(position === "bottom"
+          ? { borderTop: (theme: any) => `1px solid ${theme.palette.divider}` }
+          : { borderBottom: (theme: any) => `1px solid ${theme.palette.divider}` }),
+        flexWrap: "wrap",
+        gap: 2,
+        minHeight: "72px",
+        position: "relative",
+        zIndex: 10,
+      }}
+    >
+      {/* Left side - Info and Page Size */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 2,
+          flexWrap: "wrap",
+        }}
+      >
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ whiteSpace: "nowrap" }}
+        >
+          Showing {totalRecords > 0 ? (pageNumber - 1) * paginationPageSize + 1 : 0} to{" "}
+          {Math.min(pageNumber * paginationPageSize, totalRecords)} of {totalRecords} entries
+        </Typography>
+
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel id={`page-size-label-${position}`}>Rows per page</InputLabel>
+          <Select
+            labelId={`page-size-label-${position}`}
+            value={paginationPageSize}
+            label="Rows per page"
+            onChange={(e) => onPageSizeChange?.(Number(e.target.value))}
+            disabled={loading}
+            sx={{
+              backgroundColor: "background.paper",
+            }}
+          >
+            <MenuItem value={10}>10</MenuItem>
+            <MenuItem value={25}>25</MenuItem>
+            <MenuItem value={50}>50</MenuItem>
+            <MenuItem value={100}>100</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
+      {/* Right side - Pagination Controls */}
+      <Stack
+        direction="row"
+        spacing={1}
+        alignItems="center"
+        sx={{ flexWrap: "wrap" }}
+      >
+        <Button
+          variant="outlined"
+          size="small"
+          disabled={pageNumber === 1 || loading}
+          onClick={() => onPageChange?.(1)}
+          sx={{ minWidth: "70px" }}
+        >
+          First
+        </Button>
+
+        <Button
+          variant="outlined"
+          size="small"
+          disabled={pageNumber === 1 || loading}
+          onClick={() => onPageChange?.(pageNumber - 1)}
+          sx={{ minWidth: "90px" }}
+        >
+          Previous
+        </Button>
+
+        <Typography
+          variant="body2"
+          sx={{
+            minWidth: "120px",
+            textAlign: "center",
+            px: 2,
+            whiteSpace: "nowrap",
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+          }}
+        >
+          Page
+          <input
+            type="number"
+            min={1}
+            max={totalPages || 1}
+            value={pageNumber}
+            onChange={(e) => {
+              const value = Number(e.target.value);
+              if (value >= 1 && value <= (totalPages || 1)) {
+                onPageChange?.(value);
+              }
+            }}
+            style={{ width: 40, padding: '2px 4px', borderRadius: 4, border: '1px solid #ccc', fontSize: '0.95em', textAlign: 'center' }}
+            disabled={loading}
+          />
+          of {totalPages || 1}
+        </Typography>
+
+        <Button
+          variant="outlined"
+          size="small"
+          disabled={pageNumber >= totalPages || loading || totalPages === 0}
+          onClick={() => onPageChange?.(pageNumber + 1)}
+          sx={{ minWidth: "70px" }}
+        >
+          Next
+        </Button>
+
+        <Button
+          variant="outlined"
+          size="small"
+          disabled={pageNumber >= totalPages || loading || totalPages === 0}
+          onClick={() => onPageChange?.(totalPages)}
+          sx={{ minWidth: "70px" }}
+        >
+          Last
+        </Button>
+      </Stack>
+    </Box>
+  );
+
   return (
     <Box sx={{ width: "100%" }}>
       <Paper
@@ -161,6 +298,9 @@ export const DataGrid = <T extends any>({
           flexDirection: "column",
         }}
       >
+        {/* Top Pagination */}
+        {useCustomPagination && paginationPanel("top")}
+
         {/* Grid Container */}
         <Box
           sx={{
@@ -194,141 +334,8 @@ export const DataGrid = <T extends any>({
           />
         </Box>
 
-        {/* Custom Pagination Footer - Separate from Grid */}
-        {useCustomPagination && (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              px: 3,
-              py: 2,
-              backgroundColor: "background.paper",
-              borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-              flexWrap: "wrap",
-              gap: 2,
-              minHeight: "72px",
-              position: "relative",
-              zIndex: 10, // Ensure footer is above grid content
-            }}
-          >
-            {/* Left side - Info and Page Size */}
-            <Box 
-              sx={{ 
-                display: "flex", 
-                alignItems: "center", 
-                gap: 2,
-                flexWrap: "wrap",
-              }}
-            >
-              <Typography 
-                variant="body2" 
-                color="text.secondary"
-                sx={{ whiteSpace: "nowrap" }}
-              >
-                Showing {totalRecords > 0 ? (pageNumber - 1) * paginationPageSize + 1 : 0} to{" "}
-                {Math.min(pageNumber * paginationPageSize, totalRecords)} of {totalRecords} entries
-              </Typography>
-              
-              <FormControl size="small" sx={{ minWidth: 140 }}>
-                <InputLabel id="page-size-label">Rows per page</InputLabel>
-                <Select
-                  labelId="page-size-label"
-                  value={paginationPageSize}
-                  label="Rows per page"
-                  onChange={(e) => onPageSizeChange?.(Number(e.target.value))}
-                  disabled={loading}
-                  sx={{
-                    backgroundColor: "background.paper",
-                  }}
-                >
-                  <MenuItem value={10}>10</MenuItem>
-                  <MenuItem value={25}>25</MenuItem>
-                  <MenuItem value={50}>50</MenuItem>
-                  <MenuItem value={100}>100</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-
-            {/* Right side - Pagination Controls */}
-            <Stack 
-              direction="row"
-              spacing={1}
-              alignItems="center"
-              sx={{ flexWrap: "wrap" }}
-            >
-              <Button
-                variant="outlined"
-                size="small"
-                disabled={pageNumber === 1 || loading}
-                onClick={() => onPageChange?.(1)}
-                sx={{ minWidth: "70px" }}
-              >
-                First
-              </Button>
-              
-              <Button
-                variant="outlined"
-                size="small"
-                disabled={pageNumber === 1 || loading}
-                onClick={() => onPageChange?.(pageNumber - 1)}
-                sx={{ minWidth: "90px" }}
-              >
-                Previous
-              </Button>
-              
-              <Typography 
-                variant="body2"
-                sx={{
-                  minWidth: "120px",
-                  textAlign: "center",
-                  px: 2,
-                  whiteSpace: "nowrap",
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                }}
-              >
-                Page
-                <input
-                  type="number"
-                  min={1}
-                  max={totalPages || 1}
-                  value={pageNumber}
-                  onChange={(e) => {
-                    const value = Number(e.target.value);
-                    if (value >= 1 && value <= (totalPages || 1)) {
-                      onPageChange?.(value);
-                    }
-                  }}
-                  style={{ width: 40, padding: '2px 4px', borderRadius: 4, border: '1px solid #ccc', fontSize: '0.95em', textAlign: 'center' }}
-                  disabled={loading}
-                />
-                of {totalPages || 1}
-              </Typography>
-              
-              <Button
-                variant="outlined"
-                size="small"
-                disabled={pageNumber >= totalPages || loading || totalPages === 0}
-                onClick={() => onPageChange?.(pageNumber + 1)}
-                sx={{ minWidth: "70px" }}
-              >
-                Next
-              </Button>
-              
-              <Button
-                variant="outlined"
-                size="small"
-                disabled={pageNumber >= totalPages || loading || totalPages === 0}
-                onClick={() => onPageChange?.(totalPages)}
-                sx={{ minWidth: "70px" }}
-              >
-                Last
-              </Button>
-            </Stack>
-          </Box>
-        )}
+        {/* Bottom Pagination */}
+        {useCustomPagination && paginationPanel("bottom")}
       </Paper>
     </Box>
   );

@@ -18,4 +18,9 @@ export interface Participant {
   updatedAt?: Date | string;
   // Checkpoint times - key is checkpoint name, value is time string (HH:MM:SS) or null
   checkpointTimes?: Record<string, string | null> | null;
+  gunTime?: string | null;
+  netTime?: string | null;
+  overallRank?: number | null;
+  genderRank?: number | null;
+  categoryRank?: number | null;
 }
