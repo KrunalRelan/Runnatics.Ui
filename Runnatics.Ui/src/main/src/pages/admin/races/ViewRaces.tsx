@@ -23,12 +23,14 @@ import {
   Timer,
   EmojiEvents,
   Edit,
+  Leaderboard as LeaderboardIcon,
 } from "@mui/icons-material";
 import { Race } from "@/main/src/models/races/Race";
 import { RaceService } from "@/main/src/services/RaceService";
 import ViewParticipants from "@/main/src/pages/admin/participants/ViewParticipants";
 import ViewCheckPoints from "@/main/src/pages/admin/checkpoints/ViewCheckPoints";
 import { AddOrEditCertificate } from "../certificates/AddOrEditCertificate";
+import Leaderboard from "@/main/src/pages/admin/leaderboard/Leaderboard";
 
 // Placeholder components for other tabs
 const RaceDashboard: React.FC<{ eventId: string; raceId: string }> = () => (
@@ -152,6 +154,7 @@ const ViewRaces: React.FC = () => {
       case 4:
       case 5:
       case 6:
+      case 7:
         // Stay on current page, just change the active tab
         break;
       default:
@@ -183,6 +186,8 @@ const ViewRaces: React.FC = () => {
         return <Segments eventId={eventId} raceId={selectedRaceId} />;
       case 6:
         return <AddOrEditCertificate eventId={eventId} raceId={selectedRaceId} />;
+      case 7:
+        return <Leaderboard eventId={eventId} raceId={selectedRaceId} />;
       default:
         return null;
     }
@@ -332,6 +337,11 @@ const ViewRaces: React.FC = () => {
             icon={<EmojiEvents />}
             iconPosition="start"
             label="Add Certificate"
+          />
+          <Tab
+            icon={<LeaderboardIcon />}
+            iconPosition="start"
+            label="Leaderboard"
           />
         </Tabs>
       </Paper>

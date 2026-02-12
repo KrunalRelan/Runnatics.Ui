@@ -61,5 +61,8 @@ export const ServiceUrl = {
 
     //dashboard
     dashboardStats: () => "dashboard/stats",
+
+    //leaderboard
+    getLeaderboard: () => `Results/leaderboard`,
 };
 
