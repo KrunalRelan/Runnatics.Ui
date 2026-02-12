@@ -28,17 +28,17 @@ import {
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
-  People as PeopleIcon,
-  BarChart as BarChartIcon,
+  // People as PeopleIcon,
+  // BarChart as BarChartIcon,
   Settings as SettingsIcon,
-  Label as LabelIcon,
+  // Label as LabelIcon,
   Event as EventIcon,
   Upload as UploadIcon,
   Add as AddIcon,
   ExpandLess,
   ExpandMore,
-  Star as StarIcon,
-  Send as SendIcon,
+  // Star as StarIcon,
+  // Send as SendIcon,
   Logout as LogoutIcon,
   Notifications as NotificationsIcon,
   KeyboardDoubleArrowLeft as KeyboardDoubleArrowLeftIcon,
@@ -153,11 +153,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: <DashboardIcon />,
       path: "/dashboard",
     },
-    {
-      text: "Support",
-      icon: <DashboardIcon />,
-      path: "/support",
-    },
+ 
    
     {
       text: "Events",
@@ -181,40 +177,16 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
         // },
       ],
     },
-    {
-      text: "Participants",
-      icon: <PeopleIcon />,
-      path: "/participants",
-    },
+    
     {
       text: "Uploads",
       icon: <UploadIcon />,
       path: "/uploads",
-    },
-    {
-      text: "Tags & Readers",
-      icon: <LabelIcon />,
-      path: "/tags",
-    },
-    {
-      text: "Users",
-      icon: <PeopleIcon />,
-      path: "/users",
-    },
-    {
-      text: "Analytics",
-      icon: <BarChartIcon />,
-      path: "/analytics",
       submenu: [
-        { text: "Reports", icon: <SendIcon />, path: "/analytics/reports" },
-        { text: "Statistics", icon: <StarIcon />, path: "/analytics/stats" },
+        { text: "RFID File Upload", icon: <UploadIcon />, path: "/rfid/upload" },
       ],
     },
-    {
-      text: "Settings",
-      icon: <SettingsIcon />,
-      path: "/settings",
-    },
+    
   ];
 
   // Check if current path matches menu item

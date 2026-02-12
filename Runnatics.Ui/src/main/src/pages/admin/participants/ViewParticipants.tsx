@@ -26,6 +26,7 @@ import {
 } from "@mui/icons-material";
 import DataGrid from "@/main/src/components/DataGrid";
 import type { ColDef } from "ag-grid-community";
+import { DataGridRef } from "@/main/src/models/dataGrid";
 import { Participant } from "@/main/src/models/races/Participant";
 import {
   ParticipantFilters,
@@ -35,6 +36,7 @@ import { ParticipantService } from "@/main/src/services/ParticipantService";
 import { Category } from "@/main/src/models/participants/Category";
 import { CheckpointsService } from "@/main/src/services/CheckpointsService";
 import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
+import { RFIDService } from "@/main/src/services/RFIDService";
 
 // LAZY LOAD DIALOG COMPONENTS - Only loaded when needed
 const AddParticipant = lazy(
@@ -127,11 +129,18 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
   const [participantToDelete, setParticipantToDelete] = useState<Participant | null>(null);
 
+  // Process Results State
+  const [processingResults, setProcessingResults] = useState<boolean>(false);
+  const [hasProcessedResults, setHasProcessedResults] = useState<boolean>(false);
+
   // Refs to track initial mount and prevent duplicate calls
   const isInitialMount = useRef(true);
   const prevEventId = useRef<string | undefined>(undefined);
   const prevRaceId = useRef<string | undefined>(undefined);
   const prevFiltersRef = useRef<string>("");
+  
+  // Grid ref for export functionality
+  const gridRef = useRef<DataGridRef>(null);
 
   const genderMap: Record<string, number> = {
     male: 1,
@@ -249,16 +258,29 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
         phone: p.phone || "",
         gender: p.gender || "",
         category: p.category || "",
-        status: "Registered" as const,
-        checkIn: false,
-        chipId: "",
+        status: p.status || "Registered" as const,
+        checkIn: p.checkedIn || false,
+        chipId: p.chipId || "",
+        checkpointTimes: p.checkpointTimes || null,
+        gunTime: p.gunTime || null,
+        netTime: p.netTime || null,
+        overallRank: p.overallRank ?? null,
+        genderRank: p.genderRank ?? null,
+        categoryRank: p.categoryRank ?? null,
       }));
 
       setParticipants(mappedParticipants);
       setTotalRecords(total);
+
+      // Check if any participant has processed checkpoint times
+      const hasResults = mappedParticipants.some(
+        (p) => p.checkpointTimes && Object.keys(p.checkpointTimes).length > 0
+      );
+      setHasProcessedResults(hasResults);
     } catch (err: any) {
       setParticipants([]);
       setTotalRecords(0);
+      setHasProcessedResults(false);
     } finally {
       setParticipantsLoading(false);
     }
@@ -418,6 +440,70 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     handleCloseUpdateByBibDialog();
   };
 
+  const handleExportCsv = () => {
+    if (gridRef.current) {
+      const timestamp = new Date().toISOString().slice(0, 10);
+      gridRef.current.exportToCsv(`participants_${timestamp}.csv`);
+    }
+  };
+
+  const handleProcessResults = async () => {
+    try {
+      setProcessingResults(true);
+      const response = await RFIDService.processAllResults(eventId, raceId, false);
+      
+      // Check if the response contains a valid processing result
+      // The API returns message as an object with status, totalFinishers, etc.
+      if (response.message && typeof response.message === 'object' && response.message.status === 'Completed') {
+        // Refresh participants data after processing
+        await fetchParticipants(filters);
+        const result = response.message;
+        alert(`Results processed successfully!\n${result.totalFinishers} finishers processed across ${result.checkpointsProcessed} checkpoints.`);
+      } else if (response.message && typeof response.message === 'object') {
+        // Processing completed but with a different status
+        await fetchParticipants(filters);
+        alert(`Processing completed with status: ${response.message.status || 'Unknown'}\n${response.message.message || ''}`);
+      } else {
+        alert(`Failed to process results: ${typeof response.message === 'string' ? response.message : "Unknown error"}`);
+      }
+    } catch (error: any) {
+      console.error("Error processing results:", error);
+      alert(`Error processing results: ${error.message || "Unknown error"}`);
+    } finally {
+      setProcessingResults(false);
+    }
+  };
+
+  const [clearingResults, setClearingResults] = useState<boolean>(false);
+
+  const handleClearProcessedResults = async () => {
+    if (!window.confirm("Are you sure you want to clear all processed results? This action cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      setClearingResults(true);
+      const response = await RFIDService.clearProcessedData(eventId, raceId, true);
+      
+      // Check if the response indicates success (message can be object or string)
+      if (response.message) {
+        // Refresh participants data after clearing
+        await fetchParticipants(filters);
+        const successMessage = typeof response.message === 'object' 
+          ? (response.message.message || "Processed results cleared successfully!")
+          : "Processed results cleared successfully!";
+        alert(successMessage);
+      } else {
+        alert("Failed to clear results: Unknown error");
+      }
+    } catch (error: any) {
+      console.error("Error clearing results:", error);
+      alert(`Error clearing results: ${error.message || "Unknown error"}`);
+    } finally {
+      setClearingResults(false);
+    }
+  };
+
   const totalPages = totalRecords > 0 ? Math.ceil(totalRecords / filters.pageSize) : 1;
 
   // Define static grid columns
@@ -478,18 +564,26 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       filter: true,
       cellRenderer: (params: any) => {
         if (!params.value) return null;
-        const statusColors: Record<string, "success" | "warning" | "error"> = {
-          Registered: "success",
-          Pending: "warning",
-          Cancelled: "error",
+        const statusConfig: Record<string, { color: string; bgColor: string }> = {
+          Finished: { color: "#2e7d32", bgColor: "#e8f5e9" },
+          DNF: { color: "#d32f2f", bgColor: "#ffebee" },
+          DNS: { color: "#ed6c02", bgColor: "#fff3e0" },
+          Registered: { color: "#1976d2", bgColor: "#e3f2fd" },
+          Pending: { color: "#ed6c02", bgColor: "#fff3e0" },
+          Cancelled: { color: "#d32f2f", bgColor: "#ffebee" },
         };
-        const color = statusColors[params.value] || "default";
+        const config = statusConfig[params.value] || { color: "#757575", bgColor: "#f5f5f5" };
         return (
           <Chip
             label={params.value}
-            color={color}
             size="small"
-            sx={{ fontWeight: 500 }}
+            sx={{
+              fontWeight: 600,
+              color: config.color,
+              backgroundColor: config.bgColor,
+              borderColor: config.color,
+              border: "1px solid",
+            }}
           />
         );
       },
@@ -551,16 +645,39 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     },
   ];
 
-  // Create dynamic checkpoint columns
-  const checkpointColumns: ColDef<any>[] = checkpoints.map((checkpoint) => ({
-    headerName: checkpoint.name,
-    flex: 0.9,
-    minWidth: 90,
-    sortable: false,
-    filter: false,
-    cellRenderer: () => {
-      // TODO: When participant checkpoint data is available, display it here
-      // For now, show a placeholder
+  // Create dynamic checkpoint columns - only for parent checkpoints (those with parentDeviceName as "N/A")
+  const checkpointColumns: ColDef<any>[] = checkpoints
+    .filter((checkpoint) => !checkpoint.parentDeviceName || checkpoint.parentDeviceName === "N/A")
+    .map((checkpoint) => ({
+      headerName: checkpoint.name,
+      flex: 0.9,
+      minWidth: 90,
+      sortable: false,
+      filter: false,
+    cellRenderer: (params: any) => {
+      // Get checkpoint time from participant's checkpointTimes object
+      const checkpointTimes = params.data?.checkpointTimes;
+      const time = checkpointTimes && checkpointTimes[checkpoint.name];
+      
+      if (time) {
+        return (
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+            <Chip
+              label={time}
+              size="small"
+              color="success"
+              variant="outlined"
+              sx={{
+                fontSize: "0.75rem",
+                height: "22px",
+                fontWeight: 500,
+              }}
+            />
+          </Box>
+        );
+      }
+      
+      // Show placeholder for no data
       return (
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
           <Chip
@@ -580,12 +697,35 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     headerTooltip: `Checkpoint: ${checkpoint.name} (${checkpoint.distanceFromStart} KM)`,
   }));
 
+  // Timing columns (Gun Time & Chip Time)
+  const timingColumns: ColDef<Participant>[] = [
+    {
+      field: "netTime",
+      headerName: "Chip Time",
+      flex: 0.9,
+      minWidth: 90,
+      sortable: true,
+      filter: true,
+      valueGetter: (params: any) => params.data?.netTime || "—",
+    },
+    {
+      field: "gunTime",
+      headerName: "Gun Time",
+      flex: 0.9,
+      minWidth: 90,
+      sortable: true,
+      filter: true,
+      valueGetter: (params: any) => params.data?.gunTime || "—",
+    }
+  ];
+
   // Combine static columns with dynamic checkpoint columns
   // Insert checkpoint columns before the Actions column
   const actionsColumn = staticColumns[staticColumns.length - 1];
   const columnsBeforeActions = staticColumns.slice(0, -1);
   const columnDefs: ColDef<Participant>[] = [
     ...columnsBeforeActions,
+    ...timingColumns,
     ...checkpointColumns,
     actionsColumn,
   ];
@@ -640,8 +780,27 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               variant="outlined"
               startIcon={<FileDownload />}
               sx={{ textTransform: "none", fontWeight: 500 }}
+              onClick={handleExportCsv}
             >
               Export
+            </Button>
+            <Button
+              variant="contained"
+              color="success"
+              sx={{ textTransform: "none", fontWeight: 500 }}
+              onClick={handleProcessResults}
+              disabled={processingResults}
+            >
+              {processingResults ? "Processing..." : "Process Result"}
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              sx={{ textTransform: "none", fontWeight: 500 }}
+              onClick={handleClearProcessedResults}
+              disabled={clearingResults}
+            >
+              {clearingResults ? "Clearing..." : "Clear Processed Result"}
             </Button>
           </Stack>
         </Box>
@@ -745,6 +904,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           paginationPageSize={filters.pageSize}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
+          gridRef={gridRef}
         />
       </CardContent>
 

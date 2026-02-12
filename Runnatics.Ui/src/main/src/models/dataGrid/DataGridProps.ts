@@ -2,7 +2,14 @@ import type {
   ColDef,
   GridOptions,
   GridReadyEvent,
+  GridApi,
 } from "ag-grid-community";
+import { RefObject } from "react";
+
+export interface DataGridRef {
+  exportToCsv: (fileName?: string) => void;
+  getGridApi: () => GridApi | null;
+}
 
 export interface DataGridProps<T = any> {
   rowData: T[];
@@ -36,4 +43,6 @@ export interface DataGridProps<T = any> {
   totalPages?: number;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
+  // Export functionality
+  gridRef?: RefObject<DataGridRef | null>;
 }
