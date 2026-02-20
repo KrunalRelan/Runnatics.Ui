@@ -17,9 +17,11 @@ import {
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import PageContainer from "@/main/src/components/PageContainer";
 import { RaceService } from "@/main/src/services/RaceService";
+import { EventService } from "@/main/src/services/EventService";
 import { CreateRaceRequest } from "@/main/src/models/races/CreateRaceRequest";
 import { LeaderBoardSettings } from "@/main/src/models";
 import { LeaderboardSettingsComponent } from "../shared/LeaderboardSettings";
+import { convertLocalToUTC, convertUTCToLocal } from "@/main/src/utils/dateTimeUtils";
 
 interface FormErrors {
   [key: string]: string;
@@ -45,6 +47,9 @@ export const EditRace: React.FC = () => {
 
   // Toggle for overriding leaderboard settings at race level
   const [overrideLeaderboardSettings, setOverrideLeaderboardSettings] = useState(false);
+
+  // Store event timezone for race date conversions (races inherit event timezone)
+  const [eventTimeZone, setEventTimeZone] = useState<string>("Asia/Kolkata");
 
   // Leaderboard settings state
   const [leaderBoardSettings, setLeaderBoardSettings] = useState<LeaderBoardSettings>({
@@ -100,9 +105,20 @@ export const EditRace: React.FC = () => {
         console.log("Race ID:", raceId);
 
         setLoading(true);
+        
+        // Fetch event timezone first
+        const eventResponse = await EventService.getEventById(eventId);
+        const eventData = eventResponse.message || eventResponse;
+        const timeZone = eventData?.timeZone || "Asia/Kolkata";
+        setEventTimeZone(timeZone);
+
         const response = await RaceService.getRaceById(eventId, raceId);
         const raceData = response.message;
         if (raceData) {
+          // Convert UTC race times to local time for display
+          const startTimeLocal = raceData.startTime ? convertUTCToLocal(raceData.startTime.toString(), timeZone) : "";
+          const endTimeLocal = raceData.endTime ? convertUTCToLocal(raceData.endTime.toString(), timeZone) : "";
+
           // Load race-level leaderboard settings if they exist
           if (raceData.leaderboardSettings) {
             const hasOverride = raceData.leaderboardSettings.overrideSettings ?? false;
@@ -124,8 +140,8 @@ export const EditRace: React.FC = () => {
             title: raceData.title || "",
             distance: raceData.distance || 0,
             description: raceData.description || "",
-            startTime: raceData.startTime.toString() || "",
-            endTime: raceData.endTime?.toString() || "",
+            startTime: startTimeLocal,
+            endTime: endTimeLocal,
             raceSettings: {
               published: raceData.raceSettings?.published ?? false,
               sendSms: raceData.raceSettings?.sendSms ?? false,
@@ -286,12 +302,16 @@ export const EditRace: React.FC = () => {
     }
     setIsSubmitting(true);
     try {
+      // Convert local race times to UTC before sending to API
+      const startTimeUTC = convertLocalToUTC(formData.startTime, eventTimeZone);
+      const endTimeUTC = convertLocalToUTC(formData.endTime, eventTimeZone);
+
       const requestPayload: CreateRaceRequest = {
         title: formData.title,
         distance: formData.distance,
         description: formData.description || "",
-        startTime: formData.startTime,
-        endTime: formData.endTime,
+        startTime: startTimeUTC,
+        endTime: endTimeUTC,
         overrideSettings: overrideLeaderboardSettings,
         raceSettings: {
           published: formData.raceSettings?.published ?? false,

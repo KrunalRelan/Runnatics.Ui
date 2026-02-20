@@ -30,6 +30,7 @@ import {
   SearchCriteria,
   deafaultSearchCriteria,
 } from "@/main/src/models/SearchCriteria";
+import { formatDateTimeInTimeZone } from "@/main/src/utils/dateTimeUtils";
 
 const ViewEvent: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
@@ -130,11 +131,15 @@ const ViewEvent: React.FC = () => {
     setSearchCriteria(criteria);
   };
 
-  const formatDate = (date: Date | string | undefined | null) => {
+  const formatDate = (date: Date | string | undefined | null, timeZone: string = "Asia/Kolkata") => {
     if (!date) return "N/A";
-    const dateObj = typeof date === "string" ? new Date(date) : date;
-    if (isNaN(dateObj.getTime())) return "Invalid Date";
-    return dateObj.toLocaleString("en-US", {
+    // Use timezone-aware formatting if date is a string (UTC from API)
+    if (typeof date === "string") {
+      return formatDateTimeInTimeZone(date, timeZone, "MMMM DD, YYYY hh:mm A");
+    }
+    // Fallback for Date objects
+    if (isNaN(date.getTime())) return "Invalid Date";
+    return date.toLocaleString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -272,7 +277,7 @@ const ViewEvent: React.FC = () => {
                       Event Date
                     </Typography>
                     <Typography variant="body1" sx={{ mt: 0.5 }}>
-                      {formatDate(event.eventDate)}
+                      {formatDate(event.eventDate, event?.timeZone || "Asia/Kolkata")}
                     </Typography>
                   </Box>
                 </Stack>
@@ -377,7 +382,7 @@ const ViewEvent: React.FC = () => {
                     Registration Deadline
                   </Typography>
                   <Typography variant="body2" sx={{ mt: 0.5 }}>
-                    {formatDate(event.registrationDeadline)}
+                    {formatDate(event.registrationDeadline, event?.timeZone || "Asia/Kolkata")}
                   </Typography>
                 </Box>
                 <Box>
@@ -427,6 +432,7 @@ const ViewEvent: React.FC = () => {
               searchCriteria={searchCriteria}
               totalCount={totalCount}
               loading={racesLoading}
+              eventTimeZone={event?.timeZone || "Asia/Kolkata"}
               onSearchCriteriaChange={handleSearchCriteriaChange}
               onEdit={handleEditRace}
             />

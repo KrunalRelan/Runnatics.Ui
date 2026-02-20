@@ -52,6 +52,7 @@ import { Event } from "../../../models/Event";
 import { EventSearchRequest } from "../../../models/EventSearchRequest";
 import { SortDirection } from "@/main/src/models/SortDirection";
 import DataGrid from "@/main/src/components/DataGrid";
+import { formatDateTimeInTimeZone } from "@/main/src/utils/dateTimeUtils";
 
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -456,8 +457,15 @@ const EventsList: React.FC = () => {
     validateDateRange(startDate, value);
   };
 
-  const formatDate = (date: Date | string | undefined | null) => {
+  const formatDate = (date: Date | string | undefined | null, timeZone?: string) => {
     if (!date) return "N/A";
+    
+    // Use timezone-aware formatting if date is a string (UTC from API) and timezone provided
+    if (typeof date === "string" && timeZone) {
+      return formatDateTimeInTimeZone(date, timeZone, "MMM DD, YYYY");
+    }
+    
+    // Fallback for Date objects
     const dateObj = typeof date === "string" ? new Date(date) : date;
     if (isNaN(dateObj.getTime())) return "Invalid Date";
     return dateObj.toLocaleDateString("en-US", {
@@ -578,7 +586,7 @@ const EventsList: React.FC = () => {
         flex: 1.5,
         sortable: true,
         filter: "agDateColumnFilter",
-        valueFormatter: (params) => formatDate(params.value),
+        valueFormatter: (params) => formatDate(params.value, params.data?.timeZone || "Asia/Kolkata"),
       },
       {
         field: "venueAddress",
@@ -648,7 +656,7 @@ const EventsList: React.FC = () => {
         flex: 1.5,
         sortable: true,
         filter: "agDateColumnFilter",
-        valueFormatter: (params) => formatDate(params.value),
+        valueFormatter: (params) => formatDate(params.value, params.data?.timeZone || "Asia/Kolkata"),
       },
       {
         field: "venueAddress",
