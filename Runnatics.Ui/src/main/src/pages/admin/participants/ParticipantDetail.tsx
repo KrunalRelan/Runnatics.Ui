@@ -22,7 +22,6 @@ import {
   alpha,
   Tooltip,
   CircularProgress,
-  IconButton,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -45,170 +44,14 @@ import {
   Person,
   Warning,
   Nfc,
-  Edit,
-  Schedule,
-  Error,
-  Pending,
-  ContentCopy,
-  Refresh,
 } from "@mui/icons-material";
 import PageContainer from "@/main/src/components/PageContainer";
-import { ParticipantDetailData, Split, SplitTimeInfo, PaceProgressionInfo, RfidReading } from "@/main/src/models/participants";
+import { SplitTimeInfo, RfidReadingDetail, ParticipantDetailsResponse, CheckpointTime } from "@/main/src/models/participants";
 import { ParticipantService } from "@/main/src/services";
 import { getColorPalette } from "@/main/src/theme";
 
-// Mock data for when API returns null
-const MOCK_PERFORMANCE = {
-  averageSpeed: 12.5,
-  averagePace: "4:48",
-  maxSpeed: 15.2,
-  minPace: "3:56",
-  overallRank: 42,
-  genderRank: 28,
-  categoryRank: 15,
-  overallCategoryRank: 12,
-  totalParticipants: 250,
-  genderParticipants: 150,
-  categoryParticipants: 45,
-};
-
-const MOCK_SPLITS: Split[] = [
-  {
-    checkpointId: "cp1",
-    checkpointName: "5K",
-    distance: 5,
-    splitTime: "24:15",
-    cumulativeTime: "24:15",
-    pace: "4:51/km",
-    speed: 12.4,
-    rank: 38,
-    genderRank: 24,
-    categoryRank: 12,
-  },
-  {
-    checkpointId: "cp2",
-    checkpointName: "10K",
-    distance: 10,
-    splitTime: "23:58",
-    cumulativeTime: "48:13",
-    pace: "4:48/km",
-    speed: 12.5,
-    rank: 40,
-    genderRank: 26,
-    categoryRank: 14,
-  },
-  {
-    checkpointId: "cp3",
-    checkpointName: "15K",
-    distance: 15,
-    splitTime: "24:35",
-    cumulativeTime: "1:12:48",
-    pace: "4:55/km",
-    speed: 12.2,
-    rank: 42,
-    genderRank: 28,
-    categoryRank: 15,
-  },
-  {
-    checkpointId: "cp4",
-    checkpointName: "20K",
-    distance: 20,
-    splitTime: "24:12",
-    cumulativeTime: "1:37:00",
-    pace: "4:50/km",
-    speed: 12.4,
-    rank: 41,
-    genderRank: 27,
-    categoryRank: 14,
-  },
-  {
-    checkpointId: "cp5",
-    checkpointName: "Finish",
-    distance: 21.1,
-    splitTime: "5:18",
-    cumulativeTime: "1:42:18",
-    pace: "4:49/km",
-    speed: 12.5,
-    rank: 42,
-    genderRank: 28,
-    categoryRank: 15,
-  },
-];
-
-const MOCK_RFID_READINGS: RfidReading[] = [
-  {
-    id: "rfid1",
-    bibNumber: "42",
-    checkpointId: "cp1",
-    checkpointName: "5K",
-    readTime: "2026-01-03T08:24:15.000Z",
-    readDate: "2026-01-03",
-    processResult: "Success",
-    chipId: "E200001A950000001234",
-    deviceId: "dev1",
-    deviceName: "Reader-01",
-    isManualEntry: false,
-    notes: "Clean read",
-  },
-  {
-    id: "rfid2",
-    bibNumber: "42",
-    checkpointId: "cp2",
-    checkpointName: "10K",
-    readTime: "2026-01-03T08:48:13.000Z",
-    readDate: "2026-01-03",
-    processResult: "Success",
-    chipId: "E200001A950000001234",
-    deviceId: "dev2",
-    deviceName: "Reader-02",
-    isManualEntry: false,
-  },
-  {
-    id: "rfid3",
-    bibNumber: "42",
-    checkpointId: "cp3",
-    checkpointName: "15K",
-    readTime: "2026-01-03T09:12:48.000Z",
-    readDate: "2026-01-03",
-    processResult: "Success",
-    manualTime: "1:12:50",
-    chipId: "E200001A950000001234",
-    deviceId: "dev3",
-    deviceName: "Reader-03",
-    isManualEntry: false,
-    notes: "Manual time adjustment applied",
-  },
-  {
-    id: "rfid4",
-    bibNumber: "42",
-    checkpointId: "cp4",
-    checkpointName: "20K",
-    readTime: "2026-01-03T09:37:00.000Z",
-    readDate: "2026-01-03",
-    processResult: "Duplicate",
-    chipId: "E200001A950000001234",
-    deviceId: "dev4",
-    deviceName: "Reader-04",
-    isManualEntry: false,
-    notes: "Duplicate reading filtered",
-  },
-  {
-    id: "rfid5",
-    bibNumber: "42",
-    checkpointId: "cp5",
-    checkpointName: "Finish",
-    readTime: "2026-01-03T09:42:18.000Z",
-    readDate: "2026-01-03",
-    processResult: "Success",
-    chipId: "E200001A950000001234",
-    deviceId: "dev5",
-    deviceName: "Reader-05 (Finish)",
-    isManualEntry: false,
-  },
-];
-
 // Status badge component
-const StatusBadge: React.FC<{ status: ParticipantDetailData["status"] }> = ({
+const StatusBadge: React.FC<{ status: string }> = ({
   status,
 }) => {
   const theme = useTheme();
@@ -467,17 +310,16 @@ const ParticipantDetail: React.FC = () => {
   const isDark = theme.palette.mode === 'dark';
   const colors = getColorPalette(isDark);
 
-  const [participant, setParticipant] = useState<ParticipantDetailData | null>(null);
+  const [participant, setParticipant] = useState<ParticipantDetailsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const abortController = new AbortController();
-    let isMounted = true;
+    let isCancelled = false;
     
     const fetchParticipantDetails = async () => {
       if (!eventId || !raceId || !participantId) {
-        if (isMounted) {
+        if (!isCancelled) {
           setError("Missing required parameters");
           setLoading(false);
         }
@@ -485,138 +327,25 @@ const ParticipantDetail: React.FC = () => {
       }
 
       try {
-        if (isMounted) {
+        if (!isCancelled) {
           setLoading(true);
         }
         const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
         
-        // Check if request was cancelled
-        if (abortController.signal.aborted) {
-          return;
-        }
+        if (isCancelled) return;
         
         if (response.data.message) {
-          const apiData = response.data.message;
-          
-          // Check if performance data is null/empty and use mock data
-          const hasPerformanceData = apiData.performance && 
-            ((apiData.performance.averageSpeed ?? 0) > 0 || apiData.performance.averagePace);
-          
-          const hasRankingsData = apiData.rankings && 
-            ((apiData.rankings.overallRank ?? 0) > 0 || (apiData.rankings.totalParticipants ?? 0) > 0);
-          
-          const hasSplitsData = apiData.splitTimes && apiData.splitTimes.length > 0;
-          
-          // Use mock data if API data is null
-          const performanceData = hasPerformanceData ? {
-            averageSpeed: apiData.performance?.averageSpeed || 0,
-            averagePace: apiData.performance?.averagePace || "",
-            maxSpeed: apiData.performance?.maxSpeed || 0,
-            minPace: apiData.performance?.bestPace || "",
-          } : {
-            averageSpeed: MOCK_PERFORMANCE.averageSpeed,
-            averagePace: MOCK_PERFORMANCE.averagePace,
-            maxSpeed: MOCK_PERFORMANCE.maxSpeed,
-            minPace: MOCK_PERFORMANCE.minPace,
-          };
-          
-          const rankingsData = hasRankingsData ? {
-            overallRank: apiData.rankings?.overallRank || 0,
-            genderRank: apiData.rankings?.genderRank || 0,
-            categoryRank: apiData.rankings?.categoryRank || 0,
-            overallCategoryRank: apiData.rankings?.allCategoriesRank || 0,
-            totalParticipants: apiData.rankings?.totalParticipants || 0,
-            genderParticipants: apiData.rankings?.totalInGender || 0,
-            categoryParticipants: apiData.rankings?.totalInCategory || 0,
-          } : {
-            overallRank: MOCK_PERFORMANCE.overallRank,
-            genderRank: MOCK_PERFORMANCE.genderRank,
-            categoryRank: MOCK_PERFORMANCE.categoryRank,
-            overallCategoryRank: MOCK_PERFORMANCE.overallCategoryRank,
-            totalParticipants: MOCK_PERFORMANCE.totalParticipants,
-            genderParticipants: MOCK_PERFORMANCE.genderParticipants,
-            categoryParticipants: MOCK_PERFORMANCE.categoryParticipants,
-          };
-          
-          const splitsData = hasSplitsData 
-            ? (apiData.splitTimes || []).map((split: SplitTimeInfo) => ({
-                checkpointId: split.checkpointId || "",
-                checkpointName: split.checkpointName || "",
-                distance: split.distanceKm || 0,
-                splitTime: split.splitTime || "",
-                cumulativeTime: split.cumulativeTime || "",
-                pace: split.pace || "",
-                speed: split.speed || 0,
-                rank: split.overallRank || 0,
-                genderRank: split.genderRank || 0,
-                categoryRank: split.categoryRank || 0,
-              }))
-            : MOCK_SPLITS;
-          
-          // Use mock RFID readings for now - in production this would come from API
-          const rfidReadingsData = apiData.rfidReadings || MOCK_RFID_READINGS;
-          
-          // Map API response to ParticipantDetailData
-          const mappedData: ParticipantDetailData = {
-            id: apiData.id || "",
-            bib: apiData.bibNumber || "",
-            firstName: apiData.firstName || "",
-            lastName: apiData.lastName || "",
-            fullName: apiData.fullName || `${apiData.firstName} ${apiData.lastName}`,
-            email: apiData.email || "",
-            phone: apiData.phone || "",
-            gender: (apiData.gender as "Male" | "Female") || "Male",
-            category: apiData.ageCategory || "",
-            age: apiData.age || 0,
-            nationality: apiData.country || "",
-            club: apiData.club || undefined,
-            raceName: apiData.raceName || "",
-            raceDistance: apiData.raceDistance || 0,
-            eventName: apiData.eventName || "",
-            status: (apiData.status as any) || "Registered",
-            startTime: apiData.startTime || "",
-            finishTime: apiData.finishTime || undefined,
-            chipTime: apiData.chipTime || undefined,
-            gunTime: apiData.gunTime || undefined,
-            lastCheckpoint: hasSplitsData && apiData.splitTimes && apiData.splitTimes.length > 0 
-              ? apiData.splitTimes[apiData.splitTimes.length - 1]?.checkpointName || ""
-              : (MOCK_SPLITS[MOCK_SPLITS.length - 1]?.checkpointName || ""),
-            lastCheckpointTime: hasSplitsData && apiData.splitTimes && apiData.splitTimes.length > 0
-              ? apiData.splitTimes[apiData.splitTimes.length - 1]?.cumulativeTime || ""
-              : (MOCK_SPLITS[MOCK_SPLITS.length - 1]?.cumulativeTime || ""),
-            currentPace: hasPerformanceData 
-              ? (apiData.performance?.averagePace || "") 
-              : MOCK_PERFORMANCE.averagePace,
-            performance: {
-              ...performanceData,
-              ...rankingsData,
-            },
-            splits: splitsData,
-            paceProgression: (apiData.paceProgression || []).map((pace: PaceProgressionInfo, index: number) => ({
-              segment: pace.segment || `Segment ${index + 1}`,
-              distance: 0, // PaceProgressionInfo doesn't have distance, we'll need to calculate or use index
-              pace: pace.pace || "",
-              speed: pace.speed || 0,
-            })),
-            rfidReadings: rfidReadingsData,
-          };
-          
-          if (isMounted) {
-            setParticipant(mappedData);
-            setError(null);
-          }
+          setParticipant(response.data.message);
+          setError(null);
         } else {
-          if (isMounted) {
-            setError("Failed to load participant details");
-          }
+          setError("Failed to load participant details");
         }
       } catch (err: any) {
+        if (isCancelled) return;
         console.error("Error fetching participant details:", err);
-        if (isMounted) {
-          setError(err.response?.data?.message || "Failed to load participant details");
-        }
+        setError(err.response?.data?.message || "Failed to load participant details");
       } finally {
-        if (isMounted) {
+        if (!isCancelled) {
           setLoading(false);
         }
       }
@@ -625,8 +354,7 @@ const ParticipantDetail: React.FC = () => {
     fetchParticipantDetails();
     
     return () => {
-      abortController.abort();
-      isMounted = false;
+      isCancelled = true;
     };
   }, [eventId, raceId, participantId]);
 
@@ -750,8 +478,7 @@ const ParticipantDetail: React.FC = () => {
                       boxShadow: `0 8px 24px ${alpha('#000', 0.3)}`,
                     }}
                   >
-                    {participant.firstName[0]}
-                    {participant.lastName[0]}
+                    {participant.initials || `${participant.firstName?.[0] || ''}${participant.lastName?.[0] || ''}`}
                   </Avatar>
                   <Box>
                     <Typography
@@ -775,7 +502,7 @@ const ParticipantDetail: React.FC = () => {
                         letterSpacing: '-1px',
                       }}
                     >
-                      #{participant.bib}
+                      #{participant.bibNumber}
                     </Typography>
                   </Box>
                 </Stack>
@@ -795,8 +522,8 @@ const ParticipantDetail: React.FC = () => {
                 </Typography>
                 <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
                   <Chip
-                    icon={participant.gender === "Male" ? <Male /> : <Female />}
-                    label={`${participant.gender}, ${participant.age} yrs`}
+                    icon={participant.gender === "M" || participant.gender === "Male" ? <Male /> : <Female />}
+                    label={`${participant.gender === "M" ? "Male" : participant.gender === "F" ? "Female" : participant.gender}${participant.age ? `, ${participant.age} yrs` : ''}`}
                     size="small"
                     sx={{
                       bgcolor: alpha("#fff", 0.25),
@@ -808,7 +535,7 @@ const ParticipantDetail: React.FC = () => {
                   />
                   <Chip
                     icon={<Category />}
-                    label={participant.category}
+                    label={participant.ageCategory || '-'}
                     size="small"
                     sx={{
                       bgcolor: alpha("#fff", 0.25),
@@ -844,7 +571,7 @@ const ParticipantDetail: React.FC = () => {
               {/* Status and Chip Time */}
               <Grid size={{ xs: 12, md: 4 }}>
                 <Box sx={{ textAlign: { xs: "left", md: "right" } }}>
-                  <StatusBadge status={participant.status} />
+                <StatusBadge status={participant.status || "Registered"} />
                   {participant.chipTime && (
                     <Box sx={{ mt: 2.5 }}>
                       <Typography
@@ -894,7 +621,7 @@ const ParticipantDetail: React.FC = () => {
                   Email
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 500, mt: 0.5 }}>
-                  {participant.email}
+                  {participant.email || '-'}
                 </Typography>
               </Grid>
               <Grid size={{ xs: 6, md: 2.4 }}>
@@ -911,7 +638,7 @@ const ParticipantDetail: React.FC = () => {
                   Phone
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 500, mt: 0.5 }}>
-                  {participant.phone}
+                  {participant.phone || '-'}
                 </Typography>
               </Grid>
               <Grid size={{ xs: 6, md: 2.4 }}>
@@ -928,7 +655,7 @@ const ParticipantDetail: React.FC = () => {
                   Age Category
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 500, mt: 0.5 }}>
-                  {participant.category}
+                  {participant.ageCategory || '-'}
                 </Typography>
               </Grid>
               <Grid size={{ xs: 6, md: 2.4 }}>
@@ -986,7 +713,7 @@ const ParticipantDetail: React.FC = () => {
         <Grid size={{ xs: 6, sm: 6, md: 3 }}>
           <StatCard
             title="Avg Speed"
-            value={`${participant.performance.averageSpeed}`}
+            value={`${participant.performance?.averageSpeed ?? '-'}`}
             subtitle="km/h"
             icon={<Speed sx={{ fontSize: 28 }} />}
             color={colors.speed.main}
@@ -996,7 +723,7 @@ const ParticipantDetail: React.FC = () => {
         <Grid size={{ xs: 6, sm: 6, md: 3 }}>
           <StatCard
             title="Avg Pace"
-            value={participant.performance.averagePace}
+            value={participant.performance?.averagePace || '-'}
             subtitle="min/km"
             icon={<Timer sx={{ fontSize: 28 }} />}
             color={colors.pace.main}
@@ -1006,7 +733,7 @@ const ParticipantDetail: React.FC = () => {
         <Grid size={{ xs: 6, sm: 6, md: 3 }}>
           <StatCard
             title="Max Speed"
-            value={`${participant.performance.maxSpeed}`}
+            value={`${participant.performance?.maxSpeed ?? '-'}`}
             subtitle="km/h"
             icon={<LocalFireDepartment sx={{ fontSize: 28 }} />}
             color={colors.warning.main}
@@ -1016,7 +743,7 @@ const ParticipantDetail: React.FC = () => {
         <Grid size={{ xs: 6, sm: 6, md: 3 }}>
           <StatCard
             title="Best Pace"
-            value={participant.performance.minPace}
+            value={participant.performance?.bestPace || '-'}
             subtitle="min/km"
             icon={<TrendingUp sx={{ fontSize: 28 }} />}
             color={colors.success.main}
@@ -1061,8 +788,8 @@ const ParticipantDetail: React.FC = () => {
           >
             <Box sx={{ flex: 1 }}>
               <RankDisplay
-                rank={participant.performance.overallRank}
-                total={participant.performance.totalParticipants}
+                rank={participant.rankings?.overallRank || 0}
+                total={participant.rankings?.totalParticipants || 0}
                 label="Overall"
                 icon={<EmojiEvents sx={{ fontSize: 16, color: colors.warning.main }} />}
                 color={colors.rank.main}
@@ -1071,25 +798,25 @@ const ParticipantDetail: React.FC = () => {
             </Box>
             <Box sx={{ flex: 1 }}>
               <RankDisplay
-                rank={participant.performance.genderRank}
-                total={participant.performance.genderParticipants}
-                label={`${participant.gender}`}
+                rank={participant.rankings?.genderRank || 0}
+                total={participant.rankings?.totalInGender || 0}
+                label={`${participant.gender === "M" ? "Male" : participant.gender === "F" ? "Female" : participant.gender || ''}`}
                 icon={
-                  participant.gender === "Male" ? (
+                  participant.gender === "M" || participant.gender === "Male" ? (
                     <Male sx={{ fontSize: 16, color: colors.gender.male }} />
                   ) : (
                     <Female sx={{ fontSize: 16, color: colors.gender.female }} />
                   )
                 }
-                color={participant.gender === "Male" ? colors.gender.male : colors.gender.female}
+                color={participant.gender === "M" || participant.gender === "Male" ? colors.gender.male : colors.gender.female}
                 isDark={isDark}
               />
             </Box>
             <Box sx={{ flex: 1 }}>
               <RankDisplay
-                rank={participant.performance.categoryRank}
-                total={participant.performance.categoryParticipants}
-                label={participant.category}
+                rank={participant.rankings?.categoryRank || 0}
+                total={participant.rankings?.totalInCategory || 0}
+                label={participant.ageCategory || '-'}
                 icon={<Category sx={{ fontSize: 16, color: colors.pace.main }} />}
                 color={colors.pace.main}
                 isDark={isDark}
@@ -1097,8 +824,8 @@ const ParticipantDetail: React.FC = () => {
             </Box>
             <Box sx={{ flex: 1 }}>
               <RankDisplay
-                rank={participant.performance.overallCategoryRank}
-                total={Math.floor(participant.performance.totalParticipants * 0.4)}
+                rank={participant.rankings?.allCategoriesRank || 0}
+                total={participant.rankings?.totalAllCategories || 0}
                 label="All Categories"
                 icon={<Star sx={{ fontSize: 16, color: colors.warning.main }} />}
                 color={colors.warning.main}
@@ -1142,6 +869,7 @@ const ParticipantDetail: React.FC = () => {
               >
                 <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Checkpoint</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Distance</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Time</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Split Time</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Cumulative</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Pace</TableCell>
@@ -1158,23 +886,29 @@ const ParticipantDetail: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {participant.splits.map((split: Split, index: number) => {
+              {(participant.splitTimes || []).map((split: SplitTimeInfo, index: number) => {
+                const splits = participant.splitTimes || [];
                 const prevPace =
-                  index > 0
-                    ? convertPaceToMinutes(participant.splits[index - 1].pace)
+                  index > 0 && splits[index - 1].pace
+                    ? convertPaceToMinutes(splits[index - 1].pace!)
                     : null;
-                const currentPace = convertPaceToMinutes(split.pace);
-                const paceImproved = prevPace !== null && currentPace < prevPace;
-                const paceSlowed = prevPace !== null && currentPace > prevPace;
+                const currentPace = split.pace ? convertPaceToMinutes(split.pace) : null;
+                const paceImproved = prevPace !== null && currentPace !== null && currentPace < prevPace;
+                const paceSlowed = prevPace !== null && currentPace !== null && currentPace > prevPace;
+
+                // Look up checkpoint time and ranks from checkpointTimes array
+                const checkpointTime = (participant.checkpointTimes || []).find(
+                  (ct: CheckpointTime) => ct.checkpointName && ct.checkpointName === split.checkpointName
+                );
 
                 return (
                   <TableRow
-                    key={split.checkpointId}
+                    key={split.checkpointId || index}
                     sx={{
                       "&:hover": {
                         bgcolor: alpha(colors.primary.main, 0.05),
                       },
-                      bgcolor: index === participant.splits.length - 1 
+                      bgcolor: index === splits.length - 1 
                         ? alpha(colors.success.main, isDark ? 0.1 : 0.06) 
                         : "inherit",
                     }}
@@ -1185,24 +919,29 @@ const ParticipantDetail: React.FC = () => {
                           sx={{
                             fontSize: 18,
                             color:
-                              index === participant.splits.length - 1
+                              index === splits.length - 1
                                 ? colors.success.main
                                 : colors.pace.main,
                           }}
                         />
                         <Typography variant="body2" fontWeight={600}>
-                          {split.checkpointName}
+                          {split.checkpointName || '-'}
                         </Typography>
                       </Stack>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
-                        {split.distance} km
+                        {split.distance || `${split.distanceKm ?? 0} km`}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={600} sx={{ color: colors.text.primary }}>
+                        {checkpointTime?.time || '-'}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={600}>
-                        {split.splitTime}
+                        {split.splitTime || '-'}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -1211,12 +950,12 @@ const ParticipantDetail: React.FC = () => {
                         fontWeight={700}
                         sx={{
                           color:
-                            index === participant.splits.length - 1
+                            index === splits.length - 1
                               ? colors.success.main
                               : colors.text.primary,
                         }}
                       >
-                        {split.cumulativeTime}
+                        {split.cumulativeTime || '-'}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -1232,7 +971,7 @@ const ParticipantDetail: React.FC = () => {
                             fontWeight: 600,
                           }}
                         >
-                          {split.pace}
+                          {split.pace || '-'}
                         </Typography>
                         {paceImproved && (
                           <TrendingUp sx={{ fontSize: 14, color: colors.success.main }} />
@@ -1241,12 +980,12 @@ const ParticipantDetail: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
-                        {split.speed.toFixed(1)} km/h
+                        {split.speed != null ? `${split.speed.toFixed(1)} km/h` : '-'}
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
                       <Chip
-                        label={`#${split.rank}`}
+                        label={`#${checkpointTime?.overallRank || '-'}`}
                         size="small"
                         sx={{
                           fontWeight: 700,
@@ -1258,7 +997,7 @@ const ParticipantDetail: React.FC = () => {
                     </TableCell>
                     <TableCell align="center">
                       <Chip
-                        label={`#${split.genderRank}`}
+                        label={`#${checkpointTime?.genderRank || '-'}`}
                         size="small"
                         sx={{
                           fontWeight: 700,
@@ -1270,7 +1009,7 @@ const ParticipantDetail: React.FC = () => {
                     </TableCell>
                     <TableCell align="center">
                       <Chip
-                        label={`#${split.categoryRank}`}
+                        label={`#${checkpointTime?.categoryRank || '-'}`}
                         size="small"
                         sx={{
                           fontWeight: 700,
@@ -1319,66 +1058,27 @@ const ParticipantDetail: React.FC = () => {
                   bgcolor: alpha(colors.primary.main, isDark ? 0.1 : 0.06),
                 }}
               >
-                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Read Time</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Local Time</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Date</TableCell>
-                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Bib</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Checkpoint</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Device</TableCell>
-                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Process Result</TableCell>
-                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Manual Time</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Gun Time</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Net Time</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Chip ID</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 700, color: colors.text.primary }}>
-                  Actions
-                </TableCell>
+                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Manual</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {(participant.rfidReadings || MOCK_RFID_READINGS).map((reading: RfidReading, index: number) => {
-                // Helper to get process result styling
-                const getProcessResultConfig = (result: RfidReading['processResult']) => {
-                  const configs = {
-                    Success: {
-                      color: colors.success.main,
-                      icon: <CheckCircle sx={{ fontSize: 16 }} />,
-                      bgColor: alpha(colors.success.main, isDark ? 0.2 : 0.1),
-                    },
-                    Failed: {
-                      color: colors.error.main,
-                      icon: <Error sx={{ fontSize: 16 }} />,
-                      bgColor: alpha(colors.error.main, isDark ? 0.2 : 0.1),
-                    },
-                    Pending: {
-                      color: colors.warning.main,
-                      icon: <Pending sx={{ fontSize: 16 }} />,
-                      bgColor: alpha(colors.warning.main, isDark ? 0.2 : 0.1),
-                    },
-                    Duplicate: {
-                      color: colors.warning.main,
-                      icon: <ContentCopy sx={{ fontSize: 16 }} />,
-                      bgColor: alpha(colors.warning.main, isDark ? 0.2 : 0.1),
-                    },
-                    Invalid: {
-                      color: colors.error.main,
-                      icon: <Warning sx={{ fontSize: 16 }} />,
-                      bgColor: alpha(colors.error.main, isDark ? 0.2 : 0.1),
-                    },
-                  };
-                  return configs[result] || configs.Pending;
-                };
-
-                const processConfig = getProcessResultConfig(reading.processResult);
-                const readDateTime = new Date(reading.readTime);
+              {(participant.rfidReadings || []).map((reading: RfidReadingDetail) => {
+                const readDateTime = new Date(reading.readTimeUtc);
 
                 return (
                   <TableRow
-                    key={reading.id}
+                    key={reading.readingId}
                     sx={{
                       "&:hover": {
                         bgcolor: alpha(colors.primary.main, 0.05),
                       },
-                      bgcolor: reading.isManualEntry 
-                        ? alpha(colors.warning.main, isDark ? 0.05 : 0.02) 
-                        : "inherit",
                     }}
                   >
                     <TableCell>
@@ -1390,7 +1090,7 @@ const ParticipantDetail: React.FC = () => {
                           }}
                         />
                         <Typography variant="body2" fontWeight={600}>
-                          {readDateTime.toLocaleTimeString('en-US', { 
+                          {reading.readTimeLocal || readDateTime.toLocaleTimeString('en-US', { 
                             hour: '2-digit', 
                             minute: '2-digit', 
                             second: '2-digit' 
@@ -1408,18 +1108,6 @@ const ParticipantDetail: React.FC = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={`#${reading.bibNumber}`}
-                        size="small"
-                        sx={{
-                          fontWeight: 700,
-                          bgcolor: alpha(colors.primary.main, isDark ? 0.2 : 0.1),
-                          color: colors.primary.main,
-                          border: `1px solid ${alpha(colors.primary.main, 0.3)}`,
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
                       <Stack direction="row" alignItems="center" spacing={1}>
                         <LocationOn
                           sx={{
@@ -1428,7 +1116,7 @@ const ParticipantDetail: React.FC = () => {
                           }}
                         />
                         <Typography variant="body2" fontWeight={600}>
-                          {reading.checkpointName}
+                          {reading.checkpointName || '-'}
                         </Typography>
                       </Stack>
                     </TableCell>
@@ -1438,38 +1126,14 @@ const ParticipantDetail: React.FC = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        icon={processConfig.icon as React.ReactElement}
-                        label={reading.processResult}
-                        size="small"
-                        sx={{
-                          fontWeight: 700,
-                          bgcolor: processConfig.bgColor,
-                          color: processConfig.color,
-                          border: `1px solid ${alpha(processConfig.color, 0.3)}`,
-                          '& .MuiChip-icon': {
-                            color: processConfig.color,
-                          },
-                        }}
-                      />
+                      <Typography variant="body2" fontWeight={600}>
+                        {reading.gunTimeFormatted || '-'}
+                      </Typography>
                     </TableCell>
                     <TableCell>
-                      {reading.manualTime ? (
-                        <Stack direction="row" alignItems="center" spacing={0.5}>
-                          <Schedule sx={{ fontSize: 16, color: colors.warning.main }} />
-                          <Typography 
-                            variant="body2" 
-                            fontWeight={600}
-                            sx={{ color: colors.warning.main }}
-                          >
-                            {reading.manualTime}
-                          </Typography>
-                        </Stack>
-                      ) : (
-                        <Typography variant="body2" sx={{ color: colors.text.secondary }}>
-                          -
-                        </Typography>
-                      )}
+                      <Typography variant="body2" fontWeight={600}>
+                        {reading.netTimeFormatted || '-'}
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography 
@@ -1484,42 +1148,18 @@ const ParticipantDetail: React.FC = () => {
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
-                      <Stack direction="row" spacing={0.5} justifyContent="center">
-                        <Tooltip title="Process/Reprocess reading">
-                          <IconButton
-                            size="small"
-                            sx={{
-                              color: colors.success.main,
-                              '&:hover': {
-                                bgcolor: alpha(colors.success.main, 0.1),
-                              },
-                            }}
-                            onClick={() => {
-                              // TODO: Implement process/reprocess functionality
-                              console.log('Process RFID reading:', reading.id);
-                            }}
-                          >
-                            <Refresh sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Edit reading">
-                          <IconButton
-                            size="small"
-                            sx={{
-                              color: colors.primary.main,
-                              '&:hover': {
-                                bgcolor: alpha(colors.primary.main, 0.1),
-                              },
-                            }}
-                            onClick={() => {
-                              // TODO: Implement edit functionality
-                              console.log('Edit RFID reading:', reading.id);
-                            }}
-                          >
-                            <Edit sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
+                      <Chip
+                        label={reading.isManualEntry ? 'Yes' : 'No'}
+                        size="small"
+                        sx={{
+                          fontWeight: 700,
+                          bgcolor: reading.isManualEntry 
+                            ? alpha(colors.warning.main, isDark ? 0.2 : 0.1)
+                            : alpha(colors.success.main, isDark ? 0.2 : 0.1),
+                          color: reading.isManualEntry ? colors.warning.main : colors.success.main,
+                          border: `1px solid ${alpha(reading.isManualEntry ? colors.warning.main : colors.success.main, 0.3)}`,
+                        }}
+                      />
                     </TableCell>
                   </TableRow>
                 );
@@ -1528,17 +1168,15 @@ const ParticipantDetail: React.FC = () => {
           </Table>
         </TableContainer>
         
-        {/* Notes Section */}
-        {participant.rfidReadings?.some(r => r.notes) && (
+        {/* Processing Notes Section */}
+        {participant.processingNotes && participant.processingNotes.length > 0 && (
           <Box sx={{ p: 2, bgcolor: colors.background.subtle, borderTop: `1px solid ${colors.border.light}` }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: colors.text.primary }}>
-              Notes:
+              Processing Notes:
             </Typography>
-            {participant.rfidReadings
-              .filter(r => r.notes)
-              .map((reading) => (
+            {[...new Set(participant.processingNotes)].map((note, idx) => (
                 <Typography 
-                  key={reading.id} 
+                  key={idx} 
                   variant="caption" 
                   sx={{ 
                     display: 'block',
@@ -1546,9 +1184,18 @@ const ParticipantDetail: React.FC = () => {
                     mb: 0.5,
                   }}
                 >
-                  • <strong>{reading.checkpointName}:</strong> {reading.notes}
+                  • {note}
                 </Typography>
               ))}
+          </Box>
+        )}
+
+        {/* EPC Info */}
+        {participant.epc && (
+          <Box sx={{ p: 2, bgcolor: colors.background.subtle, borderTop: `1px solid ${colors.border.light}` }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: colors.text.primary }}>
+              EPC: <Typography component="span" variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{participant.epc}</Typography>
+            </Typography>
           </Box>
         )}
       </Card>
@@ -1647,11 +1294,11 @@ const ParticipantDetail: React.FC = () => {
 
           {/* Pace values display */}
           <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
-            {participant.splits.map((split: Split, index: number) => {
-              const prevPace = index > 0 
-                ? convertPaceToMinutes(participant.splits[index - 1].pace)
+            {(participant.splitTimes || []).filter((s: SplitTimeInfo) => s.pace).map((split: SplitTimeInfo, index: number, arr: SplitTimeInfo[]) => {
+              const prevPace = index > 0 && arr[index - 1].pace
+                ? convertPaceToMinutes(arr[index - 1].pace!)
                 : null;
-              const currentPace = convertPaceToMinutes(split.pace);
+              const currentPace = split.pace ? convertPaceToMinutes(split.pace) : 0;
               const isFaster = prevPace !== null && currentPace < prevPace;
               const isSlower = prevPace !== null && currentPace > prevPace;
               
@@ -1664,7 +1311,7 @@ const ParticipantDetail: React.FC = () => {
               
               return (
                 <Box
-                  key={split.checkpointId}
+                  key={split.checkpointId || index}
                   sx={{
                     flex: 1,
                     minWidth: 100,
@@ -1674,14 +1321,14 @@ const ParticipantDetail: React.FC = () => {
                       ? alpha(isDrasticSlowdown ? colors.error.main : colors.success.main, isDark ? 0.15 : 0.08)
                       : colors.background.subtle,
                     border: `1px solid ${
-                      index === participant.splits.length - 1 
+                      index === arr.length - 1 
                         ? alpha(colors.warning.main, 0.5)
                         : isDrasticChange
                           ? alpha(isDrasticSlowdown ? colors.error.main : colors.success.main, 0.6)
                           : colors.border.light
                     }`,
                     borderLeft: `4px solid ${
-                      index === participant.splits.length - 1 
+                      index === arr.length - 1 
                         ? colors.warning.main
                         : isFaster 
                           ? colors.success.main 
@@ -1710,7 +1357,7 @@ const ParticipantDetail: React.FC = () => {
                         flex: 1,
                       }}
                     >
-                      {split.checkpointName} ({split.distance}km)
+                      {split.checkpointName} ({split.distanceKm ?? 0}km)
                     </Typography>
                     {isDrasticChange && (
                       <Tooltip 
@@ -1752,7 +1399,7 @@ const ParticipantDetail: React.FC = () => {
                       variant="h6" 
                       sx={{ 
                         fontWeight: 800,
-                        color: index === participant.splits.length - 1
+                        color: index === arr.length - 1
                           ? colors.warning.main
                           : isFaster 
                             ? colors.success.main 
@@ -1784,7 +1431,7 @@ const ParticipantDetail: React.FC = () => {
                         fontSize: '0.75rem',
                       }}
                     >
-                      {split.speed.toFixed(1)} km/h
+                      {split.speed != null ? `${split.speed.toFixed(1)} km/h` : '-'}
                     </Typography>
                   </Stack>
                   <Typography 
@@ -1797,7 +1444,7 @@ const ParticipantDetail: React.FC = () => {
                       mt: 0.5,
                     }}
                   >
-                    Split time: {split.splitTime}
+                    Split time: {split.splitTime || '-'}
                   </Typography>
                   {isDrasticChange && (
                     <Chip
@@ -1858,15 +1505,15 @@ const ParticipantDetail: React.FC = () => {
                     <stop offset="100%" stopColor={colors.success.main} stopOpacity="0.3" />
                   </linearGradient>
                 </defs>
-                {participant.splits.map((split: Split, index: number) => {
-                  if (index === participant.splits.length - 1) return null;
+                {(participant.splitTimes || []).filter((s: SplitTimeInfo) => s.pace).map((split: SplitTimeInfo, index: number, arr: SplitTimeInfo[]) => {
+                  if (index === arr.length - 1) return null;
                   
-                  const totalCheckpoints = participant.splits.length;
+                  const totalCheckpoints = arr.length;
                   const x1 = ((index + 1) / (totalCheckpoints + 1)) * 100;
                   const x2 = ((index + 2) / (totalCheckpoints + 1)) * 100;
                   
-                  const currentPace = convertPaceToMinutes(split.pace);
-                  const nextPace = convertPaceToMinutes(participant.splits[index + 1].pace);
+                  const currentPace = split.pace ? convertPaceToMinutes(split.pace) : 0;
+                  const nextPace = arr[index + 1].pace ? convertPaceToMinutes(arr[index + 1].pace!) : 0;
                   
                   // Map pace to vertical position (faster = higher)
                   const minPace = 4.0;
@@ -1897,9 +1544,9 @@ const ParticipantDetail: React.FC = () => {
                 height: '100%',
                 position: 'relative',
               }}>
-                {participant.splits.map((split: Split, index: number) => {
-                  const paceMinutes = convertPaceToMinutes(split.pace);
-                  const prevPace = index > 0 ? convertPaceToMinutes(participant.splits[index - 1].pace) : null;
+                {(participant.splitTimes || []).filter((s: SplitTimeInfo) => s.pace).map((split: SplitTimeInfo, index: number, arr: SplitTimeInfo[]) => {
+                  const paceMinutes = split.pace ? convertPaceToMinutes(split.pace) : 0;
+                  const prevPace = index > 0 && arr[index - 1].pace ? convertPaceToMinutes(arr[index - 1].pace!) : null;
                   const isFaster = prevPace !== null && paceMinutes < prevPace;
                   const isSlower = prevPace !== null && paceMinutes > prevPace;
                   
@@ -1909,7 +1556,7 @@ const ParticipantDetail: React.FC = () => {
                   const normalizedPace = (Math.min(Math.max(paceMinutes, minPace), maxPace) - minPace) / (maxPace - minPace);
                   const verticalPosition = (1 - normalizedPace) * 60; // 0-60% range
                   
-                  const isFinish = index === participant.splits.length - 1;
+                  const isFinish = index === arr.length - 1;
                   
                   return (
                     <Tooltip
@@ -1917,20 +1564,20 @@ const ParticipantDetail: React.FC = () => {
                       title={
                         <Box sx={{ p: 0.5 }}>
                           <Typography variant="body2" fontWeight={700}>
-                            {split.checkpointName} ({split.distance}km)
+                            {split.checkpointName} ({split.distanceKm ?? 0}km)
                           </Typography>
                           <Divider sx={{ my: 0.5 }} />
                           <Typography variant="caption" display="block">
-                            <strong>Pace:</strong> {split.pace}
+                            <strong>Pace:</strong> {split.pace || '-'}
                           </Typography>
                           <Typography variant="caption" display="block">
-                            <strong>Speed:</strong> {split.speed.toFixed(1)} km/h
+                            <strong>Speed:</strong> {split.speed != null ? `${split.speed.toFixed(1)} km/h` : '-'}
                           </Typography>
                           <Typography variant="caption" display="block">
-                            <strong>Split Time:</strong> {split.splitTime}
+                            <strong>Split Time:</strong> {split.splitTime || '-'}
                           </Typography>
                           <Typography variant="caption" display="block">
-                            <strong>Cumulative Time:</strong> {split.cumulativeTime}
+                            <strong>Cumulative Time:</strong> {split.cumulativeTime || '-'}
                           </Typography>
                         </Box>
                       }
@@ -1940,7 +1587,7 @@ const ParticipantDetail: React.FC = () => {
                         sx={{
                           position: 'absolute',
                           bottom: `${verticalPosition}%`,
-                          left: `${((index + 1) / (participant.splits.length + 1)) * 100}%`,
+                          left: `${((index + 1) / (arr.length + 1)) * 100}%`,
                           transform: 'translateX(-50%)',
                           display: 'flex',
                           flexDirection: 'column',
@@ -2029,7 +1676,7 @@ const ParticipantDetail: React.FC = () => {
                             boxShadow: `0 2px 8px ${alpha('#000', 0.1)}`,
                           }}
                         >
-                          {split.pace}
+                          {split.pace || '-'}
                         </Typography>
                         
                         {/* Checkpoint name */}
@@ -2043,7 +1690,7 @@ const ParticipantDetail: React.FC = () => {
                             textAlign: 'center',
                           }}
                         >
-                          {split.checkpointName}
+                          {split.checkpointName || '-'}
                         </Typography>
                         
                         {/* Distance */}
@@ -2055,7 +1702,7 @@ const ParticipantDetail: React.FC = () => {
                             fontSize: '0.6rem',
                           }}
                         >
-                          {split.distance}km
+                          {split.distanceKm ?? 0}km
                         </Typography>
                       </Box>
                     </Tooltip>
@@ -2078,7 +1725,7 @@ const ParticipantDetail: React.FC = () => {
           >
             <Typography variant="caption" sx={{ color: colors.text.secondary, fontWeight: 600 }}>
               <AccessTime sx={{ fontSize: 14, mr: 0.5, verticalAlign: "middle" }} />
-              Start: {new Date(participant.startTime).toLocaleTimeString()}
+              Start: {participant.startTime ? new Date(participant.startTime).toLocaleTimeString() : '-'}
             </Typography>
             <Typography 
               variant="caption" 

@@ -19,6 +19,8 @@ export * from './SplitTimeInfo';
 export * from './PaceProgressionInfo';
 export * from './ParticipantDetailsResponse';
 export * from './RfidReading';
+export * from './RfidReadingDetail';
+export * from './CheckpointTime';
 export * from './AddParticipantRangeRequest';
 export * from './AddParticipantRangeResponse';
 export * from './UpdateParticipantsByBibRequest';

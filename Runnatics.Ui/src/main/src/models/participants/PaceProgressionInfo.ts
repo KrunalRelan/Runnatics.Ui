@@ -6,4 +6,7 @@ export interface PaceProgressionInfo {
   paceValue: number | null;
   speed: number | null;
   splitTime: string | null;
+  distanceKm: number | null;
+  paceChangeDirection: string | null;
+  paceChangePercent: number | null;
 }

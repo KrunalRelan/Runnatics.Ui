@@ -4,6 +4,8 @@ import { PerformanceOverview } from './PerformanceOverview';
 import { RankingInfo } from './RankingInfo';
 import { SplitTimeInfo } from './SplitTimeInfo';
 import { PaceProgressionInfo } from './PaceProgressionInfo';
+import { RfidReadingDetail } from './RfidReadingDetail';
+import { CheckpointTime } from './CheckpointTime';
 
 export interface ParticipantDetailsResponse {
   // Basic Information
@@ -36,10 +38,16 @@ export interface ParticipantDetailsResponse {
   gunTime: string | null;
   startTime: string | null;
   finishTime: string | null;
+  checkpointTimes: CheckpointTime[] | null;
 
   // Performance and Analytics
   performance: PerformanceOverview | null;
   rankings: RankingInfo | null;
   splitTimes: SplitTimeInfo[] | null;
   paceProgression: PaceProgressionInfo[] | null;
+
+  // RFID Information
+  epc: string | null;
+  rfidReadings: RfidReadingDetail[] | null;
+  processingNotes: string[] | null;
 }

@@ -10,7 +10,4 @@ export interface SplitTimeInfo {
   pace: string | null;
   paceValue: number | null;
   speed: number | null;
-  overallRank: number | null;
-  genderRank: number | null;
-  categoryRank: number | null;
 }
