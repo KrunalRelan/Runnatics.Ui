@@ -55,7 +55,15 @@ export const ServiceUrl = {
     getAllDevices: () => "devices",
 
 
+  //rfid
+    uploadRFIDFileAuto: () => "rfid/import-auto",
+    processAllRFIDResults: (eventId: string, raceId: string) => `RFID/${eventId}/${raceId}/process-all`,
+    clearProcessedData: (eventId: string, raceId: string) => `RFID/${eventId}/${raceId}/clear-processed-data`,
+
     //dashboard
     dashboardStats: () => "dashboard/stats",
+
+    //leaderboard
+    getLeaderboard: () => `Results/leaderboard`,
 };
 

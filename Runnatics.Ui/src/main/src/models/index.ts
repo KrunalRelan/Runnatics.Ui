@@ -8,3 +8,4 @@ export * from "./ServiceUrls";
 export * from "./Event";
 export * from "./TimeZoneOptions";
 export * from "./LeaderBoardSettings";
+export * from "./rfid";

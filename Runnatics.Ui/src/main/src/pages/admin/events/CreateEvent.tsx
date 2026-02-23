@@ -855,9 +855,6 @@ export const CreateEvent: React.FC = () => {
                   }
                   required
                   InputLabelProps={{ shrink: true }}
-                  inputProps={{
-                    min: new Date().toISOString().slice(0, 16),
-                  }}
                 />
               </Stack>
 
