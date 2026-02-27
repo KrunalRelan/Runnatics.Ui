@@ -31,6 +31,7 @@ import {
   Tab,
 } from "@mui/material";
 import PageContainer from "@/main/src/components/PageContainer";
+
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -39,6 +40,7 @@ import {
   Clear as ClearIcon,
   EventAvailable as EventAvailableIcon,
   History as HistoryIcon,
+  ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
 import {
   ColDef,
@@ -727,6 +729,9 @@ const EventsList: React.FC = () => {
       pageSize: size,
     }));
   };
+ const handleBack = () => {
+    navigate(`/dashboard`);
+  };
 
   if (loading && events.length === 0) {
     return (
@@ -738,6 +743,14 @@ const EventsList: React.FC = () => {
 
   return (
     <PageContainer>
+      <Button
+        variant="outlined"
+        startIcon={<ArrowBackIcon />}
+        onClick={handleBack}
+        sx={{ mb: 2 }}
+      >
+        Back
+      </Button>
       {/* Header */}
       <Box
         sx={{

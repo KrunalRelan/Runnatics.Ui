@@ -582,7 +582,7 @@ export const CreateEvent: React.FC = () => {
   }));
 
   const handleBack = () => {
-    navigate(`/events/events-dashboard`);
+    navigate(`/dashboard`);
   };
 
   return (
