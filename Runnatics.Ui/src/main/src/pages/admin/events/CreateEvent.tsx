@@ -42,6 +42,7 @@ import {
 } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
 import { LeaderboardSettingsComponent } from "../shared/LeaderboardSettings";
+import { convertLocalToUTC } from "@/main/src/utils/dateTimeUtils";
 
 interface FormErrors {
   [key: string]: string;
@@ -411,13 +412,20 @@ export const CreateEvent: React.FC = () => {
         eventOrganizerIdForApi
       );
 
+      // Convert local datetime to UTC before sending to API
+      const timeZone = apiData.timeZone || "Asia/Kolkata";
+      const eventDateUTC = convertLocalToUTC(apiData.startDate, timeZone);
+      const registrationDeadlineUTC = apiData.registrationCloseDate 
+        ? convertLocalToUTC(apiData.registrationCloseDate, timeZone) 
+        : eventDateUTC;
+
       const requestPayload = {
         eventOrganizerId: eventOrganizerIdForApi,
         name: apiData.name,
         slug: apiData.name.toLowerCase().replace(/\s+/g, "-"),
         description: apiData.description || null,
-        eventDate: apiData.startDate,
-        timeZone: apiData.timeZone || "Asia/Kolkata",
+        eventDate: eventDateUTC,
+        timeZone: timeZone,
         venueName: apiData.location || null,
         venueAddress:
           `${apiData.city}, ${apiData.state}, ${apiData.country}, ${apiData.zipCode}` || null,
@@ -429,8 +437,7 @@ export const CreateEvent: React.FC = () => {
         venueLongitude: null,
         status: EventStatus.Draft,
         maxParticipants: 1000,
-        registrationDeadline:
-          apiData.registrationCloseDate || apiData.startDate || null,
+        registrationDeadline: registrationDeadlineUTC,
         eventType: apiData.eventType,
         eventSettings: eventSettings
           ? {

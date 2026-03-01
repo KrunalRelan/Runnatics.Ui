@@ -28,20 +28,27 @@ import { Race } from "@/main/src/models/races/Race";
 import { RaceService } from "@/main/src/services/RaceService";
 import DataGrid from "@/main/src/components/DataGrid";
 import { SearchCriteria } from "@/main/src/models/SearchCriteria";
+import { formatDateTimeInTimeZone } from "@/main/src/utils/dateTimeUtils";
 
 interface RaceListProps {
   races: Race[];
   searchCriteria: SearchCriteria;
   totalCount: number; // ✅ Changed from totalRecords and totalPages
   loading?: boolean;
+  eventTimeZone?: string; // Optional timezone for formatting race times
   onSearchCriteriaChange: (criteria: SearchCriteria) => void;
   onEdit?: (raceId: string) => void;
   onDelete?: (raceId: string) => void;
 }
 
 
-function formatDateTime(dateStr: string) {
+function formatDateTime(dateStr: string, timeZone: string = "Asia/Kolkata") {
   if (!dateStr) return "N/A";
+  // Use timezone-aware formatting if timezone is provided
+  if (timeZone) {
+    return formatDateTimeInTimeZone(dateStr, timeZone, "MMM DD, YYYY hh:mm A");
+  }
+  // Fallback to basic date formatting
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return "Invalid Date";
   return date.toLocaleString("en-US", {
@@ -58,6 +65,7 @@ export const RaceList: React.FC<RaceListProps> = ({
   searchCriteria,
   totalCount, // ✅ Changed
   loading = false,
+  eventTimeZone = "Asia/Kolkata", // Default to IST if not provided
   onSearchCriteriaChange,
   onEdit,
   onDelete,
@@ -211,11 +219,11 @@ export const RaceList: React.FC<RaceListProps> = ({
         }}
       >
         <Typography variant="body2">
-          {formatDateTime(props.data.startTime)}
+          {formatDateTime(props.data.startTime, eventTimeZone)}
         </Typography>
       </Box>
     );
-  }, []);
+  }, [eventTimeZone]);
 
   // End DateTime Cell Renderer
   const EndDateTimeCellRenderer = useCallback((props: any) => {
@@ -228,11 +236,11 @@ export const RaceList: React.FC<RaceListProps> = ({
         }}
       >
         <Typography variant="body2">
-          {formatDateTime(props.data.endTime)}
+          {formatDateTime(props.data.endTime, eventTimeZone)}
         </Typography>
       </Box>
     );
-  }, []);
+  }, [eventTimeZone]);
 
   // Actions Cell Renderer
   const ActionsCellRenderer = useCallback(
