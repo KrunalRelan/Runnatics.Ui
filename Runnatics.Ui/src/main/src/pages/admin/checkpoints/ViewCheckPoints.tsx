@@ -754,7 +754,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                                 variant="contained"
                                 startIcon={<AddIcon />}
                                 onClick={handleOpenAddDialog}
-                                disabled={hasFinishCheckpoint || loading}
+                                disabled={loading}
                                 sx={{ mt: 0.5 }}
                             >
                                 Add Checkpoint

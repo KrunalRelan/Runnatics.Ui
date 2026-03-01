@@ -31,14 +31,8 @@ import ViewParticipants from "@/main/src/pages/admin/participants/ViewParticipan
 import ViewCheckPoints from "@/main/src/pages/admin/checkpoints/ViewCheckPoints";
 import { AddOrEditCertificate } from "../certificates/AddOrEditCertificate";
 import Leaderboard from "@/main/src/pages/admin/leaderboard/Leaderboard";
-
-// Placeholder components for other tabs
-const RaceDashboard: React.FC<{ eventId: string; raceId: string }> = () => (
-  <Card sx={{ p: 3 }}>
-    <Typography variant="h6">Race Dashboard</Typography>
-    <Typography color="text.secondary">Dashboard content coming soon...</Typography>
-  </Card>
-);
+import { RaceDashboard } from "./RaceDashboard";
+import config from "@/main/src/config/environment";
 
 const Segments: React.FC<{ eventId: string; raceId: string }> = () => (
   <Card sx={{ p: 3 }}>
@@ -179,7 +173,13 @@ const ViewRaces: React.FC = () => {
       case 2:
         return <ViewParticipants eventId={eventId} raceId={selectedRaceId} />;
       case 3:
-        return <RaceDashboard eventId={eventId} raceId={selectedRaceId} />;
+        return (
+          <RaceDashboard
+            raceId={Number(selectedRaceId)}
+            raceName={race?.title || 'Race'}
+            webhookBaseUrl={config.apiBaseUrl.replace(/\/api$/, '')}
+          />
+        );
       case 4:
         return <ViewCheckPoints eventId={eventId} raceId={selectedRaceId} races={races} />;
       case 5:
