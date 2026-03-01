@@ -40,6 +40,7 @@ export const ServiceUrl = {
     getParticipantCategories: (eventId: string, raceId?: string) => `participants/${eventId}/${raceId}/categories`,
     addParticipantRange: (eventId: string, raceId: string) => `participants/${eventId}/${raceId}/add-participant-range`,
     updateParticipantsByBib: (eventId: string, raceId: string) => `participants/${eventId}/${raceId}/update-by-bib`,
+    getParticipantDetails: (eventId: string, raceId: string, participantId: string) => `Results/${eventId}/${raceId}/participant/${participantId}/details`,
     //checkpoints
     searchCheckpoints: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,
     addCheckpoint: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,

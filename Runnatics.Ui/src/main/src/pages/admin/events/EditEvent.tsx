@@ -36,6 +36,7 @@ import {
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
 import { EventRequest } from "@/main/src/models/EventRequest";
 import { LeaderboardSettingsComponent } from "../shared/LeaderboardSettings";
+import { convertLocalToUTC, convertUTCToLocal } from "@/main/src/utils/dateTimeUtils";
 
 interface FormErrors {
   [key: string]: string;
@@ -221,13 +222,17 @@ export const EditEvent: React.FC = () => {
     }
 
     // ✅ Map event data - if value exists use it, otherwise empty string
+    // Convert UTC eventDate to local time for display in datetime-local input
+    const timeZone = event.timeZone ?? "Asia/Kolkata";
+    const eventDateLocal = event.eventDate ? convertUTCToLocal(event.eventDate, timeZone) : "";
+    
     const mappedFormData: EventRequest = {
       eventOrganizerId: selectedOrgId || "",
       name: event.name ?? "",
       description: event.description ?? "",
       eventType: (event.eventType as EventType) || EventType.Marathon,
-      eventDate: event.eventDate ?? "",
-      timeZone: event.timeZone ?? "Asia/Kolkata",
+      eventDate: eventDateLocal,
+      timeZone: timeZone,
       venueName: event.venueName ?? "",
       venueAddress: event.venueAddress ?? "",
       city: event.city ?? "",
@@ -443,12 +448,16 @@ export const EditEvent: React.FC = () => {
         throw new Error("Invalid organization selection");
       }
 
+      // Convert local datetime to UTC before sending to API
+      const timeZone = apiData.timeZone || "Asia/Kolkata";
+      const eventDateUTC = convertLocalToUTC(apiData.eventDate, timeZone);
+
       const requestPayload: EventRequest = {
         eventOrganizerId: eventOrganizerIdForApi,
         name: apiData.name,
         description: apiData.description || "",
-        eventDate: apiData.eventDate,
-        timeZone: apiData.timeZone || "Asia/Kolkata",
+        eventDate: eventDateUTC,
+        timeZone: timeZone,
         smsText: apiData.smsText || "",
         leaderBoardSettings: leaderBoardSettings,
         eventSettings: eventSettings,

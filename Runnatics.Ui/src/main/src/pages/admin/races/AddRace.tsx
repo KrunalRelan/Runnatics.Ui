@@ -22,6 +22,8 @@ import { Event } from "../../../models/Event";
 import { CreateRaceRequest } from "@/main/src/models/races/CreateRaceRequest";
 import { LeaderBoardSettings } from "@/main/src/models";
 import { LeaderboardSettingsComponent } from "../shared/LeaderboardSettings";
+import { convertLocalToUTC, convertUTCToLocal } from "@/main/src/utils/dateTimeUtils";
+import dayjs from "dayjs";
 
 interface FormErrors {
   [key: string]: string;
@@ -118,20 +120,24 @@ export const AddRace: React.FC = () => {
 
         // Set default date from event date (if available)
         if (eventData?.eventDate) {
-          const eventDateTime = new Date(eventData.eventDate);
-          const sixAM = new Date(eventDateTime);
-          sixAM.setHours(6, 0, 0, 0);
+          const timeZone = eventData.timeZone || "Asia/Kolkata";
+          
+          // Convert UTC event date to local time
+          const eventDateLocal = convertUTCToLocal(eventData.eventDate, timeZone);
+          
+          // Parse the local date string
+          const eventDateTime = dayjs(eventDateLocal, "YYYY-MM-DDTHH:mm");
+          const sixAM = eventDateTime.clone().set("h", 6).set("m", 0);
           
           // Use event time if it's at or after 6 AM, otherwise use 6 AM
-          const defaultStartTime = eventDateTime >= sixAM 
-            ? eventDateTime.toISOString().slice(0, 16)
-            : `${eventDateTime.toISOString().split('T')[0]}T06:00`;
+          const defaultStartTime = eventDateTime.isSameOrAfter(sixAM) 
+            ? eventDateLocal
+            : eventDateTime.format("YYYY-MM-DD") + "T06:00";
           
           // Set default end time to 6 hours after start time
-          const startDateTime = eventDateTime >= sixAM ? eventDateTime : sixAM;
-          const endDateTime = new Date(startDateTime);
-          endDateTime.setHours(endDateTime.getHours() + 6);
-          const defaultEndTime = endDateTime.toISOString().slice(0, 16);
+          const startDateTime = eventDateTime.isSameOrAfter(sixAM) ? eventDateTime : sixAM;
+          const endDateTime = startDateTime.clone().add(6, "hours");
+          const defaultEndTime = endDateTime.format("YYYY-MM-DDTHH:mm");
 
           setFormData((prev) => ({
             ...prev,
@@ -269,13 +275,18 @@ export const AddRace: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      // Convert local race times to UTC before sending to API
+      const timeZone = event?.timeZone || "Asia/Kolkata";
+      const startTimeUTC = convertLocalToUTC(formData.startTime, timeZone);
+      const endTimeUTC = convertLocalToUTC(formData.endTime, timeZone);
+
       // Create the request payload
       const requestPayload: CreateRaceRequest = {
         title: formData.title,
         distance: formData.distance,
         description: formData.description || "",
-        startTime: formData.startTime,
-        endTime: formData.endTime,
+        startTime: startTimeUTC,
+        endTime: endTimeUTC,
         overrideSettings: overrideLeaderboardSettings,
         raceSettings: {
           published: formData.raceSettings?.published ?? false,
