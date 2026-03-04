@@ -82,36 +82,32 @@ type SimMode = "auto" | "manual" | "burst";
 
 const SIMULATED_DEVICES: SimulatedDevice[] = [
   { hostname: "impinj-12-db-b0", mac: "00:16:25:12:db:b0", name: "Start/Finish Line", checkpointName: "Start/Finish" },
-  { hostname: "impinj-13-5f-24", mac: "00:16:25:13:5f:24", name: "5km Checkpoint", checkpointName: "5km" },
-  { hostname: "impinj-13-5f-25", mac: "00:16:25:13:5f:25", name: "10km Turnaround", checkpointName: "10km" },
+  { hostname: "impinj-13-db-b0", mac: "00:16:25:13:db:b0", name: "5KM Checkpoint", checkpointName: "5KM" },
 ];
 
 const SIMULATED_RUNNERS: SimulatedRunner[] = [
-  { bib: "001", name: "Arun Sharma",     epc: "418000A95101", paceMin: 4.5, paceMax: 5.2 },
-  { bib: "002", name: "Priya Kaur",      epc: "418000A95102", paceMin: 5.0, paceMax: 5.8 },
-  { bib: "003", name: "Vikram Singh",    epc: "418000A95103", paceMin: 4.8, paceMax: 5.5 },
-  { bib: "004", name: "Meera Patel",     epc: "418000A95104", paceMin: 5.5, paceMax: 6.3 },
-  { bib: "005", name: "Rajesh Kumar",    epc: "418000A95105", paceMin: 5.2, paceMax: 6.0 },
-  { bib: "006", name: "Anita Devi",      epc: "418000A95106", paceMin: 6.0, paceMax: 7.0 },
-  { bib: "007", name: "Sunil Verma",     epc: "418000A95107", paceMin: 4.2, paceMax: 4.8 },
-  { bib: "008", name: "Neha Gupta",      epc: "418000A95108", paceMin: 5.8, paceMax: 6.5 },
-  { bib: "042", name: "Harpreet Dhillon",epc: "418000A95119", paceMin: 5.0, paceMax: 5.6 },
-  { bib: "099", name: "Deepak Malhotra", epc: "418000A95199", paceMin: 4.0, paceMax: 4.5 },
+  { bib: "1001", name: "Vivek Negi",         epc: "4180003E9515", paceMin: 4.5, paceMax: 5.2 },
+  { bib: "1002", name: "Shourya Vijay",      epc: "4180003EA4D4", paceMin: 5.0, paceMax: 5.8 },
+  { bib: "1003", name: "Adiyogi Sharman",    epc: "4180003EBDEB", paceMin: 4.8, paceMax: 5.5 },
+  { bib: "1004", name: "Yashraj Singh",      epc: "4180003EC0A3", paceMin: 5.5, paceMax: 6.3 },
+  { bib: "1005", name: "Pranaya Chugh",      epc: "4180003ED627", paceMin: 5.2, paceMax: 6.0 },
+  { bib: "1006", name: "Anamitraa Choubey",  epc: "4180003EEEFC", paceMin: 6.0, paceMax: 7.0 },
+  { bib: "1007", name: "Aniket Meena",       epc: "4180003EF844", paceMin: 4.2, paceMax: 4.8 },
+  { bib: "1008", name: "Yash Singh",         epc: "4180003F0196", paceMin: 5.8, paceMax: 6.5 },
+  { bib: "1009", name: "Rudra Patel",        epc: "4180003F131E", paceMin: 5.0, paceMax: 5.6 },
+  { bib: "1010", name: "Raghav Batham",      epc: "4180003F2864", paceMin: 4.0, paceMax: 4.5 },
 ];
 
 const CHECKPOINTS: SimCheckpoint[] = [
-  { index: 0, distance: 0,    name: "Start" },
-  { index: 1, distance: 5,    name: "5km" },
-  { index: 2, distance: 10,   name: "10km Turnaround" },
-  { index: 3, distance: 15,   name: "15km (5km return)" },
-  { index: 4, distance: 21.1, name: "Finish" },
+  { index: 0, distance: 0,  name: "Start" },
+  { index: 1, distance: 5,  name: "5KM" },
+  { index: 2, distance: 10, name: "Finish" },
 ];
 
-// Which device covers which checkpoint(s) — simulates loop course
+// Which device covers which checkpoint(s)
 const DEVICE_CHECKPOINT_MAP: Record<number, number[]> = {
-  0: [0, 4], // Start/Finish device covers Start AND Finish (loop!)
-  1: [1, 3], // 5km device covers 5km outbound AND 15km return
-  2: [2],    // 10km turnaround is unique
+  0: [0, 2], // impinj-12-db-b0 covers Start AND Finish
+  1: [1],    // impinj-13-db-b0 covers 5KM checkpoint
 };
 
 const generateRSSI = (): number => -(Math.floor(Math.random() * 20) + 55);
