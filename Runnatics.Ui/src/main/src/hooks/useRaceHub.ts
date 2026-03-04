@@ -63,7 +63,7 @@ export interface UseRaceHubReturn {
  */
 export function useRaceHub(
   raceId: number | null | undefined,
-  hubUrl: string = '/hubs/race',
+  hubUrl: string = 'http://localhost:5000/hubs/race',
   maxCrossings: number = 1000
 ): UseRaceHubReturn {
   const [crossings, setCrossings] = useState<CheckpointCrossing[]>([]);
