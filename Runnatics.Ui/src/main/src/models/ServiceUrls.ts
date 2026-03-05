@@ -59,6 +59,7 @@ export const ServiceUrl = {
     uploadRFIDFileAuto: () => "rfid/import-auto",
     processAllRFIDResults: (eventId: string, raceId: string) => `RFID/${eventId}/${raceId}/process-all`,
     clearProcessedData: (eventId: string, raceId: string) => `RFID/${eventId}/${raceId}/clear-processed-data`,
+    addManualTime: (eventId: string, raceId: string, participantId: string) => `RFID/${eventId}/${raceId}/participant/${participantId}/manual-time`,
 
     //dashboard
     dashboardStats: () => "dashboard/stats",
