@@ -8,8 +8,10 @@
 // ============================================================================
 
 import { useState, useCallback } from 'react';
+import config from '../config/environment';
 
-const API_BASE = 'http://localhost:5000/api';
+// Derived at module load from environment — no hardcoded URLs
+const API_BASE = config.apiBaseUrl;
 
 export interface ReaderStatus {
   deviceId: number;
@@ -41,25 +43,25 @@ export interface UseRaceControlReturn {
   /** Assign a registered device to a race checkpoint */
   assignDevice: (
     deviceId: number,
-    raceId: number,
+    raceId: string,
     checkpointId: number,
     mode?: string
   ) => Promise<void>;
 
   /** Configure all readers for a race (webhooks + presets) */
   prepareRace: (
-    raceId: number,
+    raceId: string,
     webhookBaseUrl: string
   ) => Promise<ReaderStatus[]>;
 
   /** Start all readers — GO LIVE */
-  startRace: (raceId: number) => Promise<ReaderStatus[]>;
+  startRace: (raceId: string) => Promise<ReaderStatus[]>;
 
   /** Stop all readers */
-  stopRace: (raceId: number) => Promise<ReaderStatus[]>;
+  stopRace: (raceId: string) => Promise<ReaderStatus[]>;
 
   /** Get current status of all readers for a race */
-  getReaderStatuses: (raceId: number) => Promise<ReaderStatus[]>;
+  getReaderStatuses: (raceId: string) => Promise<ReaderStatus[]>;
 
   /** Whether any API call is in progress */
   loading: boolean;
@@ -78,9 +80,14 @@ export function useRaceControl(): UseRaceControlReturn {
       setError(null);
 
       try {
+        const token = localStorage.getItem('authToken');
         const response = await fetch(url, {
-          headers: { 'Content-Type': 'application/json' },
           ...options,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(options?.headers ?? {}),
+          },
         });
 
         if (!response.ok) {
@@ -114,7 +121,7 @@ export function useRaceControl(): UseRaceControlReturn {
   const assignDevice = useCallback(
     (
       deviceId: number,
-      raceId: number,
+      raceId: string,
       checkpointId: number,
       mode: string = 'online'
     ) =>
@@ -126,7 +133,7 @@ export function useRaceControl(): UseRaceControlReturn {
   );
 
   const prepareRace = useCallback(
-    (raceId: number, webhookBaseUrl: string) =>
+    (raceId: string, webhookBaseUrl: string) =>
       apiCall<ReaderStatus[]>(`${API_BASE}/race-control/prepare`, {
         method: 'POST',
         body: JSON.stringify({ raceId, webhookBaseUrl }),
@@ -135,7 +142,7 @@ export function useRaceControl(): UseRaceControlReturn {
   );
 
   const startRace = useCallback(
-    (raceId: number) =>
+    (raceId: string) =>
       apiCall<ReaderStatus[]>(`${API_BASE}/race-control/${raceId}/start`, {
         method: 'POST',
       }),
@@ -143,7 +150,7 @@ export function useRaceControl(): UseRaceControlReturn {
   );
 
   const stopRace = useCallback(
-    (raceId: number) =>
+    (raceId: string) =>
       apiCall<ReaderStatus[]>(`${API_BASE}/race-control/${raceId}/stop`, {
         method: 'POST',
       }),
@@ -151,7 +158,7 @@ export function useRaceControl(): UseRaceControlReturn {
   );
 
   const getReaderStatuses = useCallback(
-    (raceId: number) =>
+    (raceId: string) =>
       apiCall<ReaderStatus[]>(
         `${API_BASE}/race-control/${raceId}/reader-status`
       ),

@@ -9,7 +9,7 @@ import { useRaceHub, CheckpointCrossing } from '../../../hooks/useRaceHub';
 import { useRaceControl, ReaderStatus } from '../../../hooks/useRaceControl';
 
 interface RaceDashboardProps {
-  raceId: number;
+  raceId: string;
   raceName: string;
   webhookBaseUrl: string; // e.g., "https://api.yourdomain.com"
 }

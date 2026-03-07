@@ -16,6 +16,11 @@ import {
   LogLevel,
   HubConnectionState,
 } from '@microsoft/signalr';
+import config from '../config/environment';
+
+// Derive SignalR hub URL from the same base URL as all other API calls.
+// e.g. "http://localhost:5286/api" → "http://localhost:5286/hubs/race"
+const DEFAULT_HUB_URL = config.apiBaseUrl.replace(/\/api$/, '/hubs/race');
 
 // ── Types matching your C# DTOs ──
 
@@ -62,8 +67,8 @@ export interface UseRaceHubReturn {
  * @param maxCrossings - Maximum crossings to keep in memory (default: 1000)
  */
 export function useRaceHub(
-  raceId: number | null | undefined,
-  hubUrl: string = 'http://localhost:5000/hubs/race',
+  raceId: string | null | undefined,
+  hubUrl: string = DEFAULT_HUB_URL,
   maxCrossings: number = 1000
 ): UseRaceHubReturn {
   const [crossings, setCrossings] = useState<CheckpointCrossing[]>([]);

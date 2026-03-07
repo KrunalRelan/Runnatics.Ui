@@ -175,7 +175,7 @@ const ViewRaces: React.FC = () => {
       case 3:
         return (
           <RaceDashboard
-            raceId={Number(selectedRaceId)}
+            raceId={selectedRaceId}
             raceName={race?.title || 'Race'}
             webhookBaseUrl={config.apiBaseUrl.replace(/\/api$/, '')}
           />
