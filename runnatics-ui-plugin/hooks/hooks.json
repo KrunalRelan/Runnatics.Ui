@@ -1,0 +1,70 @@
+{
+  "hooks": [
+    {
+      "name": "pre-task",
+      "description": "Read shared context before starting any task",
+      "trigger": "on_task_start",
+      "action": "read_file",
+      "target": ".claude/CONTEXT.md",
+      "instruction": "Review CONTEXT.md for existing components, services, types, endpoints, and decisions. Use this knowledge to avoid duplication and maintain consistency."
+    },
+    {
+      "name": "post-task",
+      "description": "Update shared context after completing a task",
+      "trigger": "on_task_complete",
+      "action": "append_file",
+      "target": ".claude/CONTEXT.md",
+      "instruction": "Append a new entry to the Session Log section of CONTEXT.md with: date, task summary, components created/modified, services used, types added, decisions made."
+    },
+    {
+      "name": "pre-commit-lint",
+      "description": "Run TypeScript check and lint before committing",
+      "trigger": "on_pre_commit",
+      "action": "run_script",
+      "command": "cd Runnatics.Ui && npx tsc --noEmit && npx eslint src/ --ext .ts,.tsx --max-warnings 0",
+      "on_failure": "block_commit",
+      "message": "Fix TypeScript or ESLint errors before committing."
+    },
+    {
+      "name": "validate-no-any",
+      "description": "Ensure no 'any' types are introduced",
+      "trigger": "on_file_write",
+      "action": "validate",
+      "pattern": "\\bany\\b",
+      "file_types": [".ts", ".tsx"],
+      "exclude_patterns": ["node_modules/", "dist/", ".d.ts"],
+      "on_match": "warn",
+      "message": "TypeScript strict mode: 'any' type detected. Replace with a proper interface or type."
+    },
+    {
+      "name": "validate-no-direct-axios",
+      "description": "Ensure API calls only go through the service layer",
+      "trigger": "on_file_write",
+      "action": "validate",
+      "pattern": "\\b(axios\\.(get|post|put|patch|delete)|fetch\\()\\b",
+      "file_types": [".tsx"],
+      "exclude_patterns": ["services/", "utils/axios.config.ts", "node_modules/"],
+      "on_match": "warn",
+      "message": "API calls must go through src/main/src/services/ — never directly in components. Use the appropriate Service class."
+    },
+    {
+      "name": "validate-no-numeric-ids",
+      "description": "Catch numeric ID types in interfaces",
+      "trigger": "on_file_write",
+      "action": "validate",
+      "pattern": "\\b(id|Id|ID)\\s*[?]?:\\s*number\\b",
+      "file_types": [".ts", ".tsx"],
+      "exclude_patterns": ["node_modules/"],
+      "on_match": "warn",
+      "message": "All IDs from the API are encrypted strings. Use 'string' type, not 'number'."
+    },
+    {
+      "name": "session-start",
+      "description": "Initialize development session",
+      "trigger": "on_session_start",
+      "action": "run_script",
+      "command": "bash runnatics-ui-plugin/scripts/session-start.sh",
+      "instruction": "Run session initialization: check dev server, TypeScript health, and load context."
+    }
+  ]
+}

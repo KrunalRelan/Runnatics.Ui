@@ -22,6 +22,10 @@ import {
   alpha,
   Tooltip,
   CircularProgress,
+  TextField,
+  IconButton,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -44,10 +48,14 @@ import {
   Person,
   Warning,
   Nfc,
+  Edit,
+  Save,
+  Close,
 } from "@mui/icons-material";
 import PageContainer from "@/main/src/components/PageContainer";
 import { SplitTimeInfo, RfidReadingDetail, ParticipantDetailsResponse, CheckpointTime } from "@/main/src/models/participants";
 import { ParticipantService } from "@/main/src/services";
+import { RFIDService } from "@/main/src/services/RFIDService";
 import { getColorPalette } from "@/main/src/theme";
 
 // Status badge component
@@ -314,6 +322,16 @@ const ParticipantDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Inline time editing state
+  const [editingCheckpointId, setEditingCheckpointId] = useState<string | null>(null);
+  const [editTimeValue, setEditTimeValue] = useState<string>("");
+  const [savingTime, setSavingTime] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
   useEffect(() => {
     let isCancelled = false;
     
@@ -363,6 +381,44 @@ const ParticipantDetail: React.FC = () => {
       navigate(`/events/event-details/${eventId}/race/${raceId}`);
     } else {
       navigate(-1);
+    }
+  };
+
+  const handleStartEdit = (checkpointId: string, currentTime: string) => {
+    setEditingCheckpointId(checkpointId);
+    setEditTimeValue(currentTime || "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCheckpointId(null);
+    setEditTimeValue("");
+  };
+
+  const handleSaveTime = async (checkpointId: string) => {
+    if (!eventId || !raceId || !participantId || !editTimeValue.trim()) return;
+
+    try {
+      setSavingTime(true);
+      await RFIDService.addManualTime(eventId, raceId, participantId, checkpointId, editTimeValue.trim());
+
+      // Refresh participant data to get updated times and manual flags
+      const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
+      if (response.data.message) {
+        setParticipant(response.data.message);
+      }
+
+      setSnackbar({ open: true, message: "Time updated successfully! Marked as manual entry.", severity: "success" });
+      setEditingCheckpointId(null);
+      setEditTimeValue("");
+    } catch (err: any) {
+      console.error("Error saving manual time:", err);
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || "Failed to save time. Please try again.",
+        severity: "error",
+      });
+    } finally {
+      setSavingTime(false);
     }
   };
 
@@ -883,6 +939,9 @@ const ParticipantDetail: React.FC = () => {
                 <TableCell align="center" sx={{ fontWeight: 700, color: colors.text.primary }}>
                   Category Rank
                 </TableCell>
+                <TableCell align="center" sx={{ fontWeight: 700, color: colors.text.primary }}>
+                  Actions
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -935,9 +994,34 @@ const ParticipantDetail: React.FC = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={600} sx={{ color: colors.text.primary }}>
-                        {checkpointTime?.time || '-'}
-                      </Typography>
+                      {editingCheckpointId === split.checkpointId ? (
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                          <TextField
+                            size="small"
+                            value={editTimeValue}
+                            onChange={(e) => setEditTimeValue(e.target.value)}
+                            placeholder="HH:MM:SS"
+                            autoFocus
+                            disabled={savingTime}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && split.checkpointId) handleSaveTime(split.checkpointId);
+                              if (e.key === 'Escape') handleCancelEdit();
+                            }}
+                            sx={{
+                              width: 130,
+                              '& .MuiOutlinedInput-root': {
+                                fontSize: '0.875rem',
+                                fontWeight: 600,
+                                height: 32,
+                              },
+                            }}
+                          />
+                        </Stack>
+                      ) : (
+                        <Typography variant="body2" fontWeight={600} sx={{ color: colors.text.primary }}>
+                          {checkpointTime?.time || '-'}
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={600}>
@@ -1018,6 +1102,53 @@ const ParticipantDetail: React.FC = () => {
                           border: `1px solid ${alpha(colors.pace.main, 0.3)}`,
                         }}
                       />
+                    </TableCell>
+                    <TableCell align="center">
+                      {editingCheckpointId === split.checkpointId ? (
+                        <Stack direction="row" spacing={0.5} justifyContent="center">
+                          <Tooltip title="Save" arrow>
+                            <span>
+                              <IconButton
+                                size="small"
+                                onClick={() => split.checkpointId && handleSaveTime(split.checkpointId)}
+                                disabled={savingTime || !editTimeValue.trim()}
+                                sx={{ 
+                                  color: colors.success.main,
+                                  '&:hover': { bgcolor: alpha(colors.success.main, 0.1) },
+                                }}
+                              >
+                                {savingTime ? <CircularProgress size={18} /> : <Save sx={{ fontSize: 18 }} />}
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Cancel (Esc)" arrow>
+                            <IconButton
+                              size="small"
+                              onClick={handleCancelEdit}
+                              disabled={savingTime}
+                              sx={{ 
+                                color: colors.error.main,
+                                '&:hover': { bgcolor: alpha(colors.error.main, 0.1) },
+                              }}
+                            >
+                              <Close sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
+                      ) : (
+                        <Tooltip title="Edit Time" arrow>
+                          <IconButton
+                            size="small"
+                            onClick={() => split.checkpointId && handleStartEdit(split.checkpointId, checkpointTime?.time || '')}
+                            sx={{ 
+                              color: colors.primary.main,
+                              '&:hover': { bgcolor: alpha(colors.primary.main, 0.1) },
+                            }}
+                          >
+                            <Edit sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -1746,6 +1877,23 @@ const ParticipantDetail: React.FC = () => {
           </Box>
         </CardContent>
       </Card>
+
+      {/* Snackbar for edit notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </PageContainer>
   );
 };

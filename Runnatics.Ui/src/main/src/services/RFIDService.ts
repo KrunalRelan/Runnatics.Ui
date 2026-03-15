@@ -164,6 +164,30 @@ export class RFIDService {
      * @param keepUploads - Keep uploaded data while clearing processed results (default: true)
      * @returns Promise with the clear response
      */
+    /**
+     * Add or update a manual time entry for a participant at a specific checkpoint
+     * @param eventId - The ID of the event
+     * @param raceId - The ID of the race  
+     * @param participantId - The ID of the participant
+     * @param checkpointId - The checkpoint ID
+     * @param time - The manual time string (HH:MM:SS format)
+     * @returns Promise with the response
+     */
+    static async addManualTime(
+        eventId: string,
+        raceId: string,
+        participantId: string,
+        checkpointId: string,
+        time: string
+    ): Promise<ResponseBase<any>> {
+        const response: AxiosResponse<ResponseBase<any>> = await apiClient.post(
+            ServiceUrl.addManualTime(eventId, raceId, participantId),
+            { checkpointId, time }
+        );
+
+        return response.data;
+    }
+
     static async clearProcessedData(
         eventId: string,
         raceId: string,

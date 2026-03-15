@@ -691,17 +691,18 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       if (time) {
         return (
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-            <Chip
-              label={time}
-              size="small"
-              color="success"
-              variant="outlined"
+            <Typography
+              variant="body2"
               sx={{
-                fontSize: "0.75rem",
-                height: "22px",
-                fontWeight: 500,
+                fontWeight: 700,
+                fontSize: "0.9rem",
+                color: "success.main",
+                fontFamily: "monospace",
+                letterSpacing: "0.5px",
               }}
-            />
+            >
+              {time}
+            </Typography>
           </Box>
         );
       }
@@ -709,17 +710,16 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       // Show placeholder for no data
       return (
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-          <Chip
-            label="—"
-            size="small"
-            variant="outlined"
+          <Typography
+            variant="body2"
             sx={{
-              fontSize: "0.75rem",
-              height: "20px",
+              fontSize: "0.9rem",
               color: "text.disabled",
-              borderColor: "divider"
+              fontFamily: "monospace",
             }}
-          />
+          >
+            —
+          </Typography>
         </Box>
       );
     },

@@ -1,0 +1,64 @@
+{
+  "name": "runnatics-ui",
+  "version": "1.0.0",
+  "description": "Claude Code plugin for Runnatics.Ui — a React 19 + TypeScript + Vite race management platform with MUI, AG Grid, SignalR, Axios services, and Zustand/React Query state management.",
+  "author": "Runnatics Team",
+  "repository": "https://github.com/runnatics/Runnatics.Ui",
+  "engines": {
+    "claude-code": ">=1.0.0"
+  },
+  "agents": [
+    {
+      "name": "react-agent",
+      "path": "../agents/react-agent.md",
+      "description": "Primary agent for all React component, service, hook, and page development in Runnatics.Ui"
+    }
+  ],
+  "commands": [
+    {
+      "name": "new-component",
+      "path": "../commands/new-component.md",
+      "description": "Scaffold a new component folder with .tsx, .types.ts, useHook.ts, and index.ts"
+    }
+  ],
+  "skills": [
+    {
+      "name": "react-component",
+      "path": "../skills/react-component/SKILL.md",
+      "description": "Generate a complete React component following Runnatics conventions"
+    }
+  ],
+  "hooks": {
+    "path": "../hooks/hooks.json"
+  },
+  "scripts": {
+    "format": "../scripts/format-frontend.sh",
+    "session-start": "../scripts/session-start.sh"
+  },
+  "context": {
+    "shared_memory": "../../.claude/CONTEXT.md",
+    "instructions": [
+      "ALWAYS read .claude/CONTEXT.md before starting any task",
+      "ALWAYS update .claude/CONTEXT.md after completing a task",
+      "Never use 'any' in TypeScript — strict mode is enforced",
+      "All API IDs are encrypted strings, never numeric",
+      "API calls go through src/main/src/services/ only — never in components",
+      "Use @/ path alias for imports from src/"
+    ]
+  },
+  "stack": {
+    "framework": "React 19.2",
+    "language": "TypeScript 5.9 (strict)",
+    "bundler": "Vite (port 5173)",
+    "ui": ["MUI 7", "Tailwind CSS 4", "AG Grid 34", "Lucide React"],
+    "state": {
+      "server": "@tanstack/react-query 5",
+      "client": "Zustand 5"
+    },
+    "realtime": "@microsoft/signalr 10 (useRaceHub hook)",
+    "http": "Axios 1.13 (centralized apiClient with JWT interceptor)",
+    "forms": "React Hook Form 7 + Yup validation",
+    "routing": "React Router 7",
+    "date": "dayjs (UTC + timezone, default Asia/Kolkata)"
+  }
+}

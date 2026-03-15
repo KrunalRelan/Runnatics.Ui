@@ -24,21 +24,18 @@ import {
   EmojiEvents,
   Edit,
   Leaderboard as LeaderboardIcon,
+  Nfc,
 } from "@mui/icons-material";
 import { Race } from "@/main/src/models/races/Race";
 import { RaceService } from "@/main/src/services/RaceService";
+import { ParticipantService } from "@/main/src/services/ParticipantService";
 import ViewParticipants from "@/main/src/pages/admin/participants/ViewParticipants";
 import ViewCheckPoints from "@/main/src/pages/admin/checkpoints/ViewCheckPoints";
 import { AddOrEditCertificate } from "../certificates/AddOrEditCertificate";
 import Leaderboard from "@/main/src/pages/admin/leaderboard/Leaderboard";
-
-// Placeholder components for other tabs
-const RaceDashboard: React.FC<{ eventId: string; raceId: string }> = () => (
-  <Card sx={{ p: 3 }}>
-    <Typography variant="h6">Race Dashboard</Typography>
-    <Typography color="text.secondary">Dashboard content coming soon...</Typography>
-  </Card>
-);
+import BibMapping from "@/main/src/pages/admin/bibMapping/BibMapping";
+import { RaceDashboard } from "./RaceDashboard";
+import config from "@/main/src/config/environment";
 
 const Segments: React.FC<{ eventId: string; raceId: string }> = () => (
   <Card sx={{ p: 3 }}>
@@ -58,6 +55,7 @@ const ViewRaces: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<number>(2);
   const [selectedRaceId, setSelectedRaceId] = useState<string | undefined>(undefined);
+  const [hasParticipants, setHasParticipants] = useState<boolean>(false);
 
   // Ref to track if races have been fetched
   const racesInitialized = useRef(false);
@@ -128,6 +126,24 @@ const ViewRaces: React.FC = () => {
     fetchRaceDetails();
   }, [eventId, selectedRaceId]);
 
+  // Check if participants exist for the selected race (to enable Bib Mapping tab)
+  // Re-checks when switching tabs (e.g., after uploading participants)
+  useEffect(() => {
+    const checkParticipants = async () => {
+      if (!eventId || !selectedRaceId) return;
+      try {
+        const response = await ParticipantService.searchParticipants(eventId, selectedRaceId, {
+          pageNumber: 1,
+          pageSize: 1,
+        });
+        setHasParticipants((response.message?.length ?? 0) > 0);
+      } catch {
+        setHasParticipants(false);
+      }
+    };
+    checkParticipants();
+  }, [eventId, selectedRaceId, activeTab]);
+
   // Handlers
   const handleBack = () => {
     if (eventId) {
@@ -155,6 +171,7 @@ const ViewRaces: React.FC = () => {
       case 5:
       case 6:
       case 7:
+      case 8:
         // Stay on current page, just change the active tab
         break;
       default:
@@ -179,7 +196,13 @@ const ViewRaces: React.FC = () => {
       case 2:
         return <ViewParticipants eventId={eventId} raceId={selectedRaceId} />;
       case 3:
-        return <RaceDashboard eventId={eventId} raceId={selectedRaceId} />;
+        return (
+          <RaceDashboard
+            raceId={Number(selectedRaceId)}
+            raceName={race?.title || 'Race'}
+            webhookBaseUrl={config.apiBaseUrl.replace(/\/api$/, '')}
+          />
+        );
       case 4:
         return <ViewCheckPoints eventId={eventId} raceId={selectedRaceId} races={races} />;
       case 5:
@@ -188,6 +211,8 @@ const ViewRaces: React.FC = () => {
         return <AddOrEditCertificate eventId={eventId} raceId={selectedRaceId} />;
       case 7:
         return <Leaderboard eventId={eventId} raceId={selectedRaceId} />;
+      case 8:
+        return <BibMapping raceId={selectedRaceId} />;
       default:
         return null;
     }
@@ -342,6 +367,18 @@ const ViewRaces: React.FC = () => {
             icon={<LeaderboardIcon />}
             iconPosition="start"
             label="Leaderboard"
+          />
+          <Tab
+            icon={<Nfc />}
+            iconPosition="start"
+            label="Bib Mapping"
+            disabled={!hasParticipants}
+            sx={{
+              ...(!hasParticipants && {
+                opacity: 0.5,
+                cursor: 'not-allowed',
+              }),
+            }}
           />
         </Tabs>
       </Paper>
