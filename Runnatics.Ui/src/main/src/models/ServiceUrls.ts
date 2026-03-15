@@ -66,5 +66,14 @@ export const ServiceUrl = {
 
     //leaderboard
     getLeaderboard: () => `Results/leaderboard`,
+
+    //bib-mappings
+    createBibMapping: () => 'bib-mappings',
+    getBibMappingsByRace: () => 'bib-mappings',
+    deleteBibMapping: () => 'bib-mappings',
+
+    //simulator
+    simulateDetectEpc: () => 'simulator/detect-epc',
+    simulateDetectRandom: () => 'simulator/detect-random',
 };
 

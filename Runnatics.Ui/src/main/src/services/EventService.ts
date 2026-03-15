@@ -22,15 +22,15 @@ export class EventService {
     }): Promise<SearchResponse<Event>> {
         const response = await apiClient.post<SearchResponse<Event>>(
             ServiceUrl.searchEventService(), 
-            params?.searchCriteria
+            params?.searchCriteria ?? {}
         );
         return response.data;
     }
 
      static async getPastEvents(searchCriteria?: EventSearchRequest): Promise<SearchResponse<Event>> {
         const response = await apiClient.post<SearchResponse<Event>>(
-            ServiceUrl.searchPastEvents(), 
-            searchCriteria
+            ServiceUrl.searchPastEvents(),
+            searchCriteria ?? {}
         );
         return response.data;
     }
@@ -40,8 +40,8 @@ export class EventService {
      */
     static async getFutureEvents(searchCriteria?: EventSearchRequest): Promise<SearchResponse<Event>> {
         const response = await apiClient.post<SearchResponse<Event>>(
-            ServiceUrl.searchFutureEvents(), 
-            searchCriteria
+            ServiceUrl.searchFutureEvents(),
+            searchCriteria ?? {}
         );
         return response.data;
     }
