@@ -5,6 +5,7 @@ import {
   LogLevel,
   HubConnectionState,
 } from '@microsoft/signalr';
+import config from '../config/environment';
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
@@ -17,10 +18,10 @@ export interface UseBibMappingHubReturn {
 /**
  * Connects to the bib-mapping SignalR hub and listens for EPC detections.
  *
- * @param hubUrl - SignalR hub URL (default: http://localhost:5000/hubs/bib-mapping)
+ * @param hubUrl - SignalR hub URL (default: derived from environment config)
  */
 export function useBibMappingHub(
-  hubUrl: string = 'http://localhost:5000/hubs/bib-mapping'
+  hubUrl: string = `${config.hubBaseUrl}/hubs/bib-mapping`
 ): UseBibMappingHubReturn {
   const [lastEpc, setLastEpc] = useState<string | null>(null);
   const [lastRssi, setLastRssi] = useState<number | null>(null);

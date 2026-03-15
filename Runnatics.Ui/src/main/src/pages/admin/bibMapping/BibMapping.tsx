@@ -247,10 +247,10 @@ const BibMapping: React.FC<BibMappingProps> = ({ raceId }) => {
             <Box component="tbody">
               {[...mappings]
                 .sort((a, b) => dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf())
-                .map((mapping) => (
+                .map((mapping, index) => (
                   <Box
                     component="tr"
-                    key={mapping.id}
+                    key={mapping.id || `mapping-${index}`}
                     sx={{ borderBottom: '1px solid', borderColor: 'divider', '&:hover': { bgcolor: 'action.hover' } }}
                   >
                     <Box component="td" sx={{ py: 1.5, px: 2 }}>
