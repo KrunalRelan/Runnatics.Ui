@@ -53,6 +53,10 @@ export const ServiceUrl = {
 
     //devices
     getAllDevices: () => "devices",
+    getDeviceById: (id: number) => `devices/${id}`,
+    createDevice: () => "devices/create",
+    updateDevice: (id: number) => `devices/${id}/update`,
+    deleteDevice: (id: number) => `devices/${id}/delete`,
 
 
   //rfid

@@ -8,6 +8,7 @@ import LoginPage from "./main/src/pages/auth/LoginPage";
 import Dashboard from "./main/src/pages/Dashboard";
 import { eventsRoutes } from "./main/src/pages/admin/events/Routes";
 import { rfidRoutes } from "./main/src/pages/admin/rfid/Routes";
+import { deviceRoutes } from "./main/src/pages/admin/devices/Routes";
 import { ProtectedRoute } from "./main/src/components/auth/ProtectedRoute";
 import { CircularProgress, Box } from "@mui/material";
 
@@ -78,6 +79,25 @@ function App() {
                         {route.element}
                       </Suspense>
                     </ProtectedRoute>
+                  }
+                />
+              ))}
+
+              {/* Device routes */}
+              {deviceRoutes.map((route, index) => (
+                <Route
+                  key={`device-${index}`}
+                  path={`/${route.path}`}
+                  element={
+                    <Suspense
+                      fallback={
+                        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+                          <CircularProgress />
+                        </Box>
+                      }
+                    >
+                      {route.element}
+                    </Suspense>
                   }
                 />
               ))}

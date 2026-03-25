@@ -43,6 +43,7 @@ import {
   Notifications as NotificationsIcon,
   KeyboardDoubleArrowLeft as KeyboardDoubleArrowLeftIcon,
   KeyboardDoubleArrowRight as KeyboardDoubleArrowRightIcon,
+  Router as RouterIcon,
 } from "@mui/icons-material";
 import {
   DashboardLayoutProps,
@@ -185,6 +186,11 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
       submenu: [
         { text: "RFID File Upload", icon: <UploadIcon />, path: "/rfid/upload" },
       ],
+    },
+    {
+      text: "Devices",
+      icon: <RouterIcon />,
+      path: "/devices",
     },
     
   ];
