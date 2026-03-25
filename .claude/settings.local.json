@@ -5,7 +5,8 @@
       "Bash(npm run:*)",
       "Bash(dir:*)",
       "Bash(findstr:*)",
-      "Bash(npm install)"
+      "Bash(npm install)",
+      "Bash(cd:*)"
     ],
     "deny": [],
     "ask": []
