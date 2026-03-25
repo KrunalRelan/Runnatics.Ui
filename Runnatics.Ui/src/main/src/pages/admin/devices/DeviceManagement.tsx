@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Box,
   Typography,
@@ -14,11 +14,44 @@ import {
   DialogActions,
   Chip,
   Tooltip,
+  TablePagination,
+  TableSortLabel,
 } from '@mui/material';
 import { Pencil, Trash2, Plus, Wifi, WifiOff } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useDeviceManagement } from './useDeviceManagement';
 import DeviceFormDialog from './DeviceFormDialog';
+import type { Device } from '../../../models/Device';
+
+type SortField = 'name' | 'hostname' | 'ipAddress' | 'deviceMacAddress' | 'readerModel' | 'firmwareVersion' | 'lastSeenAt' | 'isOnline';
+type SortOrder = 'asc' | 'desc';
+
+interface Column {
+  id: SortField | 'actions';
+  label: string;
+  sortable: boolean;
+  align?: 'left' | 'right';
+}
+
+const COLUMNS: Column[] = [
+  { id: 'isOnline',          label: 'Status',       sortable: true  },
+  { id: 'name',              label: 'Name',         sortable: true  },
+  { id: 'hostname',          label: 'Hostname / IP',sortable: true  },
+  { id: 'deviceMacAddress',  label: 'MAC Address',  sortable: true  },
+  { id: 'readerModel',       label: 'Model',        sortable: true  },
+  { id: 'firmwareVersion',   label: 'Firmware',     sortable: true  },
+  { id: 'lastSeenAt',        label: 'Last Seen',    sortable: true  },
+  { id: 'actions',           label: '',             sortable: false, align: 'right' },
+];
+
+const ROWS_PER_PAGE_OPTIONS = [5, 10, 25];
+
+function getValue(device: Device, field: SortField): string | number | boolean {
+  const v = device[field];
+  if (v == null) return '';
+  if (field === 'lastSeenAt') return dayjs(v as string).valueOf();
+  return v as string | boolean;
+}
 
 const DeviceManagement: React.FC = () => {
   const {
@@ -39,7 +72,37 @@ const DeviceManagement: React.FC = () => {
     isDeleting,
   } = useDeviceManagement();
 
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   const onlineCount = devices.filter((d) => d.isOnline).length;
+
+  const handleSort = (field: SortField) => {
+    if (field === sortField) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+    setPage(0);
+  };
+
+  const sortedDevices = useMemo(() => {
+    return [...devices].sort((a, b) => {
+      const av = getValue(a, sortField);
+      const bv = getValue(b, sortField);
+      if (av < bv) return sortOrder === 'asc' ? -1 : 1;
+      if (av > bv) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [devices, sortField, sortOrder]);
+
+  const paginatedDevices = useMemo(
+    () => sortedDevices.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    [sortedDevices, page, rowsPerPage],
+  );
 
   return (
     <Box sx={{ maxWidth: 1100, mx: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -105,110 +168,136 @@ const DeviceManagement: React.FC = () => {
         )}
 
         {!isLoading && devices.length > 0 && (
-          <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse' }}>
-            <Box component="thead">
-              <Box component="tr" sx={{ borderBottom: '2px solid', borderColor: 'divider' }}>
-                {['Status', 'Name', 'Hostname / IP', 'MAC Address', 'Model', 'Firmware', 'Last Seen', ''].map((h) => (
+          <>
+            <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse' }}>
+              <Box component="thead">
+                <Box component="tr" sx={{ borderBottom: '2px solid', borderColor: 'divider' }}>
+                  {COLUMNS.map((col) => (
+                    <Box
+                      component="th"
+                      key={col.id}
+                      sx={{ py: 1.5, px: 2, textAlign: col.align ?? 'left' }}
+                    >
+                      {col.sortable ? (
+                        <TableSortLabel
+                          active={sortField === col.id}
+                          direction={sortField === col.id ? sortOrder : 'asc'}
+                          onClick={() => handleSort(col.id as SortField)}
+                        >
+                          <Typography variant="subtitle2">{col.label}</Typography>
+                        </TableSortLabel>
+                      ) : (
+                        <Typography variant="subtitle2">{col.label}</Typography>
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+              <Box component="tbody">
+                {paginatedDevices.map((device, index) => (
                   <Box
-                    component="th"
-                    key={h}
-                    sx={{ py: 1.5, px: 2, textAlign: h === '' ? 'right' : 'left' }}
+                    component="tr"
+                    key={device.id ?? `device-${index}`}
+                    sx={{
+                      borderBottom: '1px solid',
+                      borderColor: 'divider',
+                      '&:hover': { bgcolor: 'action.hover' },
+                    }}
                   >
-                    <Typography variant="subtitle2">{h}</Typography>
+                    {/* Status */}
+                    <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                      <Tooltip title={device.isOnline ? 'Online' : 'Offline'}>
+                        {device.isOnline ? (
+                          <Wifi size={18} color="#4caf50" />
+                        ) : (
+                          <WifiOff size={18} color="#bdbdbd" />
+                        )}
+                      </Tooltip>
+                    </Box>
+
+                    {/* Name */}
+                    <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                      <Typography variant="body1" fontWeight={600}>
+                        {device.name}
+                      </Typography>
+                    </Box>
+
+                    {/* Hostname / IP */}
+                    <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                        {device.hostname ?? '—'}
+                      </Typography>
+                      {device.ipAddress && (
+                        <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                          {device.ipAddress}
+                        </Typography>
+                      )}
+                    </Box>
+
+                    {/* MAC */}
+                    <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                        {device.deviceMacAddress ?? '—'}
+                      </Typography>
+                    </Box>
+
+                    {/* Model */}
+                    <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                      <Typography variant="body2">{device.readerModel ?? '—'}</Typography>
+                    </Box>
+
+                    {/* Firmware */}
+                    <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {device.firmwareVersion ?? '—'}
+                      </Typography>
+                    </Box>
+
+                    {/* Last Seen */}
+                    <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {device.lastSeenAt ? dayjs(device.lastSeenAt).format('DD MMM HH:mm') : '—'}
+                      </Typography>
+                    </Box>
+
+                    {/* Actions */}
+                    <Box component="td" sx={{ py: 1, px: 2, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <Tooltip title="Edit">
+                        <IconButton size="small" onClick={() => openEdit(device)}>
+                          <Pencil size={16} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => openDeleteConfirm(device.id)}
+                          disabled={isDeleting}
+                          sx={{ ml: 0.5 }}
+                        >
+                          <Trash2 size={16} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </Box>
                 ))}
               </Box>
             </Box>
-            <Box component="tbody">
-              {devices.map((device, index) => (
-                <Box
-                  component="tr"
-                  key={device.id ?? `device-${index}`}
-                  sx={{
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                    '&:hover': { bgcolor: 'action.hover' },
-                  }}
-                >
-                  {/* Status */}
-                  <Box component="td" sx={{ py: 1.5, px: 2 }}>
-                    <Tooltip title={device.isOnline ? 'Online' : 'Offline'}>
-                      {device.isOnline ? (
-                        <Wifi size={18} color="#4caf50" />
-                      ) : (
-                        <WifiOff size={18} color="#bdbdbd" />
-                      )}
-                    </Tooltip>
-                  </Box>
 
-                  {/* Name */}
-                  <Box component="td" sx={{ py: 1.5, px: 2 }}>
-                    <Typography variant="body1" fontWeight={600}>
-                      {device.name}
-                    </Typography>
-                  </Box>
-
-                  {/* Hostname / IP */}
-                  <Box component="td" sx={{ py: 1.5, px: 2 }}>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                      {device.hostname ?? '—'}
-                    </Typography>
-                    {device.ipAddress && (
-                      <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                        {device.ipAddress}
-                      </Typography>
-                    )}
-                  </Box>
-
-                  {/* MAC */}
-                  <Box component="td" sx={{ py: 1.5, px: 2 }}>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                      {device.deviceMacAddress ?? '—'}
-                    </Typography>
-                  </Box>
-
-                  {/* Model */}
-                  <Box component="td" sx={{ py: 1.5, px: 2 }}>
-                    <Typography variant="body2">{device.readerModel ?? '—'}</Typography>
-                  </Box>
-
-                  {/* Firmware */}
-                  <Box component="td" sx={{ py: 1.5, px: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {device.firmwareVersion ?? '—'}
-                    </Typography>
-                  </Box>
-
-                  {/* Last Seen */}
-                  <Box component="td" sx={{ py: 1.5, px: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {device.lastSeenAt ? dayjs(device.lastSeenAt).format('DD MMM HH:mm') : '—'}
-                    </Typography>
-                  </Box>
-
-                  {/* Actions */}
-                  <Box component="td" sx={{ py: 1, px: 2, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <Tooltip title="Edit">
-                      <IconButton size="small" onClick={() => openEdit(device)}>
-                        <Pencil size={16} />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => openDeleteConfirm(device.id)}
-                        disabled={isDeleting}
-                        sx={{ ml: 0.5 }}
-                      >
-                        <Trash2 size={16} />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </Box>
-              ))}
-            </Box>
-          </Box>
+            <TablePagination
+              component="div"
+              count={sortedDevices.length}
+              page={page}
+              rowsPerPage={rowsPerPage}
+              rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
+              onPageChange={(_, newPage) => setPage(newPage)}
+              onRowsPerPageChange={(e) => {
+                setRowsPerPage(parseInt(e.target.value, 10));
+                setPage(0);
+              }}
+              sx={{ mt: 1, borderTop: '1px solid', borderColor: 'divider' }}
+            />
+          </>
         )}
       </Paper>
 
