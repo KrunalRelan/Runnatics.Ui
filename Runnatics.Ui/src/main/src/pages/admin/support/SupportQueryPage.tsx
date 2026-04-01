@@ -128,8 +128,8 @@ const SupportQueryPage: React.FC = () => {
         page: page + 1,
         pageSize: rowsPerPage,
       });
-      setQueries(data.items);
-      setTotalCount(data.totalCount);
+      setQueries(Array.isArray(data.items) ? data.items : []);
+      setTotalCount(data.totalCount ?? 0);
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } }; message?: string };
       setQueriesError(error.response?.data?.message || error.message || 'Failed to load support queries');
@@ -243,7 +243,7 @@ const SupportQueryPage: React.FC = () => {
             {TABS.map((tab) => (
               <Tab
                 key={tab.label}
-                label={`${tab.label} (${counts ? counts[tab.countKey] : 0})`}
+                label={`${tab.label} (${counts?.[tab.countKey] ?? 0})`}
               />
             ))}
           </Tabs>

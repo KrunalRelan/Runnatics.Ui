@@ -28,13 +28,28 @@ export interface GetQueriesResponse {
 
 export class SupportService {
   static async getCounts(): Promise<SupportQueryCounts> {
-    const response = await apiClient.get<SupportQueryCounts>(ServiceUrl.supportCounts());
-    return response.data;
+    const response = await apiClient.get<any>(ServiceUrl.supportCounts());
+    const payload = response.data?.message ?? response.data;
+    return {
+      total: payload?.total ?? 0,
+      newQuery: payload?.newQuery ?? 0,
+      wip: payload?.wip ?? 0,
+      closed: payload?.closed ?? 0,
+      pending: payload?.pending ?? 0,
+      notYetStarted: payload?.notYetStarted ?? 0,
+      rejected: payload?.rejected ?? 0,
+      duplicate: payload?.duplicate ?? 0,
+    };
   }
 
   static async getQueries(params: GetQueriesParams): Promise<GetQueriesResponse> {
-    const response = await apiClient.get<GetQueriesResponse>(ServiceUrl.supportQueries(), { params });
-    return response.data;
+    const response = await apiClient.get<any>(ServiceUrl.supportQueries(), { params });
+    // Handle ResponseBase<T> envelope ({ message: ... }) used throughout this codebase
+    const payload = response.data?.message ?? response.data;
+    return {
+      items: Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []),
+      totalCount: payload?.totalCount ?? 0,
+    };
   }
 
   static async getQueryById(id: number): Promise<SupportQueryDetail> {
@@ -64,12 +79,14 @@ export class SupportService {
   }
 
   static async getAdminUsers(): Promise<AdminUser[]> {
-    const response = await apiClient.get<AdminUser[]>(ServiceUrl.adminUsers());
-    return response.data;
+    const response = await apiClient.get<any>(ServiceUrl.adminUsers());
+    const payload = response.data?.message ?? response.data;
+    return Array.isArray(payload) ? payload : [];
   }
 
   static async getQueryTypes(): Promise<QueryTypeOption[]> {
-    const response = await apiClient.get<QueryTypeOption[]>(ServiceUrl.supportQueryTypes());
-    return response.data;
+    const response = await apiClient.get<any>(ServiceUrl.supportQueryTypes());
+    const payload = response.data?.message ?? response.data;
+    return Array.isArray(payload) ? payload : [];
   }
 }
