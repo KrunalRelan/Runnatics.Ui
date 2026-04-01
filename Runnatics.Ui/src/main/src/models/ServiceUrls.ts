@@ -87,7 +87,7 @@ export const ServiceUrl = {
     supportComments: (id: number) => `support/${id}/comments`,
     supportComment: (commentId: number) => `support/comments/${commentId}`,
     supportCommentEmail: (commentId: number) => `support/comments/${commentId}/send-email`,
-    supportContactUs: () => 'support/contact-us',
+    supportContactUs: () => 'support/contact',
     supportQueryTypes: () => 'support/query-types',
     adminUsers: () => 'users/admins',
 };
