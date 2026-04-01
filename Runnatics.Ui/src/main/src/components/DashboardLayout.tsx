@@ -44,6 +44,7 @@ import {
   KeyboardDoubleArrowLeft as KeyboardDoubleArrowLeftIcon,
   KeyboardDoubleArrowRight as KeyboardDoubleArrowRightIcon,
   Router as RouterIcon,
+  SupportAgent as SupportAgentIcon,
 } from "@mui/icons-material";
 import {
   DashboardLayoutProps,
@@ -192,7 +193,12 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: <RouterIcon />,
       path: "/devices",
     },
-    
+    {
+      text: "Support",
+      icon: <SupportAgentIcon />,
+      path: "/support",
+    },
+
   ];
 
   // Check if current path matches menu item

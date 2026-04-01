@@ -79,5 +79,16 @@ export const ServiceUrl = {
     //simulator
     simulateDetectEpc: () => 'simulator/detect-epc',
     simulateDetectRandom: () => 'simulator/detect-random',
+
+    //support
+    supportCounts: () => 'support/counts',
+    supportQueries: () => 'support',
+    supportQueryById: (id: number) => `support/${id}`,
+    supportComments: (id: number) => `support/${id}/comments`,
+    supportComment: (commentId: number) => `support/comments/${commentId}`,
+    supportCommentEmail: (commentId: number) => `support/comments/${commentId}/send-email`,
+    supportContactUs: () => 'support/contact-us',
+    supportQueryTypes: () => 'support/query-types',
+    adminUsers: () => 'users/admins',
 };
 
