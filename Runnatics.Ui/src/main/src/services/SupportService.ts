@@ -53,8 +53,8 @@ export class SupportService {
   }
 
   static async getQueryById(id: number): Promise<SupportQueryDetail> {
-    const response = await apiClient.get<SupportQueryDetail>(ServiceUrl.supportQueryById(id));
-    return response.data;
+    const response = await apiClient.get<any>(ServiceUrl.supportQueryById(id));
+    return response.data?.message ?? response.data;
   }
 
   static async updateQuery(id: number, data: UpdateQueryRequest): Promise<void> {
@@ -79,14 +79,22 @@ export class SupportService {
   }
 
   static async getAdminUsers(): Promise<AdminUser[]> {
-    const response = await apiClient.get<any>(ServiceUrl.adminUsers());
-    const payload = response.data?.message ?? response.data;
-    return Array.isArray(payload) ? payload : [];
+    try {
+      const response = await apiClient.get<any>(ServiceUrl.adminUsers());
+      const payload = response.data?.message ?? response.data;
+      return Array.isArray(payload) ? payload : [];
+    } catch {
+      return [];
+    }
   }
 
   static async getQueryTypes(): Promise<QueryTypeOption[]> {
-    const response = await apiClient.get<any>(ServiceUrl.supportQueryTypes());
-    const payload = response.data?.message ?? response.data;
-    return Array.isArray(payload) ? payload : [];
+    try {
+      const response = await apiClient.get<any>(ServiceUrl.supportQueryTypes());
+      const payload = response.data?.message ?? response.data;
+      return Array.isArray(payload) ? payload : [];
+    } catch {
+      return [];
+    }
   }
 }
