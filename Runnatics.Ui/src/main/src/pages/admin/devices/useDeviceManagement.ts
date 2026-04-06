@@ -18,6 +18,7 @@ export interface UseDeviceManagementReturn {
   isFormOpen: boolean;
   editingDevice: Device | null;
   deleteConfirmId: number | null;
+  submitError: string | null;
   // Actions
   openCreate: () => void;
   openEdit: (device: Device) => void;
@@ -36,6 +37,7 @@ export function useDeviceManagement(): UseDeviceManagementReturn {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const devicesQuery = useQuery({
     queryKey: deviceKeys.all,
@@ -49,8 +51,23 @@ export function useDeviceManagement(): UseDeviceManagementReturn {
       toast.success('Device created successfully');
       setIsFormOpen(false);
     },
-    onError: () => {
-      toast.error('Failed to create device');
+    onError: (error: any) => {
+      let message = 'Failed to create device';
+      if (error?.response?.data) {
+        if (typeof error.response.data === 'string') {
+          message = error.response.data;
+        } else if (error.response.data.message) {
+          message = error.response.data.message;
+        } else if (error.response.data.error) {
+          message = error.response.data.error;
+        } else {
+          message = error?.message || 'Failed to create device';
+        }
+      } else {
+        message = error?.message || 'Failed to create device';
+      }
+      setSubmitError(message);
+      toast.error(message);
     },
   });
 
@@ -63,8 +80,23 @@ export function useDeviceManagement(): UseDeviceManagementReturn {
       setIsFormOpen(false);
       setEditingDevice(null);
     },
-    onError: () => {
-      toast.error('Failed to update device');
+    onError: (error: any) => {
+      let message = 'Failed to update device';
+      if (error?.response?.data) {
+        if (typeof error.response.data === 'string') {
+          message = error.response.data;
+        } else if (error.response.data.message) {
+          message = error.response.data.message;
+        } else if (error.response.data.error) {
+          message = error.response.data.error;
+        } else {
+          message = error?.message || 'Failed to update device';
+        }
+      } else {
+        message = error?.message || 'Failed to update device';
+      }
+      setSubmitError(message);
+      toast.error(message);
     },
   });
 
@@ -82,11 +114,13 @@ export function useDeviceManagement(): UseDeviceManagementReturn {
 
   const openCreate = useCallback(() => {
     setEditingDevice(null);
+    setSubmitError(null);
     setIsFormOpen(true);
   }, []);
 
   const openEdit = useCallback((device: Device) => {
     setEditingDevice(device);
+    setSubmitError(null);
     setIsFormOpen(true);
   }, []);
 
@@ -124,6 +158,7 @@ export function useDeviceManagement(): UseDeviceManagementReturn {
     isFormOpen,
     editingDevice,
     deleteConfirmId,
+    submitError,
     openCreate,
     openEdit,
     closeForm,

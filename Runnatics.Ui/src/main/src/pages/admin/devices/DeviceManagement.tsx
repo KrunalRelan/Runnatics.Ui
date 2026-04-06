@@ -61,6 +61,7 @@ const DeviceManagement: React.FC = () => {
     isFormOpen,
     editingDevice,
     deleteConfirmId,
+    submitError,
     openCreate,
     openEdit,
     closeForm,
@@ -308,6 +309,7 @@ const DeviceManagement: React.FC = () => {
         onClose={closeForm}
         onSubmit={handleSubmit}
         isSaving={isSaving}
+        submitError={submitError}
       />
 
       {/* ─── Delete Confirmation Dialog ─── */}

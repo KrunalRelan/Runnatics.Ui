@@ -8,6 +8,7 @@ import {
   TextField,
   Grid,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 import type { Device } from '../../../models/Device';
 import type { DeviceFormData } from './DeviceManagement.types';
@@ -19,6 +20,7 @@ interface DeviceFormDialogProps {
   onClose: () => void;
   onSubmit: (data: DeviceFormData) => void;
   isSaving: boolean;
+  submitError: string | null;
 }
 
 const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({
@@ -27,6 +29,7 @@ const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({
   onClose,
   onSubmit,
   isSaving,
+  submitError,
 }) => {
   const [form, setForm] = React.useState<DeviceFormData>(emptyFormData);
   const [nameError, setNameError] = React.useState('');
@@ -55,6 +58,11 @@ const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{editingDevice ? 'Edit Device' : 'Add Device'}</DialogTitle>
       <DialogContent>
+        {submitError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {submitError}
+          </Alert>
+        )}
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
           <Grid size={12}>
             <TextField
