@@ -8,7 +8,6 @@ import {
   TextField,
   Grid,
   CircularProgress,
-  Alert,
 } from '@mui/material';
 import type { Device } from '../../../models/Device';
 import type { DeviceFormData } from './DeviceManagement.types';
@@ -20,7 +19,6 @@ interface DeviceFormDialogProps {
   onClose: () => void;
   onSubmit: (data: DeviceFormData) => void;
   isSaving: boolean;
-  submitError: string | null;
 }
 
 const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({
@@ -29,7 +27,6 @@ const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({
   onClose,
   onSubmit,
   isSaving,
-  submitError,
 }) => {
   const [form, setForm] = React.useState<DeviceFormData>(emptyFormData);
   const [nameError, setNameError] = React.useState('');
@@ -51,18 +48,22 @@ const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({
       setNameError('Name is required');
       return;
     }
-    onSubmit(form);
+     const cleanedData = {
+    ...form,
+    name: form.name.trim(),
+    hostname: form.hostname?.trim(),
+    ipAddress: form.ipAddress?.trim(),
+    deviceMacAddress: form.deviceMacAddress?.trim(),
+    firmwareVersion: form.firmwareVersion?.trim(),
+    readerModel: form.readerModel?.trim(),
+  };
+    onSubmit(cleanedData);
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={isSaving ? undefined : onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{editingDevice ? 'Edit Device' : 'Add Device'}</DialogTitle>
       <DialogContent>
-        {submitError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {submitError}
-          </Alert>
-        )}
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
           <Grid size={12}>
             <TextField
@@ -123,7 +124,7 @@ const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={isSaving}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={isSaving}>
+        <Button onClick={handleSubmit} variant="contained" disabled={isSaving || !form.name.trim()}>
           {isSaving ? <CircularProgress size={22} color="inherit" /> : editingDevice ? 'Save Changes' : 'Add Device'}
         </Button>
       </DialogActions>

@@ -22,6 +22,7 @@ import dayjs from 'dayjs';
 import { useDeviceManagement } from './useDeviceManagement';
 import DeviceFormDialog from './DeviceFormDialog';
 import type { Device } from '../../../models/Device';
+import { Snackbar } from '@mui/material';
 
 type SortField = 'name' | 'hostname' | 'ipAddress' | 'deviceMacAddress' | 'readerModel' | 'firmwareVersion' | 'lastSeenAt' | 'isOnline';
 type SortOrder = 'asc' | 'desc';
@@ -34,14 +35,14 @@ interface Column {
 }
 
 const COLUMNS: Column[] = [
-  { id: 'isOnline',          label: 'Status',       sortable: true  },
-  { id: 'name',              label: 'Name',         sortable: true  },
-  { id: 'hostname',          label: 'Hostname / IP',sortable: true  },
-  { id: 'deviceMacAddress',  label: 'MAC Address',  sortable: true  },
-  { id: 'readerModel',       label: 'Model',        sortable: true  },
-  { id: 'firmwareVersion',   label: 'Firmware',     sortable: true  },
-  { id: 'lastSeenAt',        label: 'Last Seen',    sortable: true  },
-  { id: 'actions',           label: '',             sortable: false, align: 'right' },
+  { id: 'isOnline', label: 'Status', sortable: true },
+  { id: 'name', label: 'Name', sortable: true },
+  { id: 'hostname', label: 'Hostname / IP', sortable: true },
+  { id: 'deviceMacAddress', label: 'MAC Address', sortable: true },
+  { id: 'readerModel', label: 'Model', sortable: true },
+  { id: 'firmwareVersion', label: 'Firmware', sortable: true },
+  { id: 'lastSeenAt', label: 'Last Seen', sortable: true },
+  { id: 'actions', label: '', sortable: false, align: 'right' },
 ];
 
 const ROWS_PER_PAGE_OPTIONS = [5, 10, 25];
@@ -105,6 +106,11 @@ const DeviceManagement: React.FC = () => {
     [sortedDevices, page, rowsPerPage],
   );
 
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error',
+  });
   return (
     <Box sx={{ maxWidth: 1100, mx: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
 
@@ -307,14 +313,23 @@ const DeviceManagement: React.FC = () => {
         open={isFormOpen}
         editingDevice={editingDevice}
         onClose={closeForm}
-        onSubmit={handleSubmit}
+        onSubmit={(data) => {
+          handleSubmit(data);
+          setSnackbar({
+            open: true,
+            message: `Device "${data.name}" saved successfully`,
+            severity: 'success',
+          });
+        }}
         isSaving={isSaving}
-        submitError={submitError}
+      //submitError={submitError}
       />
 
       {/* ─── Delete Confirmation Dialog ─── */}
-      <Dialog open={deleteConfirmId !== null} onClose={closeDeleteConfirm}>
-        <DialogTitle>Delete Device</DialogTitle>
+      <Dialog open={deleteConfirmId !== null} onClose={closeDeleteConfirm}
+        maxWidth="xs"
+        fullWidth>
+        <DialogTitle sx={{ fontWeight: 600 }}>Delete Device</DialogTitle>
         <DialogContent>
           <DialogContentText>
             Are you sure you want to delete this device? This action cannot be undone.
@@ -322,11 +337,37 @@ const DeviceManagement: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={closeDeleteConfirm} disabled={isDeleting}>Cancel</Button>
-          <Button onClick={handleDelete} color="error" variant="contained" disabled={isDeleting}>
-            {isDeleting ? <CircularProgress size={22} color="inherit" /> : 'Delete'}
+          <Button
+            onClick={() => {
+              handleDelete();
+              setSnackbar({
+                open: true,
+                message: 'Device deleted successfully',
+                severity: 'success',
+              });
+            }}
+            color="error"
+            variant="contained"
+            disabled={isDeleting}
+          > Delete
           </Button>
         </DialogActions>
       </Dialog>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
