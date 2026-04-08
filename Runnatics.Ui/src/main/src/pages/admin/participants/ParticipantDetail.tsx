@@ -29,6 +29,7 @@ import {
 } from "@mui/material";
 import {
   ArrowBack,
+  Download,
   EmojiEvents,
   Speed,
   Timer,
@@ -56,6 +57,7 @@ import PageContainer from "@/main/src/components/PageContainer";
 import { SplitTimeInfo, RfidReadingDetail, ParticipantDetailsResponse, CheckpointTime } from "@/main/src/models/participants";
 import { ParticipantService } from "@/main/src/services";
 import { RFIDService } from "@/main/src/services/RFIDService";
+import { CertificateService } from "@/main/src/services/CertificateService";
 import { getColorPalette } from "@/main/src/theme";
 
 // Status badge component
@@ -326,6 +328,7 @@ const ParticipantDetail: React.FC = () => {
   const [editingCheckpointId, setEditingCheckpointId] = useState<string | null>(null);
   const [editTimeValue, setEditTimeValue] = useState<string>("");
   const [savingTime, setSavingTime] = useState(false);
+  const [downloadingCertificate, setDownloadingCertificate] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
     open: false,
     message: "",
@@ -381,6 +384,26 @@ const ParticipantDetail: React.FC = () => {
       navigate(`/events/event-details/${eventId}/race/${raceId}`);
     } else {
       navigate(-1);
+    }
+  };
+
+  const handleDownloadCertificate = async () => {
+    if (!participantId || !raceId || !eventId) return;
+    try {
+      setDownloadingCertificate(true);
+      const blob = await CertificateService.downloadParticipantCertificate(participantId, raceId, eventId);
+      const pngBlob = new Blob([blob], { type: 'image/png' });
+      const url = URL.createObjectURL(pngBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `certificate-${participant?.bibNumber || participantId}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setSnackbar({ open: true, message: 'Certificate downloaded successfully!', severity: 'success' });
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to download certificate.', severity: 'error' });
+    } finally {
+      setDownloadingCertificate(false);
     }
   };
 
@@ -456,22 +479,39 @@ const ParticipantDetail: React.FC = () => {
     <PageContainer>
       {/* Header Section */}
       <Box sx={{ mb: 4 }}>
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBack />}
-          onClick={handleBack}
-          sx={{ 
-            mb: 3,
-            borderColor: colors.border.main,
-            color: colors.text.primary,
-            '&:hover': {
-              borderColor: colors.primary.main,
-              bgcolor: alpha(colors.primary.main, 0.08),
-            },
-          }}
-        >
-          Back to Participants
-        </Button>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBack />}
+            onClick={handleBack}
+            sx={{ 
+              borderColor: colors.border.main,
+              color: colors.text.primary,
+              '&:hover': {
+                borderColor: colors.primary.main,
+                bgcolor: alpha(colors.primary.main, 0.08),
+              },
+            }}
+          >
+            Back to Participants
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={downloadingCertificate ? <CircularProgress size={18} color="inherit" /> : <Download />}
+            onClick={handleDownloadCertificate}
+            disabled={downloadingCertificate}
+            sx={{
+              background: `linear-gradient(135deg, ${colors.primary.main} 0%, ${colors.primary.dark || colors.primary.main} 100%)`,
+              fontWeight: 600,
+              px: 3,
+              '&:hover': {
+                background: `linear-gradient(135deg, ${colors.primary.dark || colors.primary.main} 0%, ${colors.primary.main} 100%)`,
+              },
+            }}
+          >
+            {downloadingCertificate ? 'Downloading...' : 'Download Certificate'}
+          </Button>
+        </Stack>
 
         {/* Participant Header Card */}
         <Card
