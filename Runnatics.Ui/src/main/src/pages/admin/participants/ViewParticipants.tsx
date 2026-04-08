@@ -147,12 +147,33 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   // Grid ref for export functionality
   const gridRef = useRef<DataGridRef>(null);
 
-  const genderMap: Record<string, number> = {
+  const genderMap: Record<string, number | null> = {
     male: 1,
     female: 2,
-    other: 3,
+    other: null,  // "Other" gender not supported by numeric codes, use null to filter
     all: 0,
   };
+
+  const reverseGenderMap: Record<number, string> = {
+    1: "male",
+    2: "female",
+    4: "other",  // Changed from 3 to 4
+  };
+
+  // Alternative gender code mapping if backend uses different codes
+  // Uncomment the appropriate one if code 3 doesn't work
+  // const altGenderMap: Record<string, number> = {
+  //   male: 1,
+  //   female: 2,
+  //   other: 0,  // Try 0 for other
+  //   all: 0,
+  // };
+  // const altGenderMap: Record<string, number> = {
+  //   male: 1,
+  //   female: 2,
+  //   other: 4,  // Try 4 for other
+  //   all: 0,
+  // };
 
   const statusMap: Record<string, number> = {
     registered: 1,
@@ -160,6 +181,75 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     dnf: 3,
     noShow: 4,
     all: 0,
+  };
+
+  const reverseStatusMap: Record<number, string> = {
+    1: "registered",
+    2: "completed",
+    3: "dnf",
+    4: "noShow",
+    0: "all",
+  };
+
+  // Helper function to normalize gender value
+  const normalizeGender = (genderValue: unknown): string => {
+    if (!genderValue && genderValue !== 0) return "";
+    
+    let normalized = "";
+    
+    // If it's a number, convert to string using reverse map
+    if (typeof genderValue === "number") {
+      normalized = reverseGenderMap[genderValue] || "";
+      console.log(`[DEBUG] Gender from number ${genderValue} -> ${normalized}`);
+      return normalized;
+    }
+    
+    // If it's a string, try multiple approaches
+    if (typeof genderValue === "string") {
+      const trimmed = genderValue.toLowerCase().trim();
+      
+      // Check if it's a numeric string (like "3")
+      const numValue = parseInt(trimmed, 10);
+      if (!isNaN(numValue) && reverseGenderMap[numValue]) {
+        normalized = reverseGenderMap[numValue];
+        console.log(`[DEBUG] Gender from numeric string "${genderValue}" -> ${normalized}`);
+        return normalized;
+      }
+      
+      // Direct string match
+      if (["male", "female", "other"].includes(trimmed)) {
+        console.log(`[DEBUG] Gender from string "${genderValue}" -> ${trimmed}`);
+        return trimmed;
+      }
+      
+      // Try reverse lookup for common variations
+      if (trimmed === "m" || trimmed === "male") return "male";
+      if (trimmed === "f" || trimmed === "female") return "female";
+      if (trimmed === "o" || trimmed === "other") return "other";
+      
+      console.log(`[DEBUG] Gender value not recognized: "${genderValue}" (trimmed: "${trimmed}")`);
+      return trimmed;
+    }
+    
+    return "";
+  };
+
+  // Helper function to normalize status value
+  const normalizeStatus = (statusValue: unknown): string => {
+    if (!statusValue) return "Registered";
+    
+    // If it's a number, convert to string using reverse map (capitalize first letter)
+    if (typeof statusValue === "number") {
+      const mapped = reverseStatusMap[statusValue];
+      return mapped ? mapped.charAt(0).toUpperCase() + mapped.slice(1) : "Registered";
+    }
+    
+    // If it's already a string, capitalize first letter
+    if (typeof statusValue === "string") {
+      return statusValue.charAt(0).toUpperCase() + statusValue.slice(1).toLowerCase();
+    }
+    
+    return "Registered";
   };
 
   // Fetch categories function (lazy loading)
@@ -213,23 +303,34 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     }
   };
 
-  // Fetch checkpoints when component mounts or when eventId/raceId changes
+  // Expose diagnostic function to window for console access
   useEffect(() => {
-    fetchCheckpoints();
-  }, [eventId, raceId]);
+    (window as any).testGenderCodes = testGenderCodes;
+    // No cleanup - keep function available throughout component lifetime
+  }, []); // Empty deps - expose once on mount, never remove
 
   // Fetch participants function
   const fetchParticipants = async (currentFilters: ParticipantFilters) => {
     try {
       setParticipantsLoading(true);
 
+      const genderValue = currentFilters.gender && currentFilters.gender !== "all" ? genderMap[currentFilters.gender] || null : null;
+      const statusValue = currentFilters.status && currentFilters.status !== "all" ? statusMap[currentFilters.status] || null : null;
+      
+      console.log(`[DEBUG] Fetching participants with filters:`, {
+        gender: currentFilters.gender,
+        genderCode: genderValue,
+        status: currentFilters.status,
+        statusCode: statusValue,
+      });
+
       const searchResponse = await ParticipantService.searchParticipants(
         eventId,
         raceId,
         {
           searchString: currentFilters.nameOrBib || "",
-          status: currentFilters.status === "all" ? null : statusMap[String(currentFilters.status)],
-          gender: currentFilters.gender === "all" ? null : genderMap[String(currentFilters.gender)],
+          status: statusValue,
+          gender: genderValue,
           category: currentFilters.category === "all" ? null : currentFilters.category,
           sortFieldName: "bib",
           sortDirection: 0,
@@ -252,33 +353,64 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
         total = searchResponse.length;
       }
 
-      const mappedParticipants = participantData.map((p: any) => ({
-        id: p.id,
-        bib: p.bib || "",
-        name: p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim(),
-        fullName: p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim(),
-        firstName: p.firstName || "",
-        lastName: p.lastName || "",
-        email: p.email || "",
-        phone: p.phone || "",
-        gender: p.gender || "",
-        category: p.category || "",
-        status: p.status || "Registered" as const,
-        checkIn: p.checkedIn || false,
-        chipId: p.chipId || "",
-        checkpointTimes: p.checkpointTimes || null,
-        gunTime: p.gunTime || null,
-        netTime: p.netTime || null,
-        overallRank: p.overallRank ?? null,
-        genderRank: p.genderRank ?? null,
-        categoryRank: p.categoryRank ?? null,
-      }));
+      const mappedParticipants = participantData.map((p: unknown) => {
+        const participant = p as Record<string, unknown>;
+        const normalizedGender = normalizeGender(participant.gender);
+        if (normalizedGender && normalizedGender !== "male" && normalizedGender !== "female") {
+          console.log(`[DEBUG] Participant with other gender:`, {
+            original: participant.gender,
+            normalized: normalizedGender,
+            name: participant.fullName,
+          });
+        }
+        return {
+          id: participant.id || "",
+          bib: participant.bib || "",
+          name: participant.fullName || `${participant.firstName || ""} ${participant.lastName || ""}`.trim(),
+          fullName: participant.fullName || `${participant.firstName || ""} ${participant.lastName || ""}`.trim(),
+          firstName: participant.firstName || "",
+          lastName: participant.lastName || "",
+          email: participant.email || "",
+          phone: participant.phone || "",
+          gender: normalizedGender,
+          category: participant.category || "",
+          status: normalizeStatus(participant.status),
+          checkIn: participant.checkedIn || false,
+          chipId: participant.chipId || "",
+          checkpointTimes: participant.checkpointTimes || null,
+          gunTime: participant.gunTime || null,
+          netTime: participant.netTime || null,
+          overallRank: participant.overallRank ?? null,
+          genderRank: participant.genderRank ?? null,
+          categoryRank: participant.categoryRank ?? null,
+        };
+      }) as unknown as Participant[];
 
-      setParticipants(mappedParticipants);
-      setTotalRecords(total);
+      // Client-side filtering for "other" gender since backend returns all participants when gender is null
+      let filteredParticipants = mappedParticipants;
+      if (currentFilters.gender === "other") {
+        filteredParticipants = mappedParticipants.filter(p => p.gender === "other");
+        console.log(`[DEBUG] Filtered to only "other" gender: ${filteredParticipants.length} participants`);
+      }
+
+      // Log all unique gender values for debugging
+      const uniqueGenders = [...new Set(filteredParticipants.map(p => p.gender || "empty"))];
+      console.log(`[DEBUG] API Response - Total participants: ${filteredParticipants.length}, Unique genders: ${JSON.stringify(uniqueGenders)}`);
+      
+      // Count by gender
+      const genderCounts = {
+        male: filteredParticipants.filter(p => p.gender === "male").length,
+        female: filteredParticipants.filter(p => p.gender === "female").length,
+        other: filteredParticipants.filter(p => p.gender === "other").length,
+        empty: filteredParticipants.filter(p => !p.gender).length,
+      };
+      console.log(`[DEBUG] Gender distribution:`, genderCounts);
+
+      setParticipants(filteredParticipants);
+      setTotalRecords(filteredParticipants.length);
 
       // Check if any participant has processed checkpoint times
-      const hasResults = mappedParticipants.some(
+      const hasResults = filteredParticipants.some(
         (p) => p.checkpointTimes && Object.keys(p.checkpointTimes).length > 0
       );
       setHasProcessedResults(hasResults);
@@ -320,9 +452,13 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     }
 
     if (filtersChanged) {
+      // Capture current values to avoid stale closure in setTimeout
+      const capturedFilters = filters;
+      const capturedFilterKey = currentFiltersKey;
+
       const timeoutId = setTimeout(() => {
-        prevFiltersRef.current = currentFiltersKey;
-        fetchParticipants(filters);
+        prevFiltersRef.current = capturedFilterKey;
+        fetchParticipants(capturedFilters);
       }, 300);
 
       return () => clearTimeout(timeoutId);
@@ -352,6 +488,58 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
 
   const handleResetFilters = () => {
     setFilters(defaultParticipantFilters);
+  };
+
+  // DIAGNOSTIC FUNCTION - Test different gender codes
+  const testGenderCodes = async () => {
+    console.log("=".repeat(60));
+    console.log("[DIAGNOSTIC] Testing all gender codes to find 'other' (LGBT)");
+    console.log("=".repeat(60));
+    
+    const codesToTest: (number | null)[] = [null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    
+    for (const code of codesToTest) {
+      try {
+        const response = await ParticipantService.searchParticipants(
+          eventId,
+          raceId,
+          {
+            searchString: "",
+            status: null,
+            gender: code,
+            category: null,
+            sortFieldName: "bib",
+            sortDirection: 0,
+            pageNumber: 1,
+            pageSize: 100,
+          }
+        );
+        
+        let count = 0;
+        if (response.message && Array.isArray(response.message)) {
+          count = response.message.length;
+        }
+        
+        console.log(`[DIAGNOSTIC] Gender code ${code}: ${count} participants`);
+        
+        // Log detail info about results
+        if (count > 0 && response.message && Array.isArray(response.message)) {
+          const samples = response.message.slice(0, 3).map(p => ({ 
+            name: (p as any).fullName, 
+            gender: (p as any).gender 
+          }));
+          console.log(`  Sample genders:`, samples);
+          
+          // Highlight if we found "Other"
+          if (samples.some(s => s.gender && s.gender.toLowerCase() === 'other')) {
+            console.log(`  ✓✓✓ FOUND OTHER GENDER with code ${code}! ✓✓✓`);
+          }
+        }
+      } catch (err) {
+        console.error(`[DIAGNOSTIC] Error testing code ${code}:`, err);
+      }
+    }
+    console.log("=".repeat(60));
   };
 
   const handlePageChange = (page: number) => {
@@ -836,6 +1024,15 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               disabled={clearingResults}
             >
               {clearingResults ? "Clearing..." : "Clear Processed Result"}
+            </Button>
+            <Button
+              variant="outlined"
+              color="warning"
+              sx={{ textTransform: "none", fontWeight: 500, display: "none" }}
+              onClick={testGenderCodes}
+              title="Debug: Test all gender codes"
+            >
+              Test Gender Codes
             </Button>
           </Stack>
         </Box>
