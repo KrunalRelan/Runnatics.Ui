@@ -150,6 +150,14 @@ const LoginPage: React.FC = () => {
                                 </Typography>
                             </Link>
                         </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            Need help?{' '}
+                            <Link to="/contact-us" style={{ textDecoration: 'none' }}>
+                                <Typography component="span" color="primary" sx={{ fontWeight: 600 }}>
+                                    Contact Us
+                                </Typography>
+                            </Link>
+                        </Typography>
                     </Box>
                 </form>
             </Paper>

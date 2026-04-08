@@ -9,10 +9,13 @@ import {
   TrendingUp as TrendingUpIcon,
   Logout as LogoutIcon,
   Person as PersonIcon,
+  SupportAgent as SupportAgentIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { DashboardService } from '../services/DashboardService';
 import { DashboardStatsResponse } from '../models/Dashboard/DashboardStatsResponse';
+import { SupportService } from '../services/SupportService';
+import { SupportQueryCounts } from '../models/support/Support';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -20,6 +23,7 @@ const Dashboard = () => {
   const [stats, setStats] = useState<DashboardStatsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [supportCounts, setSupportCounts] = useState<SupportQueryCounts | null>(null);
   const hasFetched = useRef(false);
 
   useEffect(() => {
@@ -33,9 +37,16 @@ const Dashboard = () => {
         setError(null);
         const data = await DashboardService.getDashboardStats();
         setStats(data);
-      } catch (err: any) {
-        console.error('Failed to fetch dashboard stats:', err);
-        setError(err.response?.data?.error?.message || err.message || 'Failed to load dashboard statistics');
+        try {
+          const counts = await SupportService.getCounts();
+          setSupportCounts(counts);
+        } catch {
+          // non-critical
+        }
+      } catch (err: unknown) {
+        const err2 = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
+        console.error('Failed to fetch dashboard stats:', err2);
+        setError(err2.response?.data?.error?.message || err2.message || 'Failed to load dashboard statistics');
       } finally {
         setLoading(false);
       }
@@ -83,6 +94,13 @@ const Dashboard = () => {
       icon: <TrendingUpIcon sx={{ fontSize: 40 }} />,
       color: '#9c27b0',
       path: '/analytics',
+    },
+    {
+      title: 'Open Support Queries',
+      value: loading ? '...' : (supportCounts?.newQuery?.toString() || '0'),
+      icon: <SupportAgentIcon sx={{ fontSize: 40 }} />,
+      color: '#0288d1',
+      path: '/support?statusId=1',
     },
   ];
 

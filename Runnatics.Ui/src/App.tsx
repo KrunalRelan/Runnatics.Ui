@@ -9,6 +9,8 @@ import Dashboard from "./main/src/pages/Dashboard";
 import { eventsRoutes } from "./main/src/pages/admin/events/Routes";
 import { rfidRoutes } from "./main/src/pages/admin/rfid/Routes";
 import { deviceRoutes } from "./main/src/pages/admin/devices/Routes";
+import { supportRoutes } from "./main/src/pages/admin/support/Routes";
+import ContactUsPage from "./main/src/pages/ContactUs/ContactUsPage";
 import { ProtectedRoute } from "./main/src/components/auth/ProtectedRoute";
 import { CircularProgress, Box } from "@mui/material";
 
@@ -39,6 +41,7 @@ function App() {
             {/* Auth routes - WITH HEADER ONLY (no side navigation) */}
             <Route element={<AuthLayoutWrapper />}>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/contact-us" element={<ContactUsPage />} />
             </Route>
             
             {/* Redirect root to login */}
@@ -87,6 +90,25 @@ function App() {
               {deviceRoutes.map((route, index) => (
                 <Route
                   key={`device-${index}`}
+                  path={`/${route.path}`}
+                  element={
+                    <Suspense
+                      fallback={
+                        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+                          <CircularProgress />
+                        </Box>
+                      }
+                    >
+                      {route.element}
+                    </Suspense>
+                  }
+                />
+              ))}
+
+              {/* Support routes */}
+              {supportRoutes.map((route, index) => (
+                <Route
+                  key={`support-${index}`}
                   path={`/${route.path}`}
                   element={
                     <Suspense
