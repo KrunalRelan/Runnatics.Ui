@@ -144,4 +144,19 @@ export class CertificateService {
     return URL.createObjectURL(response.data);
   }
 
+  /**
+   * Download certificate for a specific participant
+   */
+  static async downloadParticipantCertificate(
+    participantId: string,
+    raceId: string,
+    eventId: string
+  ): Promise<Blob> {
+    const response = await apiClient.get(
+      `${API_BASE}/participant/${participantId}/download?raceId=${raceId}&eventId=${eventId}`,
+      { responseType: 'blob' }
+    );
+    return response.data;
+  }
+
 }
