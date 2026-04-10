@@ -48,8 +48,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setIsLoading(true);
             const response = await authService.login(credentials);
             setUser(response.message.user);
-        } catch (error) {
-            console.error('Login failed:', error);
+        } catch (error: any) {
+            console.error('Login failed:', error?.response?.status, error?.response?.data?.message);
             throw error;
         } finally {
             setIsLoading(false);
@@ -61,8 +61,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setIsLoading(true);
             const response = await authService.register(userData);
             setUser(response.message.user);
-        } catch (error) {
-            console.error('Registration failed:', error);
+        } catch (error: any) {
+            console.error('Registration failed:', error?.response?.status, error?.response?.data?.message);
             throw error;
         } finally {
             setIsLoading(false);
