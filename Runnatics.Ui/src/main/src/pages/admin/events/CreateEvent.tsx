@@ -26,6 +26,7 @@ import {
   Snackbar,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 // If your project requires it, you can instead do:
 // import { SelectChangeEvent } from "@mui/material/Select";
 import { SelectChangeEvent } from "@mui/material/Select";
@@ -832,21 +833,48 @@ export const CreateEvent: React.FC = () => {
                   noOptionsText="Type to search or add new organizer"
                 />
 
-                {/* Show Add Organizer shortcut when no organizers exist yet (204 response) */}
-                {!isLoadingOrgs && organizations.length === 0 && !errors.tenantId && (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: -1 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      No organizers yet.
+                {/* Add Organizer — always visible */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    mt: 0.5,
+                  }}
+                >
+                  {!isLoadingOrgs && organizations.length === 0 ? (
+                    <Typography variant="caption" color="text.secondary">
+                      No organizers yet — create one to continue.
                     </Typography>
-                    <Button
-                      size="small"
-                      variant="text"
-                      onClick={() => handleAddNewOrganization("")}
-                    >
-                      + Add organizer
-                    </Button>
-                  </Box>
-                )}
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">
+                      {organizations.length} organizer{organizations.length !== 1 ? "s" : ""} available
+                    </Typography>
+                  )}
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<AddCircleOutlineIcon fontSize="small" />}
+                    onClick={() => handleAddNewOrganization("")}
+                    disabled={isLoadingOrgs}
+                    sx={{
+                      borderRadius: "8px",
+                      textTransform: "none",
+                      fontWeight: 600,
+                      fontSize: "0.78rem",
+                      px: 1.5,
+                      py: 0.5,
+                      borderColor: "primary.main",
+                      color: "primary.main",
+                      "&:hover": {
+                        backgroundColor: "primary.50",
+                        borderColor: "primary.dark",
+                      },
+                    }}
+                  >
+                    New Organizer
+                  </Button>
+                </Box>
 
                 {/* Event Type */}
                 <FormControl fullWidth error={!!errors.eventType} required>
