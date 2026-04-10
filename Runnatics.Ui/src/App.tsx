@@ -5,6 +5,7 @@ import { AuthProvider } from "./main/src/contexts/AuthContext";
 import DashboardLayout from "./main/src/components/DashboardLayout";
 import AuthLayout from "./main/src/components/AuthLayout";
 import LoginPage from "./main/src/pages/auth/LoginPage";
+import RegisterPage from "./main/src/pages/auth/RegisterPage";
 import Dashboard from "./main/src/pages/Dashboard";
 import { eventsRoutes } from "./main/src/pages/admin/events/Routes";
 import { rfidRoutes } from "./main/src/pages/admin/rfid/Routes";
@@ -41,6 +42,7 @@ function App() {
             {/* Auth routes - WITH HEADER ONLY (no side navigation) */}
             <Route element={<AuthLayoutWrapper />}>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
               <Route path="/contact-us" element={<ContactUsPage />} />
             </Route>
             

@@ -58,6 +58,15 @@ export interface RegisterRequest {
     lastName: string;
 }
 
+export interface RegisterOrganizationRequest {
+    organizationName: string;
+    organizationWebsite: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+}
+
 export interface AuthState {
     isAuthenticated: boolean;
     user: User | null;

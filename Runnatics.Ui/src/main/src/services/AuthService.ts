@@ -1,7 +1,7 @@
 // src/main/src/services/AuthService.ts
 
 import { apiClient, tokenManager } from '../utils/axios.config';
-import { LoginRequest, LoginResponse, RegisterRequest } from '../models/Auth';
+import { LoginRequest, LoginResponse, RegisterRequest, RegisterOrganizationRequest } from '../models/Auth';
 import { ServiceUrl } from '../models/ServiceUrls';
 
 /**
@@ -44,9 +44,9 @@ class AuthService {
      * @param userData - User registration data
      * @returns Login response with token and user data
      */
-    async register(userData: RegisterRequest): Promise<LoginResponse> {
+    async register(userData: RegisterRequest | RegisterOrganizationRequest): Promise<LoginResponse> {
         try {
-            const response = await apiClient.post<LoginResponse>('/auth/register', userData);
+            const response = await apiClient.post<LoginResponse>('/authentication/register-organization', userData);
             
             // Store the JWT token in localStorage
             if (response.data.message.token) {

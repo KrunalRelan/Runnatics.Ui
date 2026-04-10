@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService } from '../services/AuthService';
-import { LoginRequest, RegisterRequest, User } from '../models/Auth';
+import { LoginRequest, RegisterRequest, RegisterOrganizationRequest, User } from '../models/Auth';
 import { tokenManager } from '../utils/axios.config';
 
 interface AuthContextType {
@@ -10,7 +10,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (credentials: LoginRequest) => Promise<void>;
-    register: (userData: RegisterRequest) => Promise<void>;
+    register: (userData: RegisterRequest | RegisterOrganizationRequest) => Promise<void>;
     logout: () => Promise<void>;
 }
 
