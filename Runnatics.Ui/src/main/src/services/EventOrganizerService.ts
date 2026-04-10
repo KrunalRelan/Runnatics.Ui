@@ -10,6 +10,10 @@ export class EventOrganizerService {
   */
     static async getOrganizations(): Promise<EventOrganizer[]> {
         const response = await apiClient.get<ResponseBase<EventOrganizer[]>>(ServiceUrl.getEventOrganizer());
+        // 204 No Content — no organizers exist yet
+        if (response.status === 204 || !response.data || !response.data.message) {
+            return [];
+        }
         const items = Array.isArray(response.data.message) ? response.data.message : [response.data.message];
         return items;
     }

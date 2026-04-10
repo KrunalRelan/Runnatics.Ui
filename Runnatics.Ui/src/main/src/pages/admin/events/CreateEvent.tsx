@@ -159,7 +159,6 @@ export const CreateEvent: React.FC = () => {
   const isMountedRef = useRef(true);
 
   const fetchOrganizations = async (): Promise<EventOrganizer[]> => {
-    console.log("🚀 Starting to fetch organizations...");
     try {
       setIsLoadingOrgs(true);
       const response = await EventOrganizerService.getOrganizations();
@@ -173,6 +172,14 @@ export const CreateEvent: React.FC = () => {
 
       if (isMountedRef.current) {
         setOrganizations(mappedOrgs);
+        // Clear any stale org error — empty list is valid (204), not a failure
+        setErrors((prev) => {
+          if (prev.tenantId === "Failed to load organizations") {
+            const { tenantId, ...rest } = prev;
+            return rest;
+          }
+          return prev;
+        });
       }
 
       return mappedOrgs;
@@ -824,6 +831,22 @@ export const CreateEvent: React.FC = () => {
                   }}
                   noOptionsText="Type to search or add new organizer"
                 />
+
+                {/* Show Add Organizer shortcut when no organizers exist yet (204 response) */}
+                {!isLoadingOrgs && organizations.length === 0 && !errors.tenantId && (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: -1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      No organizers yet.
+                    </Typography>
+                    <Button
+                      size="small"
+                      variant="text"
+                      onClick={() => handleAddNewOrganization("")}
+                    >
+                      + Add organizer
+                    </Button>
+                  </Box>
+                )}
 
                 {/* Event Type */}
                 <FormControl fullWidth error={!!errors.eventType} required>
