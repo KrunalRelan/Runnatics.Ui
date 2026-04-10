@@ -89,25 +89,30 @@ class AuthService {
      * @returns New access token
      */
     async refreshToken(): Promise<string> {
+        // NOTE: Do NOT use apiClient here — it would trigger the 401 interceptor
+        // and create an infinite loop. Use a plain axios call instead.
+        const { default: axios } = await import('axios');
+        const refreshToken = tokenManager.getRefreshToken();
+
+        if (!refreshToken) {
+            tokenManager.clearTokens();
+            throw new Error('No refresh token available');
+        }
+
         try {
-            const refreshToken = tokenManager.getRefreshToken();
-            
-            if (!refreshToken) {
-                throw new Error('No refresh token available');
-            }
-            
-            const response = await apiClient.post<{ token: string }>('/authentication/refresh-token', {
-                refreshToken,
-            });
-            
-            // Store the new token
+            const { default: config } = await import('../config/environment');
+            const response = await axios.post<{ token: string }>(
+                `${config.apiBaseUrl}/authentication/refresh-token`,
+                { refreshToken },
+                { headers: { 'Content-Type': 'application/json' } }
+            );
+
             if (response.data.token) {
                 tokenManager.setToken(response.data.token);
             }
-            
+
             return response.data.token;
         } catch (error: any) {
-            // Clear tokens if refresh fails
             tokenManager.clearTokens();
             throw error;
         }

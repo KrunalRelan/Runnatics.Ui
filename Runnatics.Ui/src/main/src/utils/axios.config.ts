@@ -13,8 +13,18 @@ export const apiClient = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    withCredentials: false, // Set to true if you need to send cookies/credentials
-    timeout: 30000, // 30 seconds timeout
+    withCredentials: false,
+    timeout: 30000,
+});
+
+// Separate axios instance used ONLY for refresh-token calls.
+// This bypasses the response interceptor and avoids infinite retry loops.
+const refreshClient = axios.create({
+    baseURL: config.apiBaseUrl,
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    timeout: 10000,
 });
 
 // Helper functions for token management
@@ -37,75 +47,139 @@ export const tokenManager = {
     },
 };
 
-// Request interceptor - Adds Bearer token to all requests
+// --- Refresh token queue ---
+// If multiple requests fail with 401 at the same time, we queue them
+// and replay them all once a single refresh call completes.
+let isRefreshing = false;
+let failedQueue: Array<{
+    resolve: (token: string) => void;
+    reject: (err: unknown) => void;
+}> = [];
+
+const processQueue = (error: unknown, token: string | null) => {
+    failedQueue.forEach(({ resolve, reject }) => {
+        if (error) reject(error);
+        else resolve(token!);
+    });
+    failedQueue = [];
+};
+
+const redirectToLogin = () => {
+    if (window.location.pathname !== '/login') {
+        const currentPath = window.location.pathname + window.location.search;
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        localStorage.setItem('returnUrl', currentPath);
+        window.location.href = '/login';
+    }
+};
+
+// Request interceptor — attach Bearer token to every request
 apiClient.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
-        // Get token from localStorage
         const token = tokenManager.getToken();
-        
-        // Add Bearer token to Authorization header if token exists
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
         }
-
         return config;
     },
-    (error: AxiosError) => {
-        return Promise.reject(error);
-    }
+    (error: AxiosError) => Promise.reject(error)
 );
 
-// Response interceptor
+// Response interceptor — handle 401 with token refresh + retry
 apiClient.interceptors.response.use(
-    (response) => {
-        return response;
-    },
-    (error) => {
-        // Handle different error types
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+        // No response at all — network / CORS error
         if (!error.response) {
-            // Network error or CORS error
-            error.userMessage = 'Unable to connect to the server. Please check:\n' +
+            error.userMessage =
+                'Unable to connect to the server. Please check:\n' +
                 '1. Is the backend server running?\n' +
                 '2. Is CORS configured on the backend?\n' +
                 '3. Is the API URL correct?';
-        } else {
-            // Server responded with error
-            // Handle specific status codes
-            switch (error.response.status) {
-                case 401:
-                    error.userMessage = 'Authentication failed. Please check your credentials or login again.';
-                    
-                    // Session expired - redirect to login with return URL
-                    // Only redirect if not already on login page
-                    if (window.location.pathname !== '/login') {
-                        const currentPath = window.location.pathname + window.location.search;
-                        
-                        // Clear tokens
-                        tokenManager.clearTokens();
-                        
-                        // Clear any user data from localStorage
-                        localStorage.removeItem('user');
-                        localStorage.removeItem('userRole');
-                        
-                        // Save the return URL (where user was trying to go)
-                        localStorage.setItem('returnUrl', currentPath);
-                        
-                        // Redirect to login page
-                        window.location.href = '/login';
-                    }
-                    break;
-                case 403:
-                    error.userMessage = 'You do not have permission to perform this action.';
-                    break;
-                case 404:
-                    error.userMessage = 'The requested resource was not found.';
-                    break;
-                case 500:
-                    error.userMessage = 'Server error. Please try again later.';
-                    break;
-                default:
-                    error.userMessage = error.response.data?.message || 'An error occurred.';
+            return Promise.reject(error);
+        }
+
+        const { status } = error.response;
+
+        // --- 401 handling: attempt silent token refresh ---
+        if (status === 401 && !originalRequest._retry) {
+            // If the refresh endpoint itself returned 401, give up immediately
+            if (originalRequest.url?.includes('/authentication/refresh-token')) {
+                tokenManager.clearTokens();
+                redirectToLogin();
+                return Promise.reject(error);
             }
+
+            // If a refresh is already in progress, queue this request
+            if (isRefreshing) {
+                return new Promise<string>((resolve, reject) => {
+                    failedQueue.push({ resolve, reject });
+                }).then((newToken) => {
+                    originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+                    return apiClient(originalRequest);
+                });
+            }
+
+            originalRequest._retry = true;
+            isRefreshing = true;
+
+            const storedRefreshToken = tokenManager.getRefreshToken();
+
+            // No refresh token stored — go straight to login
+            if (!storedRefreshToken) {
+                isRefreshing = false;
+                tokenManager.clearTokens();
+                redirectToLogin();
+                return Promise.reject(error);
+            }
+
+            try {
+                // Use the dedicated refreshClient so this call is NOT intercepted
+                const refreshResponse = await refreshClient.post<{ token: string }>(
+                    '/authentication/refresh-token',
+                    { refreshToken: storedRefreshToken }
+                );
+
+                const newToken = refreshResponse.data?.token;
+                if (!newToken) throw new Error('Refresh response did not contain a token');
+
+                tokenManager.setToken(newToken);
+
+                // Replay all queued requests with the new token
+                processQueue(null, newToken);
+
+                // Retry the original failed request
+                originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+                return apiClient(originalRequest);
+            } catch (refreshError) {
+                // Refresh failed — reject all queued requests and force re-login
+                processQueue(refreshError, null);
+                tokenManager.clearTokens();
+                localStorage.removeItem('user');
+                localStorage.removeItem('userRole');
+                redirectToLogin();
+                return Promise.reject(refreshError);
+            } finally {
+                isRefreshing = false;
+            }
+        }
+
+        // --- Other error status codes ---
+        switch (status) {
+            case 403:
+                error.userMessage = 'You do not have permission to perform this action.';
+                break;
+            case 404:
+                error.userMessage = 'The requested resource was not found.';
+                break;
+            case 500:
+                error.userMessage = 'Server error. Please try again later.';
+                break;
+            default:
+                error.userMessage = (error.response.data as any)?.message || 'An error occurred.';
         }
 
         return Promise.reject(error);
