@@ -47,6 +47,19 @@ function getPasswordStrength(password: string): { score: number; label: string; 
     return { score: 100, label: 'Very strong', color: '#1AA251' };
 }
 
+type FormData = RegisterOrganizationRequest & { confirmPassword: string };
+
+const INITIAL_FORM: FormData = {
+    organizationName: '',
+    domain: '',
+    phoneNumber: '',
+    superAdminFirstName: '',
+    superAdminLastName: '',
+    superAdminEmail: '',
+    superAdminPassword: '',
+    confirmPassword: '',
+};
+
 const RegisterPage: React.FC = () => {
     const navigate = useNavigate();
     const { register, isLoading } = useAuth();
@@ -55,59 +68,56 @@ const RegisterPage: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [error, setError] = useState('');
-
-    const [formData, setFormData] = useState<RegisterOrganizationRequest & { confirmPassword: string }>({
-        organizationName: '',
-        organizationWebsite: '',
-        firstName: '',
-        lastName: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-    });
-
-    const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof formData, string>>>({});
+    const [formData, setFormData] = useState<FormData>(INITIAL_FORM);
+    const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormData, string>>>({});
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        if (fieldErrors[name as keyof typeof formData]) {
+        if (fieldErrors[name as keyof FormData]) {
             setFieldErrors(prev => ({ ...prev, [name]: '' }));
         }
         if (error) setError('');
     };
 
     const validateStep1 = (): boolean => {
-        const errors: Partial<Record<keyof typeof formData, string>> = {};
+        const errors: Partial<Record<keyof FormData, string>> = {};
         if (!formData.organizationName.trim()) {
             errors.organizationName = 'Organization name is required.';
         }
-        if (!formData.organizationWebsite.trim()) {
-            errors.organizationWebsite = 'Website is required.';
-        } else if (!/^https?:\/\/.+\..+/.test(formData.organizationWebsite)) {
-            errors.organizationWebsite = 'Enter a valid URL (e.g. https://example.com).';
+        if (!formData.domain.trim()) {
+            errors.domain = 'Domain is required.';
+        } else if (formData.domain.trim().length < 3 || formData.domain.trim().length > 30) {
+            errors.domain = 'Domain must be between 3 and 30 characters.';
+        } else if (!/^[a-zA-Z0-9-]+$/.test(formData.domain.trim())) {
+            errors.domain = 'Domain can only contain letters, numbers, and hyphens.';
+        }
+        if (!formData.phoneNumber.trim()) {
+            errors.phoneNumber = 'Phone number is required.';
+        } else if (!/^\+?[0-9\s\-().]{7,20}$/.test(formData.phoneNumber.trim())) {
+            errors.phoneNumber = 'Enter a valid phone number.';
         }
         setFieldErrors(errors);
         return Object.keys(errors).length === 0;
     };
 
     const validateStep2 = (): boolean => {
-        const errors: Partial<Record<keyof typeof formData, string>> = {};
-        if (!formData.firstName.trim()) errors.firstName = 'First name is required.';
-        if (!formData.lastName.trim()) errors.lastName = 'Last name is required.';
-        if (!formData.email.trim()) {
-            errors.email = 'Email is required.';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            errors.email = 'Enter a valid email address.';
+        const errors: Partial<Record<keyof FormData, string>> = {};
+        if (!formData.superAdminFirstName.trim()) errors.superAdminFirstName = 'First name is required.';
+        if (!formData.superAdminLastName.trim()) errors.superAdminLastName = 'Last name is required.';
+        if (!formData.superAdminEmail.trim()) {
+            errors.superAdminEmail = 'Email is required.';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.superAdminEmail)) {
+            errors.superAdminEmail = 'Enter a valid email address.';
         }
-        if (!formData.password) {
-            errors.password = 'Password is required.';
-        } else if (formData.password.length < 8) {
-            errors.password = 'Password must be at least 8 characters.';
+        if (!formData.superAdminPassword) {
+            errors.superAdminPassword = 'Password is required.';
+        } else if (formData.superAdminPassword.length < 8) {
+            errors.superAdminPassword = 'Password must be at least 8 characters.';
         }
         if (!formData.confirmPassword) {
             errors.confirmPassword = 'Please confirm your password.';
-        } else if (formData.password !== formData.confirmPassword) {
+        } else if (formData.superAdminPassword !== formData.confirmPassword) {
             errors.confirmPassword = 'Passwords do not match.';
         }
         setFieldErrors(errors);
@@ -135,18 +145,24 @@ const RegisterPage: React.FC = () => {
             navigate('/dashboard');
         } catch (err: any) {
             const status = err?.response?.status;
-            const msg = err?.response?.data;
+            const data = err?.response?.data;
             if (status === 409) {
-                setError(typeof msg === 'string' ? msg : 'This organization or email is already registered.');
+                setError(typeof data === 'string' ? data : 'This organization or email is already registered.');
             } else if (status === 422) {
-                setError(typeof msg === 'string' ? msg : 'Invalid organization domain.');
+                setError(typeof data === 'string' ? data : 'Invalid organization domain.');
+            } else if (status === 400 && data?.errors) {
+                const messages = Object.values(data.errors as Record<string, string[]>).flat();
+                setError(messages.join(' '));
             } else {
                 setError(err?.userMessage || 'Registration failed. Please try again.');
             }
         }
     };
 
-    const strength = getPasswordStrength(formData.password);
+    const strength = getPasswordStrength(formData.superAdminPassword);
+    const passwordsMatch =
+        formData.confirmPassword.length > 0 &&
+        formData.superAdminPassword === formData.confirmPassword;
 
     return (
         <Box
@@ -161,13 +177,8 @@ const RegisterPage: React.FC = () => {
         >
             <Paper
                 elevation={3}
-                sx={{
-                    p: { xs: 3, sm: 4 },
-                    maxWidth: 520,
-                    width: '100%',
-                }}
+                sx={{ p: { xs: 3, sm: 4 }, maxWidth: 520, width: '100%' }}
             >
-                {/* Header */}
                 <Typography variant="h4" component="h1" align="center" gutterBottom>
                     Create account
                 </Typography>
@@ -175,7 +186,6 @@ const RegisterPage: React.FC = () => {
                     Set up your organization on Runnatics
                 </Typography>
 
-                {/* Stepper */}
                 <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
                     {STEPS.map((label, index) => (
                         <Step key={label} completed={activeStep > index}>
@@ -217,15 +227,38 @@ const RegisterPage: React.FC = () => {
 
                             <TextField
                                 fullWidth
-                                label="Website"
-                                name="organizationWebsite"
-                                value={formData.organizationWebsite}
+                                label="Domain"
+                                name="domain"
+                                value={formData.domain}
                                 onChange={handleChange}
-                                error={!!fieldErrors.organizationWebsite}
-                                helperText={fieldErrors.organizationWebsite || 'Used to verify your organization domain'}
+                                error={!!fieldErrors.domain}
+                                helperText={fieldErrors.domain || '3–30 characters, letters/numbers/hyphens only'}
                                 required
                                 margin="normal"
-                                placeholder="https://example.com"
+                                placeholder="acme-running"
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <Typography variant="caption" color="text.secondary">
+                                                .runnatics.com
+                                            </Typography>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+
+                            <TextField
+                                fullWidth
+                                label="Phone number"
+                                name="phoneNumber"
+                                type="tel"
+                                value={formData.phoneNumber}
+                                onChange={handleChange}
+                                error={!!fieldErrors.phoneNumber}
+                                helperText={fieldErrors.phoneNumber}
+                                required
+                                margin="normal"
+                                placeholder="+1 555 000 0000"
                             />
 
                             <Button
@@ -241,7 +274,7 @@ const RegisterPage: React.FC = () => {
                         </Box>
                     )}
 
-                    {/* Step 2 — Account */}
+                    {/* Step 2 — Admin Account */}
                     {activeStep === 1 && (
                         <Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -251,16 +284,16 @@ const RegisterPage: React.FC = () => {
                                 </Typography>
                             </Box>
 
-                            <Grid container spacing={2} sx={{ mt: 0 }}>
+                            <Grid container spacing={2}>
                                 <Grid item xs={6}>
                                     <TextField
                                         fullWidth
                                         label="First name"
-                                        name="firstName"
-                                        value={formData.firstName}
+                                        name="superAdminFirstName"
+                                        value={formData.superAdminFirstName}
                                         onChange={handleChange}
-                                        error={!!fieldErrors.firstName}
-                                        helperText={fieldErrors.firstName}
+                                        error={!!fieldErrors.superAdminFirstName}
+                                        helperText={fieldErrors.superAdminFirstName}
                                         required
                                         autoFocus
                                         autoComplete="given-name"
@@ -270,11 +303,11 @@ const RegisterPage: React.FC = () => {
                                     <TextField
                                         fullWidth
                                         label="Last name"
-                                        name="lastName"
-                                        value={formData.lastName}
+                                        name="superAdminLastName"
+                                        value={formData.superAdminLastName}
                                         onChange={handleChange}
-                                        error={!!fieldErrors.lastName}
-                                        helperText={fieldErrors.lastName}
+                                        error={!!fieldErrors.superAdminLastName}
+                                        helperText={fieldErrors.superAdminLastName}
                                         required
                                         autoComplete="family-name"
                                     />
@@ -284,12 +317,12 @@ const RegisterPage: React.FC = () => {
                             <TextField
                                 fullWidth
                                 label="Work email"
-                                name="email"
+                                name="superAdminEmail"
                                 type="email"
-                                value={formData.email}
+                                value={formData.superAdminEmail}
                                 onChange={handleChange}
-                                error={!!fieldErrors.email}
-                                helperText={fieldErrors.email}
+                                error={!!fieldErrors.superAdminEmail}
+                                helperText={fieldErrors.superAdminEmail}
                                 required
                                 margin="normal"
                                 autoComplete="email"
@@ -298,12 +331,12 @@ const RegisterPage: React.FC = () => {
                             <TextField
                                 fullWidth
                                 label="Password"
-                                name="password"
+                                name="superAdminPassword"
                                 type={showPassword ? 'text' : 'password'}
-                                value={formData.password}
+                                value={formData.superAdminPassword}
                                 onChange={handleChange}
-                                error={!!fieldErrors.password}
-                                helperText={fieldErrors.password}
+                                error={!!fieldErrors.superAdminPassword}
+                                helperText={fieldErrors.superAdminPassword}
                                 required
                                 margin="normal"
                                 autoComplete="new-password"
@@ -323,8 +356,7 @@ const RegisterPage: React.FC = () => {
                                 }}
                             />
 
-                            {/* Password strength */}
-                            {formData.password && (
+                            {formData.superAdminPassword && (
                                 <Box sx={{ mt: 0.5, mb: 1 }}>
                                     <LinearProgress
                                         variant="determinate"
@@ -350,19 +382,14 @@ const RegisterPage: React.FC = () => {
                                 value={formData.confirmPassword}
                                 onChange={handleChange}
                                 error={!!fieldErrors.confirmPassword}
-                                helperText={
-                                    fieldErrors.confirmPassword ||
-                                    (formData.confirmPassword && formData.password === formData.confirmPassword
-                                        ? ''
-                                        : '')
-                                }
+                                helperText={fieldErrors.confirmPassword}
                                 required
                                 margin="normal"
                                 autoComplete="new-password"
                                 InputProps={{
                                     endAdornment: (
                                         <InputAdornment position="end">
-                                            {formData.confirmPassword && formData.password === formData.confirmPassword ? (
+                                            {passwordsMatch ? (
                                                 <CheckCircle sx={{ color: 'success.main', fontSize: 20, mr: 0.5 }} />
                                             ) : (
                                                 <IconButton
@@ -404,7 +431,6 @@ const RegisterPage: React.FC = () => {
                     )}
                 </form>
 
-                {/* Footer */}
                 <Box sx={{ textAlign: 'center', mt: 3 }}>
                     <Typography variant="body2" color="text.secondary">
                         Already have an account?{' '}

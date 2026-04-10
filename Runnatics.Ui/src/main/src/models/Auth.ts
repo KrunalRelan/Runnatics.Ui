@@ -60,11 +60,12 @@ export interface RegisterRequest {
 
 export interface RegisterOrganizationRequest {
     organizationName: string;
-    organizationWebsite: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    password: string;
+    domain: string;
+    phoneNumber: string;
+    superAdminFirstName: string;
+    superAdminLastName: string;
+    superAdminEmail: string;
+    superAdminPassword: string;
 }
 
 export interface AuthState {
