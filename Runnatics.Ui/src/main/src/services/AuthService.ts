@@ -74,12 +74,11 @@ class AuthService {
      */
     async logout(): Promise<void> {
         try {
-            // Call logout endpoint if available
-            await apiClient.post('/auth/logout');
+            const refreshToken = tokenManager.getRefreshToken();
+            await apiClient.post('/authentication/logout', { refreshToken });
         } catch (error) {
-            // Ignore logout errors
+            // Ignore logout errors — always clear local state
         } finally {
-            // Clear tokens and user data regardless of API call result
             tokenManager.clearTokens();
             localStorage.removeItem('user');
         }
@@ -97,7 +96,7 @@ class AuthService {
                 throw new Error('No refresh token available');
             }
             
-            const response = await apiClient.post<{ token: string }>('/auth/refresh', {
+            const response = await apiClient.post<{ token: string }>('/authentication/refresh-token', {
                 refreshToken,
             });
             
