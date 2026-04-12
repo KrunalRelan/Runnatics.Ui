@@ -35,7 +35,7 @@ function AuthLayout({ children }: AuthLayoutProps) {
       >
         <Toolbar>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Runnatics
+            Racetik
           </Typography>
 
           {/* Theme Switcher */}

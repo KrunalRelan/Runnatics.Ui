@@ -183,7 +183,7 @@ const RegisterPage: React.FC = () => {
                     Create account
                 </Typography>
                 <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-                    Set up your organization on Runnatics
+                    Set up your organization on Racetik
                 </Typography>
 
                 <Stepper activeStep={activeStep} sx={{ mb: 4 }}>

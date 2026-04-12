@@ -140,7 +140,7 @@ This wrapper provides **full dashboard** (header + side nav) for protected pages
 ```
 /login → AuthLayout
          ├── Header Bar (Top) ✅
-         │   ├── App Name: "Runnatics"
+         │   ├── App Name: "Racetik"
          │   └── Theme Switcher
          ├── NO Side Navigation ❌
          └── LoginPage Content ✅

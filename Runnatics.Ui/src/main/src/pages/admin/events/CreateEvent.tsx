@@ -44,6 +44,7 @@ import {
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
 import { LeaderboardSettingsComponent } from "../shared/LeaderboardSettings";
 import { convertLocalToUTC } from "@/main/src/utils/dateTimeUtils";
+import PageContainer from "@/main/src/components/PageContainer";
 
 interface FormErrors {
   [key: string]: string;
@@ -652,7 +653,7 @@ export const CreateEvent: React.FC = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: "auto", p: 3 }}>
+    <PageContainer>
       <Button
         variant="outlined"
         startIcon={<ArrowBackIcon />}
@@ -1216,12 +1217,14 @@ export const CreateEvent: React.FC = () => {
               </Box>
 
               {/* Leaderboard Settings */}
-              <LeaderboardSettingsComponent
-                settings={leaderBoardSettings}
-                onSettingsChange={setLeaderBoardSettings}
-                showOverrideToggle={false}
-                title="Leaderboard Settings"
-              />
+              <Box sx={{ flex: 1, pl: { xs: 0, md: 2 } }}>
+                <LeaderboardSettingsComponent
+                  settings={leaderBoardSettings}
+                  onSettingsChange={setLeaderBoardSettings}
+                  showOverrideToggle={false}
+                  title="Leaderboard Settings"
+                />
+              </Box>
             </Stack>
           </Box>
 
@@ -1318,6 +1321,6 @@ export const CreateEvent: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Box>
+    </PageContainer>
   );
 };

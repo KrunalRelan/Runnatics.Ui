@@ -222,7 +222,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
       >
         {!isMinimized ? (
           <Typography variant="h6" noWrap component="div" fontWeight={700}>
-            🚀 Runnatics
+            🚀 Racetik
           </Typography>
         ) : (
           <Typography variant="h6" component="div" fontWeight={700}>

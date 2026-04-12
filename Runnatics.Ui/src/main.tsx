@@ -29,7 +29,7 @@ function configureDayjs() : void {
 
 function configureAxios(): void {
  
-  axios.defaults.xsrfCookieName = 'Runnatics-XSRF-TOKEN';
+  axios.defaults.xsrfCookieName = 'Racetik-XSRF-TOKEN';
   axios.defaults.xsrfHeaderName = 'X-XSRF-TOKEN';
   axios.defaults.baseURL = '/api/v1/';
 }
