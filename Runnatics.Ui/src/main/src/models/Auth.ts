@@ -1,5 +1,9 @@
 // src/main/src/models/Auth.ts
 
+export type UserRole = 'SuperAdmin' | 'Admin';
+
+export const ALL_ROLES: UserRole[] = ['SuperAdmin', 'Admin'];
+
 export interface LoginRequest {
     email: string;
     password: string;

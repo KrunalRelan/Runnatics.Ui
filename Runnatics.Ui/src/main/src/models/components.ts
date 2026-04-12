@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { UserRole } from './Auth';
 import { SxProps, Theme } from '@mui/material';
 
 // StatCard Component
@@ -79,12 +80,16 @@ export interface MenuItem {
     icon: ReactNode;
     path: string;
     submenu?: SubMenuItem[];
+    /** If set, item is only shown to users whose role is in this list. */
+    roles?: UserRole[];
 }
 
 export interface SubMenuItem {
     text: string;
     icon: ReactNode;
     path: string;
+    /** If set, item is only shown to users whose role is in this list. */
+    roles?: UserRole[];
 }
 
 export interface DashboardLayoutProps {

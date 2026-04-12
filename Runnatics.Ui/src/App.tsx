@@ -13,6 +13,8 @@ import { deviceRoutes } from "./main/src/pages/admin/devices/Routes";
 import { supportRoutes } from "./main/src/pages/admin/support/Routes";
 import ContactUsPage from "./main/src/pages/ContactUs/ContactUsPage";
 import { ProtectedRoute } from "./main/src/components/auth/ProtectedRoute";
+import ForbiddenPage from "./main/src/pages/ForbiddenPage";
+import { ALL_ROLES } from "./main/src/models/Auth";
 import { CircularProgress, Box } from "@mui/material";
 
 // Layout wrapper for auth pages (header only, no side nav)
@@ -25,11 +27,16 @@ const AuthLayoutWrapper = () => {
 };
 
 // Layout wrapper for protected routes (full dashboard with side nav)
+// ProtectedRoute here enforces: authenticated + allowed role for ALL dashboard routes.
+// For routes that need a more restrictive role (e.g. SuperAdmin only), wrap the
+// individual route element with <ProtectedRoute allowedRoles={['SuperAdmin']}>.
 const DashboardLayoutWrapper = () => {
   return (
-    <DashboardLayout>
-      <Outlet />
-    </DashboardLayout>
+    <ProtectedRoute allowedRoles={ALL_ROLES}>
+      <DashboardLayout>
+        <Outlet />
+      </DashboardLayout>
+    </ProtectedRoute>
   );
 };
 
@@ -44,6 +51,7 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/contact-us" element={<ContactUsPage />} />
+              <Route path="/forbidden" element={<ForbiddenPage />} />
             </Route>
             
             {/* Redirect root to login */}

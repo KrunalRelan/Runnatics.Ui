@@ -2,13 +2,15 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService } from '../services/AuthService';
-import { LoginRequest, RegisterRequest, RegisterOrganizationRequest, User } from '../models/Auth';
+import { LoginRequest, RegisterRequest, RegisterOrganizationRequest, User, UserRole } from '../models/Auth';
 import { tokenManager } from '../utils/axios.config';
 
 interface AuthContextType {
     user: User | null;
+    userRole: UserRole | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    hasRole: (roles: UserRole[]) => boolean;
     login: (credentials: LoginRequest) => Promise<void>;
     register: (userData: RegisterRequest | RegisterOrganizationRequest) => Promise<void>;
     logout: () => Promise<void>;
@@ -81,10 +83,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     };
 
+    const userRole = (user?.role as UserRole) ?? null;
+
+    const hasRole = (roles: UserRole[]): boolean => {
+        if (!userRole) return false;
+        return roles.includes(userRole);
+    };
+
     const value: AuthContextType = {
         user,
+        userRole,
         isAuthenticated: !!user && !!tokenManager.getToken(),
         isLoading,
+        hasRole,
         login,
         register,
         logout,

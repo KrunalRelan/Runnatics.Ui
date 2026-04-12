@@ -59,7 +59,7 @@ const miniDrawerWidth = 64;
 function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout, user } = useAuth();
+  const { logout, user, hasRole } = useAuth();
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
   const [isMinimized, setIsMinimized] = useState<boolean>(true);
   const [openSubmenu, setOpenSubmenu] = useState<Record<string, boolean>>({});
@@ -149,8 +149,8 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   };
 
-  // Navigation menu items
-  const menuItems: MenuItemType[] = [
+  // Navigation menu items (roles field restricts visibility; omit roles to show to all authenticated users)
+  const allMenuItems: MenuItemType[] = [
     {
       text: "Dashboard",
       icon: <DashboardIcon />,
@@ -201,6 +201,14 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
     },
 
   ];
+
+  // Filter menu items by current user's role
+  const menuItems = allMenuItems
+    .filter(item => !item.roles || hasRole(item.roles))
+    .map(item => ({
+      ...item,
+      submenu: item.submenu?.filter(sub => !sub.roles || hasRole(sub.roles)),
+    }));
 
   // Check if current path matches menu item
   const isActive = (path: string): boolean => {
