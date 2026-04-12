@@ -7,7 +7,7 @@
  * Set the same value in the backend configuration.
  */
 
-const KEY_B64 = (import.meta as any).env?.VITE_ENCRYPTION_KEY as string | undefined;
+const KEY_B64 = ((import.meta as any).env?.VITE_ENCRYPTION_KEY as string | undefined)?.trim() || undefined;
 
 async function importKey(keyB64: string): Promise<CryptoKey> {
   const raw = Uint8Array.from(atob(keyB64), (c) => c.charCodeAt(0));

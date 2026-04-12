@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Env files with secrets (use Azure Portal / CI secrets for production keys)
+.env.production.local
+.env.development.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
