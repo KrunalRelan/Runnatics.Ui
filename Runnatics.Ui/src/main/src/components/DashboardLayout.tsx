@@ -51,6 +51,7 @@ import {
   MenuItem as MenuItemType,
 } from "../models/components";
 import ThemeSwitcher from "../theme/ThemeSwitcher";
+import RacetikLogo from "./RacetikLogo";
 
 const drawerWidth = 240;
 const miniDrawerWidth = 64;
@@ -221,13 +222,9 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
         }}
       >
         {!isMinimized ? (
-          <Typography variant="h6" noWrap component="div" fontWeight={700}>
-            🚀 Racetik
-          </Typography>
+          <RacetikLogo variant="wordmark" width={140} />
         ) : (
-          <Typography variant="h6" component="div" fontWeight={700}>
-            🚀
-          </Typography>
+          <RacetikLogo variant="icon" width={36} />
         )}
       </Toolbar>
       <Divider />

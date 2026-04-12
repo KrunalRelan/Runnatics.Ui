@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 150" width="520" height="150">
+<defs>
+  <linearGradient id="ug" x1="0%" y1="0%" x2="100%" y2="0%">
+    <stop offset="0%" stop-color="#ffffff"/>
+    <stop offset="100%" stop-color="#ff8c5a"/>
+  </linearGradient>
+</defs>
+<g transform="translate(12, 18)">
+  <path d="M5,58 Q30,5 65,18 Q88,28 98,14" fill="none" stroke="#ff8c5a" stroke-width="6" stroke-linecap="round" opacity="0.3"/>
+  <path d="M10,68 Q38,18 72,34 Q92,42 102,28" fill="none" stroke="#ff8c5a" stroke-width="6" stroke-linecap="round" opacity="0.55"/>
+  <path d="M15,78 Q42,30 78,48 Q96,56 106,42" fill="none" stroke="#ff6b35" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="106" cy="42" r="7.5" fill="#5dd882"/>
+  <path d="M101,42 L105,47 L113,36" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<text x="130" y="82" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="4" fill="#ffffff">RACE</text>
+<text x="350" y="82" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="4" fill="#ff6b35">TIK</text>
+<line x1="130" y1="96" x2="488" y2="96" stroke="url(#ug)" stroke-width="3" stroke-linecap="round"/>
+<text x="130" y="122" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" letter-spacing="6" fill="#aaaacc">TIMING · RESULTS · EVENTS</text>
+</svg>

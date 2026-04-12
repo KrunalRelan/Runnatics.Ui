@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Box, Button, TextField, Typography, Paper, Alert, CircularProgress } from '@mui/material';
+import RacetikLogo from '../../components/RacetikLogo';
 
 const LoginPage: React.FC = () => {
     const navigate = useNavigate();
@@ -83,12 +84,12 @@ const LoginPage: React.FC = () => {
                     width: '100%',
                 }}
             >
-                <Typography variant="h4" component="h1" gutterBottom align="center">
-                    Sign In
-                </Typography>
-                
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+                        <RacetikLogo variant="animated" width={280} />
+                    </Box>
+
                 <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-                    Welcome back! Please login to your account.
+                    Welcome back! Please sign in to continue.
                 </Typography>
 
                 {sessionExpired && (

@@ -4,10 +4,10 @@ import {
   Box,
   AppBar,
   Toolbar,
-  Typography,
   CssBaseline,
 } from "@mui/material";
 import ThemeSwitcher from "../theme/ThemeSwitcher";
+import RacetikLogo from "./RacetikLogo";
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -34,9 +34,9 @@ function AuthLayout({ children }: AuthLayoutProps) {
         }}
       >
         <Toolbar>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Racetik
-          </Typography>
+          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
+            <RacetikLogo variant="wordmark" width={120} />
+          </Box>
 
           {/* Theme Switcher */}
           <ThemeSwitcher />
