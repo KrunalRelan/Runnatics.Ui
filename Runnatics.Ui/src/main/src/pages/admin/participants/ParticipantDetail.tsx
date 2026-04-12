@@ -495,22 +495,26 @@ const ParticipantDetail: React.FC = () => {
           >
             Back to Participants
           </Button>
-          <Button
-            variant="contained"
-            startIcon={downloadingCertificate ? <CircularProgress size={18} color="inherit" /> : <Download />}
-            onClick={handleDownloadCertificate}
-            disabled={downloadingCertificate}
-            sx={{
-              background: `linear-gradient(135deg, ${colors.primary.main} 0%, ${colors.primary.dark || colors.primary.main} 100%)`,
-              fontWeight: 600,
-              px: 3,
-              '&:hover': {
-                background: `linear-gradient(135deg, ${colors.primary.dark || colors.primary.main} 0%, ${colors.primary.main} 100%)`,
-              },
-            }}
-          >
-            {downloadingCertificate ? 'Downloading...' : 'Download Certificate'}
-          </Button>
+          <Tooltip title={!participant?.chipTime ? 'Certificate unavailable — race result has not been processed yet' : ''}>
+            <span>
+              <Button
+                variant="contained"
+                startIcon={downloadingCertificate ? <CircularProgress size={18} color="inherit" /> : <Download />}
+                onClick={handleDownloadCertificate}
+                disabled={downloadingCertificate || !participant?.chipTime}
+                sx={{
+                  background: `linear-gradient(135deg, ${colors.primary.main} 0%, ${colors.primary.dark || colors.primary.main} 100%)`,
+                  fontWeight: 600,
+                  px: 3,
+                  '&:hover': {
+                    background: `linear-gradient(135deg, ${colors.primary.dark || colors.primary.main} 0%, ${colors.primary.main} 100%)`,
+                  },
+                }}
+              >
+                {downloadingCertificate ? 'Downloading...' : 'Download Certificate'}
+              </Button>
+            </span>
+          </Tooltip>
         </Stack>
 
         {/* Participant Header Card */}
