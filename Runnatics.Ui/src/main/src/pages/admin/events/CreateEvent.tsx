@@ -205,7 +205,6 @@ export const CreateEvent: React.FC = () => {
     fetchOrganizations();
 
     return () => {
-      console.log("🧹 Cleanup - component unmounting");
       isMountedRef.current = false;
     };
   }, []);
@@ -444,14 +443,6 @@ export const CreateEvent: React.FC = () => {
     const isValid = validateForm();
 
     if (!isValid) {
-      // Debug: log current organization states when validation fails
-      console.warn("CreateEvent: validation failed - tenantId/eventOrganizerId missing", {
-        formDataEventOrganizerId: formData.eventOrganizerId,
-        formDataTenantId: formData.tenantId,
-        selectedOrganization,
-        organizationsCount: organizations.length,
-      });
-
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -467,10 +458,6 @@ export const CreateEvent: React.FC = () => {
         throw new Error("Invalid organization selection");
       }
 
-      console.log(
-        "Event Organizer ID being sent to API:",
-        eventOrganizerIdForApi
-      );
 
       // Convert local datetime to UTC before sending to API
       const timeZone = apiData.timeZone || "Asia/Kolkata";

@@ -101,8 +101,6 @@ export const EditRace: React.FC = () => {
         return;
       }
       try {
-        console.log("Event ID:", eventId);
-        console.log("Race ID:", raceId);
 
         setLoading(true);
         
@@ -344,7 +342,6 @@ export const EditRace: React.FC = () => {
         };
       }
 
-      console.log("Updating race with payload:", requestPayload);
 
       await RaceService.updateRace(eventId!, raceId!, requestPayload);
       setSnackbar({

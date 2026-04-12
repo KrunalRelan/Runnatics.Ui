@@ -23,7 +23,6 @@ async function importKey(keyB64: string): Promise<CryptoKey> {
  */
 export async function encryptPassword(plaintext: string): Promise<string> {
   if (!KEY_B64) {
-    console.warn('[encryption] VITE_ENCRYPTION_KEY is not set – sending password unencrypted.');
     return plaintext;
   }
 

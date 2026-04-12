@@ -200,7 +200,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     // If it's a number, convert to string using reverse map
     if (typeof genderValue === "number") {
       normalized = reverseGenderMap[genderValue] || "";
-      console.log(`[DEBUG] Gender from number ${genderValue} -> ${normalized}`);
       return normalized;
     }
     
@@ -212,13 +211,11 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       const numValue = parseInt(trimmed, 10);
       if (!isNaN(numValue) && reverseGenderMap[numValue]) {
         normalized = reverseGenderMap[numValue];
-        console.log(`[DEBUG] Gender from numeric string "${genderValue}" -> ${normalized}`);
         return normalized;
       }
       
       // Direct string match
       if (["male", "female", "other"].includes(trimmed)) {
-        console.log(`[DEBUG] Gender from string "${genderValue}" -> ${trimmed}`);
         return trimmed;
       }
       
@@ -227,7 +224,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       if (trimmed === "f" || trimmed === "female") return "female";
       if (trimmed === "o" || trimmed === "other") return "other";
       
-      console.log(`[DEBUG] Gender value not recognized: "${genderValue}" (trimmed: "${trimmed}")`);
       return trimmed;
     }
     
@@ -317,13 +313,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       const genderValue = currentFilters.gender && currentFilters.gender !== "all" ? genderMap[currentFilters.gender] || null : null;
       const statusValue = currentFilters.status && currentFilters.status !== "all" ? statusMap[currentFilters.status] || null : null;
       
-      console.log(`[DEBUG] Fetching participants with filters:`, {
-        gender: currentFilters.gender,
-        genderCode: genderValue,
-        status: currentFilters.status,
-        statusCode: statusValue,
-      });
-
       const searchResponse = await ParticipantService.searchParticipants(
         eventId,
         raceId,
@@ -357,11 +346,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
         const participant = p as Record<string, unknown>;
         const normalizedGender = normalizeGender(participant.gender);
         if (normalizedGender && normalizedGender !== "male" && normalizedGender !== "female") {
-          console.log(`[DEBUG] Participant with other gender:`, {
-            original: participant.gender,
-            normalized: normalizedGender,
-            name: participant.fullName,
-          });
         }
         return {
           id: participant.id || "",
@@ -390,21 +374,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       let filteredParticipants = mappedParticipants;
       if (currentFilters.gender === "other") {
         filteredParticipants = mappedParticipants.filter(p => p.gender === "other");
-        console.log(`[DEBUG] Filtered to only "other" gender: ${filteredParticipants.length} participants`);
       }
-
-      // Log all unique gender values for debugging
-      const uniqueGenders = [...new Set(filteredParticipants.map(p => p.gender || "empty"))];
-      console.log(`[DEBUG] API Response - Total participants: ${filteredParticipants.length}, Unique genders: ${JSON.stringify(uniqueGenders)}`);
-      
-      // Count by gender
-      const genderCounts = {
-        male: filteredParticipants.filter(p => p.gender === "male").length,
-        female: filteredParticipants.filter(p => p.gender === "female").length,
-        other: filteredParticipants.filter(p => p.gender === "other").length,
-        empty: filteredParticipants.filter(p => !p.gender).length,
-      };
-      console.log(`[DEBUG] Gender distribution:`, genderCounts);
 
       setParticipants(filteredParticipants);
       setTotalRecords(filteredParticipants.length);
@@ -492,9 +462,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
 
   // DIAGNOSTIC FUNCTION - Test different gender codes
   const testGenderCodes = async () => {
-    console.log("=".repeat(60));
-    console.log("[DIAGNOSTIC] Testing all gender codes to find 'other' (LGBT)");
-    console.log("=".repeat(60));
     
     const codesToTest: (number | null)[] = [null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     
@@ -520,7 +487,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           count = response.message.length;
         }
         
-        console.log(`[DIAGNOSTIC] Gender code ${code}: ${count} participants`);
         
         // Log detail info about results
         if (count > 0 && response.message && Array.isArray(response.message)) {
@@ -528,18 +494,15 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
             name: (p as any).fullName, 
             gender: (p as any).gender 
           }));
-          console.log(`  Sample genders:`, samples);
           
           // Highlight if we found "Other"
           if (samples.some(s => s.gender && s.gender.toLowerCase() === 'other')) {
-            console.log(`  ✓✓✓ FOUND OTHER GENDER with code ${code}! ✓✓✓`);
           }
         }
       } catch (err) {
         console.error(`[DIAGNOSTIC] Error testing code ${code}:`, err);
       }
     }
-    console.log("=".repeat(60));
   };
 
   const handlePageChange = (page: number) => {

@@ -9,12 +9,5 @@ export const config = {
     mode: (import.meta as any).env?.MODE,
 };
 
-// Log configuration in development (helps with debugging)
-if (config.isDevelopment) {
-    console.log('🔧 Environment Config:', {
-        apiBaseUrl: config.apiBaseUrl,
-        mode: config.mode,
-    });
-}
 
 export default config;

@@ -8,7 +8,8 @@
       "Bash(npm install)",
       "Bash(cd:*)",
       "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(grep -v \"^$\")"
     ],
     "deny": [],
     "ask": []

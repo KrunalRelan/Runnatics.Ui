@@ -147,11 +147,8 @@ const EventsList: React.FC = () => {
 
       // Skip if we just fetched with the same criteria and not forcing (only for non-append calls)
       if (!force && !append && lastFetchedCriteriaRef.current === criteriaKey) {
-        console.log("⏭️ Skipping duplicate fetch for same criteria");
         return;
       }
-
-      console.log("🔍 fetchEvents called with criteria:", criteria, "tab:", tab, "append:", append);
 
       if (!append) {
         lastFetchedCriteriaRef.current = criteriaKey;
@@ -170,8 +167,6 @@ const EventsList: React.FC = () => {
           tab === EventTab.Future
             ? await EventService.getFutureEvents(criteria)
             : await EventService.getPastEvents(criteria);
-
-        console.log("✅ API response received:", response);
 
         const newEvents = response.message || [];
         const total = response.totalCount || 0;
@@ -218,8 +213,6 @@ const EventsList: React.FC = () => {
     const nextPage = currentPage + 1;
     setCurrentPage(nextPage);
 
-    console.log("📜 Loading more events, page:", nextPage);
-
     fetchEvents(
       { ...searchCriteria, pageNumber: nextPage },
       EventTab.Future,
@@ -243,7 +236,6 @@ const EventsList: React.FC = () => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMoreFutureEvents && !loadingMore && !loading) {
-          console.log("👀 Observer triggered - loading more events");
           loadMoreEvents();
         }
       },
@@ -264,8 +256,6 @@ const EventsList: React.FC = () => {
 
   // Fetch events whenever searchCriteria or tab changes
   useEffect(() => {
-    console.log("🎯 useEffect triggered - searchCriteria:", searchCriteria, "tab:", tabValue);
-
     // Reset states when tab or search criteria changes
     setCurrentPage(1);
     setHasMoreFutureEvents(true);
@@ -274,15 +264,8 @@ const EventsList: React.FC = () => {
 
   // Auto-search when user types 3+ characters or changes date range
   useEffect(() => {
-    console.log("🔎 Second useEffect triggered - search inputs:", {
-      searchQuery,
-      startDate,
-      endDate,
-    });
-
     // Skip if component just mounted and search is empty
     if (searchQuery.length === 0 && startDate === "" && endDate === "") {
-      console.log("⏭️ Skipping - initial state");
       return;
     }
 
@@ -300,7 +283,6 @@ const EventsList: React.FC = () => {
         : undefined;
 
       if (searchQuery.length >= 3) {
-        console.log("📝 Auto-setting search criteria for query:", searchQuery);
 
         setSearchCriteria((prev) => ({
           ...prev,
@@ -310,7 +292,6 @@ const EventsList: React.FC = () => {
           pageNumber: 1,
         }));
       } else if (searchQuery.length === 0) {
-        console.log("🧹 Auto-clearing search criteria with date filters");
 
         setSearchCriteria((prev) => ({
           ...prev,
@@ -394,7 +375,6 @@ const EventsList: React.FC = () => {
       ? new Date(endDate).toISOString()
       : undefined;
 
-    console.log("🔍 Manual search triggered with query:", searchQuery);
 
     setSearchCriteria((prev) => ({
       ...prev,

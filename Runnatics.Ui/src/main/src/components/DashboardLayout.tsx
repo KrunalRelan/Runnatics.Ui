@@ -232,7 +232,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
         {!isMinimized ? (
           <RacetikLogo variant="wordmark" width={140} />
         ) : (
-          <RacetikLogo variant="icon" width={36} />
+          <RacetikLogo variant="icon-animated" width={36} />
         )}
       </Toolbar>
       <Divider />
@@ -451,7 +451,6 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
               justifyContent: isMinimized ? "center" : "initial",
             }}
             onClick={() => {
-              console.log("Logout");
             }}
           >
             <ListItemIcon 

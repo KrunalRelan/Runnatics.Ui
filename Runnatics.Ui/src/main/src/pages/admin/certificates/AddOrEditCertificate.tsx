@@ -119,7 +119,6 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     // Skip on initial mount (handled by the above useEffect)
     if (!hasLoadedRef.current) return;
     
-    console.log('Race ID changed, resetting template...', { newRaceId: raceId });
     
     // Only reload if not in edit mode (edit mode loads specific template by ID)
     if (!isEditMode && eventId) {
@@ -133,7 +132,6 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
     const targetRaceId = raceId;
     currentLoadingRaceRef.current = targetRaceId;
     
-    console.log('Resetting and loading template for race:', targetRaceId);
     
     // Reset ALL state to initial values
     setSelectedFieldId(null);
@@ -162,14 +160,12 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
   const loadExistingTemplate = async (targetRaceId: string | undefined) => {
     if (!eventId) return;
 
-    console.log('loadExistingTemplate called with:', { eventId, targetRaceId });
 
     try {
       setLoadingMessage('Loading certificate template...');
       setLoading(true);
       const existingTemplate = await CertificateService.getTemplateByEventAndRace(eventId, targetRaceId);
       
-      console.log('Backend returned template:', existingTemplate);
       
       // Only update if we're still loading this race
       if (currentLoadingRaceRef.current === targetRaceId) {
@@ -177,15 +173,6 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
           // Check if this is the race's own template or a default template from another race/event
           const isOwnTemplate = existingTemplate.raceId === targetRaceId;
           const isDefaultTemplate = existingTemplate.isDefault && !isOwnTemplate;
-          
-          console.log('Template analysis:', {
-            templateRaceId: existingTemplate.raceId,
-            targetRaceId,
-            isOwnTemplate,
-            isDefaultTemplate,
-            templateIsDefault: existingTemplate.isDefault,
-            willSetViewingDefault: isDefaultTemplate
-          });
           
           // Set template with correct raceId for current race
           const templateToSet = {
@@ -201,23 +188,19 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
             // Viewing default template - don't set existingTemplateId so saving creates new
             setExistingTemplateId(null);
             setIsViewingDefaultTemplate(true);
-            console.log('✅ SET isViewingDefaultTemplate to TRUE');
             showSnackbar('Showing default template. Click Update to create a copy for this race.', 'info');
           } else {
             // Viewing own template
             setExistingTemplateId(existingTemplate.id || null);
             setIsViewingDefaultTemplate(false);
-            console.log('❌ SET isViewingDefaultTemplate to FALSE - own template');
             showSnackbar('Existing template loaded. You can edit and update it.', 'success');
           }
         } else {
-          console.log('No template returned from backend');
           setIsViewingDefaultTemplate(false);
         }
       }
     } catch (error) {
       if (currentLoadingRaceRef.current === targetRaceId) {
-        console.log('Error loading template:', error);
         setIsViewingDefaultTemplate(false);
         // No error message needed - it's normal to not have a template yet
       }

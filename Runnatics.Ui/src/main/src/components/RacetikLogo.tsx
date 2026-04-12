@@ -5,7 +5,7 @@ import logoWhite from '../../../assets/logos/racetik-logo-white.svg';
 import logoWordmark from '../../../assets/logos/racetik-wordmark.svg';
 import logoIcon from '../../../assets/logos/racetik-icon.svg';
 
-export type RacetikLogoVariant = 'full' | 'animated' | 'icon' | 'white' | 'wordmark';
+export type RacetikLogoVariant = 'full' | 'animated' | 'icon' | 'icon-animated' | 'white' | 'wordmark';
 
 interface RacetikLogoProps {
   variant?: RacetikLogoVariant;
@@ -128,22 +128,115 @@ const RacetikLogo: React.FC<RacetikLogoProps> = ({
     );
   }
 
-  const srcMap: Record<Exclude<RacetikLogoVariant, 'animated'>, string> = {
+  // Always-running animated icon (inline SVG so CSS animations work)
+  if (variant === 'icon-animated') {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 120 120"
+        width={width}
+        height={width}
+        className={className}
+        aria-label="Racetik"
+        role="img"
+      >
+        <defs>
+          <style>{`
+            @keyframes rti-run1 {
+              0%   { stroke-dashoffset: 220; }
+              100% { stroke-dashoffset: -220; }
+            }
+            @keyframes rti-run2 {
+              0%   { stroke-dashoffset: 220; }
+              100% { stroke-dashoffset: -220; }
+            }
+            @keyframes rti-run3 {
+              0%   { stroke-dashoffset: 220; }
+              100% { stroke-dashoffset: -220; }
+            }
+            @keyframes rti-pulse {
+              0%   { r: 10px; opacity: 1; }
+              60%  { r: 17px; opacity: 0; }
+              100% { r: 10px; opacity: 0; }
+            }
+            @keyframes rti-dot-beat {
+              0%, 100% { transform: scale(1);   }
+              50%       { transform: scale(1.18); }
+            }
+          `}</style>
+        </defs>
+        <g transform="translate(10, 15)">
+          {/* Track lanes — traveling dash */}
+          <path
+            d="M5,72 Q30,5 60,22 Q85,35 98,16"
+            fill="none" stroke="#e8491d" strokeWidth="8" strokeLinecap="round"
+            style={{
+              strokeDasharray: '28 192',
+              animation: 'rti-run1 1.4s linear infinite',
+              opacity: 0.35,
+            }}
+          />
+          <path
+            d="M10,82 Q38,20 68,38 Q90,50 102,32"
+            fill="none" stroke="#e8491d" strokeWidth="8" strokeLinecap="round"
+            style={{
+              strokeDasharray: '28 192',
+              animation: 'rti-run2 1.4s linear infinite',
+              animationDelay: '-0.47s',
+              opacity: 0.6,
+            }}
+          />
+          <path
+            d="M15,92 Q42,32 75,52 Q95,65 106,48"
+            fill="none" stroke="#ff6b35" strokeWidth="8" strokeLinecap="round"
+            style={{
+              strokeDasharray: '28 192',
+              animation: 'rti-run3 1.4s linear infinite',
+              animationDelay: '-0.93s',
+            }}
+          />
+          {/* Pulse ring */}
+          <circle
+            cx="106" cy="48" r="10"
+            fill="none" stroke="#ff6b35" strokeWidth="2"
+            style={{ animation: 'rti-pulse 1.4s ease-out infinite' }}
+          />
+          {/* Finish dot */}
+          <circle
+            cx="106" cy="48" r="10"
+            fill="#2d9e4f"
+            style={{
+              transformOrigin: '106px 48px',
+              animation: 'rti-dot-beat 1.4s ease-in-out infinite',
+            }}
+          />
+          {/* Checkmark */}
+          <path
+            d="M100,48 L105,54 L114,42"
+            fill="none" stroke="#ffffff" strokeWidth="3"
+            strokeLinecap="round" strokeLinejoin="round"
+          />
+        </g>
+      </svg>
+    );
+  }
+
+  const srcMap: Record<Exclude<RacetikLogoVariant, 'animated' | 'icon-animated'>, string> = {
     full: logoStatic,
     white: logoWhite,
     wordmark: logoWordmark,
     icon: logoIcon,
   };
 
-  const aspectMap: Record<Exclude<RacetikLogoVariant, 'animated'>, number> = {
+  const aspectMap: Record<Exclude<RacetikLogoVariant, 'animated' | 'icon-animated'>, number> = {
     full: 520 / 150,
     white: 520 / 150,
     wordmark: 360 / 70,
     icon: 1,
   };
 
-  const src = srcMap[variant as Exclude<RacetikLogoVariant, 'animated'>];
-  const ar = aspectMap[variant as Exclude<RacetikLogoVariant, 'animated'>];
+  const src = srcMap[variant as Exclude<RacetikLogoVariant, 'animated' | 'icon-animated'>];
+  const ar = aspectMap[variant as Exclude<RacetikLogoVariant, 'animated' | 'icon-animated'>];
   const height = Math.round(width / ar);
 
   return (
