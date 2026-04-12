@@ -6,8 +6,9 @@ import apiClient from "../utils/axios.config";
 export class DevicesService {
     static async getDevices(): Promise<Device[]> {
         const response = await apiClient.get<ResponseBase<Device[]>>(ServiceUrl.getAllDevices());
-        const items = Array.isArray(response.data.message) ? response.data.message : [response.data.message];
-        return items;
+        const msg = response.data.message;
+        if (!msg) return [];
+        return Array.isArray(msg) ? msg : [msg];
     }
 
     static async getDeviceById(id: number): Promise<Device> {
