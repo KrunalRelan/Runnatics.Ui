@@ -154,8 +154,9 @@ export const CreateEvent: React.FC = () => {
     },
   });
 
-  const userRole =
+  const userRoleRaw =
     typeof window !== "undefined" ? localStorage.getItem("userRole") || "" : "";
+  const userRole = userRoleRaw.toLowerCase();
 
   // Fetch organizations (reusable) and manage mounted state
   const isMountedRef = useRef(true);

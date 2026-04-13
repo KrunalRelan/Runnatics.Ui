@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { Suspense } from "react";
+import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "./main/src/theme";
 import { AuthProvider } from "./main/src/contexts/AuthContext";
 import DashboardLayout from "./main/src/components/DashboardLayout";
@@ -44,6 +45,7 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
+        <Toaster position="bottom-right" toastOptions={{ duration: 4000 }} />
         <BrowserRouter>
           <Routes>
             {/* Auth routes - WITH HEADER ONLY (no side navigation) */}

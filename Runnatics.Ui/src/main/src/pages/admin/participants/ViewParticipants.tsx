@@ -25,7 +25,14 @@ import {
   Delete,
   ViewWeek,
   Visibility,
+  ViewColumn,
 } from "@mui/icons-material";
+import {
+  Popover,
+  Checkbox,
+  FormControlLabel as MuiFormControlLabel,
+  Divider as MuiDivider,
+} from "@mui/material";
 import DataGrid from "@/main/src/components/DataGrid";
 import type { ColDef } from "ag-grid-community";
 import { DataGridRef } from "@/main/src/models/dataGrid";
@@ -449,6 +456,10 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     field: keyof ParticipantFilters,
     value: string | number
   ) => {
+    // For text search, only trigger filter when 0 (cleared) or >= 3 characters
+    if (field === "nameOrBib" && typeof value === "string" && value.length > 0 && value.length < 3) {
+      return;
+    }
     setFilters((prev) => ({
       ...prev,
       [field]: value,
@@ -536,6 +547,9 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
 
   const handleUpdateParticipant = () => {
     fetchParticipants(filters);
+    // Reset categories so dropdown picks up any newly added category
+    setCategoriesLoaded(false);
+    setCategories([]);
   };
 
   const handleDeleteParticipant = (participant: Participant) => {
@@ -562,6 +576,9 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
 
   const handleAddParticipant = () => {
     fetchParticipants(filters);
+    // Reset categories so dropdown picks up any newly added category
+    setCategoriesLoaded(false);
+    setCategories([]);
   };
 
   const handleOpenBulkUploadDialog = () => {
@@ -639,6 +656,19 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
 
   const [clearingResults, setClearingResults] = useState<boolean>(false);
 
+  // Column visibility state — keys match staticColumns field/headerName
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  const [colVisAnchor, setColVisAnchor] = useState<null | HTMLElement>(null);
+
+  const toggleColumnVisibility = (key: string) => {
+    setHiddenColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   const handleClearProcessedResults = async () => {
     if (!window.confirm("Are you sure you want to clear all processed results? This action cannot be undone.")) {
       return;
@@ -675,8 +705,8 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       headerName: "#",
       flex: 0.4,
       minWidth: 50,
-      sortable: true,
-      filter: true,
+      sortable: false,
+      filter: false,
       valueGetter: (params: any) => {
         if (params.node?.rowIndex !== undefined && params.node?.rowIndex !== null) {
           return (filters.pageNumber - 1) * filters.pageSize + params.node.rowIndex + 1;
@@ -759,20 +789,12 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     },
     {
       field: "checkIn",
-      headerName: "Check In",
-      flex: 0.8,
-      minWidth: 80,
-      sortable: true,
-      filter: true,
-      cellRenderer: (params: any) => (params.value ? "Yes" : "No"),
-    },
-    {
-      field: "chipId",
-      headerName: "Chip ID",
-      flex: 1,
+      headerName: "EPC Mapped",
+      flex: 0.9,
       minWidth: 90,
       sortable: true,
       filter: true,
+      cellRenderer: (params: any) => (params.value ? "Yes" : "No"),
     },
     {
       headerName: "Actions",
@@ -899,16 +921,32 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     }
   ];
 
+  // Column visibility labels for the toggle popover (keys match col.field first, then col.headerName)
+  const toggleableColumns = [
+    { key: "gender", label: "Gender" },
+    { key: "category", label: "Category" },
+    { key: "status", label: "Status" },
+    { key: "checkIn", label: "EPC Mapped" },
+    { key: "netTime", label: "Chip Time" },
+    { key: "gunTime", label: "Gun Time" },
+  ];
+
   // Combine static columns with dynamic checkpoint columns
   // Insert checkpoint columns before the Actions column
   const actionsColumn = staticColumns[staticColumns.length - 1];
   const columnsBeforeActions = staticColumns.slice(0, -1);
-  const columnDefs: ColDef<Participant>[] = [
+  const allColumns: ColDef<Participant>[] = [
     ...columnsBeforeActions,
     ...timingColumns,
     ...checkpointColumns,
     actionsColumn,
   ];
+
+  // Apply column visibility
+  const columnDefs: ColDef<Participant>[] = allColumns.filter((col) => {
+    const key = col.field || col.headerName || "";
+    return !hiddenColumns.has(key);
+  });
 
   return (
     <Card sx={{ 
@@ -969,6 +1007,14 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               onClick={handleExportCsv}
             >
               Export
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<ViewColumn />}
+              sx={{ textTransform: "none", fontWeight: 500 }}
+              onClick={(e) => setColVisAnchor(e.currentTarget)}
+            >
+              Columns
             </Button>
             <Button
               variant="contained"
@@ -1187,6 +1233,36 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           />
         </Suspense>
       )}
+
+      {/* Column Visibility Popover */}
+      <Popover
+        open={Boolean(colVisAnchor)}
+        anchorEl={colVisAnchor}
+        onClose={() => setColVisAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+      >
+        <Box sx={{ p: 2, minWidth: 200 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+            Toggle Columns
+          </Typography>
+          <MuiDivider sx={{ mb: 1 }} />
+          {toggleableColumns.map((col) => (
+            <Box key={col.key} sx={{ display: "block" }}>
+              <MuiFormControlLabel
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={!hiddenColumns.has(col.key)}
+                    onChange={() => toggleColumnVisibility(col.key)}
+                  />
+                }
+                label={<Typography variant="body2">{col.label}</Typography>}
+              />
+            </Box>
+          ))}
+        </Box>
+      </Popover>
     </Card>
   );
 };

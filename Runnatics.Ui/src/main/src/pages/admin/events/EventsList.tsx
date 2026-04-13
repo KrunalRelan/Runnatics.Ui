@@ -51,6 +51,7 @@ import {
 } from "ag-grid-community";
 import { EventService } from "../../../services/EventService";
 import { Event } from "../../../models/Event";
+import { EventStatus } from "../../../models/EventStatus";
 import { EventSearchRequest } from "../../../models/EventSearchRequest";
 import { SortDirection } from "@/main/src/models/SortDirection";
 import DataGrid from "@/main/src/components/DataGrid";
@@ -70,7 +71,7 @@ const getDefaultSearchCriteria = (): EventSearchRequest => ({
   pageNumber: 1,
   pageSize: 25,
   sortFieldName: "EventDate",
-  sortDirection: SortDirection.Ascending,
+  sortDirection: SortDirection.Descending,
 });
 
 const EventsList: React.FC = () => {
@@ -90,7 +91,7 @@ const EventsList: React.FC = () => {
   const [dateError, setDateError] = useState<string>("");
 
   // Tab state: 0 = Upcoming/Future Events, 1 = Past Events
-  const [tabValue, setTabValue] = useState<EventTab>(EventTab.Future);
+  const [tabValue, setTabValue] = useState<EventTab>(EventTab.Past);
 
   // Lazy loading states for Future Events
   const [hasMoreFutureEvents, setHasMoreFutureEvents] = useState(true);
@@ -461,6 +462,11 @@ const EventsList: React.FC = () => {
   const ActionsCellRenderer = useCallback(
     (props: any) => {
       const event = props.data;
+      const canDelete =
+        event.status !== EventStatus.Completed &&
+        event.status !== EventStatus.Cancelled &&
+        event.status !== 4 &&
+        event.status !== 5;
       return (
         <Stack
           direction="row"
@@ -478,14 +484,17 @@ const EventsList: React.FC = () => {
               <EditIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Delete">
-            <IconButton
-              color="error"
-              size="small"
-              onClick={() => handleDeleteClick(event)}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
+          <Tooltip title={canDelete ? "Delete" : "Cannot delete a completed or cancelled event"}>
+            <span>
+              <IconButton
+                color="error"
+                size="small"
+                onClick={() => handleDeleteClick(event)}
+                disabled={!canDelete}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </span>
           </Tooltip>
         </Stack>
       );

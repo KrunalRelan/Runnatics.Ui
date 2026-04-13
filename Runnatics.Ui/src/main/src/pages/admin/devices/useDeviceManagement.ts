@@ -42,6 +42,17 @@ export function useDeviceManagement(): UseDeviceManagementReturn {
     queryFn: () => DevicesService.getDevices(),
   });
 
+  const extractErrorMessage = (err: unknown, fallback: string): string => {
+    const e = err as any;
+    return (
+      e?.response?.data?.message ||
+      e?.response?.data?.title ||
+      (typeof e?.response?.data === 'string' ? e.response.data : null) ||
+      e?.message ||
+      fallback
+    );
+  };
+
   const createMutation = useMutation({
     mutationFn: (data: DeviceFormData) => DevicesService.createDevice(toCreateRequest(data)),
     onSuccess: () => {
@@ -49,8 +60,8 @@ export function useDeviceManagement(): UseDeviceManagementReturn {
       toast.success('Device created successfully');
       setIsFormOpen(false);
     },
-    onError: () => {
-      toast.error('Failed to create device');
+    onError: (err) => {
+      toast.error(extractErrorMessage(err, 'Failed to create device'));
     },
   });
 
@@ -63,8 +74,8 @@ export function useDeviceManagement(): UseDeviceManagementReturn {
       setIsFormOpen(false);
       setEditingDevice(null);
     },
-    onError: () => {
-      toast.error('Failed to update device');
+    onError: (err) => {
+      toast.error(extractErrorMessage(err, 'Failed to update device'));
     },
   });
 
@@ -75,8 +86,8 @@ export function useDeviceManagement(): UseDeviceManagementReturn {
       toast.success('Device deleted successfully');
       setDeleteConfirmId(null);
     },
-    onError: () => {
-      toast.error('Failed to delete device');
+    onError: (err) => {
+      toast.error(extractErrorMessage(err, 'Failed to delete device'));
     },
   });
 

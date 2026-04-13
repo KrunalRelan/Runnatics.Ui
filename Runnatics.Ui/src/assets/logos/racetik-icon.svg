@@ -1,9 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
-<g transform="translate(10, 15)">
-  <path d="M5,72 Q30,5 60,22 Q85,35 98,16" fill="none" stroke="#e8491d" stroke-width="8" stroke-linecap="round" opacity="0.3"/>
-  <path d="M10,82 Q38,20 68,38 Q90,50 102,32" fill="none" stroke="#e8491d" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
-  <path d="M15,92 Q42,32 75,52 Q95,65 106,48" fill="none" stroke="#ff6b35" stroke-width="8" stroke-linecap="round"/>
-  <circle cx="106" cy="48" r="10" fill="#2d9e4f"/>
-  <path d="M100,48 L105,54 L114,42" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<g transform="translate(12, 18)">
+  <circle cx="48" cy="52" r="38" fill="none" stroke="#2d8e3f" stroke-width="4"/>
+  <circle cx="48" cy="52" r="32" fill="none" stroke="#2d8e3f" stroke-width="1.2" opacity="0.4"/>
+  <rect x="43" y="8" width="10" height="9" rx="3" fill="#2d8e3f"/>
+  <rect x="41" y="3" width="14" height="6" rx="2" fill="#2d8e3f"/>
+  <circle cx="24" cy="22" r="4" fill="#2d8e3f"/>
+  <circle cx="72" cy="22" r="4" fill="#2d8e3f"/>
+  <line x1="21" y1="22" x2="17" y2="18" stroke="#2d8e3f" stroke-width="3" stroke-linecap="round"/>
+  <line x1="75" y1="22" x2="79" y2="18" stroke="#2d8e3f" stroke-width="3" stroke-linecap="round"/>
+  <line x1="48" y1="20" x2="48" y2="25" stroke="#2d8e3f" stroke-width="2" stroke-linecap="round"/>
+  <line x1="48" y1="79" x2="48" y2="84" stroke="#2d8e3f" stroke-width="2" stroke-linecap="round"/>
+  <line x1="16" y1="52" x2="11" y2="52" stroke="#2d8e3f" stroke-width="2" stroke-linecap="round"/>
+  <line x1="80" y1="52" x2="85" y2="52" stroke="#2d8e3f" stroke-width="2" stroke-linecap="round"/>
+  <line x1="48" y1="55" x2="48" y2="32" stroke="#2d8e3f" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="48" cy="55" r="3" fill="#2d8e3f"/>
+  <path d="M68,58 L78,75 L100,40" fill="none" stroke="#3cb55c" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 </svg>

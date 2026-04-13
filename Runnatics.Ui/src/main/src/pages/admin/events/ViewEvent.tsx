@@ -25,6 +25,7 @@ import {
 } from "@mui/icons-material";
 import { EventService } from "../../../services/EventService";
 import { RaceService } from "../../../services/RaceService";
+import { EventStatus } from "../../../models/EventStatus";
 import RaceList from "../races/RaceList";
 import {
   SearchCriteria,
@@ -97,6 +98,26 @@ const ViewEvent: React.FC = () => {
   // Extract races and totalCount
   const races = racesData?.races || [];
   const totalCount = racesData?.totalCount || 0;
+
+  const statusLabelMap: Record<string | number, string> = {
+    [EventStatus.Draft]: "Draft",
+    [EventStatus.Published]: "Published",
+    [EventStatus.RegistrationOpen]: "Registration Open",
+    [EventStatus.RegistrationClosed]: "Registration Closed",
+    [EventStatus.Completed]: "Completed",
+    [EventStatus.Cancelled]: "Cancelled",
+    Draft: "Draft",
+    Published: "Published",
+    RegistrationOpen: "Registration Open",
+    RegistrationClosed: "Registration Closed",
+    Completed: "Completed",
+    Cancelled: "Cancelled",
+  };
+
+  const getStatusLabel = (status: EventStatus | string | undefined | null) => {
+    if (status === undefined || status === null || status === "") return "N/A";
+    return statusLabelMap[status] ?? String(status);
+  };
 
   // Format errors
   const error = eventError
@@ -390,7 +411,7 @@ const ViewEvent: React.FC = () => {
                     Status
                   </Typography>
                   <Typography variant="body2" sx={{ mt: 0.5 }}>
-                    {event.status || "N/A"}
+                    {getStatusLabel(event.status)}
                   </Typography>
                 </Box>
               </Box>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -36,6 +36,7 @@ export const AddRace: React.FC = () => {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false); // Prevents double-submit on rapid clicks
   const [error, setError] = useState<string>("");
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -259,12 +260,22 @@ export const AddRace: React.FC = () => {
       }
     }
 
+    // Validate race start is on or after the event date
+    if (formData.startTime && event?.eventDate) {
+      const timeZone = event.timeZone || "Asia/Kolkata";
+      const eventDateLocal = convertUTCToLocal(String(event.eventDate), timeZone);
+      if (eventDateLocal && formData.startTime < eventDateLocal.slice(0, 10)) {
+        newErrors.startTime = `Race start date cannot be before the event date (${eventDateLocal.slice(0, 10)})`;
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return; // Prevent double-submit
     setError("");
 
     const isValid = validateForm();
@@ -273,6 +284,7 @@ export const AddRace: React.FC = () => {
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
 
     try {
@@ -345,6 +357,7 @@ export const AddRace: React.FC = () => {
       });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };

@@ -1,41 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 150" width="520" height="150">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 200" width="580" height="200">
 <style>
-  @keyframes lane1 { 0% { stroke-dashoffset: 200; opacity: 0; } 40% { opacity: 0.3; } 100% { stroke-dashoffset: 0; opacity: 0.3; } }
-  @keyframes lane2 { 0% { stroke-dashoffset: 200; opacity: 0; } 40% { opacity: 0.55; } 100% { stroke-dashoffset: 0; opacity: 0.55; } }
-  @keyframes lane3 { 0% { stroke-dashoffset: 200; opacity: 0; } 40% { opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 1; } }
-  @keyframes dot-pop { 0% { r: 0; opacity: 0; } 70% { r: 10; opacity: 1; } 100% { r: 7.5; opacity: 1; } }
-  @keyframes check-draw { 0% { stroke-dashoffset: 30; } 100% { stroke-dashoffset: 0; } }
-  @keyframes pulse-ring { 0% { r: 7.5; opacity: 0.5; } 100% { r: 18; opacity: 0; } }
-  @keyframes text-slide { 0% { opacity: 0; transform: translateX(-15px); } 100% { opacity: 1; transform: translateX(0); } }
-  @keyframes underline-draw { 0% { stroke-dashoffset: 360; } 100% { stroke-dashoffset: 0; } }
-  @keyframes tagline-fade { 0% { opacity: 0; } 100% { opacity: 1; } }
-  .l1 { stroke-dasharray: 200; animation: lane1 0.8s ease-out 0.2s both; }
-  .l2 { stroke-dasharray: 200; animation: lane2 0.8s ease-out 0.5s both; }
-  .l3 { stroke-dasharray: 200; animation: lane3 0.8s ease-out 0.8s both; }
-  .finish-dot { animation: dot-pop 0.4s ease-out 1.5s both; }
-  .finish-check { stroke-dasharray: 30; animation: check-draw 0.3s ease-out 1.8s both; }
-  .pulse { animation: pulse-ring 1s ease-out 1.5s both; }
-  .race-text { animation: text-slide 0.5s ease-out 1.1s both; }
-  .tik-text { animation: text-slide 0.5s ease-out 1.3s both; }
-  .underline { stroke-dasharray: 360; animation: underline-draw 0.6s ease-out 1.6s both; }
-  .tagline { animation: tagline-fade 0.5s ease-out 2s both; }
+  @keyframes swoosh-draw { 0% { stroke-dashoffset: 500; } 100% { stroke-dashoffset: 0; } }
+  @keyframes race-slide { 0% { opacity: 0; transform: translateX(-30px) skewX(-8deg); } 100% { opacity: 1; transform: translateX(0) skewX(-8deg); } }
+  @keyframes tik-slide { 0% { opacity: 0; transform: translateX(-20px) skewX(-8deg); } 100% { opacity: 1; transform: translateX(0) skewX(-8deg); } }
+  @keyframes watch-spin { 0% { opacity: 0; transform: scale(0.3) rotate(-90deg); } 60% { transform: scale(1.1) rotate(10deg); } 100% { opacity: 1; transform: scale(1) rotate(0deg); } }
+  @keyframes hand-tick { 0% { transform: rotate(-120deg); } 30% { transform: rotate(20deg); } 50% { transform: rotate(-10deg); } 70% { transform: rotate(5deg); } 100% { transform: rotate(0deg); } }
+  @keyframes check-draw { 0% { stroke-dashoffset: 50; opacity: 0; } 20% { opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 1; } }
+  @keyframes check-pop { 0% { transform: scale(0); opacity: 0; } 70% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes pulse { 0% { opacity: 0.6; transform: scale(1); } 50% { opacity: 0; transform: scale(1.8); } 100% { opacity: 0; transform: scale(2); } }
+  .swoosh { stroke-dasharray: 500; animation: swoosh-draw 1s ease-out 0.3s both; }
+  .race { animation: race-slide 0.6s ease-out 0s both; }
+  .tik { animation: tik-slide 0.6s ease-out 0.2s both; }
+  .watch-group { animation: watch-spin 0.7s ease-out 0.6s both; transform-origin: 460px 55px; }
+  .watch-hand { animation: hand-tick 0.8s ease-out 1.2s both; transform-origin: 460px 58px; }
+  .checkmark { stroke-dasharray: 50; animation: check-draw 0.5s ease-out 1.6s both; }
+  .check-bg { animation: check-pop 0.4s ease-out 1.5s both; transform-origin: 490px 75px; }
+  .pulse-ring { animation: pulse 1.2s ease-out 2s both; transform-origin: 460px 58px; }
 </style>
-<defs>
-  <linearGradient id="ug" x1="0%" y1="0%" x2="100%" y2="0%">
-    <stop offset="0%" stop-color="#e8491d"/>
-    <stop offset="100%" stop-color="#ff6b35"/>
-  </linearGradient>
-</defs>
-<g transform="translate(12, 18)">
-  <path class="l1" d="M5,58 Q30,5 65,18 Q88,28 98,14" fill="none" stroke="#e8491d" stroke-width="6" stroke-linecap="round"/>
-  <path class="l2" d="M10,68 Q38,18 72,34 Q92,42 102,28" fill="none" stroke="#e8491d" stroke-width="6" stroke-linecap="round"/>
-  <path class="l3" d="M15,78 Q42,30 78,48 Q96,56 106,42" fill="none" stroke="#ff6b35" stroke-width="6" stroke-linecap="round"/>
-  <circle class="pulse" cx="106" cy="42" r="7.5" fill="none" stroke="#ff6b35" stroke-width="1.5"/>
-  <circle class="finish-dot" cx="106" cy="42" r="7.5" fill="#2d9e4f"/>
-  <path class="finish-check" d="M101,42 L105,47 L113,36" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<g class="race">
+  <text x="30" y="148" font-family="'Arial Black', 'Impact', sans-serif" font-size="100" font-weight="900" fill="#1b2d5a" font-style="italic" letter-spacing="-2">RACE</text>
 </g>
-<text class="race-text" x="130" y="82" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="4" fill="#1a1a2e">RACE</text>
-<text class="tik-text" x="350" y="82" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="4" fill="#e8491d">TIK</text>
-<line class="underline" x1="130" y1="96" x2="488" y2="96" stroke="url(#ug)" stroke-width="3" stroke-linecap="round"/>
-<text class="tagline" x="130" y="122" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" letter-spacing="6" fill="#888899">TIMING · RESULTS · EVENTS</text>
+<g class="tik">
+  <text x="310" y="148" font-family="'Arial Black', 'Impact', sans-serif" font-size="100" font-weight="900" fill="#5a1a35" font-style="italic" letter-spacing="-2">TIK</text>
+</g>
+<path class="swoosh" d="M30,165 Q150,155 280,162 Q400,170 540,148" fill="none" stroke="#5a1a35" stroke-width="4" stroke-linecap="round"/>
+<path class="swoosh" d="M60,172 Q180,163 300,168 Q420,175 530,158" fill="none" stroke="#8b3a5a" stroke-width="2" stroke-linecap="round" opacity="0.5" style="animation-delay: 0.5s"/>
+<g class="watch-group">
+  <circle cx="460" cy="55" r="30" fill="none" stroke="#2d8e3f" stroke-width="3.5"/>
+  <circle cx="460" cy="55" r="25" fill="none" stroke="#2d8e3f" stroke-width="1" opacity="0.4"/>
+  <rect x="455" y="20" width="10" height="8" rx="3" fill="#2d8e3f"/>
+  <rect x="453" y="16" width="14" height="5" rx="2" fill="#2d8e3f"/>
+  <circle cx="440" cy="30" r="3" fill="#2d8e3f"/>
+  <circle cx="480" cy="30" r="3" fill="#2d8e3f"/>
+  <line x1="437" y1="30" x2="434" y2="27" stroke="#2d8e3f" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="483" y1="30" x2="486" y2="27" stroke="#2d8e3f" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="460" y1="30" x2="460" y2="34" stroke="#2d8e3f" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="460" y1="76" x2="460" y2="80" stroke="#2d8e3f" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="434" y1="55" x2="430" y2="55" stroke="#2d8e3f" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="486" y1="55" x2="490" y2="55" stroke="#2d8e3f" stroke-width="1.5" stroke-linecap="round"/>
+</g>
+<g class="watch-hand">
+  <line x1="460" y1="58" x2="460" y2="38" stroke="#2d8e3f" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="460" cy="58" r="2.5" fill="#2d8e3f"/>
+</g>
+<circle class="pulse-ring" cx="460" cy="58" r="30" fill="none" stroke="#3cb55c" stroke-width="2"/>
+<g class="check-bg">
+  <path class="checkmark" d="M478,62 L488,76 L510,48" fill="none" stroke="#3cb55c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
 </svg>
