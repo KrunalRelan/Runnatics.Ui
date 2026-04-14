@@ -26,13 +26,18 @@ export async function encryptPassword(plaintext: string): Promise<string> {
     return plaintext;
   }
 
-  const key = await importKey(KEY_B64);
-  const iv = crypto.getRandomValues(new Uint8Array(16));
-  const encoded = new TextEncoder().encode(plaintext);
-  const cipherBuffer = await crypto.subtle.encrypt({ name: 'AES-CBC', iv }, key, encoded);
+  try {
+    const key = await importKey(KEY_B64);
+    const iv = crypto.getRandomValues(new Uint8Array(16));
+    const encoded = new TextEncoder().encode(plaintext);
+    const cipherBuffer = await crypto.subtle.encrypt({ name: 'AES-CBC', iv }, key, encoded);
 
-  const ivB64 = btoa(String.fromCharCode(...iv));
-  const cipherB64 = btoa(String.fromCharCode(...new Uint8Array(cipherBuffer)));
+    const ivB64 = btoa(String.fromCharCode(...iv));
+    const cipherB64 = btoa(String.fromCharCode(...new Uint8Array(cipherBuffer)));
 
-  return `${ivB64}:${cipherB64}`;
+    return `${ivB64}:${cipherB64}`;
+  } catch (err) {
+    console.error('[encryption] encryptPassword failed — sending plaintext. Error:', err);
+    return plaintext;
+  }
 }
