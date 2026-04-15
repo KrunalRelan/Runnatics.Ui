@@ -75,11 +75,11 @@ export class EventService {
      * Note: JWT token is automatically included via interceptor
      */
     static async updateEvent(id: string, eventData: EventRequest): Promise<Event> {
-        const response: AxiosResponse<Event> = await apiClient.put(
-            ServiceUrl.editEvent(id), 
+        const response: AxiosResponse<any> = await apiClient.put(
+            ServiceUrl.editEvent(id),
             eventData
         );
-        return response.data;
+        return response.data?.message ?? response.data;
     }
 
     /**

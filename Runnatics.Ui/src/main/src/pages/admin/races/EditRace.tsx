@@ -114,8 +114,8 @@ export const EditRace: React.FC = () => {
         const raceData = response.message;
         if (raceData) {
           // Convert UTC race times to local time for display
-          const startTimeLocal = raceData.startTime ? convertUTCToLocal(raceData.startTime.toString(), timeZone) : "";
-          const endTimeLocal = raceData.endTime ? convertUTCToLocal(raceData.endTime.toString(), timeZone) : "";
+          const startTimeLocal = raceData.startTime ? convertUTCToLocal(raceData.startTime.toString(), timeZone, "YYYY-MM-DDTHH:mm:ss") : "";
+          const endTimeLocal = raceData.endTime ? convertUTCToLocal(raceData.endTime.toString(), timeZone, "YYYY-MM-DDTHH:mm:ss") : "";
 
           // Load race-level leaderboard settings if they exist
           if (raceData.leaderboardSettings) {
@@ -457,14 +457,7 @@ export const EditRace: React.FC = () => {
                 helperText={errors.startTime}
                 required
                 InputLabelProps={{ shrink: true }}
-                inputProps={{
-                  min: eventDateMin,
-                }}
-                InputProps={{
-                  inputProps: {
-                    min: eventDateMin,
-                  }
-                }}
+                inputProps={{ min: eventDateMin, step: 1 }}
               />
               <TextField
                 fullWidth
@@ -477,14 +470,7 @@ export const EditRace: React.FC = () => {
                 helperText={errors.endTime}
                 required
                 InputLabelProps={{ shrink: true }}
-                inputProps={{
-                  min: eventDateMin,
-                }}
-                InputProps={{
-                  inputProps: {
-                    min: eventDateMin,
-                  }
-                }}
+                inputProps={{ min: eventDateMin, step: 1 }}
               />
             </Stack>
           </Box>

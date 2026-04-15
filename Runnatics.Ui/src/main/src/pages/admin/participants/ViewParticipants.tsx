@@ -384,7 +384,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       }
 
       setParticipants(filteredParticipants);
-      setTotalRecords(filteredParticipants.length);
+      setTotalRecords(currentFilters.gender === "other" ? filteredParticipants.length : total);
 
       // Check if any participant has processed checkpoint times
       const hasResults = filteredParticipants.some(

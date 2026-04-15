@@ -64,7 +64,8 @@ export function convertLocalToUTC(
  */
 export function convertUTCToLocal(
   utcDateTimeString: string,
-  timeZone: string
+  timeZone: string,
+  format: string = 'YYYY-MM-DDTHH:mm'
 ): string {
   if (!utcDateTimeString || !timeZone) {
     return '';
@@ -72,10 +73,9 @@ export function convertUTCToLocal(
 
   try {
     // Explicitly parse as UTC, then convert to target timezone
-    // Format as datetime-local format (YYYY-MM-DDTHH:mm)
     const localTime = dayjs.utc(utcDateTimeString)
       .tz(timeZone)
-      .format('YYYY-MM-DDTHH:mm');
+      .format(format);
 
     return localTime;
   } catch (error) {

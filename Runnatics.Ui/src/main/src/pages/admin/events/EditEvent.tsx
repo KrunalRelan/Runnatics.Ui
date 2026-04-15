@@ -475,16 +475,20 @@ export const EditEvent: React.FC = () => {
 
       const updatedEvent = await EventService.updateEvent(id!, requestPayload);
 
+      if (bannerFile && updatedEvent?.id) {
+        try {
+          await EventService.uploadBannerImage(updatedEvent.id, bannerFile);
+        } catch (bannerErr) {
+          console.error('Banner upload failed:', bannerErr);
+        }
+      }
+
       setSnackbar({
         open: true,
         message: `Event "${requestPayload.name}" updated successfully!`,
         severity: "success",
       });
-      // Redirect after 1 second (1000 ms)
-      setTimeout(async () => {
-        if (bannerFile && updatedEvent.id) {
-          await EventService.uploadBannerImage(updatedEvent.id, bannerFile);
-        }
+      setTimeout(() => {
         navigate("/events/events-dashboard");
       }, 1000);
 

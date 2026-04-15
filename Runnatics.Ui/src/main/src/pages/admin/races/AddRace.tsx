@@ -124,22 +124,22 @@ export const AddRace: React.FC = () => {
           const timeZone = eventData.timeZone || "Asia/Kolkata";
           
           // Convert UTC event date to local time
-          const eventDateLocal = convertUTCToLocal(String(eventData.eventDate), timeZone);
-          
+          const eventDateLocal = convertUTCToLocal(String(eventData.eventDate), timeZone, "YYYY-MM-DDTHH:mm:ss");
+
           // Parse the local date string
-          const eventDateTime = dayjs(eventDateLocal, "YYYY-MM-DDTHH:mm");
+          const eventDateTime = dayjs(eventDateLocal);
           const sixAM = eventDateTime.set("hour", 6).set("minute", 0).set("second", 0).set("millisecond", 0);
 
           // Use event time if it's at or after 6 AM, otherwise use 6 AM
           const isAtOrAfterSixAM = eventDateTime.valueOf() >= sixAM.valueOf();
           const defaultStartTime = isAtOrAfterSixAM
             ? eventDateLocal
-            : eventDateTime.format("YYYY-MM-DD") + "T06:00";
+            : eventDateTime.format("YYYY-MM-DD") + "T06:00:00";
 
           // Set default end time to 6 hours after start time
           const startDateTime = isAtOrAfterSixAM ? eventDateTime : sixAM;
           const endDateTime = startDateTime.add(6, "hours");
-          const defaultEndTime = endDateTime.format("YYYY-MM-DDTHH:mm");
+          const defaultEndTime = endDateTime.format("YYYY-MM-DDTHH:mm:ss");
 
           setFormData((prev) => ({
             ...prev,
@@ -463,6 +463,7 @@ export const AddRace: React.FC = () => {
                 helperText={errors.startTime}
                 required
                 InputLabelProps={{ shrink: true }}
+                inputProps={{ step: 1 }}
               />
 
               {/* End Time */}
@@ -477,6 +478,7 @@ export const AddRace: React.FC = () => {
                 helperText={errors.endTime}
                 required
                 InputLabelProps={{ shrink: true }}
+                inputProps={{ step: 1 }}
               />
             </Stack>
           </Box>
