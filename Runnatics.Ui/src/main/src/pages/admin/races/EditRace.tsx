@@ -34,6 +34,12 @@ export const EditRace: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>("");
+
+  // Split date/time state for direct keyboard entry
+  const [startDatePart, setStartDatePart] = useState<string>("");
+  const [startTimePart, setStartTimePart] = useState<string>("");
+  const [endDatePart, setEndDatePart] = useState<string>("");
+  const [endTimePart, setEndTimePart] = useState<string>("");
   const [errors, setErrors] = useState<FormErrors>({});
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -116,6 +122,14 @@ export const EditRace: React.FC = () => {
           // Convert UTC race times to local time for display
           const startTimeLocal = raceData.startTime ? convertUTCToLocal(raceData.startTime.toString(), timeZone, "YYYY-MM-DDTHH:mm:ss") : "";
           const endTimeLocal = raceData.endTime ? convertUTCToLocal(raceData.endTime.toString(), timeZone, "YYYY-MM-DDTHH:mm:ss") : "";
+
+          // Split into date and time parts for separate inputs
+          const [sDate, sTime] = startTimeLocal ? startTimeLocal.split("T") : ["", ""];
+          const [eDate, eTime] = endTimeLocal ? endTimeLocal.split("T") : ["", ""];
+          setStartDatePart(sDate || "");
+          setStartTimePart(sTime?.substring(0, 8) || "");
+          setEndDatePart(eDate || "");
+          setEndTimePart(eTime?.substring(0, 8) || "");
 
           // Load race-level leaderboard settings if they exist
           if (raceData.leaderboardSettings) {
@@ -264,6 +278,12 @@ export const EditRace: React.FC = () => {
     });
   };
 
+  const getCombinedDateTime = (datePart: string, timePart: string): string => {
+    if (!datePart) return "";
+    const time = timePart || "00:00:00";
+    return `${datePart}T${time}`;
+  };
+
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
     if (!formData.title.trim()) {
@@ -272,16 +292,22 @@ export const EditRace: React.FC = () => {
     if (!formData.distance || formData.distance <= 0) {
       newErrors.distance = "Distance must be greater than 0";
     }
-    if (!formData.startTime) {
+    if (!startDatePart) {
+      newErrors.startTime = "Start date is required";
+    }
+    if (!startTimePart) {
       newErrors.startTime = "Start time is required";
     }
-    if (!formData.endTime) {
+    if (!endDatePart) {
+      newErrors.endTime = "End date is required";
+    }
+    if (!endTimePart) {
       newErrors.endTime = "End time is required";
     }
     // Validate start time is before end time
-    if (formData.startTime && formData.endTime) {
-      const start = new Date(formData.startTime);
-      const end = new Date(formData.endTime);
+    if (startDatePart && startTimePart && endDatePart && endTimePart) {
+      const start = new Date(getCombinedDateTime(startDatePart, startTimePart));
+      const end = new Date(getCombinedDateTime(endDatePart, endTimePart));
       if (end <= start) {
         newErrors.endTime = "End time must be after start time";
       }
@@ -300,9 +326,11 @@ export const EditRace: React.FC = () => {
     }
     setIsSubmitting(true);
     try {
-      // Convert local race times to UTC before sending to API
-      const startTimeUTC = convertLocalToUTC(formData.startTime, eventTimeZone);
-      const endTimeUTC = convertLocalToUTC(formData.endTime, eventTimeZone);
+      // Combine split date/time parts and convert to UTC
+      const startTimeCombined = getCombinedDateTime(startDatePart, startTimePart);
+      const endTimeCombined = getCombinedDateTime(endDatePart, endTimePart);
+      const startTimeUTC = convertLocalToUTC(startTimeCombined, eventTimeZone);
+      const endTimeUTC = convertLocalToUTC(endTimeCombined, eventTimeZone);
 
       const requestPayload: CreateRaceRequest = {
         title: formData.title,
@@ -445,33 +473,56 @@ export const EditRace: React.FC = () => {
               />
             </Stack>
             <Box sx={{ flex: 1 }} />
+            {/* Start Time — split into Date + Time for direct keyboard entry */}
             <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
-              <TextField
-                fullWidth
-                label="Start Time"
-                name="startTime"
-                type="datetime-local"
-                value={formData.startTime}
-                onChange={handleInputChange}
-                error={!!errors.startTime}
-                helperText={errors.startTime}
-                required
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ min: eventDateMin, step: 1 }}
-              />
-              <TextField
-                fullWidth
-                label="End Time"
-                name="endTime"
-                type="datetime-local"
-                value={formData.endTime}
-                onChange={handleInputChange}
-                error={!!errors.endTime}
-                helperText={errors.endTime}
-                required
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ min: eventDateMin, step: 1 }}
-              />
+              <Stack direction="row" spacing={2} sx={{ flex: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Start Date"
+                  type="date"
+                  value={startDatePart}
+                  onChange={(e) => setStartDatePart(e.target.value)}
+                  error={!!errors.startTime}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  fullWidth
+                  label="Start Time (HH:MM:SS)"
+                  type="time"
+                  value={startTimePart}
+                  onChange={(e) => setStartTimePart(e.target.value)}
+                  error={!!errors.startTime}
+                  helperText={errors.startTime}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ step: 1 }}
+                />
+              </Stack>
+              <Stack direction="row" spacing={2} sx={{ flex: 1 }}>
+                <TextField
+                  fullWidth
+                  label="End Date"
+                  type="date"
+                  value={endDatePart}
+                  onChange={(e) => setEndDatePart(e.target.value)}
+                  error={!!errors.endTime}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  fullWidth
+                  label="End Time (HH:MM:SS)"
+                  type="time"
+                  value={endTimePart}
+                  onChange={(e) => setEndTimePart(e.target.value)}
+                  error={!!errors.endTime}
+                  helperText={errors.endTime}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ step: 1 }}
+                />
+              </Stack>
             </Stack>
           </Box>
 

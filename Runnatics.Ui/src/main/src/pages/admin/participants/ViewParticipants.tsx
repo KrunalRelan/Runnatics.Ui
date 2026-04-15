@@ -306,6 +306,11 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     }
   };
 
+  // Auto-fetch checkpoints when eventId/raceId change
+  useEffect(() => {
+    fetchCheckpoints();
+  }, [eventId, raceId]);
+
   // Expose diagnostic function to window for console access
   useEffect(() => {
     (window as any).testGenderCodes = testGenderCodes;
@@ -354,6 +359,18 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
         const normalizedGender = normalizeGender(participant.gender);
         if (normalizedGender && normalizedGender !== "male" && normalizedGender !== "female") {
         }
+        // Normalize checkpointTimes — handle both array [{checkpointName, time}] and object {name: time} formats
+        let checkpointTimesObj: Record<string, string> = {};
+        if (Array.isArray(participant.checkpointTimes)) {
+          (participant.checkpointTimes as any[]).forEach((ct: any) => {
+            if (ct.checkpointName && ct.time) {
+              checkpointTimesObj[ct.checkpointName] = ct.time;
+            }
+          });
+        } else if (participant.checkpointTimes && typeof participant.checkpointTimes === "object") {
+          checkpointTimesObj = participant.checkpointTimes as Record<string, string>;
+        }
+
         return {
           id: participant.id || "",
           bib: participant.bib || "",
@@ -368,7 +385,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           status: normalizeStatus(participant.status),
           checkIn: participant.checkedIn || false,
           chipId: participant.chipId || "",
-          checkpointTimes: participant.checkpointTimes || null,
+          checkpointTimes: checkpointTimesObj,
           gunTime: participant.gunTime || null,
           netTime: participant.netTime || null,
           overallRank: participant.overallRank ?? null,
@@ -721,6 +738,30 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       minWidth: 70,
       sortable: true,
       filter: true,
+      cellRenderer: (params: any) => {
+        const participant = params.data as Participant;
+        return (
+          <Box
+            component="span"
+            sx={{
+              color: "primary.main",
+              cursor: "pointer",
+              fontWeight: 600,
+              "&:hover": { textDecoration: "underline" },
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (participant?.id) {
+                navigate(
+                  `/events/event-details/${eventId}/race/${raceId}/participant/${participant.id}?mode=edit`
+                );
+              }
+            }}
+          >
+            {params.value}
+          </Box>
+        );
+      },
     },
     {
       field: "fullName",
@@ -786,15 +827,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           />
         );
       },
-    },
-    {
-      field: "checkIn",
-      headerName: "EPC Mapped",
-      flex: 0.9,
-      minWidth: 90,
-      sortable: true,
-      filter: true,
-      cellRenderer: (params: any) => (params.value ? "Yes" : "No"),
     },
     {
       headerName: "Actions",
@@ -926,7 +958,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     { key: "gender", label: "Gender" },
     { key: "category", label: "Category" },
     { key: "status", label: "Status" },
-    { key: "checkIn", label: "EPC Mapped" },
     { key: "netTime", label: "Chip Time" },
     { key: "gunTime", label: "Gun Time" },
   ];

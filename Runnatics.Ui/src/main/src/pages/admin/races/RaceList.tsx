@@ -322,18 +322,24 @@ export const RaceList: React.FC<RaceListProps> = ({
       },
       {
         headerName: "Participants",
-        field: "maxParticipants",
+        field: "totalParticipants",
         flex: 1,
         minWidth: 120,
         sortable: true,
         filter: false,
+        valueGetter: (params: any) => params.data?.totalParticipants ?? params.data?.maxParticipants ?? 0,
       },
       {
-        headerName: "Not Encoded",
+        headerName: "Chips Encoded",
         flex: 1,
-        minWidth: 120,
-        sortable: true,
+        minWidth: 130,
+        sortable: false,
         filter: false,
+        valueGetter: (params: any) => {
+          const encoded = params.data?.encodedEpcCount ?? 0;
+          const total = params.data?.totalParticipants ?? params.data?.maxParticipants ?? 0;
+          return `${encoded}/${total}`;
+        },
       },
       {
         headerName: "SMS",

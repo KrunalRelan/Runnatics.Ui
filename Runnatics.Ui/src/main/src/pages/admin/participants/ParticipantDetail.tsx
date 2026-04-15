@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -52,7 +52,20 @@ import {
   Edit,
   Save,
   Close,
+  Delete as DeleteIcon,
 } from "@mui/icons-material";
+import {
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
+} from "@mui/material";
+import { ParticipantService as _PS } from "@/main/src/services/ParticipantService";
+import { RaceService } from "@/main/src/services/RaceService";
+import { Race } from "@/main/src/models/races/Race";
+import DeleteParticipant from "./DeleteParticipant";
+import { Participant } from "@/main/src/models/races/Participant";
 import PageContainer from "@/main/src/components/PageContainer";
 import { SplitTimeInfo, RfidReadingDetail, ParticipantDetailsResponse, CheckpointTime } from "@/main/src/models/participants";
 import { ParticipantService } from "@/main/src/services";
@@ -316,6 +329,7 @@ const ParticipantDetail: React.FC = () => {
     participantId: string;
   }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const colors = getColorPalette(isDark);
@@ -323,6 +337,30 @@ const ParticipantDetail: React.FC = () => {
   const [participant, setParticipant] = useState<ParticipantDetailsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Edit mode (activated via ?mode=edit query param or Edit button)
+  const [editMode, setEditMode] = useState(() => searchParams.get("mode") === "edit");
+
+  // Edit form state
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
+  const [editMobile, setEditMobile] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editAgeCategory, setEditAgeCategory] = useState("");
+  const [editRunStatus, setEditRunStatus] = useState("");
+  const [editDisqualificationReason, setEditDisqualificationReason] = useState("");
+  const [editManualDistance, setEditManualDistance] = useState<string>("");
+  const [editLoopCount, setEditLoopCount] = useState<string>("");
+  const [editManualTime, setEditManualTime] = useState("");
+  const [editRaceId, setEditRaceId] = useState("");
+  const [races, setRaces] = useState<Race[]>([]);
+  const [racesLoading, setRacesLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Delete dialog state
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [deleteParticipantObj, setDeleteParticipantObj] = useState<Participant | null>(null);
 
   // Inline time editing state
   const [editingCheckpointId, setEditingCheckpointId] = useState<string | null>(null);
@@ -334,6 +372,84 @@ const ParticipantDetail: React.FC = () => {
     message: "",
     severity: "success",
   });
+
+  // Populate edit form when participant data loads
+  useEffect(() => {
+    if (participant) {
+      setEditFirstName(participant.firstName || "");
+      setEditLastName(participant.lastName || "");
+      setEditMobile(participant.phone || "");
+      setEditEmail(participant.email || "");
+      setEditAgeCategory(participant.ageCategory || "");
+      setEditRunStatus(participant.status || "");
+      setEditRaceId(participant.raceId || raceId || "");
+    }
+  }, [participant]);
+
+  // Fetch races for reassignment dropdown when entering edit mode
+  useEffect(() => {
+    if (editMode && eventId) {
+      setRacesLoading(true);
+      RaceService.getAllRaces({
+        eventId,
+        searchCriteria: { pageNumber: 1, pageSize: 100, sortFieldName: "startTime", sortDirection: 1 },
+      })
+        .then((res) => setRaces(res.message || []))
+        .catch(() => setRaces([]))
+        .finally(() => setRacesLoading(false));
+    }
+  }, [editMode, eventId]);
+
+  const handleSaveEdit = async () => {
+    if (!participantId) return;
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await _PS.editParticipant(participantId, {
+        firstName: editFirstName || undefined,
+        lastName: editLastName || undefined,
+        phone: editMobile || undefined,
+        email: editEmail || undefined,
+        category: editAgeCategory || undefined,
+        status: editRunStatus || undefined,
+        raceId: editRaceId || undefined,
+        disqualificationReason: editRunStatus === "Disqualified" ? editDisqualificationReason || undefined : undefined,
+        manualDistance: editManualDistance ? parseFloat(editManualDistance) : undefined,
+        loopCount: editLoopCount ? parseInt(editLoopCount, 10) : undefined,
+        manualTime: editManualTime || undefined,
+      } as any);
+      setSnackbar({ open: true, message: "Participant updated successfully!", severity: "success" });
+      setEditMode(false);
+      // Refresh participant data
+      if (eventId && raceId && participantId) {
+        const response = await _PS.getParticipantDetails(eventId, raceId, participantId);
+        if (response.data.message) setParticipant(response.data.message);
+      }
+    } catch (err: any) {
+      setSaveError(err.response?.data?.message || err.message || "Failed to save changes.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleOpenDelete = () => {
+    if (participant) {
+      setDeleteParticipantObj({
+        id: participant.id || "",
+        bib: participant.bibNumber || "",
+        fullName: participant.fullName || "",
+        email: participant.email || "",
+      } as Participant);
+      setOpenDeleteDialog(true);
+    }
+  };
+
+  const handleDeleteComplete = () => {
+    setOpenDeleteDialog(false);
+    if (eventId && raceId) {
+      navigate(`/events/event-details/${eventId}/race/${raceId}`);
+    }
+  };
 
   useEffect(() => {
     let isCancelled = false;
@@ -484,7 +600,7 @@ const ParticipantDetail: React.FC = () => {
             variant="outlined"
             startIcon={<ArrowBack />}
             onClick={handleBack}
-            sx={{ 
+            sx={{
               borderColor: colors.border.main,
               color: colors.text.primary,
               '&:hover': {
@@ -495,26 +611,65 @@ const ParticipantDetail: React.FC = () => {
           >
             Back to Participants
           </Button>
-          <Tooltip title={!participant?.chipTime ? 'Certificate unavailable — race result has not been processed yet' : ''}>
-            <span>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            {!editMode ? (
               <Button
-                variant="contained"
-                startIcon={downloadingCertificate ? <CircularProgress size={18} color="inherit" /> : <Download />}
-                onClick={handleDownloadCertificate}
-                disabled={downloadingCertificate || !participant?.chipTime}
-                sx={{
-                  background: `linear-gradient(135deg, ${colors.primary.main} 0%, ${colors.primary.dark || colors.primary.main} 100%)`,
-                  fontWeight: 600,
-                  px: 3,
-                  '&:hover': {
-                    background: `linear-gradient(135deg, ${colors.primary.dark || colors.primary.main} 0%, ${colors.primary.main} 100%)`,
-                  },
-                }}
+                variant="outlined"
+                startIcon={<Edit />}
+                onClick={() => setEditMode(true)}
+                color="primary"
               >
-                {downloadingCertificate ? 'Downloading...' : 'Download Certificate'}
+                Edit
               </Button>
-            </span>
-          </Tooltip>
+            ) : (
+              <>
+                <Button
+                  variant="outlined"
+                  onClick={() => { setEditMode(false); setSaveError(null); }}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={isSaving ? <CircularProgress size={18} color="inherit" /> : <Save />}
+                  onClick={handleSaveEdit}
+                  disabled={isSaving}
+                  color="primary"
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+              </>
+            )}
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={handleOpenDelete}
+            >
+              Delete
+            </Button>
+            <Tooltip title={!participant?.chipTime ? 'Certificate unavailable — race result has not been processed yet' : ''}>
+              <span>
+                <Button
+                  variant="contained"
+                  startIcon={downloadingCertificate ? <CircularProgress size={18} color="inherit" /> : <Download />}
+                  onClick={handleDownloadCertificate}
+                  disabled={downloadingCertificate || !participant?.chipTime}
+                  sx={{
+                    background: `linear-gradient(135deg, ${colors.primary.main} 0%, ${colors.primary.dark || colors.primary.main} 100%)`,
+                    fontWeight: 600,
+                    px: 3,
+                    '&:hover': {
+                      background: `linear-gradient(135deg, ${colors.primary.dark || colors.primary.main} 0%, ${colors.primary.main} 100%)`,
+                    },
+                  }}
+                >
+                  {downloadingCertificate ? 'Downloading...' : 'Download Certificate'}
+                </Button>
+              </span>
+            </Tooltip>
+          </Stack>
         </Stack>
 
         {/* Participant Header Card */}
@@ -797,11 +952,145 @@ const ParticipantDetail: React.FC = () => {
         </Card>
       </Box>
 
+      {/* Edit Form Card — visible in edit mode */}
+      {editMode && (
+        <Card sx={{ mb: 3, border: `2px solid ${colors.primary.main}`, borderRadius: '12px' }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: colors.primary.main }}>
+              Edit Participant Info
+            </Typography>
+            {saveError && (
+              <Alert severity="error" sx={{ mb: 2 }} onClose={() => setSaveError(null)}>
+                {saveError}
+              </Alert>
+            )}
+            <Stack spacing={2}>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="First Name"
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Last Name"
+                  value={editLastName}
+                  onChange={(e) => setEditLastName(e.target.value)}
+                />
+              </Stack>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Mobile"
+                  value={editMobile}
+                  onChange={(e) => setEditMobile(e.target.value)}
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Email"
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                />
+              </Stack>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Age Category"
+                  value={editAgeCategory}
+                  onChange={(e) => setEditAgeCategory(e.target.value)}
+                  placeholder="e.g. 18 to 35"
+                />
+                <FormControl fullWidth size="small">
+                  <InputLabel>Run Status</InputLabel>
+                  <Select
+                    value={editRunStatus}
+                    label="Run Status"
+                    onChange={(e: SelectChangeEvent) => setEditRunStatus(e.target.value)}
+                  >
+                    <MenuItem value="Registered">Registered</MenuItem>
+                    <MenuItem value="Finished">Finished</MenuItem>
+                    <MenuItem value="DNF">DNF</MenuItem>
+                    <MenuItem value="DNS">DNS</MenuItem>
+                    <MenuItem value="Disqualified">Disqualified</MenuItem>
+                  </Select>
+                </FormControl>
+              </Stack>
+              {editRunStatus === "Disqualified" && (
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Disqualification Reason"
+                  value={editDisqualificationReason}
+                  onChange={(e) => setEditDisqualificationReason(e.target.value)}
+                  required
+                  placeholder="Enter reason for disqualification"
+                />
+              )}
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Manual Distance (km)"
+                  type="number"
+                  value={editManualDistance}
+                  onChange={(e) => setEditManualDistance(e.target.value)}
+                  inputProps={{ min: 0, step: 0.01 }}
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Loop Count"
+                  type="number"
+                  value={editLoopCount}
+                  onChange={(e) => setEditLoopCount(e.target.value)}
+                  inputProps={{ min: 0, step: 1 }}
+                />
+              </Stack>
+              <TextField
+                fullWidth
+                size="small"
+                label="Manual Time (HH:MM:SS)"
+                value={editManualTime}
+                onChange={(e) => setEditManualTime(e.target.value)}
+                placeholder="00:00:00"
+              />
+              {/* Race reassignment */}
+              <FormControl fullWidth size="small">
+                <InputLabel>Race</InputLabel>
+                <Select
+                  value={editRaceId}
+                  label="Race"
+                  onChange={(e: SelectChangeEvent) => setEditRaceId(e.target.value)}
+                  disabled={racesLoading}
+                >
+                  {racesLoading ? (
+                    <MenuItem disabled>Loading races...</MenuItem>
+                  ) : (
+                    races.map((r) => (
+                      <MenuItem key={r.id} value={r.id}>
+                        {r.distance ? `${r.distance} KM` : ""} — {r.title}
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Performance Overview */}
-      <Typography 
-        variant="h6" 
-        sx={{ 
-          fontWeight: 700, 
+      <Typography
+        variant="h6"
+        sx={{
+          fontWeight: 700,
           mb: 2.5,
           color: colors.text.primary,
           fontSize: '1.25rem',
@@ -1921,6 +2210,14 @@ const ParticipantDetail: React.FC = () => {
           </Box>
         </CardContent>
       </Card>
+
+      {/* Delete Participant Dialog */}
+      <DeleteParticipant
+        open={openDeleteDialog}
+        onClose={() => setOpenDeleteDialog(false)}
+        onDelete={handleDeleteComplete}
+        participant={deleteParticipantObj}
+      />
 
       {/* Snackbar for edit notifications */}
       <Snackbar

@@ -35,10 +35,8 @@ import { EventService } from "../../../services/EventService";
 import {
   EventOrganizer,
   EventType,
-  timeZoneOptions,
   EventSettings,
   LeaderBoardSettings,
-  EventStatus,
   CreateEventRequest,
 } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
@@ -415,22 +413,6 @@ export const CreateEvent: React.FC = () => {
       newErrors.startDate = "Start date is required";
     }
 
-    if (!formData.location.trim()) {
-      newErrors.location = "Location is required";
-    }
-
-    if (!formData.city.trim()) {
-      newErrors.city = "City is required";
-    }
-
-    if (!formData.country.trim()) {
-      newErrors.country = "Country is required";
-    }
-
-    if (!formData.timeZone) {
-      newErrors.timeZone = "Time zone is required";
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -463,9 +445,6 @@ export const CreateEvent: React.FC = () => {
       // Convert local datetime to UTC before sending to API
       const timeZone = apiData.timeZone || "Asia/Kolkata";
       const eventDateUTC = convertLocalToUTC(apiData.startDate, timeZone);
-      const registrationDeadlineUTC = apiData.registrationCloseDate 
-        ? convertLocalToUTC(apiData.registrationCloseDate, timeZone) 
-        : eventDateUTC;
 
       const requestPayload = {
         eventOrganizerId: eventOrganizerIdForApi,
@@ -475,17 +454,13 @@ export const CreateEvent: React.FC = () => {
         eventDate: eventDateUTC,
         timeZone: timeZone,
         venueName: apiData.location || null,
-        venueAddress:
-          `${apiData.city}, ${apiData.state}, ${apiData.country}, ${apiData.zipCode}` || null,
+        venueAddress: [apiData.city, apiData.state, apiData.country, apiData.zipCode].filter(Boolean).join(", ") || null,
         city: apiData.city || null,
         state: apiData.state || null,
         country: apiData.country || null,
         zipCode: apiData.zipCode || null,
         venueLatitude: null,
         venueLongitude: null,
-        status: EventStatus.Draft,
-        maxParticipants: 1000,
-        registrationDeadline: registrationDeadlineUTC,
         eventType: apiData.eventType,
         eventSettings: eventSettings
           ? {
@@ -578,6 +553,9 @@ export const CreateEvent: React.FC = () => {
         requestPayload as any
       );
 
+      // Handle both wrapped { message: { id } } and unwrapped { id } API responses
+      const newEventId = (createdEvent as any)?.message?.id || (createdEvent as any)?.id;
+
       setSnackbar({
         open: true,
         message: `Event "${requestPayload.name}" created successfully!`,
@@ -585,10 +563,14 @@ export const CreateEvent: React.FC = () => {
       });
       // Redirect after 1 second (1000 ms)
       setTimeout(async () => {
-        if (bannerFile && createdEvent.id) {
-          await EventService.uploadBannerImage(createdEvent.id, bannerFile);
+        if (bannerFile && newEventId) {
+          await EventService.uploadBannerImage(String(newEventId), bannerFile);
         }
-        navigate("/events/events-dashboard");
+        if (newEventId) {
+          navigate(`/events/event-details/${newEventId}`);
+        } else {
+          navigate("/events/events-dashboard");
+        }
       }, 1000);
     } catch (error: any) {
       let errorMessage = "Failed to create event. Please try again.";
@@ -963,27 +945,6 @@ export const CreateEvent: React.FC = () => {
                   InputLabelProps={{ shrink: true }}
                 />
               </Stack>
-
-              <Stack spacing={3} sx={{ flex: 1 }}>
-                <FormControl fullWidth error={!!errors.timeZone} required>
-                  <InputLabel>Time Zone</InputLabel>
-                  <Select
-                    name="timeZone"
-                    value={formData.timeZone}
-                    onChange={handleSelectChange}
-                    label="Time Zone"
-                  >
-                    {timeZoneOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {errors.timeZone && (
-                    <FormHelperText>{errors.timeZone}</FormHelperText>
-                  )}
-                </FormControl>
-              </Stack>
             </Stack>
           </Box>
 
@@ -1008,7 +969,6 @@ export const CreateEvent: React.FC = () => {
                   error={!!errors.location}
                   helperText={errors.location}
                   placeholder="Enter venue or starting location"
-                  required
                 />
 
                 <TextField
@@ -1020,7 +980,6 @@ export const CreateEvent: React.FC = () => {
                   error={!!errors.city}
                   helperText={errors.city}
                   placeholder="Enter city"
-                  required
                 />
 
                 <TextField
@@ -1032,7 +991,6 @@ export const CreateEvent: React.FC = () => {
                   error={!!errors.country}
                   helperText={errors.country}
                   placeholder="Enter country"
-                  required
                 />
               </Stack>
 

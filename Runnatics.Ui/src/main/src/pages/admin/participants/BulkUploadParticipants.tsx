@@ -201,6 +201,45 @@ const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
         {/* Step 1: Upload */}
         {step === 1 && (
           <Box>
+            {/* CSV Column Reference */}
+            <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "primary.light" }}>
+                    <TableCell sx={{ fontWeight: 700, color: "primary.contrastText" }}>Column Name</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "primary.contrastText" }}>Required</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "primary.contrastText" }}>Description</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {[
+                    { col: "bib", required: true, desc: "Unique BIB number for the participant" },
+                    { col: "first_name", required: false, desc: "Participant's first name" },
+                    { col: "last_name", required: false, desc: "Participant's last name" },
+                    { col: "gender", required: false, desc: "Male / Female / Other (or M/F)" },
+                    { col: "mobile", required: false, desc: "Mobile phone number" },
+                    { col: "email", required: false, desc: "Email address" },
+                    { col: "age_category", required: false, desc: "Age group (e.g. 18 to 35, 35.1 to 45)" },
+                    { col: "birth_date", required: false, desc: "Date of birth (YYYY-MM-DD)" },
+                    { col: "city", required: false, desc: "Participant's city" },
+                  ].map((row) => (
+                    <TableRow key={row.col}>
+                      <TableCell sx={{ fontFamily: "monospace", fontWeight: 600 }}>{row.col}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={row.required ? "Mandatory" : "Optional"}
+                          size="small"
+                          color={row.required ? "error" : "default"}
+                          variant={row.required ? "filled" : "outlined"}
+                        />
+                      </TableCell>
+                      <TableCell>{row.desc}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
             <Button
               variant="outlined"
               startIcon={<Download />}

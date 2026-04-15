@@ -368,54 +368,6 @@ const ViewEvent: React.FC = () => {
               </Box>
             )}
 
-            {/* Additional Info */}
-            <Box>
-              <Divider sx={{ my: 2 }} />
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    sm: "repeat(2, 1fr)",
-                    md: "repeat(4, 1fr)",
-                  },
-                  gap: 2,
-                }}
-              >
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Time Zone
-                  </Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5 }}>
-                    {event.timeZone || "N/A"}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Max Participants
-                  </Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5 }}>
-                    {event.maxParticipants || "Unlimited"}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Registration Deadline
-                  </Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5 }}>
-                    {formatDate(event.registrationDeadline, event?.timeZone || "Asia/Kolkata")}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Status
-                  </Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5 }}>
-                    {getStatusLabel(event.status)}
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
           </Box>
         </CardContent>
       </Card>

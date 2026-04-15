@@ -12,6 +12,8 @@ export interface Race {
     startTime: Date | string;
     endTime?: Date | string;
     maxParticipants?: number;
+    totalParticipants?: number;
+    encodedEpcCount?: number;
     smsEnabled: boolean;
     checkPoints: number;
     createdAt?: Date | string;

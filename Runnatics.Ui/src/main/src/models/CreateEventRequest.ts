@@ -9,19 +9,19 @@ export interface CreateEventRequest {
   description: string;
   eventType: EventType;
   startDate: string; // ISO string format
-  endDate: string;
-  registrationOpenDate: string;
-  registrationCloseDate: string;
-  location: string;
-  city: string;
-  state: string;
-  country: string;
-  zipCode: string;
+  endDate?: string;
+  registrationOpenDate?: string;
+  registrationCloseDate?: string;
+  location?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  zipCode?: string;
   capacity?: number;
   price?: number;
   currency?: string;
   bannerImageUrl?: string;
-  timeZone: string;
+  timeZone?: string;
   smsText?: string;
   leaderBoardSettings?: LeaderBoardSettings;
   eventSettings?: EventSettings;

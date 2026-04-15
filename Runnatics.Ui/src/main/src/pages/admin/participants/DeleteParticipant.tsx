@@ -10,6 +10,7 @@ import {
   CircularProgress,
   Box,
   Snackbar,
+  TextField,
 } from "@mui/material";
 import { WarningAmber } from "@mui/icons-material";
 import { Participant } from "@/main/src/models/races/Participant";
@@ -30,6 +31,7 @@ const DeleteParticipant: React.FC<DeleteParticipantProps> = ({
 }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmBib, setConfirmBib] = useState<string>("");
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -40,9 +42,12 @@ const DeleteParticipant: React.FC<DeleteParticipantProps> = ({
     severity: "success",
   });
 
+  const bibMatches = confirmBib.trim() === String(participant?.bib || "").trim();
+
   const handleClose = () => {
     setError(null);
     setLoading(false);
+    setConfirmBib("");
     onClose();
   };
 
@@ -52,57 +57,49 @@ const DeleteParticipant: React.FC<DeleteParticipantProps> = ({
       return;
     }
 
+    if (!bibMatches) {
+      setError("BIB number does not match. Please type the exact BIB number to confirm.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       await ParticipantService.deleteParticipant(participant.id);
 
-      // Show success message
       setSnackbar({
         open: true,
         message: "Participant deleted successfully!",
         severity: "success",
       });
 
-      // Call parent callback to refresh the list
       onDelete();
 
-      // Close dialog after a short delay
       setTimeout(() => {
         handleClose();
       }, 1500);
     } catch (err: any) {
       console.error("Error deleting participant:", err);
 
-      // Extract error message from various possible response formats
       let errorMessage = "Failed to delete participant. Please try again.";
 
       if (err.response?.data) {
         const data = err.response.data;
 
-        // Check for validation errors from ASP.NET
         if (data.errors && typeof data.errors === "object") {
           const validationErrors = Object.entries(data.errors)
             .map(([field, messages]: [string, any]) => {
-              const msgs = Array.isArray(messages)
-                ? messages.join(", ")
-                : messages;
+              const msgs = Array.isArray(messages) ? messages.join(", ") : messages;
               return `${field}: ${msgs}`;
             })
             .join("; ");
           errorMessage = validationErrors;
-        }
-        // Check for title/detail error format
-        else if (data.title || data.detail) {
+        } else if (data.title || data.detail) {
           errorMessage = data.detail || data.title;
-        }
-        // Check for simple message string
-        else if (typeof data === "string") {
+        } else if (typeof data === "string") {
           errorMessage = data;
-        }
-        // Check for message property
-        else if (data.message) {
+        } else if (data.message) {
           errorMessage = data.message;
         }
       }
@@ -128,8 +125,8 @@ const DeleteParticipant: React.FC<DeleteParticipantProps> = ({
       >
         <DialogTitle>
           <Box display="flex" alignItems="center" gap={1}>
-            <WarningAmber color="warning" />
-            <Typography variant="h6" component="span">
+            <WarningAmber color="error" />
+            <Typography variant="h6" component="span" color="error">
               Delete Participant
             </Typography>
           </Box>
@@ -144,38 +141,58 @@ const DeleteParticipant: React.FC<DeleteParticipantProps> = ({
               <strong>Error:</strong> {error}
             </Alert>
           )}
-          <Typography variant="body1" sx={{ mt: error ? 1 : 2 }}>
-            Are you sure you want to delete this participant?
-          </Typography>
+
           {participant && (
-            <Box sx={{
-              mt: 2,
-              p: 2,
-              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100',
-              borderRadius: 1
-            }}>
-              <Typography variant="body2">
-                <strong>Bib:</strong> {participant.bib}
+            <>
+              <Alert severity="warning" sx={{ mt: error ? 1 : 2, mb: 2 }}>
+                You are about to permanently delete participant{" "}
+                <strong>{participant.fullName || participant.name || "Unknown"}</strong>{" "}
+                (BIB #{participant.bib}). This action cannot be undone.
+              </Alert>
+
+              <Box
+                sx={{
+                  p: 2,
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark" ? "grey.800" : "grey.100",
+                  borderRadius: 1,
+                  mb: 2,
+                }}
+              >
+                <Typography variant="body2">
+                  <strong>BIB:</strong> {participant.bib}
+                </Typography>
+                {participant.fullName && (
+                  <Typography variant="body2">
+                    <strong>Name:</strong> {participant.fullName}
+                  </Typography>
+                )}
+                {participant.email && (
+                  <Typography variant="body2">
+                    <strong>Email:</strong> {participant.email}
+                  </Typography>
+                )}
+              </Box>
+
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
+                Type BIB number <strong>{participant.bib}</strong> to confirm deletion:
               </Typography>
-              {participant.fullName && (
-                <Typography variant="body2">
-                  <strong>Name:</strong> {participant.fullName}
-                </Typography>
-              )}
-              {participant.email && (
-                <Typography variant="body2">
-                  <strong>Email:</strong> {participant.email}
-                </Typography>
-              )}
-            </Box>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder={`Type ${participant.bib} to confirm`}
+                value={confirmBib}
+                onChange={(e) => setConfirmBib(e.target.value)}
+                error={confirmBib.length > 0 && !bibMatches}
+                helperText={
+                  confirmBib.length > 0 && !bibMatches
+                    ? "BIB number does not match"
+                    : ""
+                }
+                disabled={loading}
+              />
+            </>
           )}
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mt: 2, fontStyle: "italic" }}
-          >
-            This action cannot be undone.
-          </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleClose} variant="outlined" disabled={loading}>
@@ -185,7 +202,7 @@ const DeleteParticipant: React.FC<DeleteParticipantProps> = ({
             onClick={handleDelete}
             variant="contained"
             color="error"
-            disabled={loading}
+            disabled={loading || !bibMatches}
             startIcon={loading ? <CircularProgress size={20} /> : null}
           >
             {loading ? "Deleting..." : "Delete"}
