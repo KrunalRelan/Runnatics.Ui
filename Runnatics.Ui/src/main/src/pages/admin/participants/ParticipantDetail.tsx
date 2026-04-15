@@ -1554,10 +1554,11 @@ const ParticipantDetail: React.FC = () => {
                           }}
                         />
                         <Typography variant="body2" fontWeight={600}>
-                          {reading.readTimeLocal || readDateTime.toLocaleTimeString('en-US', { 
-                            hour: '2-digit', 
-                            minute: '2-digit', 
-                            second: '2-digit' 
+                          {reading.readTimeLocal || readDateTime.toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false,
                           })}
                         </Typography>
                       </Stack>
@@ -2189,7 +2190,7 @@ const ParticipantDetail: React.FC = () => {
           >
             <Typography variant="caption" sx={{ color: colors.text.secondary, fontWeight: 600 }}>
               <AccessTime sx={{ fontSize: 14, mr: 0.5, verticalAlign: "middle" }} />
-              Start: {participant.startTime ? new Date(participant.startTime).toLocaleTimeString() : '-'}
+              Start: {participant.startTime ? new Date(participant.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '-'}
             </Typography>
             <Typography 
               variant="caption" 
@@ -2204,7 +2205,7 @@ const ParticipantDetail: React.FC = () => {
             {participant.finishTime && (
               <Typography variant="caption" sx={{ color: colors.text.secondary, fontWeight: 600 }}>
                 <Flag sx={{ fontSize: 14, mr: 0.5, verticalAlign: "middle" }} />
-                Finish: {new Date(participant.finishTime).toLocaleTimeString()}
+                Finish: {new Date(participant.finishTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
               </Typography>
             )}
           </Box>

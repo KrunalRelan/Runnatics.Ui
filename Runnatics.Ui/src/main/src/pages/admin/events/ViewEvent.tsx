@@ -156,7 +156,7 @@ const ViewEvent: React.FC = () => {
     if (!date) return "N/A";
     // Use timezone-aware formatting if date is a string (UTC from API)
     if (typeof date === "string") {
-      return formatDateTimeInTimeZone(date, timeZone, "MMMM DD, YYYY hh:mm A");
+      return formatDateTimeInTimeZone(date, timeZone, "MMMM DD, YYYY HH:mm");
     }
     // Fallback for Date objects
     if (isNaN(date.getTime())) return "Invalid Date";
@@ -166,6 +166,7 @@ const ViewEvent: React.FC = () => {
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false,
     });
   };
 

@@ -94,13 +94,13 @@ export function convertUTCToLocal(
  * 
  * @param utcDateTimeString - UTC ISO string from API
  * @param timeZone - IANA timezone string
- * @param format - dayjs format string (default: "MMM DD, YYYY hh:mm A")
+ * @param format - dayjs format string (default: "MMM DD, YYYY HH:mm")
  * @returns Formatted datetime string in the specified timezone
  */
 export function formatDateTimeInTimeZone(
   utcDateTimeString: string,
   timeZone: string,
-  format: string = 'MMM DD, YYYY hh:mm A'
+  format: string = 'MMM DD, YYYY HH:mm'
 ): string {
   if (!utcDateTimeString || !timeZone) {
     return 'N/A';
@@ -213,7 +213,7 @@ export function formatDateTimeRange(
   startDateTime: string,
   endDateTime: string,
   timeZone: string,
-  format: string = 'MMM DD, YYYY hh:mm A'
+  format: string = 'MMM DD, YYYY HH:mm'
 ): string {
   if (!startDateTime || !endDateTime || !timeZone) {
     return 'N/A';

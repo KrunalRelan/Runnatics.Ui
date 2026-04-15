@@ -24,7 +24,7 @@ export interface SessionContextType {
 export const defaultSessionContext: SessionContextType = {
   user: undefined,
   dateFormat: "MM/DD/YYYY",
-  timeFormat: "hh:mm A",
+  timeFormat: "HH:mm",
   userHasPermission: () => false,
   isSuperAdmin: false,
   isAdmin: false,
@@ -42,7 +42,7 @@ export const SessionContextProvider = ({
   children,
 }: SessionContextProviderProps) => {
   const [dateFormat, setDateFormat] = useState("MM/DD/YYYY");
-  const [timeFormat, setTimeFormat] = useState("hh:mm A");
+  const [timeFormat, setTimeFormat] = useState("HH:mm");
 
   const { data, error, isFetching } = useQuery({
     queryKey: [SessionService.getAppContext.name],

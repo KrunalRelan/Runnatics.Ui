@@ -300,7 +300,7 @@ const ReaderCard: React.FC<{ reader: ReaderStatus }> = ({ reader }) => (
 const CrossingRow: React.FC<{ crossing: CheckpointCrossing }> = ({
   crossing,
 }) => {
-  const time = new Date(crossing.timestamp).toLocaleTimeString();
+  const time = new Date(crossing.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
   return (
     <div

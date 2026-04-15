@@ -46,7 +46,7 @@ function formatDateTime(dateStr: string, timeZone: string = "Asia/Kolkata") {
   if (!dateStr) return "N/A";
   // Use timezone-aware formatting if timezone is provided
   if (timeZone) {
-    return formatDateTimeInTimeZone(dateStr, timeZone, "MMM DD, YYYY hh:mm A");
+    return formatDateTimeInTimeZone(dateStr, timeZone, "MMM DD, YYYY HH:mm");
   }
   // Fallback to basic date formatting
   const date = new Date(dateStr);

@@ -830,8 +830,8 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     },
     {
       headerName: "Actions",
-      flex: 1.2,
-      minWidth: 130,
+      flex: 0.8,
+      minWidth: 90,
       cellRenderer: (params: any) => (
         <Stack
           direction="row"
@@ -849,17 +849,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
             title="View Details"
           >
             <Visibility fontSize="small" />
-          </IconButton>
-          <IconButton
-            size="small"
-            color="primary"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEditParticipant(params.data);
-            }}
-            title="Edit"
-          >
-            <Edit fontSize="small" />
           </IconButton>
           <IconButton
             size="small"
@@ -1177,11 +1166,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
           gridRef={gridRef}
-          onRowClicked={(event) => {
-            if (event.data) {
-              handleViewParticipant(event.data);
-            }
-          }}
         />
       </CardContent>
 
