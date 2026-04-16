@@ -144,6 +144,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   // Process Results State
   const [processingResults, setProcessingResults] = useState<boolean>(false);
   const [hasProcessedResults, setHasProcessedResults] = useState<boolean>(false);
+  const [hasEpcMapped, setHasEpcMapped] = useState<boolean>(false);
 
   // Refs to track initial mount and prevent duplicate calls
   const isInitialMount = useRef(true);
@@ -408,10 +409,15 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
         (p) => p.checkpointTimes && Object.keys(p.checkpointTimes).length > 0
       );
       setHasProcessedResults(hasResults);
+
+      // Check if any participant has EPC mapped (checkedIn = true)
+      const epcMapped = mappedParticipants.some((p) => p.checkIn === true);
+      setHasEpcMapped(epcMapped);
     } catch (err: any) {
       setParticipants([]);
       setTotalRecords(0);
       setHasProcessedResults(false);
+      setHasEpcMapped(false);
     } finally {
       setParticipantsLoading(false);
     }
@@ -1041,7 +1047,8 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               color="success"
               sx={{ textTransform: "none", fontWeight: 500 }}
               onClick={handleProcessResults}
-              disabled={processingResults}
+              disabled={processingResults || !hasEpcMapped}
+              title={!hasEpcMapped ? "No EPC data mapped yet" : undefined}
             >
               {processingResults ? "Processing..." : "Process Result"}
             </Button>
@@ -1050,7 +1057,8 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               color="error"
               sx={{ textTransform: "none", fontWeight: 500 }}
               onClick={handleClearProcessedResults}
-              disabled={clearingResults}
+              disabled={clearingResults || !hasEpcMapped}
+              title={!hasEpcMapped ? "No EPC data mapped yet" : undefined}
             >
               {clearingResults ? "Clearing..." : "Clear Processed Result"}
             </Button>

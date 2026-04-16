@@ -60,6 +60,8 @@ export const CreateEvent: React.FC = () => {
   const [apiError, setApiError] = useState<string>("");
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
+  const [startDatePart, setStartDatePart] = useState("");
+  const [startTimePart, setStartTimePart] = useState("");
 
   // Selected organization state
   const [selectedOrganization, setSelectedOrganization] =
@@ -409,8 +411,11 @@ export const CreateEvent: React.FC = () => {
       newErrors.name = "Event name is required";
     }
 
-    if (!formData.startDate) {
+    if (!startDatePart) {
       newErrors.startDate = "Start date is required";
+    }
+    if (!startTimePart) {
+      newErrors.startTime = "Start time is required";
     }
 
     setErrors(newErrors);
@@ -444,7 +449,10 @@ export const CreateEvent: React.FC = () => {
 
       // Convert local datetime to UTC before sending to API
       const timeZone = apiData.timeZone || "Asia/Kolkata";
-      const eventDateUTC = convertLocalToUTC(apiData.startDate, timeZone);
+      const startDateCombined = startDatePart && startTimePart
+        ? `${startDatePart}T${startTimePart}`
+        : startDatePart;
+      const eventDateUTC = convertLocalToUTC(startDateCombined, timeZone);
 
       const requestPayload = {
         eventOrganizerId: eventOrganizerIdForApi,
@@ -461,7 +469,7 @@ export const CreateEvent: React.FC = () => {
         zipCode: apiData.zipCode || null,
         venueLatitude: null,
         venueLongitude: null,
-        eventType: apiData.eventType,
+        eventType: EventType.Marathon,
         eventSettings: eventSettings
           ? {
             removeBanner: eventSettings.removeBanner || false,
@@ -610,13 +618,6 @@ export const CreateEvent: React.FC = () => {
       navigate("/events");
     }
   };
-
-  const eventTypeOptions = (
-    Object.values(EventType) as Array<string | number>
-  ).map((type) => ({
-    value: type as string | number,
-    label: String(type),
-  }));
 
   const handleBack = () => {
     navigate(`/dashboard`);
@@ -847,25 +848,6 @@ export const CreateEvent: React.FC = () => {
                   </Button>
                 </Box>
 
-                {/* Event Type */}
-                <FormControl fullWidth error={!!errors.eventType} required>
-                  <InputLabel>Event Type</InputLabel>
-                  <Select
-                    name="eventType"
-                    value={formData.eventType}
-                    onChange={handleSelectChange}
-                    label="Event Type"
-                  >
-                    {eventTypeOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {errors.eventType && (
-                    <FormHelperText>{errors.eventType}</FormHelperText>
-                  )}
-                </FormControl>
               </Stack>
 
               {/* Right Column */}
@@ -929,20 +911,35 @@ export const CreateEvent: React.FC = () => {
             </Typography>
 
             <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
-              <Stack spacing={3} sx={{ flex: 1 }}>
+              <Stack direction="row" spacing={2} sx={{ flex: 1 }}>
                 <TextField
                   fullWidth
-                  label="Event Date & Time"
-                  name="startDate"
-                  type="datetime-local"
-                  value={formData.startDate}
-                  onChange={handleInputChange}
+                  label="Event Date"
+                  type="date"
+                  value={startDatePart}
+                  onChange={(e) => {
+                    setStartDatePart(e.target.value);
+                    if (errors.startDate) setErrors((prev) => { const n = { ...prev }; delete n.startDate; return n; });
+                  }}
                   error={!!errors.startDate}
-                  helperText={
-                    errors.startDate || "Event date is required"
-                  }
+                  helperText={errors.startDate || "Required"}
                   required
                   InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  fullWidth
+                  label="Event Time (HH:MM:SS)"
+                  type="time"
+                  value={startTimePart}
+                  onChange={(e) => {
+                    setStartTimePart(e.target.value);
+                    if (errors.startTime) setErrors((prev) => { const n = { ...prev }; delete n.startTime; return n; });
+                  }}
+                  error={!!errors.startTime}
+                  helperText={errors.startTime || "24-hour format"}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ step: 1 }}
                 />
               </Stack>
             </Stack>

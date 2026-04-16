@@ -53,6 +53,8 @@ export const EditEvent: React.FC = () => {
   const [apiError, setApiError] = useState<string>("");
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
+  const [eventDatePart, setEventDatePart] = useState("");
+  const [eventTimePart, setEventTimePart] = useState("");
 
   // Guard to prevent duplicate fetches (React 18 StrictMode)
   const hasFetchedRef = useRef(false);
@@ -222,10 +224,17 @@ export const EditEvent: React.FC = () => {
     }
 
     // ✅ Map event data - if value exists use it, otherwise empty string
-    // Convert UTC eventDate to local time for display in datetime-local input
+    // Convert UTC eventDate to local time and split into date/time parts
     const timeZone = event.timeZone ?? "Asia/Kolkata";
-    const eventDateLocal = event.eventDate ? convertUTCToLocal(event.eventDate, timeZone) : "";
-    
+    const eventDateLocal = event.eventDate
+      ? convertUTCToLocal(event.eventDate, timeZone, "YYYY-MM-DDTHH:mm:ss")
+      : "";
+    if (eventDateLocal) {
+      const [datePart, timePart] = eventDateLocal.split("T");
+      setEventDatePart(datePart || "");
+      setEventTimePart(timePart || "");
+    }
+
     const mappedFormData: EventRequest = {
       eventOrganizerId: selectedOrgId || "",
       name: event.name ?? "",
@@ -397,8 +406,11 @@ export const EditEvent: React.FC = () => {
     if (!formData.name.trim()) {
       newErrors.name = "Event name is required";
     }
-    if (!formData.eventDate) {
+    if (!eventDatePart) {
       newErrors.eventDate = "Event date is required";
+    }
+    if (!eventTimePart) {
+      newErrors.eventTime = "Event time is required";
     }
     if (!(formData.venueName ?? "").trim()) {
       newErrors.venueName = "Venue name is required";
@@ -450,7 +462,10 @@ export const EditEvent: React.FC = () => {
 
       // Convert local datetime to UTC before sending to API
       const timeZone = apiData.timeZone || "Asia/Kolkata";
-      const eventDateUTC = convertLocalToUTC(apiData.eventDate, timeZone);
+      const eventDateCombined = eventDatePart && eventTimePart
+        ? `${eventDatePart}T${eventTimePart}`
+        : eventDatePart;
+      const eventDateUTC = convertLocalToUTC(eventDateCombined, timeZone);
 
       const requestPayload: EventRequest = {
         eventOrganizerId: eventOrganizerIdForApi,
@@ -725,23 +740,35 @@ export const EditEvent: React.FC = () => {
             )} */}
 
             <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
-              <Stack spacing={3} sx={{ flex: 1 }}>
+              <Stack direction="row" spacing={2} sx={{ flex: 1 }}>
                 <TextField
                   fullWidth
-                  label="Event Date & Time"
-                  name="eventDate"
-                  type="datetime-local"
-                  value={formData.eventDate}
-                  onChange={handleInputChange}
+                  label="Event Date"
+                  type="date"
+                  value={eventDatePart}
+                  onChange={(e) => {
+                    setEventDatePart(e.target.value);
+                    if (errors.eventDate) setErrors((prev) => { const n = { ...prev }; delete n.eventDate; return n; });
+                  }}
                   error={!!errors.eventDate}
-                  // helperText={
-                  //   isEventInPast
-                  //     ? "Cannot modify date for past events"
-                  //     : errors.eventDate
-                  // }
+                  helperText={errors.eventDate || "Required"}
                   required
-                  // disabled={isEventInPast}
                   InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  fullWidth
+                  label="Event Time (HH:MM:SS)"
+                  type="time"
+                  value={eventTimePart}
+                  onChange={(e) => {
+                    setEventTimePart(e.target.value);
+                    if (errors.eventTime) setErrors((prev) => { const n = { ...prev }; delete n.eventTime; return n; });
+                  }}
+                  error={!!errors.eventTime}
+                  helperText={errors.eventTime || "24-hour format"}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ step: 1 }}
                 />
               </Stack>
 
