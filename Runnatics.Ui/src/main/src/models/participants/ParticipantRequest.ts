@@ -7,5 +7,11 @@ export interface ParticipantRequest {
   gender?: string;
   category?: string;
   chipId?: string;
-  checkIn: boolean;
+  checkIn?: boolean;
+  status?: string;
+  raceId?: string;
+  disqualificationReason?: string;
+  manualDistance?: number;
+  loopCount?: number;
+  manualTime?: string;
 }

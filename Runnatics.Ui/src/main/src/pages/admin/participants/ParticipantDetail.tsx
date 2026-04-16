@@ -406,6 +406,7 @@ const ParticipantDetail: React.FC = () => {
     setSaveError(null);
     try {
       await _PS.editParticipant(participantId, {
+        bibNumber: participant?.bibNumber || "",
         firstName: editFirstName || undefined,
         lastName: editLastName || undefined,
         phone: editMobile || undefined,
@@ -417,7 +418,7 @@ const ParticipantDetail: React.FC = () => {
         manualDistance: editManualDistance ? parseFloat(editManualDistance) : undefined,
         loopCount: editLoopCount ? parseInt(editLoopCount, 10) : undefined,
         manualTime: editManualTime || undefined,
-      } as any);
+      });
       setSnackbar({ open: true, message: "Participant updated successfully!", severity: "success" });
       setEditMode(false);
       // Refresh participant data
