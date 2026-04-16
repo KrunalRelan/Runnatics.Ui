@@ -343,22 +343,12 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
     // Determine if name is required based on parent checkpoint selection
     const isNameRequired = !formData.parentDeviceId || formData.parentDeviceId.trim() === "";
     
-    // Get available parent checkpoints
-    // Show only root checkpoints (those without a parent)
+    // Get available parent checkpoints — all existing checkpoints except the one being edited
     const availableParentCheckpoints = existingCheckpoints.filter(cp => {
-        // Exclude the checkpoint being edited
         if (checkpointToEdit && cp.id === checkpointToEdit.id) {
             return false;
         }
-        // Include checkpoints that don't have a parent
-        // Parent is considered absent if it's null, undefined, empty string, "0", or "N/A"
-        const hasParent = cp.parentDeviceId && 
-                         cp.parentDeviceId.trim() !== "" && 
-                         cp.parentDeviceId !== "0" &&
-                         cp.parentDeviceId.toUpperCase() !== "N/A";
-        
-        // Return true only if it doesn't have a parent
-        return !hasParent;
+        return true;
     });
 
     return (
