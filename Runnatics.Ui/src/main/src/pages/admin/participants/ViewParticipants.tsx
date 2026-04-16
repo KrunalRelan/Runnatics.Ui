@@ -410,8 +410,8 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       );
       setHasProcessedResults(hasResults);
 
-      // Check if any participant has EPC mapped (checkedIn = true)
-      const epcMapped = mappedParticipants.some((p) => p.checkIn === true);
+      // Check if any participant has EPC mapped (non-empty chipId)
+      const epcMapped = mappedParticipants.some((p) => !!(p.chipId?.trim()));
       setHasEpcMapped(epcMapped);
     } catch (err: any) {
       setParticipants([]);

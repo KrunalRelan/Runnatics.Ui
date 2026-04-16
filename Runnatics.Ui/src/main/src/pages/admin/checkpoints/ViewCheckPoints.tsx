@@ -121,125 +121,33 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
             return { loopLength: 0, maxNewLoops: 0, currentLoopCount: 0, maxCheckpointDistance: 0 };
         }
 
-        // Sort checkpoints by distance
-        const sortedCheckpoints = [...localCheckpoints].sort((a, b) => 
-            Number(a.distanceFromStart) - Number(b.distanceFromStart)
-        );
+        const allDistances = localCheckpoints.map(cp => Number(cp.distanceFromStart));
+        const maxCheckpointDistance = Math.max(...allDistances);
 
-        const sortedDistances = sortedCheckpoints.map(cp => Number(cp.distanceFromStart));
-        const maxCheckpointDistance = sortedDistances[sortedDistances.length - 1];
+        // Collect unique non-zero distances to detect loop length via GCD.
+        // Using GCD handles all configurations — single device, paired devices, already-looped data —
+        // without relying on device-ID repetition which breaks when paired readers are used.
+        const nonZeroDistances = [...new Set(allDistances.filter(d => d > 0))].sort((a, b) => a - b);
 
-        // Case 1: Single checkpoint - stadium/track scenario
-        // The checkpoint distance is the loop length
-        if (sortedCheckpoints.length === 1) {
-            const loopLength = Number(sortedCheckpoints[0].distanceFromStart);
-            const currentLoopCount = maxCheckpointDistance > 0 
-                ? Math.ceil(maxCheckpointDistance / loopLength)
-                : 1;
-            
-            let maxNewLoops = 0;
-            if (maxCheckpointDistance < raceDistance && loopLength > 0) {
-                const maxTotalLoops = Math.floor(raceDistance / loopLength);
-                maxNewLoops = Math.max(0, maxTotalLoops - currentLoopCount);
-            }
-            
-            return { 
-                loopLength, 
-                maxNewLoops, 
-                currentLoopCount,
-                maxCheckpointDistance 
-            };
+        if (nonZeroDistances.length === 0) {
+            return { loopLength: 0, maxNewLoops: 0, currentLoopCount: 0, maxCheckpointDistance };
         }
 
-        // Case 2: Two checkpoints
-        // Only allow loops if both checkpoints use the SAME device (valid for stadium/track)
-        // If different devices, it's not a valid loop pattern
-        if (sortedCheckpoints.length === 2) {
-            const firstDeviceId = sortedCheckpoints[0].deviceId;
-            const secondDeviceId = sortedCheckpoints[1].deviceId;
-            
-            // Different devices = not a valid loop, can't add more
-            if (firstDeviceId !== secondDeviceId) {
-                return { 
-                    loopLength: maxCheckpointDistance, 
-                    maxNewLoops: 0, 
-                    currentLoopCount: 1,
-                    maxCheckpointDistance 
-                };
-            }
-            
-            // Same device = valid loop pattern
-            const loopLength = maxCheckpointDistance;
-            const currentLoopCount = 1;
-            
-            let maxNewLoops = 0;
-            if (maxCheckpointDistance < raceDistance && loopLength > 0) {
-                const maxTotalLoops = Math.floor(raceDistance / loopLength);
-                maxNewLoops = Math.max(0, maxTotalLoops - currentLoopCount);
-            }
-            
-            return { 
-                loopLength, 
-                maxNewLoops, 
-                currentLoopCount,
-                maxCheckpointDistance 
-            };
+        // Convert to integer metres to avoid floating-point GCD issues (e.g. 2.5 km → 2500 m)
+        const toMetres = (km: number) => Math.round(km * 1000);
+        const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+        const loopLengthMetres = nonZeroDistances.map(toMetres).reduce(gcd);
+        const loopLength = loopLengthMetres / 1000;
+
+        if (loopLength <= 0) {
+            return { loopLength: 0, maxNewLoops: 0, currentLoopCount: 1, maxCheckpointDistance };
         }
 
-        // Case 3: Three or more checkpoints - detect loop by device repetition
-        let detectedLoopLength = 0; // Start with 0 instead of maxCheckpointDistance
-        let loopDetected = false;
-        const firstDeviceId = sortedCheckpoints[0].deviceId;
-        
-        // Look for the first occurrence where the first device appears again
-        for (let i = 2; i < sortedCheckpoints.length; i++) {
-            if (sortedCheckpoints[i].deviceId === firstDeviceId) {
-                const candidateLength = Number(sortedCheckpoints[i].distanceFromStart);
-                
-                // Verify there's at least one different device between start and this point
-                const hasIntermediateDevice = sortedCheckpoints
-                    .slice(1, i)
-                    .some(cp => cp.deviceId !== firstDeviceId);
-                
-                if (hasIntermediateDevice) {
-                    // Found a valid loop pattern - device repeats with different device(s) in between
-                    detectedLoopLength = candidateLength;
-                    loopDetected = true;
-                    break;
-                }
-            }
-        }
+        const currentLoopCount = Math.round(maxCheckpointDistance / loopLength);
+        const maxTotalLoops = Math.floor((raceDistance * 1000) / loopLengthMetres);
+        const maxNewLoops = Math.max(0, maxTotalLoops - currentLoopCount);
 
-        // If no valid loop pattern was found (no device repetition detected)
-        // Return maxNewLoops = 0 to disable Add Loops button
-        if (!loopDetected) {
-            return { 
-                loopLength: maxCheckpointDistance, 
-                maxNewLoops: 0, 
-                currentLoopCount: 1,
-                maxCheckpointDistance 
-            };
-        }
-
-        // Calculate current loop count based on detected loop length
-        const currentLoopCount = detectedLoopLength > 0 
-            ? Math.ceil(maxCheckpointDistance / detectedLoopLength)
-            : 1;
-        
-        // Calculate max new loops that can be added
-        // Only allow adding loops if max checkpoint distance < race distance
-        let maxNewLoops = 0;
-        if (maxCheckpointDistance < raceDistance && detectedLoopLength > 0) {
-            const maxTotalLoops = Math.floor(raceDistance / detectedLoopLength);
-            maxNewLoops = Math.max(0, maxTotalLoops - currentLoopCount);
-        }
-
-        return { 
-            loopLength: detectedLoopLength, 
-            maxNewLoops, 
-            currentLoopCount,
-            maxCheckpointDistance 
-        };
+        return { loopLength, maxNewLoops, currentLoopCount, maxCheckpointDistance };
     }, [raceDistance, localCheckpoints]);
 
     // Consolidated reusable function to fetch checkpoints
@@ -253,11 +161,14 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                 raceId
             });
             const checkpoints = response.message || [];
-            // Sort checkpoints by distance from start, then by ID for stable ordering
+            // Sort by distance ASC, then primary device (no parent) before paired device
             const sortedCheckpoints = [...checkpoints].sort((a, b) => {
                 const distDiff = Number(a.distanceFromStart) - Number(b.distanceFromStart);
                 if (distDiff !== 0) return distDiff;
-                // Secondary sort by ID to maintain consistent order
+                const aHasParent = !!(a.parentDeviceId?.trim());
+                const bHasParent = !!(b.parentDeviceId?.trim());
+                if (!aHasParent && bHasParent) return -1;
+                if (aHasParent && !bHasParent) return 1;
                 return a.id.localeCompare(b.id);
             });
             setLocalCheckpoints(sortedCheckpoints);
@@ -329,19 +240,18 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
     };
 
     /**
-     * Add Loops Handler - Based on existing checkpoints
-     * 
-     * Logic:
-     * 1. Loop length = detected from checkpoint pattern
-     * 2. For each new loop, replicate checkpoints with distance > 0 (from first loop)
-     * 3. New checkpoint distance = baseDistance + originalDistance
-     * 4. baseDistance for loop N = loopLength * (currentLoopCount + N - 1)
-     * 
-     * Example: Race 15 KM, existing checkpoints at 0, 2.5, 5 KM
-     * - Loop length = 5 KM, currentLoopCount = 1
-     * - Adding 2 loops:
-     *   - Loop 2 (base=5): 5+2.5=7.5, 5+5=10
-     *   - Loop 3 (base=10): 10+2.5=12.5, 10+5=15 (Finish)
+     * Add Loops Handler
+     *
+     * In a loop race the start/finish line is the same physical location. Runners
+     * pass through start/finish at the end of every completed loop. Therefore:
+     *   - The start checkpoints (distance = 0) are the start/finish line readers
+     *   - Each new loop end is a repeat of those same readers at distance = loopLength × N
+     *   - Intermediate checkpoints (0 < dist < loopLength) already exist in the first loop
+     *     and are NOT duplicated — they only appear once per loop position
+     *
+     * Example: 10 KM race, loopLength = 5 KM, currentLoopCount = 1
+     *   Existing: 0 KM (box15, box16), 5 KM (box19, box24)
+     *   Adding 1 loop → creates: 10 KM Finish (box15, box16)
      */
     const handleAddLoops = async (loopsToAdd?: number) => {
         const numLoopsToAdd = loopsToAdd ?? loopsToAddInput;
@@ -378,57 +288,51 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
             return;
         }
 
-        // Get first loop checkpoints (excluding start at 0)
-        // Only replicate checkpoints with distance > 0 and within first loop
-        const firstLoopCheckpoints = localCheckpoints
-            .filter(cp => {
-                const dist = Number(cp.distanceFromStart);
-                return dist > 0 && dist <= loopLength;
-            })
-            .sort((a, b) => Number(a.distanceFromStart) - Number(b.distanceFromStart));
+        // Start/finish line checkpoints (distance = 0) are the template for each loop end.
+        // Sort them: primary devices (no parentDeviceId) first, then paired devices.
+        const startCheckpoints = localCheckpoints
+            .filter(cp => Number(cp.distanceFromStart) === 0)
+            .sort((a, b) => {
+                const aHasParent = !!(a.parentDeviceId?.trim());
+                const bHasParent = !!(b.parentDeviceId?.trim());
+                if (!aHasParent && bHasParent) return -1;
+                if (aHasParent && !bHasParent) return 1;
+                return 0;
+            });
 
-        if (firstLoopCheckpoints.length === 0) {
-            setLoopError("No checkpoints found with distance > 0 in the first loop. Please add intermediate checkpoints.");
+        if (startCheckpoints.length === 0) {
+            setLoopError("No start checkpoints (distance = 0) found. Please add a checkpoint at the start line first.");
             return;
         }
 
         // Generate new checkpoints for the requested loops
         const newCheckpoints: any[] = [];
-        const existingDistances = new Set(localCheckpoints.map(cp => Number(cp.distanceFromStart)));
+        // Track device+distance pairs to avoid duplicates within this batch
+        const existingPairs = new Set(
+            localCheckpoints.map(cp => `${cp.deviceId}@${Number(cp.distanceFromStart)}`)
+        );
 
-        // Start from the current loop count (since we're adding NEW loops)
         for (let loopIndex = 0; loopIndex < numLoopsToAdd; loopIndex++) {
-            const baseDistance = loopLength * (currentLoopCount + loopIndex);
+            // Each new loop end is at: loopLength × (completedLoops + 1 + loopIndex)
+            const targetDistance = loopLength * (currentLoopCount + loopIndex + 1);
 
-            for (const checkpoint of firstLoopCheckpoints) {
-                const originalDistance = Number(checkpoint.distanceFromStart);
-                const newDistance = baseDistance + originalDistance;
+            if (targetDistance > raceDistance + 0.001) break;
 
-                // Skip if beyond race distance
-                if (newDistance > raceDistance) continue;
+            const isFinish = Math.abs(targetDistance - raceDistance) < 0.001;
 
-                // Skip if checkpoint already exists at this distance (with tolerance)
-                const alreadyExists = [...existingDistances].some(d => Math.abs(d - newDistance) < 0.001);
-                if (alreadyExists) continue;
-
-                // Determine checkpoint name
-                let checkpointName: string;
-                if (Math.abs(newDistance - raceDistance) < 0.001) {
-                    checkpointName = "Finish";
-                } else {
-                    checkpointName = `${newDistance} KM`;
-                }
+            for (const startCp of startCheckpoints) {
+                const key = `${startCp.deviceId}@${targetDistance}`;
+                if (existingPairs.has(key)) continue;
 
                 newCheckpoints.push({
-                    name: checkpointName,
-                    distanceFromStart: newDistance,
-                    deviceId: checkpoint.deviceId || "",
-                    parentDeviceId: checkpoint.parentDeviceId || "",
-                    isMandatory: Math.abs(newDistance - raceDistance) < 0.001 ? true : (checkpoint.isMandatory || false),
+                    name: isFinish ? "Finish" : `${targetDistance} KM`,
+                    distanceFromStart: targetDistance,
+                    deviceId: startCp.deviceId || "",
+                    parentDeviceId: startCp.parentDeviceId || "",
+                    isMandatory: isFinish ? true : startCp.isMandatory,
                 });
 
-                // Track this distance to avoid duplicates within the same batch
-                existingDistances.add(newDistance);
+                existingPairs.add(key);
             }
         }
 
