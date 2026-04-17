@@ -41,9 +41,11 @@ function PublicHeader() {
         }
         .header-logo {
           animation: header-logo-in 0.5s ease-out both;
-          transition: transform 0.2s ease !important;
+          transition: transform 0.2s ease;
+          height: 40px !important;
+          width: auto !important;
         }
-        .header-logo-link:hover .header-logo { transform: scale(1.05); }
+        .header-logo-link:hover .header-logo { transform: scale(1.03); }
         @media (max-width: 767px) {
           .header-logo { height: 32px !important; }
         }
@@ -75,7 +77,7 @@ function PublicHeader() {
         >
           {/* Logo */}
           <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }} className="header-logo-link">
-            <RacetikLogo variant="png" width={160} className="header-logo" />
+            <RacetikLogo variant="wordmark" width={200} className="header-logo" />
           </Link>
 
           {/* Desktop nav */}
