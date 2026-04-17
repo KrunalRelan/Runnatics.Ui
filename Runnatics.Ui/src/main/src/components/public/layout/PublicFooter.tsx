@@ -39,7 +39,7 @@ function PublicFooter() {
           {/* Col 1 — Brand */}
           <div>
             <div style={{ marginBottom: '0.75rem' }}>
-              <RacetikLogo variant="white" width={160} />
+              <RacetikLogo variant="png-white" width={144} />
             </div>
             <p
               style={{
@@ -50,9 +50,9 @@ function PublicFooter() {
                 margin: 0,
               }}
             >
-              Race Timing & Event Management
+              Racetik — Cure Milestones
               <br />
-              Trusted since 2013.
+              Race Timing & Event Management
             </p>
           </div>
 

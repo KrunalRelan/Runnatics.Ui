@@ -34,6 +34,21 @@ function PublicHeader() {
 
   return (
     <>
+      <style>{`
+        @keyframes header-logo-in {
+          from { opacity: 0; transform: translateX(-10px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        .header-logo {
+          animation: header-logo-in 0.5s ease-out both;
+          transition: transform 0.2s ease !important;
+        }
+        .header-logo-link:hover .header-logo { transform: scale(1.05); }
+        @media (max-width: 767px) {
+          .header-logo { height: 32px !important; }
+        }
+      `}</style>
+
       <header
         style={{
           position: 'fixed',
@@ -59,8 +74,8 @@ function PublicHeader() {
           }}
         >
           {/* Logo */}
-          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-            <RacetikLogo variant="wordmark" width={140} />
+          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }} className="header-logo-link">
+            <RacetikLogo variant="png" width={160} className="header-logo" />
           </Link>
 
           {/* Desktop nav */}

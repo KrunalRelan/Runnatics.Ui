@@ -69,7 +69,17 @@ function EventDetailPage() {
   return (
     <>
       {/* Hero */}
-      <Section tone="dark" style={{ padding: 'clamp(4rem, 8vw, 6rem) 0' }}>
+      <Section
+        tone="dark"
+        style={{
+          padding: 'clamp(4rem, 8vw, 6rem) 0',
+          ...(ev.bannerImageUrl ? {
+            backgroundImage: `linear-gradient(rgba(10,18,32,0.72), rgba(10,18,32,0.72)), url(${ev.bannerImageUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          } : {}),
+        }}
+      >
         <Container>
           <div style={{ marginBottom: '0.75rem' }}>
             <Link to="/events" style={{ fontFamily: 'var(--font-body)', fontSize: '0.9375rem', color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>

@@ -31,10 +31,10 @@ function PrivacyPage() {
           <p style={prose}>We implement industry-standard security measures including TLS encryption for data in transit, encrypted storage for sensitive data, and regular security audits. While we take reasonable precautions, no system is 100% secure and we cannot guarantee absolute security.</p>
 
           <h2 style={h2}>6. Your Rights</h2>
-          <p style={prose}>Under applicable Indian data protection laws, you have the right to access, correct, or delete your personal data. To exercise these rights, contact us at privacy@runnatics.com. We will respond within 30 days. You may also opt out of marketing communications at any time via the unsubscribe link in our emails.</p>
+          <p style={prose}>Under applicable Indian data protection laws, you have the right to access, correct, or delete your personal data. To exercise these rights, contact us at privacy@racetik.com. We will respond within 30 days. You may also opt out of marketing communications at any time via the unsubscribe link in our emails.</p>
 
           <h2 style={h2}>7. Contact</h2>
-          <p style={prose}>For privacy-related enquiries, contact our Data Protection Officer at <strong>privacy@runnatics.com</strong> or write to: Racetik Privacy, Connaught Place, New Delhi 110001, India.</p>
+          <p style={prose}>For privacy-related enquiries, contact our Data Protection Officer at <strong>privacy@racetik.com</strong> or write to: Racetik Privacy, Connaught Place, New Delhi 110001, India.</p>
         </div>
       </Container>
     </Section>

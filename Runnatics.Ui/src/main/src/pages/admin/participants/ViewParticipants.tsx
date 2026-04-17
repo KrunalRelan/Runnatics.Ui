@@ -479,10 +479,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     field: keyof ParticipantFilters,
     value: string | number
   ) => {
-    // For text search, only trigger filter when 0 (cleared) or >= 3 characters
-    if (field === "nameOrBib" && typeof value === "string" && value.length > 0 && value.length < 3) {
-      return;
-    }
+    // Trigger filter on any input length (including 1–2 char BIB numbers / short names)
     setFilters((prev) => ({
       ...prev,
       [field]: value,
@@ -726,10 +723,11 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   const staticColumns: ColDef<Participant>[] = [
     {
       headerName: "#",
-      flex: 0.4,
-      minWidth: 50,
+      width: 60,
       sortable: false,
       filter: false,
+      pinned: "left" as const,
+      cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
       valueGetter: (params: any) => {
         if (params.node?.rowIndex !== undefined && params.node?.rowIndex !== null) {
           return (filters.pageNumber - 1) * filters.pageSize + params.node.rowIndex + 1;
@@ -740,10 +738,11 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       field: "bib",
       headerName: "Bib",
-      flex: 0.8,
-      minWidth: 70,
+      width: 80,
       sortable: true,
       filter: true,
+      pinned: "left" as const,
+      cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
       cellRenderer: (params: any) => {
         const participant = params.data as Participant;
         return (
@@ -772,40 +771,44 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       field: "fullName",
       headerName: "Name",
-      flex: 1.8,
-      minWidth: 140,
+      flex: 2,
+      minWidth: 150,
       sortable: true,
       filter: true,
+      pinned: "left" as const,
       valueGetter: (params: any) =>
         params.data?.fullName || params.data?.name || "",
       cellStyle: {
         color: '#1976d2',
         cursor: 'pointer',
         textDecoration: 'none',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
       },
       cellClass: 'participant-name-cell',
     },
     {
       field: "gender",
       headerName: "Gender",
-      flex: 0.9,
-      minWidth: 90,
+      width: 90,
       sortable: true,
       filter: true,
+      cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
     },
     {
       field: "category",
       headerName: "Category",
-      flex: 1.2,
-      minWidth: 110,
+      flex: 1,
+      minWidth: 120,
       sortable: true,
       filter: true,
+      cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
     },
     {
       field: "status",
       headerName: "Status",
-      flex: 1.2,
-      minWidth: 110,
+      width: 110,
       sortable: true,
       filter: true,
       cellRenderer: (params: any) => {
@@ -836,8 +839,8 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     },
     {
       headerName: "Actions",
-      flex: 0.8,
-      minWidth: 90,
+      width: 80,
+      pinned: "right" as const,
       cellRenderer: (params: any) => (
         <Stack
           direction="row"
@@ -879,8 +882,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     .filter((checkpoint) => !checkpoint.parentDeviceName || checkpoint.parentDeviceName === "N/A")
     .map((checkpoint) => ({
       headerName: checkpoint.name,
-      flex: 0.9,
-      minWidth: 90,
+      width: 100,
       sortable: false,
       filter: false,
     cellRenderer: (params: any) => {
@@ -931,19 +933,19 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       field: "netTime",
       headerName: "Chip Time",
-      flex: 0.9,
-      minWidth: 90,
+      width: 110,
       sortable: true,
       filter: true,
+      cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' },
       valueGetter: (params: any) => params.data?.netTime || "—",
     },
     {
       field: "gunTime",
       headerName: "Gun Time",
-      flex: 0.9,
-      minWidth: 90,
+      width: 110,
       sortable: true,
       filter: true,
+      cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' },
       valueGetter: (params: any) => params.data?.gunTime || "—",
     }
   ];

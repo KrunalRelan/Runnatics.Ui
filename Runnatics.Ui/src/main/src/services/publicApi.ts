@@ -58,6 +58,7 @@ interface ApiEvent {
   raceCategories?: string[];
   registrationOpen: boolean;
   venue?: string;
+  bannerImageUrl?: string;
 }
 
 // ── Normalised shapes used by components ──────────────────────────
@@ -70,6 +71,7 @@ export interface PublicEvent {
   categories: string[];
   registrationOpen: boolean;
   isPast: boolean;
+  bannerImageUrl?: string;
 }
 
 export interface PublicEventCategory {
@@ -96,6 +98,7 @@ export interface PublicEventDetail {
   sponsors: PublicEventSponsor[];
   registrationUrl?: string;
   registrationOpen: boolean;
+  bannerImageUrl?: string;
 }
 
 function formatEventDate(iso: string): string {
@@ -115,6 +118,7 @@ function normaliseEvent(e: ApiEvent): PublicEvent {
     categories: e.raceCategories ?? [],
     registrationOpen: e.registrationOpen,
     isPast: new Date(e.eventDate) < new Date(),
+    bannerImageUrl: e.bannerImageUrl,
   };
 }
 

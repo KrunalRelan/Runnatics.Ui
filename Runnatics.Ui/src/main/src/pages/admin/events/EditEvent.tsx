@@ -22,8 +22,10 @@ import {
   AlertTitle,
   CircularProgress,
   Snackbar,
+  Tooltip,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { EventService } from "../../../services/EventService";
 import {
   EventOrganizer,
@@ -927,7 +929,14 @@ export const EditEvent: React.FC = () => {
                           }
                         />
                       }
-                      label="Remove Banner"
+                      label={
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          Remove Banner
+                          <Tooltip title="Removes the event banner image from the public website and results page." placement="right">
+                            <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
+                          </Tooltip>
+                        </Box>
+                      }
                     />
                     <FormControlLabel
                       control={
@@ -941,7 +950,14 @@ export const EditEvent: React.FC = () => {
                           }
                         />
                       }
-                      label="Publish Event"
+                      label={
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          Publish Event
+                          <Tooltip title="Makes the event visible on the public website." placement="right">
+                            <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
+                          </Tooltip>
+                        </Box>
+                      }
                     />
                     <FormControlLabel
                       control={
@@ -955,7 +971,14 @@ export const EditEvent: React.FC = () => {
                           }
                         />
                       }
-                      label="Rank On Net"
+                      label={
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          Rank On Net
+                          <Tooltip title="Uses net/chip time instead of gun time for ranking." placement="right">
+                            <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
+                          </Tooltip>
+                        </Box>
+                      }
                     />
                     <FormControlLabel
                       control={
@@ -969,7 +992,14 @@ export const EditEvent: React.FC = () => {
                           }
                         />
                       }
-                      label="Allow Participant Edit"
+                      label={
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          Allow Participant Name Editing
+                          <Tooltip title="Permits participants to update their registered name after registration." placement="right">
+                            <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
+                          </Tooltip>
+                        </Box>
+                      }
                     />
                   </Stack>
 
@@ -986,7 +1016,14 @@ export const EditEvent: React.FC = () => {
                           }
                         />
                       }
-                      label="Use Old Data"
+                      label={
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          Use Old Data
+                          <Tooltip title="Allows reusing participant and timing data from a previous edition of this event." placement="right">
+                            <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
+                          </Tooltip>
+                        </Box>
+                      }
                     />
                     <FormControlLabel
                       control={
@@ -1000,7 +1037,14 @@ export const EditEvent: React.FC = () => {
                           }
                         />
                       }
-                      label="Confirmed Event"
+                      label={
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          Confirmed Event
+                          <Tooltip title="Marks this event as confirmed and locks key details." placement="right">
+                            <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
+                          </Tooltip>
+                        </Box>
+                      }
                     />
                     <FormControlLabel
                       control={
@@ -1014,7 +1058,14 @@ export const EditEvent: React.FC = () => {
                           }
                         />
                       }
-                      label="Allow Name Check"
+                      label={
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          Allow Name Check
+                          <Tooltip title="Enables name verification against the registration database during check-in." placement="right">
+                            <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
+                          </Tooltip>
+                        </Box>
+                      }
                     />
                     <FormControlLabel
                       control={
@@ -1028,7 +1079,14 @@ export const EditEvent: React.FC = () => {
                           }
                         />
                       }
-                      label="Show Result Summary"
+                      label={
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          Show Result Summary
+                          <Tooltip title="Displays a summary view on the results page." placement="right">
+                            <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
+                          </Tooltip>
+                        </Box>
+                      }
                     />
                   </Stack>
                 </Stack>

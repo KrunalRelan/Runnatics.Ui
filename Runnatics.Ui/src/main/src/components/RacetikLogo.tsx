@@ -5,7 +5,7 @@ import logoWhite from '../../../assets/logos/racetik-logo-white.svg';
 import logoWordmark from '../../../assets/logos/racetik-wordmark.svg';
 import logoIcon from '../../../assets/logos/racetik-icon.svg';
 
-export type RacetikLogoVariant = 'full' | 'animated' | 'icon' | 'icon-animated' | 'white' | 'wordmark';
+export type RacetikLogoVariant = 'full' | 'animated' | 'icon' | 'icon-animated' | 'white' | 'wordmark' | 'png' | 'png-white';
 
 interface RacetikLogoProps {
   variant?: RacetikLogoVariant;
@@ -193,22 +193,38 @@ const RacetikLogo: React.FC<RacetikLogoProps> = ({
     );
   }
 
-  const srcMap: Record<Exclude<RacetikLogoVariant, 'animated' | 'icon-animated'>, string> = {
+  if (variant === 'png' || variant === 'png-white') {
+    return (
+      <img
+        src="/images/racetik-logo.png"
+        alt="Racetik"
+        className={className}
+        style={{
+          display: 'block',
+          height: width ? `${Math.round(width / 4)}px` : '40px',
+          width: 'auto',
+          ...(variant === 'png-white' ? { filter: 'brightness(0) invert(1)', opacity: 0.9 } : {}),
+        }}
+      />
+    );
+  }
+
+  const srcMap: Record<Exclude<RacetikLogoVariant, 'animated' | 'icon-animated' | 'png' | 'png-white'>, string> = {
     full: logoStatic,
     white: logoWhite,
     wordmark: logoWordmark,
     icon: logoIcon,
   };
 
-  const aspectMap: Record<Exclude<RacetikLogoVariant, 'animated' | 'icon-animated'>, number> = {
+  const aspectMap: Record<Exclude<RacetikLogoVariant, 'animated' | 'icon-animated' | 'png' | 'png-white'>, number> = {
     full: 580 / 200,
     white: 580 / 200,
     wordmark: 400 / 80,
     icon: 1,
   };
 
-  const src = srcMap[variant as Exclude<RacetikLogoVariant, 'animated' | 'icon-animated'>];
-  const ar = aspectMap[variant as Exclude<RacetikLogoVariant, 'animated' | 'icon-animated'>];
+  const src = srcMap[variant as Exclude<RacetikLogoVariant, 'animated' | 'icon-animated' | 'png' | 'png-white'>];
+  const ar = aspectMap[variant as Exclude<RacetikLogoVariant, 'animated' | 'icon-animated' | 'png' | 'png-white'>];
   const height = Math.round(width / ar);
 
   return (

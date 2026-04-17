@@ -576,7 +576,7 @@ export const EditRace: React.FC = () => {
                         onChange={handleRaceSettingsSwitchChange("checkValidation")}
                       />
                     }
-                    label="Check Validation"
+                    label="Check Variation"
                   />
                   <FormControlLabel
                     control={

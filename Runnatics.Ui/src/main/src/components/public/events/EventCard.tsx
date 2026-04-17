@@ -9,8 +9,18 @@ interface EventCardProps {
 function EventCard({ event }: EventCardProps) {
   return (
     <Card>
-      <div style={{ aspectRatio: '16/9', backgroundColor: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Activity size={36} color="#9CA3AF" />
+      <div style={{ aspectRatio: '16/9', backgroundColor: '#E5E7EB', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {event.bannerImageUrl ? (
+          <img
+            src={event.bannerImageUrl}
+            alt={event.name}
+            loading="lazy"
+            decoding="async"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
+          />
+        ) : (
+          <Activity size={36} color="#9CA3AF" />
+        )}
       </div>
       <div style={{ padding: '1.25rem' }}>
         <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '1rem', margin: '0 0 0.5rem', color: 'var(--color-text)' }}>

@@ -7,7 +7,7 @@ import Pagination from '../../components/public/shared/Pagination';
 import { ErrorState, TableSkeleton } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
 import useDebounce from '../../hooks/useDebounce';
-import { getEventResults } from '../../services/publicApi';
+import { getEventResults, getEventDetail } from '../../services/publicApi';
 import type { ResultRow } from '../../services/publicApi';
 
 export type { ResultRow };
@@ -33,6 +33,12 @@ function ResultsPage() {
     [slug, race, gender, debouncedSearch, page],
   );
 
+  // Fetch event detail for banner (best-effort — ignored if endpoint unavailable)
+  const { data: eventDetail } = usePublicApi(
+    (signal) => slug ? getEventDetail(slug, signal) : Promise.resolve(null as any),
+    [slug],
+  );
+
   const results = data?.results ?? [];
   const totalPages = data ? Math.ceil(data.totalCount / PAGE_SIZE) : 0;
   const availableRaces = data?.races ?? [];
@@ -43,7 +49,17 @@ function ResultsPage() {
 
   return (
     <>
-      <Section tone="dark" style={{ padding: 'clamp(4rem, 8vw, 6rem) 0' }}>
+      <Section
+        tone="dark"
+        style={{
+          padding: 'clamp(4rem, 8vw, 6rem) 0',
+          ...(eventDetail?.bannerImageUrl ? {
+            backgroundImage: `linear-gradient(rgba(10,18,32,0.75), rgba(10,18,32,0.75)), url(${eventDetail.bannerImageUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          } : {}),
+        }}
+      >
         <Container>
           {slug && (
             <div style={{ marginBottom: '0.75rem' }}>

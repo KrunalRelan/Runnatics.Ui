@@ -9,7 +9,9 @@ export interface Participant {
   phone?: string;
   gender: string;
   category?: string;
-  status?: 'Registered' | 'Pending' | 'Cancelled';
+  status?: 'Registered' | 'Pending' | 'Cancelled' | 'Started' | 'Finished' | 'DNF' | 'DNS' | 'DQ';
+  dateOfBirth?: string;
+  ageCategory?: string;
   checkIn?: boolean;
   chipId?: string;
   raceId?: string;

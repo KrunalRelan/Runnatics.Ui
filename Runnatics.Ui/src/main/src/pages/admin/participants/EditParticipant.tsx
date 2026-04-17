@@ -52,6 +52,8 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
     status: "Registered",
     checkIn: false,
     chipId: "",
+    dateOfBirth: "",
+    ageCategory: "",
   });
 
   const [loading, setLoading] = useState<boolean>(false);
@@ -129,6 +131,8 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
         chipId: participant.chipId || "",
         raceId: participant.raceId || "",
         eventId: participant.eventId || "",
+        dateOfBirth: (participant as any).dateOfBirth || "",
+        ageCategory: (participant as any).ageCategory || "",
       });
       // Set initial race selection: prioritize raceId prop (current tab), then participant's raceId
       const raceToSelect = raceId || participant.raceId || "";
@@ -198,7 +202,10 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
         category: formData.category?.trim() || undefined,
         chipId: formData.chipId?.trim() || undefined,
         checkIn: formData.checkIn || false,
-        raceId: selectedRaceId, // Include raceId in request body
+        status: formData.status || undefined,
+        dateOfBirth: formData.dateOfBirth?.trim() || undefined,
+        ageCategory: formData.ageCategory?.trim() || undefined,
+        raceId: selectedRaceId,
       } as any);
 
       // Auto-generate fullName from firstName and lastName for local state
@@ -276,7 +283,7 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
           }
           handleClose();
         }}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>Edit Participant</DialogTitle>
@@ -366,26 +373,53 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
             {/* Chip ID and Status - Optional */}
             <Stack direction="row" spacing={2}>
               <TextField
-                label="Chip ID"
+                label="Chip ID / EPC"
                 value={formData.chipId}
                 onChange={(e) => handleFormChange("chipId", e.target.value)}
                 fullWidth
                 size="small"
+                placeholder="RFID chip identifier"
               />
               <FormControl fullWidth size="small">
-                <InputLabel>Status</InputLabel>
+                <InputLabel>Run Status</InputLabel>
                 <Select
                   value={formData.status}
-                  label="Status"
+                  label="Run Status"
                   onChange={(e: SelectChangeEvent) =>
                     handleFormChange("status", e.target.value as any)
                   }
                 >
                   <MenuItem value="Registered">Registered</MenuItem>
+                  <MenuItem value="Started">Started</MenuItem>
+                  <MenuItem value="Finished">Finished</MenuItem>
+                  <MenuItem value="DNF">DNF (Did Not Finish)</MenuItem>
+                  <MenuItem value="DNS">DNS (Did Not Start)</MenuItem>
+                  <MenuItem value="DQ">DQ (Disqualified)</MenuItem>
                   <MenuItem value="Pending">Pending</MenuItem>
                   <MenuItem value="Cancelled">Cancelled</MenuItem>
                 </Select>
               </FormControl>
+            </Stack>
+
+            {/* Date of Birth and Age Category */}
+            <Stack direction="row" spacing={2}>
+              <TextField
+                label="Date of Birth"
+                type="date"
+                value={formData.dateOfBirth}
+                onChange={(e) => handleFormChange("dateOfBirth", e.target.value)}
+                fullWidth
+                size="small"
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                label="Age Category"
+                value={formData.ageCategory}
+                onChange={(e) => handleFormChange("ageCategory", e.target.value)}
+                fullWidth
+                size="small"
+                placeholder="e.g., Senior, Junior, Veteran"
+              />
             </Stack>
             {/* Race Selection - Required */}
             <FormControl fullWidth size="small" required>
