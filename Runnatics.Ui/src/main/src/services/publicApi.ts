@@ -212,10 +212,8 @@ export function getGallery(eventSlug?: string, signal?: AbortSignal): Promise<Ga
 
 export interface PublicStats {
   totalEvents: number;
-  totalParticipants: number;
-  totalCities: number;
-  timingAccuracy: string;
-  foundedYear: number;
+  upcomingEvents: number;
+  pastEvents: number;
 }
 
 export function getPublicStats(signal?: AbortSignal): Promise<PublicStats> {

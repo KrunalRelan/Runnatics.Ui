@@ -11,10 +11,9 @@ interface StatItem {
 
 function toStatItems(stats: PublicStats): StatItem[] {
   return [
-    { value: stats.totalParticipants >= 100000 ? `${(stats.totalParticipants / 100000).toFixed(0)}L+` : `${stats.totalParticipants.toLocaleString()}+`, label: 'Participants' },
-    { value: `${stats.totalEvents.toLocaleString()}+`, label: 'Events' },
-    { value: `${stats.totalCities}+`, label: 'Cities' },
-    { value: stats.timingAccuracy, label: 'Timing Accuracy' },
+    { value: `${(stats.totalEvents ?? 0).toLocaleString()}+`, label: 'Total Events' },
+    { value: `${stats.upcomingEvents ?? 0}`, label: 'Upcoming Events' },
+    { value: `${stats.pastEvents ?? 0}`, label: 'Past Events' },
   ];
 }
 
@@ -25,7 +24,7 @@ function ParticipantInsights() {
     [],
   );
 
-  const statItems = stats ? toStatItems(stats) : null;
+  const statItems = stats?.totalEvents != null ? toStatItems(stats) : null;
 
   return (
     <Section tone="dark">
@@ -48,7 +47,7 @@ function ParticipantInsights() {
               </p>
             )}
             {!loading && statItems && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem' }}>
                 {statItems.map((s) => (
                   <div key={s.label}>
                     <div style={{
