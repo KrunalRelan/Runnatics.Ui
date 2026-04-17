@@ -3,7 +3,9 @@
  * Completely separate from the admin API services.
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? '';
+// VITE_API_BASE_URL ends with /api (e.g. https://…azurewebsites.net/api).
+// Strip the trailing /api so we can build /api/public/… paths ourselves.
+const BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL ?? '').replace(/\/api$/, '');
 
 interface ResponseBase<T> {
   data: T;
