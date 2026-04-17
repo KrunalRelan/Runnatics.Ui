@@ -19,13 +19,13 @@ function OurStory() {
           <div>
             <Heading level={2}>Our Story</Heading>
             <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)', lineHeight: 1.75, marginTop: '1.25rem' }}>
-              Runnatics was born in 2013 when a group of avid runners grew frustrated with
+              Racetik was born in 2013 when a group of avid runners grew frustrated with
               inaccurate finisher times at community races in Delhi. Combining a passion for
               running with a background in embedded systems, the founding team built India's
               first affordable RFID-based race timing solution from scratch.
             </p>
             <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)', lineHeight: 1.75, marginTop: '1rem' }}>
-              Over the next decade, Runnatics expanded from local park runs to national
+              Over the next decade, Racetik expanded from local park runs to national
               marathons. Today we power over 1,000 events annually — from intimate 500-person
               charity 5Ks to 50,000-participant city marathons — across 50+ cities in India
               and neighbouring countries.

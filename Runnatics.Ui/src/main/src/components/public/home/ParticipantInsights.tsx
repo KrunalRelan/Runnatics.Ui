@@ -87,7 +87,7 @@ function ParticipantInsights() {
               marginBottom: '2rem',
               fontSize: '1.0625rem',
             }}>
-              From intimate community 5Ks to India's largest marathons, Runnatics has
+              From intimate community 5Ks to India's largest marathons, Racetik has
               been the silent engine behind every finisher's time. Our platform handles
               everything from participant onboarding to certificate delivery — so you can
               focus on creating unforgettable race experiences.

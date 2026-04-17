@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
+import RacetikLogo from '../../RacetikLogo';
 
 const navLinks = [
   { label: 'Home', to: '/' },
@@ -58,18 +59,8 @@ function PublicHeader() {
           }}
         >
           {/* Logo */}
-          <Link
-            to="/"
-            style={{
-              fontFamily: 'var(--font-heading)',
-              fontWeight: 700,
-              fontSize: '1.5rem',
-              color: 'var(--color-primary)',
-              textDecoration: 'none',
-              letterSpacing: '-0.5px',
-            }}
-          >
-            Runnatics
+          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+            <RacetikLogo variant="wordmark" width={140} />
           </Link>
 
           {/* Desktop nav */}

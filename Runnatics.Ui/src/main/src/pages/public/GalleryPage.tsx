@@ -163,7 +163,7 @@ function GalleryPage() {
         </div>
       )}
 
-      <CTABanner title="Organise Your Race Event" subtitle="Let Runnatics handle timing, results, and memories." />
+      <CTABanner title="Organise Your Race Event" subtitle="Let Racetik handle timing, results, and memories." />
     </>
   );
 }

@@ -98,7 +98,7 @@ function EventsPage() {
       </Section>
       <CTABanner
         title="Organise Your Next Race"
-        subtitle="Get in touch and let Runnatics handle timing, registration, and results."
+        subtitle="Get in touch and let Racetik handle timing, registration, and results."
         ctaLabel="Talk to Us"
       />
     </>

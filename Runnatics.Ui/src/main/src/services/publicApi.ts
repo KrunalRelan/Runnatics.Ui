@@ -16,7 +16,7 @@ async function fetchPublicApi<T>(
   signal?: AbortSignal,
   options?: RequestInit,
 ): Promise<T> {
-  const res = await fetch(`${BASE_URL}/api/v1/public${path}`, {
+  const res = await fetch(`${BASE_URL}/api/public${path}`, {
     signal,
     ...options,
     headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) },

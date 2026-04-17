@@ -19,10 +19,10 @@ function PrivacyPage() {
           <p style={prose}>We collect information you provide when registering for an event (name, email, phone, date of birth, gender, emergency contact), processing payments (handled by third-party providers — we do not store card details), and using our platform features. We also collect technical data such as browser type, IP address, and usage analytics through cookies.</p>
 
           <h2 style={h2}>2. How We Use Your Information</h2>
-          <p style={prose}>Your data is used to process event registrations and timing results, generate finisher certificates, communicate race updates and results, personalise your experience on the Runnatics platform, comply with legal obligations, and improve our services through aggregate analytics.</p>
+          <p style={prose}>Your data is used to process event registrations and timing results, generate finisher certificates, communicate race updates and results, personalise your experience on the Racetik platform, comply with legal obligations, and improve our services through aggregate analytics.</p>
 
           <h2 style={h2}>3. Data Sharing</h2>
-          <p style={prose}>We share data with event organisers who use the Runnatics platform for their event (limited to participant data relevant to their event), payment processors (Razorpay, Stripe) under their respective privacy policies, photography partners for race photo delivery, and authorities where required by law. We do not sell your personal data to third parties.</p>
+          <p style={prose}>We share data with event organisers who use the Racetik platform for their event (limited to participant data relevant to their event), payment processors (Razorpay, Stripe) under their respective privacy policies, photography partners for race photo delivery, and authorities where required by law. We do not sell your personal data to third parties.</p>
 
           <h2 style={h2}>4. Cookies</h2>
           <p style={prose}>We use essential cookies for authentication and session management, analytics cookies to understand platform usage, and preference cookies to remember your settings. You can manage cookie preferences through your browser settings. Disabling essential cookies may affect platform functionality.</p>
@@ -34,7 +34,7 @@ function PrivacyPage() {
           <p style={prose}>Under applicable Indian data protection laws, you have the right to access, correct, or delete your personal data. To exercise these rights, contact us at privacy@runnatics.com. We will respond within 30 days. You may also opt out of marketing communications at any time via the unsubscribe link in our emails.</p>
 
           <h2 style={h2}>7. Contact</h2>
-          <p style={prose}>For privacy-related enquiries, contact our Data Protection Officer at <strong>privacy@runnatics.com</strong> or write to: Runnatics Privacy, Connaught Place, New Delhi 110001, India.</p>
+          <p style={prose}>For privacy-related enquiries, contact our Data Protection Officer at <strong>privacy@runnatics.com</strong> or write to: Racetik Privacy, Connaught Place, New Delhi 110001, India.</p>
         </div>
       </Container>
     </Section>

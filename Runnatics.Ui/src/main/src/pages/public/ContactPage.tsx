@@ -225,7 +225,7 @@ function ContactPage() {
             <div>
               <Heading level={2} style={{ marginBottom: '1.5rem' }}>Contact Information</Heading>
               {[
-                { icon: <Mail size={20} color="var(--color-accent)" />, label: 'Email', value: 'info@runnatics.com' },
+                { icon: <Mail size={20} color="var(--color-accent)" />, label: 'Email', value: 'info@racetik.com' },
                 { icon: <Phone size={20} color="var(--color-accent)" />, label: 'Phone', value: '+91 98765 43210' },
                 { icon: <MapPin size={20} color="var(--color-accent)" />, label: 'Address', value: 'Connaught Place, New Delhi 110001' },
                 { icon: <Clock size={20} color="var(--color-accent)" />, label: 'Hours', value: 'Mon–Fri, 9 AM – 6 PM IST' },
@@ -245,7 +245,7 @@ function ContactPage() {
         </Container>
       </Section>
 
-      <CTABanner title="Ready to Power Your Event?" subtitle="Join 1000+ events that trust Runnatics for precision timing and management." />
+      <CTABanner title="Ready to Power Your Event?" subtitle="Join 1000+ events that trust Racetik for precision timing and management." />
     </>
   );
 }

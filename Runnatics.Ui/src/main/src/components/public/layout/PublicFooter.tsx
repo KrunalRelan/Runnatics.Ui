@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Twitter, Instagram, Facebook, Mail, Phone, MapPin } from 'lucide-react';
+import RacetikLogo from '../../RacetikLogo';
 
 const quickLinks = [
   { label: 'Home', to: '/' },
@@ -37,16 +38,8 @@ function PublicFooter() {
         >
           {/* Col 1 — Brand */}
           <div>
-            <div
-              style={{
-                fontFamily: 'var(--font-heading)',
-                fontWeight: 700,
-                fontSize: '1.5rem',
-                marginBottom: '0.75rem',
-                letterSpacing: '-0.5px',
-              }}
-            >
-              Runnatics
+            <div style={{ marginBottom: '0.75rem' }}>
+              <RacetikLogo variant="white" width={160} />
             </div>
             <p
               style={{
@@ -145,7 +138,7 @@ function PublicFooter() {
               Contact
             </h4>
             {[
-              { icon: <Mail size={15} />, text: 'info@runnatics.com' },
+              { icon: <Mail size={15} />, text: 'info@racetik.com' },
               { icon: <Phone size={15} />, text: '+91 98765 43210' },
               { icon: <MapPin size={15} />, text: 'New Delhi, India' },
             ].map(({ icon, text }) => (
@@ -188,7 +181,7 @@ function PublicFooter() {
               margin: 0,
             }}
           >
-            © 2026 Runnatics. All rights reserved.
+            © 2026 Racetik. All rights reserved.
           </p>
           <div style={{ display: 'flex', gap: '1rem' }}>
             {[Twitter, Instagram, Facebook].map((Icon, i) => (

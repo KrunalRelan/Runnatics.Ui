@@ -9,7 +9,7 @@ interface CTABannerProps {
 
 function CTABanner({
   title = 'Marathon Management Made Smarter',
-  subtitle = 'Join 1000+ events powered by Runnatics',
+  subtitle = 'Join 1000+ events powered by Racetik',
   ctaLabel = 'Get Started Today',
   ctaHref = '/contact',
 }: CTABannerProps) {
