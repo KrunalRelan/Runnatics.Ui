@@ -35,7 +35,7 @@ function AuthLayout({ children }: AuthLayoutProps) {
       >
         <Toolbar>
           <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-            <RacetikLogo variant="wordmark" width={120} />
+            <RacetikLogo variant="png" width={120} />
           </Box>
 
           {/* Theme Switcher */}

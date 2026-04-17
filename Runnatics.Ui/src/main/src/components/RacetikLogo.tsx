@@ -197,13 +197,13 @@ const RacetikLogo: React.FC<RacetikLogoProps> = ({
     return (
       <img
         src="/images/racetik-logo.png"
-        alt="Racetik"
+        alt="Racetik — Cure Milestones"
         className={className}
         style={{
           display: 'block',
-          height: width ? `${Math.round(width / 4)}px` : '40px',
-          width: 'auto',
-          ...(variant === 'png-white' ? { filter: 'brightness(0) invert(1)', opacity: 0.9 } : {}),
+          width: width ? `${width}px` : 'auto',
+          height: 'auto',
+          ...(variant === 'png-white' ? { filter: 'brightness(0) invert(1)', opacity: 0.92 } : {}),
         }}
       />
     );

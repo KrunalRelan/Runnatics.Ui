@@ -39,7 +39,7 @@ function PublicFooter() {
           {/* Col 1 — Brand */}
           <div>
             <div style={{ marginBottom: '0.75rem' }}>
-              <RacetikLogo variant="white" width={104} />
+              <RacetikLogo variant="png-white" width={120} />
             </div>
             <p
               style={{

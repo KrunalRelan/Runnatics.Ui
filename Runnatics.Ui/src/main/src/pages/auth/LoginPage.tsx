@@ -85,7 +85,7 @@ const LoginPage: React.FC = () => {
                 }}
             >
                 <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-                        <RacetikLogo variant="animated" width={280} />
+                        <RacetikLogo variant="png" width={260} />
                     </Box>
 
                 <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>

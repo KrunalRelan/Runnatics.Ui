@@ -230,7 +230,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
         }}
       >
         {!isMinimized ? (
-          <RacetikLogo variant="wordmark" width={140} />
+          <RacetikLogo variant="png" width={140} />
         ) : (
           <RacetikLogo variant="icon-animated" width={36} />
         )}

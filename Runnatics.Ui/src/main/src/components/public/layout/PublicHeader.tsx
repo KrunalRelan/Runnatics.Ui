@@ -77,7 +77,7 @@ function PublicHeader() {
         >
           {/* Logo */}
           <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }} className="header-logo-link">
-            <RacetikLogo variant="wordmark" width={200} className="header-logo" />
+            <RacetikLogo variant="png" width={160} className="header-logo" />
           </Link>
 
           {/* Desktop nav */}
