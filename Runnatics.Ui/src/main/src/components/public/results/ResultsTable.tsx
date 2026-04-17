@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import type { ResultRow } from '../../../pages/public/ResultsPage';
+import { ChevronDown, ChevronUp, SearchX } from 'lucide-react';
+import type { ResultRow } from '../../../services/publicApi';
 
 interface ResultsTableProps {
   results: ResultRow[];
@@ -11,8 +11,11 @@ function ResultsTable({ results }: ResultsTableProps) {
 
   if (results.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--color-text-muted)', fontFamily: 'var(--font-body)' }}>
-        No results found.
+      <div style={{ textAlign: 'center', padding: '4rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+        <SearchX size={36} color="var(--color-text-muted)" />
+        <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)', fontSize: '1rem', margin: 0 }}>
+          No results found. Try adjusting your filters.
+        </p>
       </div>
     );
   }
@@ -34,8 +37,8 @@ function ResultsTable({ results }: ResultsTableProps) {
             <>
               <tr
                 key={r.bib}
-                style={{ backgroundColor: i % 2 === 0 ? '#fff' : 'var(--color-bg-alt)', cursor: 'pointer' }}
-                onClick={() => setExpanded(expanded === r.rank ? null : r.rank)}
+                style={{ backgroundColor: i % 2 === 0 ? '#fff' : 'var(--color-bg-alt)', cursor: r.splits?.length > 0 ? 'pointer' : 'default' }}
+                onClick={() => r.splits?.length > 0 && setExpanded(expanded === r.rank ? null : r.rank)}
               >
                 <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: r.rank <= 3 ? 'var(--color-accent)' : 'var(--color-text)' }}>{r.rank}</td>
                 <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)' }}>{r.bib}</td>
@@ -47,10 +50,10 @@ function ResultsTable({ results }: ResultsTableProps) {
                 <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)' }}>{r.catRank}</td>
                 <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)' }}>{r.genderRank}</td>
                 <td style={{ padding: '0.75rem 1rem' }}>
-                  {expanded === r.rank ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  {r.splits?.length > 0 && (expanded === r.rank ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
                 </td>
               </tr>
-              {expanded === r.rank && (
+              {expanded === r.rank && r.splits?.length > 0 && (
                 <tr key={`${r.bib}-splits`} style={{ backgroundColor: '#EFF6FF' }}>
                   <td colSpan={10} style={{ padding: '1rem 2rem' }}>
                     <strong style={{ fontFamily: 'var(--font-heading)', fontSize: '0.875rem', color: 'var(--color-primary)' }}>Splits</strong>

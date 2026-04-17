@@ -1,18 +1,9 @@
 import { Calendar, MapPin, Activity } from 'lucide-react';
 import { Badge, Button, Card } from '../ui';
-
-export interface EventData {
-  slug: string;
-  name: string;
-  date: string;
-  city: string;
-  categories: string[];
-  registrationOpen: boolean;
-  isPast: boolean;
-}
+import type { PublicEvent } from '../../../services/publicApi';
 
 interface EventCardProps {
-  event: EventData;
+  event: PublicEvent;
 }
 
 function EventCard({ event }: EventCardProps) {

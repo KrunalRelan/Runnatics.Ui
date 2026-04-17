@@ -1,18 +1,17 @@
 import { Search } from 'lucide-react';
 import { Container } from '../ui';
 
-const cities = ['All', 'Delhi', 'Mumbai', 'Bangalore', 'Gurgaon', 'Hyderabad', 'Pune'];
-
 interface EventFiltersProps {
   tab: 'upcoming' | 'past';
   city: string;
   search: string;
+  availableCities: string[];
   onTabChange: (t: 'upcoming' | 'past') => void;
   onCityChange: (c: string) => void;
   onSearchChange: (s: string) => void;
 }
 
-function EventFilters({ tab, city, search, onTabChange, onCityChange, onSearchChange }: EventFiltersProps) {
+function EventFilters({ tab, city, search, availableCities, onTabChange, onCityChange, onSearchChange }: EventFiltersProps) {
   return (
     <div
       style={{
@@ -25,15 +24,7 @@ function EventFilters({ tab, city, search, onTabChange, onCityChange, onSearchCh
       }}
     >
       <Container>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            padding: '0.875rem 0',
-            flexWrap: 'wrap',
-          }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.875rem 0', flexWrap: 'wrap' }}>
           {/* Tabs */}
           <div style={{ display: 'flex', gap: '0', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
             {(['upcoming', 'past'] as const).map((t) => (
@@ -58,26 +49,29 @@ function EventFilters({ tab, city, search, onTabChange, onCityChange, onSearchCh
             ))}
           </div>
 
-          {/* City dropdown */}
-          <select
-            value={city}
-            onChange={(e) => onCityChange(e.target.value)}
-            aria-label="Filter by city"
-            style={{
-              fontFamily: 'var(--font-body)',
-              fontSize: '0.9375rem',
-              padding: '0.5rem 0.75rem',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px',
-              backgroundColor: '#fff',
-              color: 'var(--color-text)',
-              cursor: 'pointer',
-            }}
-          >
-            {cities.map((c) => (
-              <option key={c} value={c}>{c === 'All' ? 'All Cities' : c}</option>
-            ))}
-          </select>
+          {/* City dropdown — only shown when cities are available */}
+          {availableCities.length > 0 && (
+            <select
+              value={city}
+              onChange={(e) => onCityChange(e.target.value)}
+              aria-label="Filter by city"
+              style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: '0.9375rem',
+                padding: '0.5rem 0.75rem',
+                border: '1px solid var(--color-border)',
+                borderRadius: '8px',
+                backgroundColor: '#fff',
+                color: 'var(--color-text)',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="All">All Cities</option>
+              {availableCities.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
 
           {/* Search */}
           <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>

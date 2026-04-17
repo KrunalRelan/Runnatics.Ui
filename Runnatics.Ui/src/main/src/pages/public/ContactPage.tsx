@@ -2,19 +2,22 @@ import { useState } from 'react';
 import { Mail, Phone, MapPin, Clock } from 'lucide-react';
 import { Section, Container, Heading } from '../../components/public/ui';
 import CTABanner from '../../components/public/shared/CTABanner';
+import { submitContactForm, type ContactFormPayload } from '../../services/publicApi';
 
 const subjectOptions = ['General Enquiry', 'Event Timing', 'Registration', 'Sponsorship', 'Technical Support', 'Other'];
-const eventOptions = ['Airtel Delhi Half Marathon', 'Tata Mumbai Marathon', 'Bengaluru 10K', 'Other'];
 
 interface FormState {
   name: string; email: string; phone: string; subject: string; event: string; message: string;
 }
 
 interface FormErrors {
-  name?: string; email?: string; phone?: string; subject?: string; message?: string;
+  name?: string; email?: string; subject?: string; message?: string;
 }
 
-function Toast({ visible }: { visible: boolean }) {
+type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error';
+
+function Toast({ status }: { status: SubmitStatus }) {
+  const visible = status === 'success' || status === 'error';
   return (
     <div
       role="status"
@@ -25,7 +28,7 @@ function Toast({ visible }: { visible: boolean }) {
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 200,
-        backgroundColor: 'var(--color-success)',
+        backgroundColor: status === 'error' ? 'var(--color-error)' : 'var(--color-success)',
         color: '#fff',
         fontFamily: 'var(--font-body)',
         fontWeight: 600,
@@ -35,9 +38,10 @@ function Toast({ visible }: { visible: boolean }) {
         boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
         transition: 'top 0.4s cubic-bezier(0.34,1.56,0.64,1)',
         pointerEvents: 'none',
+        whiteSpace: 'nowrap',
       }}
     >
-      Message sent! We'll get back to you shortly.
+      {status === 'error' ? 'Failed to send. Please try again.' : "Message sent! We'll get back to you shortly."}
     </div>
   );
 }
@@ -65,23 +69,40 @@ const inputStyle = {
   transition: 'border-color 0.15s',
 };
 
+const EMPTY_FORM: FormState = { name: '', email: '', phone: '', subject: '', event: '', message: '' };
+
 function ContactPage() {
-  const [form, setForm] = useState<FormState>({ name: '', email: '', phone: '', subject: '', event: '', message: '' });
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [toast, setToast] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
 
-  const set = (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-    setForm((f) => ({ ...f, [k]: e.target.value }));
+  const set = (k: keyof FormState) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+  ) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validate(form);
     setErrors(errs);
-    if (Object.keys(errs).length === 0) {
-      console.log('Contact form submission:', form);
-      setForm({ name: '', email: '', phone: '', subject: '', event: '', message: '' });
-      setToast(true);
-      setTimeout(() => setToast(false), 3500);
+    if (Object.keys(errs).length > 0) return;
+
+    setSubmitStatus('submitting');
+    try {
+      const payload: ContactFormPayload = {
+        name: form.name,
+        email: form.email,
+        phone: form.phone || undefined,
+        subject: form.subject,
+        event: form.event || undefined,
+        message: form.message,
+      };
+      await submitContactForm(payload);
+      setSubmitStatus('success');
+      setForm(EMPTY_FORM);
+    } catch {
+      setSubmitStatus('error');
+    } finally {
+      setTimeout(() => setSubmitStatus('idle'), 4000);
     }
   };
 
@@ -91,13 +112,15 @@ function ContactPage() {
         {label}
       </label>
       {children}
-      {error && <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-error)', marginTop: '0.25rem', margin: 0 }}>{error}</p>}
+      {error && <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-error)', marginTop: '0.25rem', margin: '0.25rem 0 0' }}>{error}</p>}
     </div>
   );
 
+  const submitting = submitStatus === 'submitting';
+
   return (
     <>
-      <Toast visible={toast} />
+      <Toast status={submitStatus} />
 
       {/* Hero */}
       <Section tone="dark" style={{ padding: 'clamp(4rem, 8vw, 6rem) 0', textAlign: 'center' }}>
@@ -117,27 +140,53 @@ function ContactPage() {
             <form onSubmit={handleSubmit} noValidate>
               <Heading level={2} style={{ marginBottom: '1.5rem' }}>Send a Message</Heading>
               {field('Full Name *', errors.name,
-                <input value={form.name} onChange={set('name')} placeholder="Arjun Sharma" style={{ ...inputStyle, borderColor: errors.name ? 'var(--color-error)' : 'var(--color-border)' }} />
+                <input
+                  value={form.name}
+                  onChange={set('name')}
+                  placeholder="Arjun Sharma"
+                  disabled={submitting}
+                  style={{ ...inputStyle, borderColor: errors.name ? 'var(--color-error)' : 'var(--color-border)' }}
+                />
               )}
               {field('Email Address *', errors.email,
-                <input type="email" value={form.email} onChange={set('email')} placeholder="arjun@example.com" style={{ ...inputStyle, borderColor: errors.email ? 'var(--color-error)' : 'var(--color-border)' }} />
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={set('email')}
+                  placeholder="arjun@example.com"
+                  disabled={submitting}
+                  style={{ ...inputStyle, borderColor: errors.email ? 'var(--color-error)' : 'var(--color-border)' }}
+                />
               )}
-              {field('Phone Number',
-                undefined,
-                <input type="tel" value={form.phone} onChange={set('phone')} placeholder="+91 98765 43210" style={inputStyle} />
+              {field('Phone Number', undefined,
+                <input
+                  type="tel"
+                  value={form.phone}
+                  onChange={set('phone')}
+                  placeholder="+91 98765 43210"
+                  disabled={submitting}
+                  style={inputStyle}
+                />
               )}
               {field('Subject *', errors.subject,
-                <select value={form.subject} onChange={set('subject')} style={{ ...inputStyle, borderColor: errors.subject ? 'var(--color-error)' : 'var(--color-border)' }}>
+                <select
+                  value={form.subject}
+                  onChange={set('subject')}
+                  disabled={submitting}
+                  style={{ ...inputStyle, borderColor: errors.subject ? 'var(--color-error)' : 'var(--color-border)' }}
+                >
                   <option value="">Select a subject</option>
                   {subjectOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               )}
-              {field('Event (Optional)',
-                undefined,
-                <select value={form.event} onChange={set('event')} style={inputStyle}>
-                  <option value="">Select an event</option>
-                  {eventOptions.map((e) => <option key={e} value={e}>{e}</option>)}
-                </select>
+              {field('Event (Optional)', undefined,
+                <input
+                  value={form.event}
+                  onChange={set('event')}
+                  placeholder="Event name (optional)"
+                  disabled={submitting}
+                  style={inputStyle}
+                />
               )}
               {field('Message *', errors.message,
                 <textarea
@@ -145,28 +194,30 @@ function ContactPage() {
                   onChange={set('message')}
                   rows={5}
                   placeholder="Tell us about your event or enquiry..."
+                  disabled={submitting}
                   style={{ ...inputStyle, resize: 'vertical', borderColor: errors.message ? 'var(--color-error)' : 'var(--color-border)' }}
                 />
               )}
               <button
                 type="submit"
+                disabled={submitting}
                 style={{
                   padding: '0.75rem 2rem',
-                  backgroundColor: 'var(--color-accent)',
+                  backgroundColor: submitting ? 'var(--color-text-muted)' : 'var(--color-accent)',
                   color: '#fff',
                   fontFamily: 'var(--font-body)',
                   fontWeight: 600,
                   fontSize: '1rem',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: 'pointer',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
                   transition: 'background-color 0.2s',
                   width: '100%',
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--color-accent-hover)'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--color-accent)'; }}
+                onMouseEnter={(e) => { if (!submitting) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--color-accent-hover)'; }}
+                onMouseLeave={(e) => { if (!submitting) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--color-accent)'; }}
               >
-                Send Message
+                {submitting ? 'Sending…' : 'Send Message'}
               </button>
             </form>
 

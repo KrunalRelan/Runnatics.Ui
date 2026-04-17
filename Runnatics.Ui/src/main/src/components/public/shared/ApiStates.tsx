@@ -71,20 +71,22 @@ export function TableSkeleton({ rows = 8, cols = 9 }: { rows?: number; cols?: nu
   );
 }
 
+const darkShimmer = {
+  background: 'linear-gradient(90deg,rgba(255,255,255,0.08) 25%,rgba(255,255,255,0.15) 50%,rgba(255,255,255,0.08) 75%)',
+  backgroundSize: '200% 100%',
+  animation: 'shimmer 1.4s infinite',
+  borderRadius: '6px',
+} as const;
+
 export function StatsSkeleton() {
   return (
     <>
-      <style>{`
-        @keyframes shimmer {
-          0%   { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-      `}</style>
+      <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <SkeletonBox height="2.5rem" width="70%" style={{ background: 'rgba(255,255,255,0.15)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
-            <SkeletonBox height="0.875rem" width="50%" style={{ background: 'rgba(255,255,255,0.10)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+            <div style={{ ...darkShimmer, height: '2.5rem', width: '70%' }} />
+            <div style={{ ...darkShimmer, height: '0.875rem', width: '50%', opacity: 0.7 }} />
           </div>
         ))}
       </div>

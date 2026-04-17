@@ -11,8 +11,13 @@ interface ResponseBase<T> {
   message?: string;
 }
 
-async function fetchPublicApi<T>(path: string, options?: RequestInit): Promise<T> {
+async function fetchPublicApi<T>(
+  path: string,
+  signal?: AbortSignal,
+  options?: RequestInit,
+): Promise<T> {
   const res = await fetch(`${BASE_URL}/api/v1/public${path}`, {
+    signal,
     ...options,
     headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) },
   });
@@ -64,16 +69,16 @@ export interface PublicEventDetail {
   registrationOpen: boolean;
 }
 
-export async function getUpcomingEvents(): Promise<PublicEvent[]> {
-  return fetchPublicApi<PublicEvent[]>('/events?status=upcoming');
+export function getUpcomingEvents(signal?: AbortSignal): Promise<PublicEvent[]> {
+  return fetchPublicApi<PublicEvent[]>('/events?status=upcoming', signal);
 }
 
-export async function getPastEvents(): Promise<PublicEvent[]> {
-  return fetchPublicApi<PublicEvent[]>('/events?status=past');
+export function getPastEvents(signal?: AbortSignal): Promise<PublicEvent[]> {
+  return fetchPublicApi<PublicEvent[]>('/events?status=past', signal);
 }
 
-export async function getEventDetail(slug: string): Promise<PublicEventDetail> {
-  return fetchPublicApi<PublicEventDetail>(`/events/${slug}`);
+export function getEventDetail(slug: string, signal?: AbortSignal): Promise<PublicEventDetail> {
+  return fetchPublicApi<PublicEventDetail>(`/events/${slug}`, signal);
 }
 
 // ── Results ───────────────────────────────────────────────────────
@@ -113,18 +118,22 @@ export interface ResultsParams {
   pageSize?: number;
 }
 
-export async function getEventResults(
+export function getEventResults(
   slug: string,
   params?: ResultsParams,
+  signal?: AbortSignal,
 ): Promise<ResultsResponse> {
   const qs = new URLSearchParams();
   if (params?.race && params.race !== 'All') qs.set('race', params.race);
   if (params?.gender && params.gender !== 'All') qs.set('gender', params.gender);
-  if (params?.search) qs.set('search', params.search);
+  if (params?.search?.trim()) qs.set('search', params.search.trim());
   if (params?.page) qs.set('page', String(params.page));
   if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
   const query = qs.toString();
-  return fetchPublicApi<ResultsResponse>(`/events/${slug}/results${query ? `?${query}` : ''}`);
+  return fetchPublicApi<ResultsResponse>(
+    `/events/${slug}/results${query ? `?${query}` : ''}`,
+    signal,
+  );
 }
 
 // ── Gallery ───────────────────────────────────────────────────────
@@ -143,9 +152,9 @@ export interface GalleryResponse {
   events: string[];
 }
 
-export async function getGallery(eventSlug?: string): Promise<GalleryResponse> {
+export function getGallery(eventSlug?: string, signal?: AbortSignal): Promise<GalleryResponse> {
   const qs = eventSlug && eventSlug !== 'All' ? `?event=${encodeURIComponent(eventSlug)}` : '';
-  return fetchPublicApi<GalleryResponse>(`/gallery${qs}`);
+  return fetchPublicApi<GalleryResponse>(`/gallery${qs}`, signal);
 }
 
 // ── Platform stats ─────────────────────────────────────────────────
@@ -158,8 +167,8 @@ export interface PublicStats {
   foundedYear: number;
 }
 
-export async function getPublicStats(): Promise<PublicStats> {
-  return fetchPublicApi<PublicStats>('/stats');
+export function getPublicStats(signal?: AbortSignal): Promise<PublicStats> {
+  return fetchPublicApi<PublicStats>('/stats', signal);
 }
 
 // ── Contact ───────────────────────────────────────────────────────
@@ -173,8 +182,11 @@ export interface ContactFormPayload {
   message: string;
 }
 
-export async function submitContactForm(payload: ContactFormPayload): Promise<void> {
-  await fetchPublicApi<void>('/contact', {
+export async function submitContactForm(
+  payload: ContactFormPayload,
+  signal?: AbortSignal,
+): Promise<void> {
+  await fetchPublicApi<void>('/contact', signal, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
