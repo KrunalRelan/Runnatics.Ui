@@ -7,10 +7,22 @@
 // Strip the trailing /api so we can build /api/public/… paths ourselves.
 const BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL ?? '').replace(/\/api$/, '');
 
-interface ResponseBase<T> {
-  data: T;
-  success: boolean;
-  message?: string;
+// API envelope: { message: <payload>, totalCount?: number }
+// "message" holds the actual data (not "data", no "success" flag).
+interface ApiEnvelope<T> {
+  message: T;
+  totalCount?: number;
+}
+
+// Paged list shape returned inside message for list endpoints
+interface ApiPage<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
 }
 
 async function fetchPublicApi<T>(
@@ -28,17 +40,32 @@ async function fetchPublicApi<T>(
     throw new Error(`Public API error: ${res.status} ${res.statusText}`);
   }
 
-  const json: ResponseBase<T> = await res.json();
-  if (!json.success) throw new Error(json.message ?? 'Unknown API error');
-  return json.data;
+  const json: ApiEnvelope<T> = await res.json();
+  return json.message;
 }
 
 // ── Events ────────────────────────────────────────────────────────
 
+// ── Raw shapes from API ───────────────────────────────────────────
+
+interface ApiEvent {
+  slug?: string;
+  name: string;
+  city?: string;
+  state?: string;
+  eventDate: string;       // ISO string e.g. "2026-04-22T14:19:00"
+  description?: string;
+  raceCategories?: string[];
+  registrationOpen: boolean;
+  venue?: string;
+}
+
+// ── Normalised shapes used by components ──────────────────────────
+
 export interface PublicEvent {
   slug: string;
   name: string;
-  date: string;
+  date: string;            // human-readable e.g. "22 Apr 2026"
   city: string;
   categories: string[];
   registrationOpen: boolean;
@@ -71,12 +98,34 @@ export interface PublicEventDetail {
   registrationOpen: boolean;
 }
 
-export function getUpcomingEvents(signal?: AbortSignal): Promise<PublicEvent[]> {
-  return fetchPublicApi<PublicEvent[]>('/events?status=upcoming', signal);
+function formatEventDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return iso;
+  }
 }
 
-export function getPastEvents(signal?: AbortSignal): Promise<PublicEvent[]> {
-  return fetchPublicApi<PublicEvent[]>('/events?status=past', signal);
+function normaliseEvent(e: ApiEvent): PublicEvent {
+  return {
+    slug: e.slug ?? '',
+    name: e.name,
+    date: formatEventDate(e.eventDate),
+    city: e.city ?? e.state ?? '',
+    categories: e.raceCategories ?? [],
+    registrationOpen: e.registrationOpen,
+    isPast: new Date(e.eventDate) < new Date(),
+  };
+}
+
+export async function getUpcomingEvents(signal?: AbortSignal): Promise<PublicEvent[]> {
+  const page = await fetchPublicApi<ApiPage<ApiEvent>>('/events?status=upcoming', signal);
+  return page.items.map(normaliseEvent);
+}
+
+export async function getPastEvents(signal?: AbortSignal): Promise<PublicEvent[]> {
+  const page = await fetchPublicApi<ApiPage<ApiEvent>>('/events?status=past', signal);
+  return page.items.map(normaliseEvent);
 }
 
 export function getEventDetail(slug: string, signal?: AbortSignal): Promise<PublicEventDetail> {
