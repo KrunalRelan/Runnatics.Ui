@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { Suspense } from "react";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "./main/src/theme";
@@ -17,6 +17,19 @@ import { ProtectedRoute } from "./main/src/components/auth/ProtectedRoute";
 import ForbiddenPage from "./main/src/pages/ForbiddenPage";
 import { ALL_ROLES } from "./main/src/models/Auth";
 import { CircularProgress, Box } from "@mui/material";
+
+// Public site
+import PublicLayout from "./main/src/components/public/layout/PublicLayout";
+import HomePage from "./main/src/pages/public/HomePage";
+import AboutPage from "./main/src/pages/public/AboutPage";
+import ServicesPage from "./main/src/pages/public/ServicesPage";
+import EventsPage from "./main/src/pages/public/EventsPage";
+import EventDetailPage from "./main/src/pages/public/EventDetailPage";
+import ResultsPage from "./main/src/pages/public/ResultsPage";
+import GalleryPage from "./main/src/pages/public/GalleryPage";
+import ContactPage from "./main/src/pages/public/ContactPage";
+import PrivacyPage from "./main/src/pages/public/PrivacyPage";
+import NotFoundPage from "./main/src/pages/public/NotFoundPage";
 
 // Layout wrapper for auth pages (header only, no side nav)
 const AuthLayoutWrapper = () => {
@@ -48,6 +61,21 @@ function App() {
         <Toaster position="bottom-right" toastOptions={{ duration: 4000 }} />
         <BrowserRouter>
           <Routes>
+            {/* ── Public site ─────────────────────────────────────── */}
+            <Route element={<PublicLayout />}>
+              <Route index element={<HomePage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/services" element={<ServicesPage />} />
+              <Route path="/events" element={<EventsPage />} />
+              <Route path="/events/:slug" element={<EventDetailPage />} />
+              <Route path="/events/:slug/results" element={<ResultsPage />} />
+              <Route path="/results" element={<ResultsPage />} />
+              <Route path="/gallery" element={<GalleryPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
+
             {/* Auth routes - WITH HEADER ONLY (no side navigation) */}
             <Route element={<AuthLayoutWrapper />}>
               <Route path="/login" element={<LoginPage />} />
@@ -55,9 +83,6 @@ function App() {
               <Route path="/contact-us" element={<ContactUsPage />} />
               <Route path="/forbidden" element={<ForbiddenPage />} />
             </Route>
-            
-            {/* Redirect root to login */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
 
             {/* Protected routes - WITH FULL DASHBOARD (header + side nav) */}
             <Route element={<DashboardLayoutWrapper />}>

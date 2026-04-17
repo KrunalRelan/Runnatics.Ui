@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /register
+Disallow: /dashboard
+Disallow: /events/events-dashboard
+Disallow: /events/events-create
+Disallow: /events/events-edit/
+Disallow: /events/event-details/
+Disallow: /rfid/
+Disallow: /devices/
+Disallow: /support/
+
+Sitemap: https://www.runnatics.com/sitemap.xml

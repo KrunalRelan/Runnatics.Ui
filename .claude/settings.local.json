@@ -9,7 +9,9 @@
       "Bash(cd:*)",
       "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
       "Bash(npx tsc:*)",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Bash(xargs grep *)",
+      "Bash(npm install *)"
     ],
     "deny": [],
     "ask": []
