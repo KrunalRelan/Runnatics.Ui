@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { BibMappingService } from '../../../services/BibMappingService';
 import { bibMappingKeys } from './useBibMapping';
+import { extractErrorMessage } from '../../../utils/errors';
 import type { SimulationResult, BulkSimulationRow } from './BibMapping.types';
 
 function generateEpc(): string {
@@ -78,8 +79,7 @@ export function useSimulator(raceId: string): UseSimulatorReturn {
           timestamp,
         };
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : 'Mapping failed';
+        const message = extractErrorMessage(err, 'Mapping failed');
         return {
           bibNumber,
           epc,

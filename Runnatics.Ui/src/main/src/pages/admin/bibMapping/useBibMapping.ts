@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { BibMappingService } from '../../../services/BibMappingService';
 import { useBibMappingHub } from '../../../hooks/useBibMappingHub';
+import { extractErrorMessage } from '../../../utils/errors';
 import type { BibMappingResponse, DeleteBibMappingParams } from '../../../models/bibMapping';
 import type { ConnectionStatus } from './BibMapping.types';
 
@@ -58,8 +59,8 @@ export function useBibMapping(raceId: string): UseBibMappingReturn {
       setPendingEpc(null);
       toast.success('BIB mapping saved');
     },
-    onError: () => {
-      toast.error('Failed to save mapping');
+    onError: (err: unknown) => {
+      toast.error(extractErrorMessage(err, 'Failed to save mapping'));
     },
   });
 
@@ -70,8 +71,8 @@ export function useBibMapping(raceId: string): UseBibMappingReturn {
       queryClient.invalidateQueries({ queryKey: bibMappingKeys.byRace(raceId) });
       toast.success('Mapping deleted');
     },
-    onError: () => {
-      toast.error('Failed to delete mapping');
+    onError: (err: unknown) => {
+      toast.error(extractErrorMessage(err, 'Failed to delete mapping'));
     },
   });
 

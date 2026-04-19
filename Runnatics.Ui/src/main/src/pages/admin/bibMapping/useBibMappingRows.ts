@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { BibMappingService } from '../../../services/BibMappingService';
 import { ParticipantService } from '../../../services/ParticipantService';
+import { extractErrorMessage } from '../../../utils/errors';
 import type { BibMappingResponse } from '../../../models/bibMapping';
 import type {
   DuplicateInfo,
@@ -340,8 +341,8 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
       } catch (err: any) {
         // Server may report a 409 conflict if client data was stale.
         const statusCode = err?.response?.status;
-        const serverMessage: string | undefined =
-          err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message;
+        // Always resolve to a string — the raw { code, message } object would crash React.
+        const serverMessage = extractErrorMessage(err, 'Failed to save mapping');
 
         if (statusCode === 409) {
           // Refetch mappings so we can surface the existing binding.
@@ -380,15 +381,14 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
           }
         }
 
-        const message = serverMessage || 'Failed to save mapping';
-        toast.error(message);
+        toast.error(serverMessage);
         setRowOverrides((prev) => ({
           ...prev,
           [participantId]: {
             ...(prev[participantId] ?? {}),
             pendingEpc: epc,
             status: 'error',
-            errorMessage: message,
+            errorMessage: serverMessage,
           },
         }));
         flashError(participantId);
@@ -446,8 +446,8 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
         recordSuccess(info.newBib, info.newParticipantId);
         const nextId = nextUnmappedId(info.newParticipantId);
         return { ok: true, nextId: nextId ?? undefined };
-      } catch (err: any) {
-        const message: string = err?.response?.data?.message ?? err?.message ?? 'Override failed';
+      } catch (err: unknown) {
+        const message = extractErrorMessage(err, 'Override failed');
         toast.error(message);
         await queryClient.invalidateQueries({ queryKey: bibMappingKeys.byRace(raceId) });
         setRowOverrides((prev) => ({
@@ -479,8 +479,8 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
         await queryClient.invalidateQueries({ queryKey: bibMappingKeys.byRace(raceId) });
         toast.success(`Cleared mapping for BIB #${row.bibNumber}`);
         return true;
-      } catch (err: any) {
-        const message: string = err?.response?.data?.message ?? err?.message ?? 'Failed to clear mapping';
+      } catch (err: unknown) {
+        const message = extractErrorMessage(err, 'Failed to clear mapping');
         toast.error(message);
         return false;
       }

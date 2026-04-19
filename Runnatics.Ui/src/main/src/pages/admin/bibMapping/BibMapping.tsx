@@ -51,6 +51,13 @@ import DuplicateEpcDialog from './DuplicateEpcDialog';
 import ClearMappingDialog from './ClearMappingDialog';
 import SessionFooter from './SessionFooter';
 import { formatRelative } from './relativeTime';
+import { extractErrorMessage } from '../../../utils/errors';
+
+// Hard guard against any future code path that leaks a raw error object into
+// state. React crashes with "Objects are not valid as a React child" (minified
+// #31) if an object shows up in a text slot, so coerce to string at render time.
+const asText = (v: unknown, fallback = ''): string =>
+  typeof v === 'string' ? v : v == null ? fallback : extractErrorMessage(v, fallback);
 
 const SOUND_STORAGE_KEY = 'bibMapping.soundEnabled';
 
@@ -387,7 +394,7 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
         )}
 
         {loadError && !isLoading && (
-          <Alert severity="error" sx={{ m: 2 }}>{loadError}</Alert>
+          <Alert severity="error" sx={{ m: 2 }}>{asText(loadError, 'Failed to load mappings')}</Alert>
         )}
 
         {!isLoading && !loadError && rows.length === 0 && (
@@ -529,7 +536,7 @@ const Row: React.FC<RowProps> = ({
           spellCheck={false}
           placeholder={isMapped ? '' : `Scan chip or type ${EPC_MIN_LEN}–${EPC_MAX_LEN} hex chars`}
           error={isError}
-          helperText={isError ? row.errorMessage : ' '}
+          helperText={isError ? asText(row.errorMessage, 'Error') : ' '}
           slotProps={{
             htmlInput: {
               style: { fontFamily: 'monospace', letterSpacing: 0.5 },
@@ -605,7 +612,7 @@ const StatusCell: React.FC<{ row: MappingRow; isFocused: boolean; justMapped: bo
 
   if (row.status === 'error') {
     return (
-      <Tooltip title={row.errorMessage ?? 'Error'}>
+      <Tooltip title={asText(row.errorMessage, 'Error')}>
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, color: '#ef4444' }}>
           <AlertCircle size={18} />
           <Typography variant="caption" color="error">Error</Typography>
