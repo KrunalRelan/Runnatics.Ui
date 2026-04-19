@@ -21,7 +21,7 @@ import { EventService } from "@/main/src/services/EventService";
 import { CreateRaceRequest } from "@/main/src/models/races/CreateRaceRequest";
 import { LeaderBoardSettings } from "@/main/src/models";
 import { LeaderboardSettingsComponent } from "../shared/LeaderboardSettings";
-import { convertLocalToUTC, convertUTCToLocal } from "@/main/src/utils/dateTimeUtils";
+import { inputPartsToUtc, utcToInputDateTime } from "@/main/src/utils/dateTime";
 
 interface FormErrors {
   [key: string]: string;
@@ -54,8 +54,6 @@ export const EditRace: React.FC = () => {
   // Toggle for overriding leaderboard settings at race level
   const [overrideLeaderboardSettings, setOverrideLeaderboardSettings] = useState(false);
 
-  // Store event timezone for race date conversions (races inherit event timezone)
-  const [eventTimeZone, setEventTimeZone] = useState<string>("Asia/Kolkata");
 
   // Leaderboard settings state
   const [leaderBoardSettings, setLeaderBoardSettings] = useState<LeaderBoardSettings>({
@@ -110,18 +108,16 @@ export const EditRace: React.FC = () => {
 
         setLoading(true);
         
-        // Fetch event timezone first
-        const eventResponse = await EventService.getEventById(eventId);
-        const eventData = eventResponse.message || eventResponse;
-        const timeZone = eventData?.timeZone || "Asia/Kolkata";
-        setEventTimeZone(timeZone);
+        // The event record is fetched only to validate the event exists; race
+        // times in this UI are always interpreted in IST.
+        await EventService.getEventById(eventId);
 
         const response = await RaceService.getRaceById(eventId, raceId);
         const raceData = response.message;
         if (raceData) {
-          // Convert UTC race times to local time for display
-          const startTimeLocal = raceData.startTime ? convertUTCToLocal(raceData.startTime.toString(), timeZone, "YYYY-MM-DDTHH:mm:ss") : "";
-          const endTimeLocal = raceData.endTime ? convertUTCToLocal(raceData.endTime.toString(), timeZone, "YYYY-MM-DDTHH:mm:ss") : "";
+          // Convert UTC race times to IST wall-clock for the split pickers.
+          const startTimeLocal = raceData.startTime ? utcToInputDateTime(raceData.startTime.toString()) : "";
+          const endTimeLocal = raceData.endTime ? utcToInputDateTime(raceData.endTime.toString()) : "";
 
           // Split into date and time parts for separate inputs
           const [sDate, sTime] = startTimeLocal ? startTimeLocal.split("T") : ["", ""];
@@ -326,11 +322,9 @@ export const EditRace: React.FC = () => {
     }
     setIsSubmitting(true);
     try {
-      // Combine split date/time parts and convert to UTC
-      const startTimeCombined = getCombinedDateTime(startDatePart, startTimePart);
-      const endTimeCombined = getCombinedDateTime(endDatePart, endTimePart);
-      const startTimeUTC = convertLocalToUTC(startTimeCombined, eventTimeZone);
-      const endTimeUTC = convertLocalToUTC(endTimeCombined, eventTimeZone);
+      // Treat the split date/time parts as IST wall-clock; convert to UTC for the API.
+      const startTimeUTC = inputPartsToUtc(startDatePart, startTimePart) ?? "";
+      const endTimeUTC = inputPartsToUtc(endDatePart, endTimePart) ?? "";
 
       const requestPayload: CreateRaceRequest = {
         title: formData.title,

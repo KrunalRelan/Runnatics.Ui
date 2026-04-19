@@ -22,7 +22,7 @@ import { Event } from "../../../models/Event";
 import { CreateRaceRequest } from "@/main/src/models/races/CreateRaceRequest";
 import { LeaderBoardSettings } from "@/main/src/models";
 import { LeaderboardSettingsComponent } from "../shared/LeaderboardSettings";
-import { convertLocalToUTC, convertUTCToLocal } from "@/main/src/utils/dateTimeUtils";
+import { inputDateTimeToUtc, utcToInputDate, utcToInputDateTime } from "@/main/src/utils/dateTime";
 import dayjs from "dayjs";
 
 interface FormErrors {
@@ -121,10 +121,8 @@ export const AddRace: React.FC = () => {
 
         // Set default date from event date (if available)
         if (eventData?.eventDate) {
-          const timeZone = eventData.timeZone || "Asia/Kolkata";
-          
-          // Convert UTC event date to local time
-          const eventDateLocal = convertUTCToLocal(String(eventData.eventDate), timeZone, "YYYY-MM-DDTHH:mm:ss");
+          // Convert UTC event date to IST wall-clock for the picker.
+          const eventDateLocal = utcToInputDateTime(eventData.eventDate);
 
           // Parse the local date string
           const eventDateTime = dayjs(eventDateLocal);
@@ -262,10 +260,9 @@ export const AddRace: React.FC = () => {
 
     // Validate race start is on or after the event date
     if (formData.startTime && event?.eventDate) {
-      const timeZone = event.timeZone || "Asia/Kolkata";
-      const eventDateLocal = convertUTCToLocal(String(event.eventDate), timeZone);
-      if (eventDateLocal && formData.startTime < eventDateLocal.slice(0, 10)) {
-        newErrors.startTime = `Race start date cannot be before the event date (${eventDateLocal.slice(0, 10)})`;
+      const eventDateLocal = utcToInputDate(event.eventDate);
+      if (eventDateLocal && formData.startTime.slice(0, 10) < eventDateLocal) {
+        newErrors.startTime = `Race start date cannot be before the event date (${eventDateLocal})`;
       }
     }
 
@@ -288,10 +285,9 @@ export const AddRace: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Convert local race times to UTC before sending to API
-      const timeZone = event?.timeZone || "Asia/Kolkata";
-      const startTimeUTC = convertLocalToUTC(formData.startTime, timeZone);
-      const endTimeUTC = convertLocalToUTC(formData.endTime, timeZone);
+      // Treat race times as IST wall-clock and convert to UTC for the API.
+      const startTimeUTC = inputDateTimeToUtc(formData.startTime) ?? "";
+      const endTimeUTC = inputDateTimeToUtc(formData.endTime) ?? "";
 
       // Create the request payload
       const requestPayload: CreateRaceRequest = {

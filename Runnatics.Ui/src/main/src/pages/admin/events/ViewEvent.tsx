@@ -31,7 +31,7 @@ import {
   SearchCriteria,
   deafaultSearchCriteria,
 } from "@/main/src/models/SearchCriteria";
-import { formatDateTimeInTimeZone } from "@/main/src/utils/dateTimeUtils";
+import { formatDateTime } from "@/main/src/utils/dateTime";
 
 const ViewEvent: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
@@ -152,22 +152,10 @@ const ViewEvent: React.FC = () => {
     setSearchCriteria(criteria);
   };
 
-  const formatDate = (date: Date | string | undefined | null, timeZone: string = "Asia/Kolkata") => {
+  // Event detail shows the full date + time, rendered in IST with an " IST" suffix.
+  const formatDate = (date: Date | string | undefined | null) => {
     if (!date) return "N/A";
-    // Use timezone-aware formatting if date is a string (UTC from API)
-    if (typeof date === "string") {
-      return formatDateTimeInTimeZone(date, timeZone, "MMMM DD, YYYY HH:mm");
-    }
-    // Fallback for Date objects
-    if (isNaN(date.getTime())) return "Invalid Date";
-    return date.toLocaleString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
+    return formatDateTime(date, "DD MMM YYYY, HH:mm");
   };
 
   if (loading) {
@@ -299,7 +287,7 @@ const ViewEvent: React.FC = () => {
                       Event Date
                     </Typography>
                     <Typography variant="body1" sx={{ mt: 0.5 }}>
-                      {formatDate(event.eventDate, event?.timeZone || "Asia/Kolkata")}
+                      {formatDate(event.eventDate)}
                     </Typography>
                   </Box>
                 </Stack>

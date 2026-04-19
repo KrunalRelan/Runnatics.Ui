@@ -41,7 +41,7 @@ import {
 } from "@/main/src/models";
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
 import { LeaderboardSettingsComponent } from "../shared/LeaderboardSettings";
-import { convertLocalToUTC } from "@/main/src/utils/dateTimeUtils";
+import { inputPartsToUtc } from "@/main/src/utils/dateTime";
 import PageContainer from "@/main/src/components/PageContainer";
 
 interface FormErrors {
@@ -447,12 +447,9 @@ export const CreateEvent: React.FC = () => {
       }
 
 
-      // Convert local datetime to UTC before sending to API
+      // Treat the form values as IST wall-clock and convert to UTC for the API.
       const timeZone = apiData.timeZone || "Asia/Kolkata";
-      const startDateCombined = startDatePart && startTimePart
-        ? `${startDatePart}T${startTimePart}`
-        : startDatePart;
-      const eventDateUTC = convertLocalToUTC(startDateCombined, timeZone);
+      const eventDateUTC = inputPartsToUtc(startDatePart, startTimePart) ?? "";
 
       const requestPayload = {
         eventOrganizerId: eventOrganizerIdForApi,

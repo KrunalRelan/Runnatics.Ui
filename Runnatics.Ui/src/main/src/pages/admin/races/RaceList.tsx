@@ -28,36 +28,24 @@ import { Race } from "@/main/src/models/races/Race";
 import { RaceService } from "@/main/src/services/RaceService";
 import DataGrid from "@/main/src/components/DataGrid";
 import { SearchCriteria } from "@/main/src/models/SearchCriteria";
-import { formatDateTimeInTimeZone } from "@/main/src/utils/dateTimeUtils";
+import { formatDateTime as formatDateTimeIst } from "@/main/src/utils/dateTime";
 
 interface RaceListProps {
   races: Race[];
   searchCriteria: SearchCriteria;
   totalCount: number; // ✅ Changed from totalRecords and totalPages
   loading?: boolean;
-  eventTimeZone?: string; // Optional timezone for formatting race times
+  /** @deprecated Race times are always rendered in IST. Prop kept for callers that still pass it. */
+  eventTimeZone?: string;
   onSearchCriteriaChange: (criteria: SearchCriteria) => void;
   onEdit?: (raceId: string) => void;
   onDelete?: (raceId: string) => void;
 }
 
 
-function formatDateTime(dateStr: string, timeZone: string = "Asia/Kolkata") {
+function formatDateTime(dateStr: string) {
   if (!dateStr) return "N/A";
-  // Use timezone-aware formatting if timezone is provided
-  if (timeZone) {
-    return formatDateTimeInTimeZone(dateStr, timeZone, "MMM DD, YYYY HH:mm");
-  }
-  // Fallback to basic date formatting
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "Invalid Date";
-  return date.toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTimeIst(dateStr, "DD MMM YYYY, HH:mm");
 }
 
 export const RaceList: React.FC<RaceListProps> = ({
@@ -65,7 +53,6 @@ export const RaceList: React.FC<RaceListProps> = ({
   searchCriteria,
   totalCount, // ✅ Changed
   loading = false,
-  eventTimeZone = "Asia/Kolkata", // Default to IST if not provided
   onSearchCriteriaChange,
   onEdit,
   onDelete,
@@ -219,11 +206,11 @@ export const RaceList: React.FC<RaceListProps> = ({
         }}
       >
         <Typography variant="body2">
-          {formatDateTime(props.data.startTime, eventTimeZone)}
+          {formatDateTime(props.data.startTime)}
         </Typography>
       </Box>
     );
-  }, [eventTimeZone]);
+  }, []);
 
   // End DateTime Cell Renderer
   const EndDateTimeCellRenderer = useCallback((props: any) => {
@@ -236,11 +223,11 @@ export const RaceList: React.FC<RaceListProps> = ({
         }}
       >
         <Typography variant="body2">
-          {formatDateTime(props.data.endTime, eventTimeZone)}
+          {formatDateTime(props.data.endTime)}
         </Typography>
       </Box>
     );
-  }, [eventTimeZone]);
+  }, []);
 
   // Actions Cell Renderer
   const ActionsCellRenderer = useCallback(

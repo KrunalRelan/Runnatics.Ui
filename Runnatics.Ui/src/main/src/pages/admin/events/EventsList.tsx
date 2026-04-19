@@ -55,7 +55,7 @@ import { EventStatus } from "../../../models/EventStatus";
 import { EventSearchRequest } from "../../../models/EventSearchRequest";
 import { SortDirection } from "@/main/src/models/SortDirection";
 import DataGrid from "@/main/src/components/DataGrid";
-import { formatDateTimeInTimeZone } from "@/main/src/utils/dateTimeUtils";
+import { formatDate as formatDateIst } from "@/main/src/utils/dateTime";
 
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -440,22 +440,10 @@ const EventsList: React.FC = () => {
     validateDateRange(startDate, value);
   };
 
-  const formatDate = (date: Date | string | undefined | null, timeZone?: string) => {
+  // Event cards show a date-only value, rendered in IST. See dateTime.ts.
+  const formatDate = (date: Date | string | undefined | null) => {
     if (!date) return "N/A";
-    
-    // Use timezone-aware formatting if date is a string (UTC from API) and timezone provided
-    if (typeof date === "string" && timeZone) {
-      return formatDateTimeInTimeZone(date, timeZone, "MMM DD, YYYY");
-    }
-    
-    // Fallback for Date objects
-    const dateObj = typeof date === "string" ? new Date(date) : date;
-    if (isNaN(dateObj.getTime())) return "Invalid Date";
-    return dateObj.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return formatDateIst(date, "DD MMM YYYY");
   };
 
   // Actions cell renderer
@@ -577,7 +565,7 @@ const EventsList: React.FC = () => {
         flex: 1.5,
         sortable: true,
         filter: "agDateColumnFilter",
-        valueFormatter: (params) => formatDate(params.value, params.data?.timeZone || "Asia/Kolkata"),
+        valueFormatter: (params) => formatDate(params.value),
       },
       {
         field: "venueAddress",
@@ -647,7 +635,7 @@ const EventsList: React.FC = () => {
         flex: 1.5,
         sortable: true,
         filter: "agDateColumnFilter",
-        valueFormatter: (params) => formatDate(params.value, params.data?.timeZone || "Asia/Kolkata"),
+        valueFormatter: (params) => formatDate(params.value),
       },
       {
         field: "venueAddress",

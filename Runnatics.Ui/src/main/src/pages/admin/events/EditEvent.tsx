@@ -38,7 +38,7 @@ import {
 import { EventOrganizerService } from "@/main/src/services/EventOrganizerService";
 import { EventRequest } from "@/main/src/models/EventRequest";
 import { LeaderboardSettingsComponent } from "../shared/LeaderboardSettings";
-import { convertLocalToUTC, convertUTCToLocal } from "@/main/src/utils/dateTimeUtils";
+import { inputPartsToUtc, utcToInputDateTime } from "@/main/src/utils/dateTime";
 
 interface FormErrors {
   [key: string]: string;
@@ -225,12 +225,10 @@ export const EditEvent: React.FC = () => {
       }
     }
 
-    // ✅ Map event data - if value exists use it, otherwise empty string
-    // Convert UTC eventDate to local time and split into date/time parts
+    // Convert UTC eventDate from the API to IST wall-clock, then split
+    // into date/time parts for the native inputs.
     const timeZone = event.timeZone ?? "Asia/Kolkata";
-    const eventDateLocal = event.eventDate
-      ? convertUTCToLocal(event.eventDate, timeZone, "YYYY-MM-DDTHH:mm:ss")
-      : "";
+    const eventDateLocal = event.eventDate ? utcToInputDateTime(event.eventDate) : "";
     if (eventDateLocal) {
       const [datePart, timePart] = eventDateLocal.split("T");
       setEventDatePart(datePart || "");
@@ -462,12 +460,9 @@ export const EditEvent: React.FC = () => {
         throw new Error("Invalid organization selection");
       }
 
-      // Convert local datetime to UTC before sending to API
+      // Treat the form values as IST wall-clock and convert to UTC for the API.
       const timeZone = apiData.timeZone || "Asia/Kolkata";
-      const eventDateCombined = eventDatePart && eventTimePart
-        ? `${eventDatePart}T${eventTimePart}`
-        : eventDatePart;
-      const eventDateUTC = convertLocalToUTC(eventDateCombined, timeZone);
+      const eventDateUTC = inputPartsToUtc(eventDatePart, eventTimePart) ?? "";
 
       const requestPayload: EventRequest = {
         eventOrganizerId: eventOrganizerIdForApi,

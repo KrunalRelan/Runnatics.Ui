@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { useRaceHub, CheckpointCrossing } from '../../../hooks/useRaceHub';
 import { useRaceControl, ReaderStatus } from '../../../hooks/useRaceControl';
+import { formatTime } from '../../../utils/dateTime';
 
 interface RaceDashboardProps {
   raceId: string;
@@ -300,7 +301,7 @@ const ReaderCard: React.FC<{ reader: ReaderStatus }> = ({ reader }) => (
 const CrossingRow: React.FC<{ crossing: CheckpointCrossing }> = ({
   crossing,
 }) => {
-  const time = new Date(crossing.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const time = formatTime(crossing.timestamp);
 
   return (
     <div
