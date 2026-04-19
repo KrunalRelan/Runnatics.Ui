@@ -8,13 +8,13 @@ import BibMapping from './BibMapping';
  * and passes it to the BibMapping component.
  */
 const BibMappingPage: React.FC = () => {
-  const { raceId } = useParams<{ eventId: string; raceId: string }>();
+  const { eventId, raceId } = useParams<{ eventId: string; raceId: string }>();
 
-  if (!raceId) {
-    return <Alert severity="error">Race ID is required</Alert>;
+  if (!eventId || !raceId) {
+    return <Alert severity="error">Event and race IDs are required</Alert>;
   }
 
-  return <BibMapping raceId={raceId} />;
+  return <BibMapping eventId={eventId} raceId={raceId} />;
 };
 
 export default BibMappingPage;

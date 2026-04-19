@@ -212,7 +212,7 @@ const ViewRaces: React.FC = () => {
       case 7:
         return <Leaderboard eventId={eventId} raceId={selectedRaceId} />;
       case 8:
-        return <BibMapping raceId={selectedRaceId} />;
+        return <BibMapping eventId={eventId} raceId={selectedRaceId} />;
       default:
         return null;
     }
