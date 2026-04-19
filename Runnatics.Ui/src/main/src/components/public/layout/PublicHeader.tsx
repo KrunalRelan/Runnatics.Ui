@@ -5,12 +5,10 @@ import RacetikLogo from '../../RacetikLogo';
 
 const navLinks = [
   { label: 'Home', to: '/' },
-  { label: 'About', to: '/about' },
+  { label: 'About Us', to: '/about' },
   { label: 'Services', to: '/services' },
-  { label: 'Events', to: '/events' },
-  { label: 'Results', to: '/results' },
-  { label: 'Gallery', to: '/gallery' },
-  { label: 'Contact', to: '/contact' },
+  { label: 'Contact Us', to: '/contact' },
+  { label: 'Result', to: '/results' },
 ];
 
 function PublicHeader() {

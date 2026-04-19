@@ -1,4 +1,4 @@
-import { Timer, ClipboardList, FileCheck, Tag, Camera, LifeBuoy, Check } from 'lucide-react';
+import { Timer, QrCode, ClipboardList, Wrench, Camera, Check } from 'lucide-react';
 import { Section, Container, Heading, Button } from '../../components/public/ui';
 import CTABanner from '../../components/public/shared/CTABanner';
 import type { ElementType } from 'react';
@@ -13,34 +13,29 @@ interface ServiceSection {
 
 const services: ServiceSection[] = [
   {
-    icon: Timer, title: 'RFID Race Timing', reverse: false,
-    desc: 'Precision chip-based timing accurate to 0.001 seconds. Our RFID systems handle any volume — from 100-person fun runs to 50,000-participant city marathons.',
-    features: ['Ultra-wideband chip detection', 'Gun time & net time', 'Real-time leaderboard updates'],
+    icon: Timer, title: 'RFID Chip Timing', reverse: false,
+    desc: 'Precision RFID chip-based timing for races of all sizes. Real-time results with checkpoint splits, gun time, and chip time accuracy.',
+    features: ['Chip-level accuracy', 'Checkpoint splits & live tracking', 'Gun time and net (chip) time'],
   },
   {
-    icon: ClipboardList, title: 'Event Registration', reverse: true,
-    desc: 'End-to-end online registration platform with payment processing, waitlist management, and participant self-service portal.',
-    features: ['Custom registration forms', 'Razorpay & Stripe payment', 'Group & corporate registrations'],
+    icon: QrCode, title: 'BIB Distribution Software and Management', reverse: true,
+    desc: 'Complete BIB management solution including design, printing, distribution tracking, and on-site collection management.',
+    features: ['BIB design & printing', 'Distribution tracking dashboard', 'On-site collection management'],
   },
   {
-    icon: FileCheck, title: 'Results & Certificates', reverse: false,
-    desc: "Instant results publication and personalised digital finisher certificates delivered to every participant's inbox within minutes of crossing the line.",
-    features: ['Searchable results by bib or name', 'Custom certificate templates', 'QR verification'],
+    icon: ClipboardList, title: 'Event Registration Platform', reverse: false,
+    desc: 'Online event registration portal for participants with payment processing, category selection, and automated confirmation.',
+    features: ['Secure payment processing', 'Category & wave selection', 'Automated email confirmations'],
   },
   {
-    icon: Tag, title: 'Bib & Medal Design', reverse: true,
-    desc: 'Premium bib printing with embedded RFID chips, sponsor branding, and race information. Custom finisher medals that participants treasure for years.',
-    features: ['Embedded chip bibs', 'Full-colour custom design', 'Bulk medal fulfilment'],
+    icon: Wrench, title: 'Event Operations & Equipment Leasing Services', reverse: true,
+    desc: 'Full event production support including barricading, cones, event production equipment, medals, and t-shirts. Everything you need for race day.',
+    features: ['Barricading, cones & signage', 'Medals, t-shirts & bib collection kits', 'On-ground production support'],
   },
   {
-    icon: Camera, title: 'Photography & Video', reverse: false,
-    desc: 'Professional race photography at key course checkpoints with AI-powered face recognition to deliver personalised photo galleries to every finisher.',
-    features: ['Checkpoint & finish line coverage', 'Face-recognition delivery', 'Watermarked previews + hi-res downloads'],
-  },
-  {
-    icon: LifeBuoy, title: 'Consulting & Support', reverse: true,
-    desc: 'Strategic event consulting for first-time organisers and experienced race directors. From course mapping to post-race analytics.',
-    features: ['Course design & permits', 'Volunteer & logistics planning', 'Post-event ROI reporting'],
+    icon: Camera, title: 'Race Day Photo Tagging', reverse: false,
+    desc: 'Automated race day photography with BIB-based photo tagging. Participants can find their photos instantly using their BIB number.',
+    features: ['BIB-based photo tagging', 'Checkpoint & finish line coverage', 'Instant personalised galleries'],
   },
 ];
 
@@ -81,7 +76,7 @@ function ServicesPage() {
                     </li>
                   ))}
                 </ul>
-                <Button variant="primary" href="/contact">Get a Quote</Button>
+                <Button variant="primary" href="/contact">Get Started</Button>
               </div>
               {/* Placeholder image */}
               <div style={{ direction: 'ltr', aspectRatio: '4/3', backgroundColor: '#E5E7EB', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

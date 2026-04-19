@@ -17,23 +17,31 @@ function OurStory() {
           }}
         >
           <div>
-            <Heading level={2}>Our Story</Heading>
+            <Heading level={2}>Who We Are</Heading>
             <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)', lineHeight: 1.75, marginTop: '1.25rem' }}>
-              Racetik was born in 2013 when a group of avid runners grew frustrated with
-              inaccurate finisher times at community races in Delhi. Combining a passion for
-              running with a background in embedded systems, the founding team built India's
-              first affordable RFID-based race timing solution from scratch.
+              Racetik Timing Solution is committed to delivering precise, reliable, and
+              end-to-end event timing and management services. With a focus on innovation,
+              scalability, and client collaboration, we ensure seamless execution and a
+              superior experience for every event—making us a trusted partner for
+              organizers seeking accuracy, efficiency, and excellence.
             </p>
-            <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)', lineHeight: 1.75, marginTop: '1rem' }}>
-              Over the next decade, Racetik expanded from local park runs to national
-              marathons. Today we power over 1,000 events annually — from intimate 500-person
-              charity 5Ks to 50,000-participant city marathons — across 50+ cities in India
-              and neighbouring countries.
-            </p>
-            <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)', lineHeight: 1.75, marginTop: '1rem' }}>
-              Our mission remains unchanged: give every runner an accurate time, a beautiful
-              digital certificate, and the moment of pride they deserve at the finish line.
-            </p>
+
+            <div style={{ marginTop: '2.5rem' }}>
+              <Heading level={3}>Our Mission</Heading>
+              <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)', lineHeight: 1.75, marginTop: '1rem' }}>
+                Our mission is to provide every organizer and athlete with an{' '}
+                <strong style={{ color: 'var(--color-accent)', fontWeight: 700 }}>
+                  uncompromising record
+                </strong>{' '}
+                of performance. By combining deep industry expertise with collaborative
+                partnerships, we empower event organizers to deliver seamless, world-class
+                experiences. We believe in{' '}
+                <strong style={{ color: 'var(--color-accent)', fontWeight: 700 }}>
+                  shared success
+                </strong>
+                : as the events we support reach new heights, we grow alongside them.
+              </p>
+            </div>
           </div>
 
           <div

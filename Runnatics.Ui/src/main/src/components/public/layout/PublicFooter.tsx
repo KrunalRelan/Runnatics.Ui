@@ -1,20 +1,21 @@
 import { Link } from 'react-router-dom';
-import { Twitter, Instagram, Facebook, Mail, Phone, MapPin } from 'lucide-react';
+import { Twitter, Instagram, Facebook, Mail, MapPin } from 'lucide-react';
 import RacetikLogo from '../../RacetikLogo';
 
 const quickLinks = [
   { label: 'Home', to: '/' },
-  { label: 'About', to: '/about' },
-  { label: 'Events', to: '/events' },
-  { label: 'Results', to: '/results' },
-  { label: 'Contact', to: '/contact' },
+  { label: 'About Us', to: '/about' },
+  { label: 'Services', to: '/services' },
+  { label: 'Contact Us', to: '/contact' },
+  { label: 'Result', to: '/results' },
 ];
 
 const services = [
-  'Race Timing',
-  'Event Registration',
-  'Digital Certificates',
-  'Photography & Video',
+  'RFID Chip Timing',
+  'BIB Distribution & Management',
+  'Event Registration Platform',
+  'Event Operations & Equipment Leasing',
+  'Race Day Photo Tagging',
 ];
 
 function PublicFooter() {
@@ -138,9 +139,8 @@ function PublicFooter() {
               Contact
             </h4>
             {[
-              { icon: <Mail size={15} />, text: 'info@racetik.com' },
-              { icon: <Phone size={15} />, text: '+91 98765 43210' },
-              { icon: <MapPin size={15} />, text: 'New Delhi, India' },
+              { icon: <Mail size={15} />, text: 'support@racetik.com' },
+              { icon: <MapPin size={15} />, text: 'India' },
             ].map(({ icon, text }) => (
               <div
                 key={text}

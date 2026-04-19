@@ -49,7 +49,7 @@ function UpcomingRaces() {
     <Section tone="light">
       <Container>
         <div ref={ref} style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <Heading level={2} style={{ display: 'inline-block' }}>Upcoming Races</Heading>
+          <Heading level={2} style={{ display: 'inline-block' }}>Upcoming Events</Heading>
           <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)', marginTop: '1rem' }}>
             India's biggest running events, powered by Racetik.
           </p>

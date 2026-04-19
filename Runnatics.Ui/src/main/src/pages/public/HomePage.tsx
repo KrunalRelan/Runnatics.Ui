@@ -1,4 +1,5 @@
 import Hero from '../../components/public/home/Hero';
+import PastEventResults from '../../components/public/home/PastEventResults';
 import PlatformOverview from '../../components/public/home/PlatformOverview';
 import UpcomingRaces from '../../components/public/home/UpcomingRaces';
 import ParticipantInsights from '../../components/public/home/ParticipantInsights';
@@ -10,6 +11,7 @@ function HomePage() {
   return (
     <>
       <Hero />
+      <PastEventResults />
       <PlatformOverview />
       <UpcomingRaces />
       <ParticipantInsights />

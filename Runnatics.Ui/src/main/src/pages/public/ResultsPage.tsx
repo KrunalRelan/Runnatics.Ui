@@ -4,18 +4,59 @@ import { Section, Container, Heading } from '../../components/public/ui';
 import ResultFilters from '../../components/public/results/ResultFilters';
 import ResultsTable from '../../components/public/results/ResultsTable';
 import Pagination from '../../components/public/shared/Pagination';
-import { ErrorState, TableSkeleton } from '../../components/public/shared/ApiStates';
+import EventCard from '../../components/public/events/EventCard';
+import {
+  CardGridSkeleton,
+  EmptyState,
+  ErrorState,
+  TableSkeleton,
+} from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
 import useDebounce from '../../hooks/useDebounce';
-import { getEventResults, getEventDetail } from '../../services/publicApi';
+import { getEventResults, getEventDetail, getPastEvents } from '../../services/publicApi';
 import type { ResultRow } from '../../services/publicApi';
 
 export type { ResultRow };
 
 const PAGE_SIZE = 20;
 
-function ResultsPage() {
-  const { slug } = useParams();
+function EventSelector() {
+  const { data: events, loading, error, refetch } = usePublicApi(
+    (signal) => getPastEvents(signal),
+    [],
+  );
+  const list = events ?? [];
+
+  return (
+    <>
+      <Section tone="dark" style={{ padding: 'clamp(4rem, 8vw, 6rem) 0' }}>
+        <Container>
+          <Heading level={1} style={{ color: '#fff' }}>Race Results</Heading>
+          <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.65)', marginTop: '0.75rem', fontSize: '1.125rem' }}>
+            Browse results from all past events. Search by event, name, or BIB number.
+          </p>
+        </Container>
+      </Section>
+
+      <Section tone="light">
+        <Container>
+          {loading && <CardGridSkeleton count={6} />}
+          {!loading && error && <ErrorState message={error} onRetry={refetch} />}
+          {!loading && !error && list.length === 0 && (
+            <EmptyState title="No past events yet" subtitle="Results from completed events will appear here." />
+          )}
+          {!loading && !error && list.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+              {list.map((ev) => <EventCard key={ev.slug} event={ev} />)}
+            </div>
+          )}
+        </Container>
+      </Section>
+    </>
+  );
+}
+
+function EventResults({ slug }: { slug: string }) {
   const [search, setSearch] = useState('');
   const [race, setRace] = useState('All');
   const [gender, setGender] = useState('All');
@@ -26,16 +67,15 @@ function ResultsPage() {
   const { data, loading, error, refetch } = usePublicApi(
     (signal) =>
       getEventResults(
-        slug ?? '',
+        slug,
         { race, gender, search: debouncedSearch, page, pageSize: PAGE_SIZE },
         signal,
       ),
     [slug, race, gender, debouncedSearch, page],
   );
 
-  // Fetch event detail for banner (best-effort — ignored if endpoint unavailable)
   const { data: eventDetail } = usePublicApi(
-    (signal) => slug ? getEventDetail(slug, signal) : Promise.resolve(null as any),
+    (signal) => getEventDetail(slug, signal),
     [slug],
   );
 
@@ -61,22 +101,18 @@ function ResultsPage() {
         }}
       >
         <Container>
-          {slug && (
-            <div style={{ marginBottom: '0.75rem' }}>
-              <Link
-                to={`/events/${slug}`}
-                style={{ fontFamily: 'var(--font-body)', fontSize: '0.9375rem', color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}
-              >
-                ← Back to Event
-              </Link>
-            </div>
-          )}
+          <div style={{ marginBottom: '0.75rem' }}>
+            <Link
+              to="/results"
+              style={{ fontFamily: 'var(--font-body)', fontSize: '0.9375rem', color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}
+            >
+              ← Back to Events
+            </Link>
+          </div>
           <Heading level={1} style={{ color: '#fff' }}>Race Results</Heading>
-          {slug && (
-            <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.6)', marginTop: '0.5rem', textTransform: 'capitalize' }}>
-              {slug.replace(/-/g, ' ')}
-            </p>
-          )}
+          <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.6)', marginTop: '0.5rem', textTransform: 'capitalize' }}>
+            {eventDetail?.name ?? slug.replace(/-/g, ' ')}
+          </p>
         </Container>
       </Section>
 
@@ -122,6 +158,11 @@ function ResultsPage() {
       </Section>
     </>
   );
+}
+
+function ResultsPage() {
+  const { slug } = useParams();
+  return slug ? <EventResults slug={slug} /> : <EventSelector />;
 }
 
 export default ResultsPage;

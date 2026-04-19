@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Phone, MapPin, Clock } from 'lucide-react';
+import { Mail, MapPin, Clock } from 'lucide-react';
 import { Section, Container, Heading } from '../../components/public/ui';
 import CTABanner from '../../components/public/shared/CTABanner';
 import { submitContactForm, type ContactFormPayload } from '../../services/publicApi';
@@ -127,7 +127,13 @@ function ContactPage() {
         <Container>
           <Heading level={1} style={{ color: '#fff' }}>Get in Touch</Heading>
           <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.65)', fontSize: '1.125rem', marginTop: '0.75rem' }}>
-            We'd love to hear from you. Let's create something great together.
+            For event enquiry, click below or email us at{' '}
+            <a
+              href="mailto:support@racetik.com"
+              style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 600 }}
+            >
+              support@racetik.com
+            </a>
           </p>
         </Container>
       </Section>
@@ -217,7 +223,7 @@ function ContactPage() {
                 onMouseEnter={(e) => { if (!submitting) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--color-accent-hover)'; }}
                 onMouseLeave={(e) => { if (!submitting) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--color-accent)'; }}
               >
-                {submitting ? 'Sending…' : 'Send Message'}
+                {submitting ? 'Sending…' : 'For event enquiry'}
               </button>
             </form>
 
@@ -225,18 +231,40 @@ function ContactPage() {
             <div>
               <Heading level={2} style={{ marginBottom: '1.5rem' }}>Contact Information</Heading>
               {[
-                { icon: <Mail size={20} color="var(--color-accent)" />, label: 'Email', value: 'info@racetik.com' },
-                { icon: <Phone size={20} color="var(--color-accent)" />, label: 'Phone', value: '+91 98765 43210' },
-                { icon: <MapPin size={20} color="var(--color-accent)" />, label: 'Address', value: 'Connaught Place, New Delhi 110001' },
-                { icon: <Clock size={20} color="var(--color-accent)" />, label: 'Hours', value: 'Mon–Fri, 9 AM – 6 PM IST' },
-              ].map(({ icon, label, value }) => (
+                {
+                  icon: <Mail size={20} color="var(--color-accent)" />,
+                  label: 'Email',
+                  value: 'support@racetik.com',
+                  href: 'mailto:support@racetik.com',
+                },
+                // TODO: Address pending from client — update when provided.
+                {
+                  icon: <MapPin size={20} color="var(--color-accent)" />,
+                  label: 'Address',
+                  value: 'Address coming soon',
+                },
+                {
+                  icon: <Clock size={20} color="var(--color-accent)" />,
+                  label: 'Hours',
+                  value: 'Mon–Fri, 9 AM – 6 PM IST',
+                },
+              ].map(({ icon, label, value, href }) => (
                 <div key={label} style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
                   <div style={{ width: '44px', height: '44px', flexShrink: 0, borderRadius: '10px', backgroundColor: 'rgba(232,93,42,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {icon}
                   </div>
                   <div>
                     <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
-                    <div style={{ fontFamily: 'var(--font-body)', fontWeight: 500, fontSize: '1rem', color: 'var(--color-text)', marginTop: '0.2rem' }}>{value}</div>
+                    {href ? (
+                      <a
+                        href={href}
+                        style={{ fontFamily: 'var(--font-body)', fontWeight: 500, fontSize: '1rem', color: 'var(--color-accent)', marginTop: '0.2rem', textDecoration: 'none', display: 'inline-block' }}
+                      >
+                        {value}
+                      </a>
+                    ) : (
+                      <div style={{ fontFamily: 'var(--font-body)', fontWeight: 500, fontSize: '1rem', color: 'var(--color-text)', marginTop: '0.2rem' }}>{value}</div>
+                    )}
                   </div>
                 </div>
               ))}
