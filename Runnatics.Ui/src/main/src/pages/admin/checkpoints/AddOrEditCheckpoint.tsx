@@ -292,6 +292,28 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                     isMandatory: formData.isMandatory,
                     distanceFromStart: formData.distanceFromStart,
                 });
+
+                // Auto-sync child checkpoints when editing a parent (primary) checkpoint
+                if (!checkpointToEdit.parentDeviceId?.trim() && checkpointToEdit.deviceName) {
+                    const originalDistance = Number(checkpointToEdit.distanceFromStart);
+                    const childCheckpoints = existingCheckpoints.filter(cp =>
+                        cp.id !== checkpointToEdit.id &&
+                        cp.parentDeviceName?.trim() === checkpointToEdit.deviceName?.trim() &&
+                        Math.abs(Number(cp.distanceFromStart) - originalDistance) < 0.001
+                    );
+                    for (const child of childCheckpoints) {
+                        const childDevice = devices.find(d => d.name === child.deviceName);
+                        const childDeviceId = childDevice ? String(childDevice.id) : child.deviceId;
+                        await CheckpointsService.updateCheckpoint(eventId, raceId, child.id, {
+                            name: child.name,
+                            deviceId: childDeviceId || undefined,
+                            parentDeviceId: formData.deviceId || undefined,
+                            isMandatory: formData.isMandatory,
+                            distanceFromStart: formData.distanceFromStart,
+                        });
+                    }
+                }
+
                 onClick(formData);
             } else {
                 // ADD MODE
@@ -343,9 +365,13 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
     // Determine if name is required based on parent checkpoint selection
     const isNameRequired = !formData.parentDeviceId || formData.parentDeviceId.trim() === "";
     
-    // Get available parent checkpoints — all existing checkpoints except the one being edited
+    // Get available parent checkpoints — only primary (non-child) checkpoints, excluding the one being edited
     const availableParentCheckpoints = existingCheckpoints.filter(cp => {
         if (checkpointToEdit && cp.id === checkpointToEdit.id) {
+            return false;
+        }
+        // Exclude child checkpoints (those that already have a parent device)
+        if (cp.parentDeviceId?.trim()) {
             return false;
         }
         return true;
