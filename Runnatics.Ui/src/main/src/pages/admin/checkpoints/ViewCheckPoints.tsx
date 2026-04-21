@@ -567,6 +567,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
             headerName: "Parent Device Name",
             flex: 1,
             minWidth: 120,
+            hide: true,
             sortable: true,
             filter: true,
             valueGetter: (params: any) =>
