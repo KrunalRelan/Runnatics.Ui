@@ -43,7 +43,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
         name: "",
         deviceId: "",
         parentDeviceId: "",
-        isMandatory: false,
+        isMandatory: true,
         distanceFromStart: 0,
     });
     const [devices, setDevices] = useState<Device[]>([]);
@@ -145,7 +145,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                 name: "",
                 deviceId: "",
                 parentDeviceId: "",
-                isMandatory: false,
+                isMandatory: true,
                 distanceFromStart: 0,
             });
             
@@ -216,7 +216,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
             name: "",
             deviceId: "",
             parentDeviceId: "",
-            isMandatory: false,
+            isMandatory: true,
             distanceFromStart: 0,
         });
         setSelectedParentCheckpoint(null);
