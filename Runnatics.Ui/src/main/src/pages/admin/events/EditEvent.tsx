@@ -186,43 +186,33 @@ export const EditEvent: React.FC = () => {
 
   // ✅ Populate form data from event object - use value if exists, otherwise keep blank
   const populateFormData = (event: Event, availableOrgs: EventOrganizer[]) => {
-    // Find matching organization
+    // Find matching organization — try by organizerId first, then by name
     let selectedOrgId = "";
 
-    if (event.tenantId) {
-      const matchingOrg = availableOrgs.find(
-        (org) => org.id === event.organizerId
-      );
+    const matchingOrg =
+      availableOrgs.find((org) => org.id === event.organizerId) ||
+      (event.eventOrganizerName
+        ? availableOrgs.find(
+            (org) =>
+              (org.name || org.organizerName || "").toLowerCase() ===
+              event.eventOrganizerName!.toLowerCase()
+          )
+        : undefined);
 
-      if (matchingOrg) {
-        selectedOrgId = matchingOrg.id;
-      } else {
-        const placeholderOrg: EventOrganizer = {
-          id: event.tenantId,
-          tenantId: event.tenantId,
-          name: event.eventOrganizerName || `Organization (${event.tenantId})`,
-          organizerName: event.eventOrganizerName || "",
-        };
-        availableOrgs.push(placeholderOrg);
-        setOrganizations([...availableOrgs]);
-        selectedOrgId = placeholderOrg.id;
-      }
+    if (matchingOrg) {
+      selectedOrgId = matchingOrg.id;
     } else if (event.organizerId) {
+      // No match in the list — add a placeholder so the dropdown shows the name,
+      // but always use event.organizerId (not tenantId) as the submitted value.
+      const placeholderOrg: EventOrganizer = {
+        id: event.organizerId,
+        tenantId: event.tenantId,
+        name: event.eventOrganizerName || `Organization (${event.organizerId})`,
+        organizerName: event.eventOrganizerName || "",
+      };
+      availableOrgs.push(placeholderOrg);
+      setOrganizations([...availableOrgs]);
       selectedOrgId = event.organizerId;
-      const orgExists = availableOrgs.some(
-        (org) => org.id === event.organizerId
-      );
-      if (!orgExists) {
-        const placeholderOrg: EventOrganizer = {
-          id: event.organizerId,
-          tenantId: event.organizerId,
-          name:
-            event.eventOrganizerName || `Organization (${event.organizerId})`,
-          organizerName: event.eventOrganizerName || "",
-        };
-        availableOrgs.push(placeholderOrg);
-        setOrganizations([...availableOrgs]);
-      }
     }
 
     // Convert UTC eventDate from the API to IST wall-clock, then split
