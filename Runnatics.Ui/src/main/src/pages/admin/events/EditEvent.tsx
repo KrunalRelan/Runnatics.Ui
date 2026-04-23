@@ -186,43 +186,33 @@ export const EditEvent: React.FC = () => {
 
   // ✅ Populate form data from event object - use value if exists, otherwise keep blank
   const populateFormData = (event: Event, availableOrgs: EventOrganizer[]) => {
-    // Find matching organization
+    // Find matching organization — try by organizerId first, then by name
     let selectedOrgId = "";
 
-    if (event.tenantId) {
-      const matchingOrg = availableOrgs.find(
-        (org) => org.id === event.organizerId
-      );
+    const matchingOrg =
+      availableOrgs.find((org) => org.id === event.organizerId) ||
+      (event.eventOrganizerName
+        ? availableOrgs.find(
+            (org) =>
+              (org.name || org.organizerName || "").toLowerCase() ===
+              event.eventOrganizerName!.toLowerCase()
+          )
+        : undefined);
 
-      if (matchingOrg) {
-        selectedOrgId = matchingOrg.id;
-      } else {
-        const placeholderOrg: EventOrganizer = {
-          id: event.tenantId,
-          tenantId: event.tenantId,
-          name: event.eventOrganizerName || `Organization (${event.tenantId})`,
-          organizerName: event.eventOrganizerName || "",
-        };
-        availableOrgs.push(placeholderOrg);
-        setOrganizations([...availableOrgs]);
-        selectedOrgId = placeholderOrg.id;
-      }
+    if (matchingOrg) {
+      selectedOrgId = matchingOrg.id;
     } else if (event.organizerId) {
+      // No match in the list — add a placeholder so the dropdown shows the name,
+      // but always use event.organizerId (not tenantId) as the submitted value.
+      const placeholderOrg: EventOrganizer = {
+        id: event.organizerId,
+        tenantId: event.tenantId,
+        name: event.eventOrganizerName || `Organization (${event.organizerId})`,
+        organizerName: event.eventOrganizerName || "",
+      };
+      availableOrgs.push(placeholderOrg);
+      setOrganizations([...availableOrgs]);
       selectedOrgId = event.organizerId;
-      const orgExists = availableOrgs.some(
-        (org) => org.id === event.organizerId
-      );
-      if (!orgExists) {
-        const placeholderOrg: EventOrganizer = {
-          id: event.organizerId,
-          tenantId: event.organizerId,
-          name:
-            event.eventOrganizerName || `Organization (${event.organizerId})`,
-          organizerName: event.eventOrganizerName || "",
-        };
-        availableOrgs.push(placeholderOrg);
-        setOrganizations([...availableOrgs]);
-      }
     }
 
     // Convert UTC eventDate from the API to IST wall-clock, then split
@@ -412,21 +402,9 @@ export const EditEvent: React.FC = () => {
     if (!eventTimePart) {
       newErrors.eventTime = "Event time is required";
     }
-    if (!(formData.venueName ?? "").trim()) {
-      newErrors.venueName = "Venue name is required";
-    }
-    if (!(formData.venueAddress ?? "").trim()) {
-      newErrors.venueAddress = "Venue address is required";
-    }
-    if (!(formData.city ?? "").trim()) {
-      newErrors.city = "City is required";
-    }
     // if (!(formData.state ?? "").trim()) {
     //   newErrors.state = "State is required";
     // }
-    if (!(formData.country ?? "").trim()) {
-      newErrors.country = "Country is required";
-    }
     if (!formData.timeZone) {
       newErrors.timeZone = "Time zone is required";
     }
@@ -823,7 +801,6 @@ export const EditEvent: React.FC = () => {
                   error={!!errors.venueName}
                   helperText={errors.venueName}
                   placeholder="Enter venue name"
-                  required
                 />
 
                 <TextField
@@ -835,7 +812,6 @@ export const EditEvent: React.FC = () => {
                   error={!!errors.venueAddress}
                   helperText={errors.venueAddress}
                   placeholder="Enter venue or starting location"
-                  required
                 />
 
                 <TextField
@@ -847,7 +823,6 @@ export const EditEvent: React.FC = () => {
                   error={!!errors.city}
                   helperText={errors.city}
                   placeholder="Enter city"
-                  required
                 />
 
                 <TextField
@@ -859,7 +834,6 @@ export const EditEvent: React.FC = () => {
                   error={!!errors.country}
                   helperText={errors.country}
                   placeholder="Enter country"
-                  required
                 />
               </Stack>
 
