@@ -111,59 +111,59 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
     }, [selectedRace]);
 
     /**
-     * Detect loop length by finding when the primary start devices reappear at a non-zero distance.
-     * e.g. If Box 01 is at 0 KM and again at 5 KM → loopLength = 5 KM.
-     * Falls back to GCD if no device repetition is detected (single-device tracks).
+     * Detect loop length by finding any primary (non-child) device that appears at
+     * two or more distinct distances. The smallest gap between consecutive appearances
+     * of the same device defines the loop length. The first appearance distance is the
+     * loop offset (where the loop section begins).
+     *
+     * Examples:
+     *  - Box01 @ 0 KM and 5 KM → loopOffset=0, loopLength=5
+     *  - Box19 @ 1 KM and 3 KM → loopOffset=1, loopLength=2 (1 KM straight, then 2 KM loops)
      */
     const loopParams = useMemo(() => {
         if (!raceDistance || localCheckpoints.length === 0) {
-            return { loopLength: 0, maxNewLoops: 0, currentLoopCount: 0, maxCheckpointDistance: 0 };
+            return { loopLength: 0, loopOffset: 0, maxNewLoops: 0, currentLoopCount: 0, maxCheckpointDistance: 0 };
         }
 
         const allDistances = localCheckpoints.map(cp => Number(cp.distanceFromStart));
         const maxCheckpointDistance = Math.max(...allDistances);
 
-        // Primary start devices: no parentDeviceId, at distance 0
-        const startDeviceIds = new Set(
-            localCheckpoints
-                .filter(cp => Number(cp.distanceFromStart) === 0 && !cp.parentDeviceId?.trim())
-                .map(cp => cp.deviceId)
-                .filter(Boolean)
-        );
+        // Collect distinct distances per primary (non-child) device
+        const deviceDistances = new Map<string, number[]>();
+        for (const cp of localCheckpoints) {
+            if (!cp.deviceId || cp.parentDeviceId?.trim()) continue;
+            const dist = Number(cp.distanceFromStart);
+            const existing = deviceDistances.get(cp.deviceId) ?? [];
+            if (!existing.some(d => Math.abs(d - dist) < 0.001)) {
+                deviceDistances.set(cp.deviceId, [...existing, dist]);
+            }
+        }
 
+        // Loop length = smallest gap between two appearances of the same device
         let loopLength = 0;
-
-        if (startDeviceIds.size > 0) {
-            // Loop ends where a start device reappears at a non-zero distance
-            const reappearDistances = localCheckpoints
-                .filter(cp => Number(cp.distanceFromStart) > 0 && startDeviceIds.has(cp.deviceId))
-                .map(cp => Number(cp.distanceFromStart));
-            if (reappearDistances.length > 0) {
-                loopLength = Math.min(...reappearDistances);
+        let loopOffset = 0;
+        for (const [, distances] of deviceDistances) {
+            if (distances.length < 2) continue;
+            distances.sort((a, b) => a - b);
+            const gap = distances[1] - distances[0];
+            if (gap <= 0) continue;
+            if (loopLength === 0 || gap < loopLength) {
+                loopLength = gap;
+                loopOffset = distances[0];
             }
         }
 
-        // Fallback: GCD of non-zero distances (single-device or no repetition yet)
         if (loopLength <= 0) {
-            const nonZeroDistances = [...new Set(allDistances.filter(d => d > 0))].sort((a, b) => a - b);
-            if (nonZeroDistances.length === 0) {
-                return { loopLength: 0, maxNewLoops: 0, currentLoopCount: 0, maxCheckpointDistance };
-            }
-            const toMetres = (km: number) => Math.round(km * 1000);
-            const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
-            loopLength = nonZeroDistances.map(toMetres).reduce(gcd) / 1000;
-        }
-
-        if (loopLength <= 0) {
-            return { loopLength: 0, maxNewLoops: 0, currentLoopCount: 1, maxCheckpointDistance };
+            return { loopLength: 0, loopOffset: 0, maxNewLoops: 0, currentLoopCount: 0, maxCheckpointDistance };
         }
 
         const loopLengthMetres = Math.round(loopLength * 1000);
-        const currentLoopCount = Math.round(maxCheckpointDistance / loopLength);
-        const maxTotalLoops = Math.floor((raceDistance * 1000) / loopLengthMetres);
+        const currentLoopCount = Math.round(((maxCheckpointDistance - loopOffset) * 1000) / loopLengthMetres);
+        const remainingMetres = Math.round((raceDistance - loopOffset) * 1000);
+        const maxTotalLoops = Math.floor(remainingMetres / loopLengthMetres);
         const maxNewLoops = Math.max(0, maxTotalLoops - currentLoopCount);
 
-        return { loopLength, maxNewLoops, currentLoopCount, maxCheckpointDistance };
+        return { loopLength, loopOffset, maxNewLoops, currentLoopCount, maxCheckpointDistance };
     }, [raceDistance, localCheckpoints]);
 
     // Consolidated reusable function to fetch checkpoints
@@ -283,7 +283,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
             return;
         }
 
-        const { loopLength, maxNewLoops, currentLoopCount } = loopParams;
+        const { loopLength, loopOffset, maxNewLoops, currentLoopCount } = loopParams;
 
         if (loopLength <= 0) {
             setLoopError("Cannot determine loop length. Please add checkpoints with distance > 0.");
@@ -303,11 +303,14 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
             return;
         }
 
-        // First-loop template: all checkpoints with 0 < dist <= loopLength, sorted
+        // First-loop template: checkpoints spanning the first loop section.
+        // If loopOffset > 0 (e.g. 1 KM straight then loops), include from loopOffset onward.
+        // If loopOffset = 0 (start-line loops), exclude distance 0 (the static start).
         const firstLoopTemplate = localCheckpoints
             .filter(cp => {
                 const dist = Number(cp.distanceFromStart);
-                return dist > 0 && dist <= loopLength + 0.001;
+                const minDist = loopOffset > 0 ? loopOffset - 0.001 : 0;
+                return dist > minDist && dist <= loopOffset + loopLength + 0.001;
             })
             .sort((a, b) => {
                 const distDiff = Number(a.distanceFromStart) - Number(b.distanceFromStart);
@@ -917,7 +920,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                                     {loopParams.maxNewLoops > 0 && drawerLoopInput > 0 && !isAddLoopsDisabled && (
                                         <Alert severity="info">
                                             Adding {drawerLoopInput} loop(s) will create checkpoints up to{" "}
-                                            {Math.min(loopParams.loopLength * (loopParams.currentLoopCount + drawerLoopInput), raceDistance)} KM.
+                                            {Math.min(loopParams.loopOffset + loopParams.loopLength * (loopParams.currentLoopCount + drawerLoopInput), raceDistance)} KM.
                                             <br />
                                             Total loops after: {loopParams.currentLoopCount + drawerLoopInput}
                                         </Alert>
