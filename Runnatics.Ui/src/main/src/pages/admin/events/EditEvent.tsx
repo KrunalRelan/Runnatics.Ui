@@ -412,21 +412,9 @@ export const EditEvent: React.FC = () => {
     if (!eventTimePart) {
       newErrors.eventTime = "Event time is required";
     }
-    if (!(formData.venueName ?? "").trim()) {
-      newErrors.venueName = "Venue name is required";
-    }
-    if (!(formData.venueAddress ?? "").trim()) {
-      newErrors.venueAddress = "Venue address is required";
-    }
-    if (!(formData.city ?? "").trim()) {
-      newErrors.city = "City is required";
-    }
     // if (!(formData.state ?? "").trim()) {
     //   newErrors.state = "State is required";
     // }
-    if (!(formData.country ?? "").trim()) {
-      newErrors.country = "Country is required";
-    }
     if (!formData.timeZone) {
       newErrors.timeZone = "Time zone is required";
     }
@@ -823,7 +811,6 @@ export const EditEvent: React.FC = () => {
                   error={!!errors.venueName}
                   helperText={errors.venueName}
                   placeholder="Enter venue name"
-                  required
                 />
 
                 <TextField
@@ -835,7 +822,6 @@ export const EditEvent: React.FC = () => {
                   error={!!errors.venueAddress}
                   helperText={errors.venueAddress}
                   placeholder="Enter venue or starting location"
-                  required
                 />
 
                 <TextField
@@ -847,7 +833,6 @@ export const EditEvent: React.FC = () => {
                   error={!!errors.city}
                   helperText={errors.city}
                   placeholder="Enter city"
-                  required
                 />
 
                 <TextField
@@ -859,7 +844,6 @@ export const EditEvent: React.FC = () => {
                   error={!!errors.country}
                   helperText={errors.country}
                   placeholder="Enter country"
-                  required
                 />
               </Stack>
 
