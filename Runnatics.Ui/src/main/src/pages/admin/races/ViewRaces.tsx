@@ -377,19 +377,11 @@ const ViewRaces: React.FC = () => {
               }),
             }}
           />
+          <Tab icon={<Timer />} iconPosition="start" label="Segments" />
+          <Tab icon={<EmojiEvents />} iconPosition="start" label="Add Certificate" />
+          <Tab icon={<TrendingUp />} iconPosition="start" label="Dashboard" />
+          <Tab icon={<LeaderboardIcon />} iconPosition="start" label="Leaderboard" />
         </Tabs>
-        <Tab icon={<Timer />} iconPosition="start" label="Segments" />
-        <Tab
-          icon={<EmojiEvents />}
-          iconPosition="start"
-          label="Add Certificate"
-        />
-        <Tab icon={<TrendingUp />} iconPosition="start" label="Dashboard" />
-        <Tab
-          icon={<LeaderboardIcon />}
-          iconPosition="start"
-          label="Leaderboard"
-        />
       </Paper>
 
       {/* Content Area */}
