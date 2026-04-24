@@ -104,16 +104,31 @@ function beep() {
   }
 }
 
+const PAGE_SIZE = 50;
+
 const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
+  // Server-side pagination/filter/search state owned by the component
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'All' | 'Mapped' | 'Unmapped'>('All');
+  const [page, setPage] = useState(1);
+
+  // Debounce search input to avoid firing on every keystroke
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedSearch(search), 400);
+    return () => window.clearTimeout(t);
+  }, [search]);
+
+  // Reset page on filter/search change
+  useEffect(() => { setPage(1); }, [debouncedSearch, filterStatus]);
+
   const {
     rows,
-    visibleRows,
     justMappedIds,
     errorFlashIds,
     isLoading,
     loadError,
-    search,
-    setSearch,
+    totalCount,
     setPendingEpc,
     submitEpc,
     skipRow,
@@ -125,7 +140,14 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
     progress,
     stats,
     incrementDuplicateAttempts,
-  } = useBibMappingRows(eventId, raceId);
+  } = useBibMappingRows(eventId, raceId, {
+    page,
+    pageSize: PAGE_SIZE,
+    search: debouncedSearch,
+    status: filterStatus,
+  });
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
@@ -138,21 +160,6 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
   const [overrideWorking, setOverrideWorking] = useState(false);
   const [clearTarget, setClearTarget] = useState<MappingRow | null>(null);
   const [clearWorking, setClearWorking] = useState(false);
-
-  const [filterStatus, setFilterStatus] = useState<'all' | 'mapped' | 'unmapped' | 'skipped'>('all');
-  const [page, setPage] = useState(1);
-  const PAGE_SIZE = 20;
-
-  const filteredRows = useMemo(() => {
-    if (filterStatus === 'all') return visibleRows;
-    return visibleRows.filter((r) => r.status === filterStatus);
-  }, [visibleRows, filterStatus]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
-  const paginatedRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  // Reset to page 1 on search or filter change
-  useEffect(() => { setPage(1); }, [search, filterStatus]);
 
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     try {
@@ -412,10 +419,9 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
             label="Status"
             onChange={(e) => setFilterStatus(e.target.value as any)}
           >
-            <MenuItem value="all">All</MenuItem>
-            <MenuItem value="mapped">Mapped</MenuItem>
-            <MenuItem value="unmapped">Unmapped</MenuItem>
-            <MenuItem value="skipped">Skipped</MenuItem>
+            <MenuItem value="All">All</MenuItem>
+            <MenuItem value="Mapped">Mapped</MenuItem>
+            <MenuItem value="Unmapped">Unmapped</MenuItem>
           </Select>
         </FormControl>
       </Box>
@@ -450,7 +456,7 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
               </Box>
             </Box>
             <Box component="tbody">
-              {paginatedRows.map((row) => (
+              {rows.map((row) => (
                 <Row
                   key={row.participantId}
                   row={row}
@@ -471,10 +477,10 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
             </Box>
           </Box>
         )}
-        {!isLoading && !loadError && filteredRows.length > 0 && (
+        {!isLoading && !loadError && totalCount > 0 && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
             <Typography variant="body2" color="text.secondary">
-              Showing {Math.min((page - 1) * PAGE_SIZE + 1, filteredRows.length)}–{Math.min(page * PAGE_SIZE, filteredRows.length)} of {filteredRows.length}
+              Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, totalCount)} of {totalCount}
             </Typography>
             <Pagination
               count={totalPages}

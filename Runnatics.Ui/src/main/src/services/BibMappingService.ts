@@ -5,7 +5,9 @@ import { ResponseBase } from '../models/ResponseBase';
 import {
     CreateBibMappingRequest,
     BibMappingResponse,
+    BibMappingParticipantResponse,
     DeleteBibMappingParams,
+    GetEpcMappingRequest,
 } from '../models/bibMapping';
 
 /**
@@ -33,6 +35,20 @@ export class BibMappingService {
             { params: { raceId } }
         );
         return response.data.message;
+    }
+
+    /**
+     * Get participants with mapping status (server-side paginated)
+     */
+    static async getParticipantsWithMappingStatus(
+        raceId: string,
+        request: GetEpcMappingRequest
+    ): Promise<ResponseBase<BibMappingParticipantResponse[]>> {
+        const response: AxiosResponse<ResponseBase<BibMappingParticipantResponse[]>> = await apiClient.get(
+            ServiceUrl.getBibMappingParticipants(),
+            { params: { raceId, ...request } }
+        );
+        return response.data;
     }
 
     /**

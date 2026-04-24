@@ -76,6 +76,7 @@ export const ServiceUrl = {
     createBibMapping: () => 'bib-mappings',
     getBibMappingsByRace: () => 'bib-mappings',
     deleteBibMapping: () => 'bib-mappings',
+    getBibMappingParticipants: () => 'bib-mappings/participants',
 
     //simulator
     simulateDetectEpc: () => 'simulator/detect-epc',

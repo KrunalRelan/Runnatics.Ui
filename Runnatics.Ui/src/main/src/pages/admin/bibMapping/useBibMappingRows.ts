@@ -2,9 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { BibMappingService } from '../../../services/BibMappingService';
-import { ParticipantService } from '../../../services/ParticipantService';
 import { extractErrorMessage } from '../../../utils/errors';
-import type { BibMappingResponse } from '../../../models/bibMapping';
+import type { BibMappingResponse, EpcMappingStatusFilter } from '../../../models/bibMapping';
 import type {
   DuplicateInfo,
   MappingRow,
@@ -13,7 +12,6 @@ import type {
   SubmitResult,
 } from './BibMapping.types';
 
-const PARTICIPANT_PAGE_SIZE = 10000;
 const JUST_MAPPED_MS = 3000;
 
 // Min/max EPC hex length we accept. EPC-96 is 24 hex chars; we accept 12-32 to be safe.
@@ -23,8 +21,13 @@ export const EPC_MAX_LEN = 32;
 export const bibMappingKeys = {
   all: ['bibMappings'] as const,
   byRace: (raceId: string) => [...bibMappingKeys.all, 'byRace', raceId] as const,
-  participantsByRace: (eventId: string, raceId: string) =>
-    ['participants', 'byRace', eventId, raceId] as const,
+  participantsByRace: (
+    raceId: string,
+    page: number,
+    pageSize: number,
+    search: string,
+    status: EpcMappingStatusFilter,
+  ) => [...bibMappingKeys.all, 'participants', raceId, page, pageSize, search, status] as const,
 };
 
 export function sanitizeEpc(raw: string): string {
@@ -35,15 +38,20 @@ export function isValidEpc(epc: string): boolean {
   return epc.length >= EPC_MIN_LEN && epc.length <= EPC_MAX_LEN;
 }
 
+export interface BibMappingRowsParams {
+  page: number;
+  pageSize: number;
+  search: string;
+  status: EpcMappingStatusFilter;
+}
+
 interface UseBibMappingRowsReturn {
   rows: MappingRow[];
-  visibleRows: MappingRow[];
   justMappedIds: Set<string>;
   errorFlashIds: Set<string>;
   isLoading: boolean;
   loadError: string | null;
-  search: string;
-  setSearch: (v: string) => void;
+  totalCount: number;
   setPendingEpc: (participantId: string, value: string) => void;
   submitEpc: (participantId: string) => Promise<SubmitResult>;
   skipRow: (participantId: string) => void;
@@ -58,22 +66,30 @@ interface UseBibMappingRowsReturn {
   refetch: () => void;
 }
 
-export function useBibMappingRows(eventId: string, raceId: string): UseBibMappingRowsReturn {
+export function useBibMappingRows(
+  _eventId: string,
+  raceId: string,
+  params: BibMappingRowsParams,
+): UseBibMappingRowsReturn {
   const queryClient = useQueryClient();
+  const { page, pageSize, search, status } = params;
 
+  // Paginated participants + mapping status from new endpoint
   const participantsQuery = useQuery({
-    queryKey: bibMappingKeys.participantsByRace(eventId, raceId),
+    queryKey: bibMappingKeys.participantsByRace(raceId, page, pageSize, search, status),
     queryFn: () =>
-      ParticipantService.searchParticipants(eventId, raceId, {
-        pageNumber: 1,
-        pageSize: PARTICIPANT_PAGE_SIZE,
+      BibMappingService.getParticipantsWithMappingStatus(raceId, {
+        pageNumber: page,
+        pageSize,
+        searchString: search,
+        status,
         sortFieldName: 'bib',
         sortDirection: 0,
-        searchString: '',
       }),
-    enabled: !!eventId && !!raceId,
+    enabled: !!raceId,
   });
 
+  // Still fetch all mappings for duplicate detection (lightweight list)
   const mappingsQuery = useQuery({
     queryKey: bibMappingKeys.byRace(raceId),
     queryFn: () => BibMappingService.getByRace(raceId),
@@ -81,7 +97,6 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
   });
 
   const [rowOverrides, setRowOverrides] = useState<Record<string, Partial<MappingRow>>>({});
-  const [search, setSearch] = useState('');
   const [justMappedIds, setJustMappedIds] = useState<Set<string>>(new Set());
   const [errorFlashIds, setErrorFlashIds] = useState<Set<string>>(new Set());
   const [mappedThisSession, setMappedThisSession] = useState(0);
@@ -91,46 +106,34 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
   const justMappedTimers = useRef<Map<string, number>>(new Map());
   const errorFlashTimers = useRef<Map<string, number>>(new Map());
 
-  // Build rows by merging participants + mappings + local overrides
+  // Build rows from the new combined endpoint response + local overrides
   const rows = useMemo<MappingRow[]>(() => {
     const participants = participantsQuery.data?.message ?? [];
-    const mappings = mappingsQuery.data ?? [];
-    const mappingByParticipantId = new Map<string, BibMappingResponse>();
-    mappings.forEach((m) => mappingByParticipantId.set(m.participantId, m));
 
     return participants.map((p) => {
-      const existing = mappingByParticipantId.get(p.id);
-      const override = rowOverrides[p.id] ?? {};
-      const mappedEpc = existing?.epc ?? '';
-      const status: RowStatus =
-        override.status ??
-        (mappedEpc ? 'mapped' : 'unmapped');
+      const override = rowOverrides[p.participantId] ?? {};
+      const mappedEpc = p.epc ?? '';
+      const baseStatus: RowStatus = p.isEpcMapped ? 'mapped' : 'unmapped';
+      const status: RowStatus = override.status ?? baseStatus;
 
       return {
-        participantId: p.id,
-        bibNumber: p.bib,
-        name: p.fullName || `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim(),
+        participantId: p.participantId,
+        bibNumber: p.bibNumber,
+        name: p.participantName,
         epc: mappedEpc,
         pendingEpc: override.pendingEpc ?? '',
         status,
         errorMessage: override.errorMessage,
-        chipId: existing?.chipId,
-        eventId: existing?.eventId,
-        createdAt: existing?.createdAt,
+        chipId: p.chipId,
+        eventId: p.eventId,
+        createdAt: p.createdAt,
       };
     });
-  }, [participantsQuery.data, mappingsQuery.data, rowOverrides]);
+  }, [participantsQuery.data, rowOverrides]);
 
-  const visibleRows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (r) =>
-        r.bibNumber.toLowerCase().includes(q) ||
-        r.name.toLowerCase().includes(q),
-    );
-  }, [rows, search]);
+  const totalCount = participantsQuery.data?.totalCount ?? 0;
 
+  // Progress over the current page (approximate — full progress via stats endpoint would need separate call)
   const progress = useMemo(() => {
     const total = rows.length;
     const mapped = rows.filter((r) => r.status === 'mapped').length;
@@ -138,7 +141,7 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
     return { mapped, total, percent };
   }, [rows]);
 
-  // Prune stale overrides once the server refetch catches up.
+  // Prune stale overrides once server refetch catches up
   useEffect(() => {
     setRowOverrides((prev) => {
       const next: Record<string, Partial<MappingRow>> = {};
@@ -151,9 +154,9 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
       }
       return next;
     });
-  }, [mappingsQuery.data]);
+  }, [participantsQuery.data]);
 
-  // Cleanup pending timers on unmount so late setStates don't fire.
+  // Cleanup pending timers on unmount
   useEffect(() => {
     return () => {
       justMappedTimers.current.forEach((t) => window.clearTimeout(t));
@@ -253,6 +256,12 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
     markJustMapped(participantId);
   }, [markJustMapped]);
 
+  const invalidateParticipants = useCallback(() => {
+    queryClient.invalidateQueries({
+      queryKey: bibMappingKeys.participantsByRace(raceId, page, pageSize, search, status),
+    });
+  }, [queryClient, raceId, page, pageSize, search, status]);
+
   const submitEpc = useCallback(
     async (participantId: string): Promise<SubmitResult> => {
       const row = rows.find((r) => r.participantId === participantId);
@@ -273,12 +282,9 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
         return { status: 'invalid' };
       }
 
-      // Session dupe: same EPC typed (but not yet saved) on another row.
+      // Session dupe: same EPC typed (but not yet saved) on another row
       const sessionDupe = rows.find(
-        (r) =>
-          r.participantId !== participantId &&
-          r.pendingEpc &&
-          sanitizeEpc(r.pendingEpc) === epc,
+        (r) => r.participantId !== participantId && r.pendingEpc && sanitizeEpc(r.pendingEpc) === epc,
       );
       if (sessionDupe) {
         setRowOverrides((prev) => ({
@@ -294,10 +300,10 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
         return { status: 'session-duplicate' };
       }
 
-      // Server dupe: EPC already mapped to another participant.
+      // Server dupe: EPC already mapped to another participant
       const existingMappings = mappingsQuery.data ?? [];
       const dupe = existingMappings.find(
-        (m) => m.epc.toUpperCase() === epc && m.participantId !== participantId,
+        (m: BibMappingResponse) => m.epc.toUpperCase() === epc && m.participantId !== participantId,
       );
       if (dupe) {
         const existingRow = rows.find((r) => r.participantId === dupe.participantId);
@@ -329,7 +335,10 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
 
       try {
         await BibMappingService.create({ raceId, bibNumber: row.bibNumber, epc });
-        await queryClient.invalidateQueries({ queryKey: bibMappingKeys.byRace(raceId) });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: bibMappingKeys.byRace(raceId) }),
+          invalidateParticipants(),
+        ]);
         setRowOverrides((prev) => {
           const next = { ...prev };
           delete next[participantId];
@@ -339,17 +348,12 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
         const nextId = nextUnmappedId(participantId);
         return { status: 'ok', nextId: nextId ?? undefined };
       } catch (err: any) {
-        // Server may report a 409 conflict if client data was stale.
         const statusCode = err?.response?.status;
-        // Always resolve to a string — the raw { code, message } object would crash React.
         const serverMessage = extractErrorMessage(err, 'Failed to save mapping');
 
         if (statusCode === 409) {
-          // Refetch mappings so we can surface the existing binding.
           await queryClient.invalidateQueries({ queryKey: bibMappingKeys.byRace(raceId) });
-          const fresh = queryClient.getQueryData<BibMappingResponse[]>(
-            bibMappingKeys.byRace(raceId),
-          ) ?? [];
+          const fresh = queryClient.getQueryData<BibMappingResponse[]>(bibMappingKeys.byRace(raceId)) ?? [];
           const conflict = fresh.find(
             (m) => m.epc.toUpperCase() === epc && m.participantId !== participantId,
           );
@@ -395,22 +399,9 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
         return { status: 'error' };
       }
     },
-    [rows, raceId, queryClient, mappingsQuery.data, nextUnmappedId, recordSuccess, flashError],
+    [rows, raceId, queryClient, mappingsQuery.data, nextUnmappedId, recordSuccess, flashError, invalidateParticipants],
   );
 
-  /**
-   * Force-override a duplicate mapping.
-   *
-   * TODO(api): backend should accept `{ override: true }` (or `?force=true`) on
-   *   POST /bib-mappings so this is atomic. The server-side controller should
-   *   then detach the EPC from the old participant and assign it to the new
-   *   one inside a single transaction. Once available, replace the
-   *   delete-then-create fallback below.
-   *
-   * Current fallback: DELETE old → POST new. If the POST fails, we surface
-   *   the error but the old mapping will already be gone; the caller should
-   *   prompt the user to retry the scan.
-   */
   const overrideMapping = useCallback(
     async (info: DuplicateInfo): Promise<{ ok: boolean; nextId?: string }> => {
       setRowOverrides((prev) => ({
@@ -431,12 +422,11 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
             eventId: info.existingEventId,
           });
         }
-        await BibMappingService.create({
-          raceId,
-          bibNumber: info.newBib,
-          epc: info.epc,
-        });
-        await queryClient.invalidateQueries({ queryKey: bibMappingKeys.byRace(raceId) });
+        await BibMappingService.create({ raceId, bibNumber: info.newBib, epc: info.epc });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: bibMappingKeys.byRace(raceId) }),
+          invalidateParticipants(),
+        ]);
         setRowOverrides((prev) => {
           const next = { ...prev };
           delete next[info.newParticipantId];
@@ -463,7 +453,7 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
         return { ok: false };
       }
     },
-    [raceId, queryClient, nextUnmappedId, recordSuccess, flashError],
+    [raceId, queryClient, nextUnmappedId, recordSuccess, flashError, invalidateParticipants],
   );
 
   const clearMapping = useCallback(
@@ -471,12 +461,11 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
       const row = rows.find((r) => r.participantId === participantId);
       if (!row || row.status !== 'mapped' || !row.chipId || !row.eventId) return false;
       try {
-        await BibMappingService.delete({
-          chipId: row.chipId,
-          participantId,
-          eventId: row.eventId,
-        });
-        await queryClient.invalidateQueries({ queryKey: bibMappingKeys.byRace(raceId) });
+        await BibMappingService.delete({ chipId: row.chipId, participantId, eventId: row.eventId });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: bibMappingKeys.byRace(raceId) }),
+          invalidateParticipants(),
+        ]);
         toast.success(`Cleared mapping for BIB #${row.bibNumber}`);
         return true;
       } catch (err: unknown) {
@@ -485,7 +474,7 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
         return false;
       }
     },
-    [rows, raceId, queryClient],
+    [rows, raceId, queryClient, invalidateParticipants],
   );
 
   const skipRow = useCallback((participantId: string) => {
@@ -526,14 +515,11 @@ export function useBibMappingRows(eventId: string, raceId: string): UseBibMappin
 
   return {
     rows,
-    visibleRows,
     justMappedIds,
     errorFlashIds,
     isLoading: participantsQuery.isLoading || mappingsQuery.isLoading,
-    loadError:
-      participantsQuery.error?.message ?? mappingsQuery.error?.message ?? null,
-    search,
-    setSearch,
+    loadError: participantsQuery.error?.message ?? mappingsQuery.error?.message ?? null,
+    totalCount,
     setPendingEpc,
     submitEpc,
     skipRow,
