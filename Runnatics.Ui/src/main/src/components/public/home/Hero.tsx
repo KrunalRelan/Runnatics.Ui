@@ -24,7 +24,7 @@ function HeroSlide({ event, isActive }: { event: PublicEvent; isActive: boolean 
     >
       {event.bannerBase64 ? (
         <img
-          src={{base64ToDataUrl(event.bannerBase64)}}
+          src={base64ToDataUrl(event.bannerBase64)}
           alt={event.name}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
