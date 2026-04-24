@@ -38,6 +38,7 @@ export const DataGrid = <T extends any>({
   onRowClicked,
   onCellClicked,
   onGridReady,
+  onFirstDataRendered,
   onSortChanged,
   gridOptions,
   height = 600,
@@ -324,6 +325,7 @@ export const DataGrid = <T extends any>({
             onRowClicked={onRowClicked}
             onCellClicked={onCellClicked}
             onGridReady={handleGridReady}
+            onFirstDataRendered={onFirstDataRendered}
             rowSelection={rowSelection}
             rowHeight={rowHeight}
             headerHeight={headerHeight}

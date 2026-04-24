@@ -21,9 +21,9 @@ function HeroSlide({ event, isActive }: { event: PublicEvent; isActive: boolean 
         overflow: 'hidden',
       }}
     >
-      {event.bannerImageUrl ? (
+      {event.bannerBase64 ? (
         <img
-          src={event.bannerImageUrl}
+          src={`data:image/png;base64,${event.bannerBase64}`}
           alt={event.name}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
@@ -41,7 +41,7 @@ function HeroSlide({ event, isActive }: { event: PublicEvent; isActive: boolean 
         style={{
           position: 'absolute',
           inset: 0,
-          background: event.bannerImageUrl
+          background: event.bannerBase64
             ? 'linear-gradient(180deg, rgba(11,28,50,0.55) 0%, rgba(11,28,50,0.75) 100%)'
             : 'radial-gradient(circle at 20% 50%, rgba(232,93,42,0.10) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.04) 0%, transparent 40%)',
         }}

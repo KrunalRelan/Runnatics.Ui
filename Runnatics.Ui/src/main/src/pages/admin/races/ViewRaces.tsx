@@ -165,6 +165,9 @@ const ViewRaces: React.FC = () => {
       case 1:
         navigate(`/events/events-edit/${eventId}`);
         break;
+      case 9:
+        if (selectedRaceId) navigate(`/events/event-details/${eventId}/race/edit/${selectedRaceId}`);
+        break;
       case 2:
       case 3:
       case 4:
@@ -213,6 +216,9 @@ const ViewRaces: React.FC = () => {
         return <Leaderboard eventId={eventId} raceId={selectedRaceId} />;
       case 8:
         return <BibMapping eventId={eventId} raceId={selectedRaceId} />;
+      case 9:
+        navigate(`/events/event-details/${eventId}/race/edit/${selectedRaceId}`);
+        return null;
       default:
         return null;
     }
@@ -380,6 +386,7 @@ const ViewRaces: React.FC = () => {
               }),
             }}
           />
+          <Tab icon={<Edit />} iconPosition="start" label="Edit Race" />
         </Tabs>
       </Paper>
 

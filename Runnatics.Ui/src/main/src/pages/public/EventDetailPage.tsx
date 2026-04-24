@@ -73,8 +73,8 @@ function EventDetailPage() {
         tone="dark"
         style={{
           padding: 'clamp(4rem, 8vw, 6rem) 0',
-          ...(ev.bannerImageUrl ? {
-            backgroundImage: `linear-gradient(rgba(10,18,32,0.72), rgba(10,18,32,0.72)), url(${ev.bannerImageUrl})`,
+          ...(ev.bannerBase64 ? {
+            backgroundImage: `linear-gradient(rgba(10,18,32,0.72), rgba(10,18,32,0.72)), url(data:image/png;base64,${ev.bannerBase64})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           } : {}),

@@ -51,6 +51,8 @@ export const EditEvent: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerBase64, setBannerBase64] = useState<string | null>(null);
+  const [existingBannerBase64, setExistingBannerBase64] = useState<string | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState<string>("");
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
@@ -274,6 +276,11 @@ export const EditEvent: React.FC = () => {
 
     setFormData(mappedFormData);
 
+    // Set existing banner base64 if present
+    if ((event as any).bannerBase64) {
+      setExistingBannerBase64((event as any).bannerBase64);
+    }
+
     // ✅ Set event settings - use value if exists, otherwise default
     if (event.eventSettings) {
       const mappedEventSettings: EventSettings = {
@@ -374,9 +381,19 @@ export const EditEvent: React.FC = () => {
     }
   };
 
-  // Handle file upload
+  // Handle file upload — convert to base64
   const handleFileChange = (file: File | null) => {
     setBannerFile(file);
+    if (!file) {
+      setBannerBase64(null);
+    } else {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setBannerBase64(result.split(',')[1] ?? null);
+      };
+      reader.readAsDataURL(file);
+    }
     if (errors.bannerImage) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -466,18 +483,11 @@ export const EditEvent: React.FC = () => {
         state: apiData.state || "",
         country: apiData.country || "",
         zipCode: apiData.zipCode || "",
-        bannerImageUrl: apiData.bannerImageUrl || "",
+        ...(!existingBannerBase64 && bannerBase64 ? { bannerBase64 } : {}),
       };
 
       const updatedEvent = await EventService.updateEvent(id!, requestPayload);
 
-      if (bannerFile && updatedEvent?.id) {
-        try {
-          await EventService.uploadBannerImage(updatedEvent.id, bannerFile);
-        } catch (bannerErr) {
-          console.error('Banner upload failed:', bannerErr);
-        }
-      }
 
       setSnackbar({
         open: true,
@@ -683,25 +693,51 @@ export const EditEvent: React.FC = () => {
                   rows={1}
                 />
 
-                <Button
-                  variant="outlined"
-                  component="label"
-                  fullWidth
-                  sx={{ height: 56 }}
-                >
-                  {bannerFile ? bannerFile.name : "Upload Event Banner Image"}
-                  <input
-                    type="file"
-                    hidden
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      handleFileChange(file);
-                    }}
-                  />
-                </Button>
-                {errors.bannerImage && (
-                  <FormHelperText error>{errors.bannerImage}</FormHelperText>
+                {existingBannerBase64 ? (
+                  <Box>
+                    <Box sx={{ borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider', mb: 1 }}>
+                      <img
+                        src={`data:image/png;base64,${existingBannerBase64}`}
+                        alt="Event Banner"
+                        style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }}
+                      />
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Banner already uploaded. It cannot be changed.
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      fullWidth
+                      sx={{ height: 56 }}
+                    >
+                      {bannerFile ? bannerFile.name : "Upload Event Banner Image"}
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          handleFileChange(file);
+                        }}
+                      />
+                    </Button>
+                    {bannerBase64 && (
+                      <Box sx={{ mt: 1, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+                        <img
+                          src={`data:image/png;base64,${bannerBase64}`}
+                          alt="Banner Preview"
+                          style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }}
+                        />
+                      </Box>
+                    )}
+                    {errors.bannerImage && (
+                      <FormHelperText error>{errors.bannerImage}</FormHelperText>
+                    )}
+                  </Box>
                 )}
               </Stack>
             </Stack>

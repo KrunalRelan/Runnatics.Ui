@@ -2,6 +2,7 @@ import type {
   ColDef,
   GridOptions,
   GridReadyEvent,
+  FirstDataRenderedEvent,
   GridApi,
 } from "ag-grid-community";
 import { RefObject } from "react";
@@ -21,6 +22,7 @@ export interface DataGridProps<T = any> {
   onRowClicked?: (event: any) => void;
   onCellClicked?: (event: any) => void;
   onGridReady?: (event: GridReadyEvent) => void;
+  onFirstDataRendered?: (event: FirstDataRenderedEvent) => void;
   onSortChanged?: (sortFieldName?: string, sortDirection?: number) => void;
   gridOptions?: GridOptions;
   height?: number | string;

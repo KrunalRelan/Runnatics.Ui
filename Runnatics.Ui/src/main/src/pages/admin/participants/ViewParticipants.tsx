@@ -34,7 +34,7 @@ import {
   Divider as MuiDivider,
 } from "@mui/material";
 import DataGrid from "@/main/src/components/DataGrid";
-import type { ColDef } from "ag-grid-community";
+import type { ColDef, GridReadyEvent, FirstDataRenderedEvent } from "ag-grid-community";
 import { DataGridRef } from "@/main/src/models/dataGrid";
 import { Participant } from "@/main/src/models/races/Participant";
 import {
@@ -154,6 +154,14 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   
   // Grid ref for export functionality
   const gridRef = useRef<DataGridRef>(null);
+
+  const handleGridReady = (params: GridReadyEvent) => {
+    params.api.autoSizeAllColumns();
+  };
+
+  const handleFirstDataRendered = (params: FirstDataRenderedEvent) => {
+    params.api.autoSizeAllColumns();
+  };
 
   const genderMap: Record<string, number | null> = {
     male: 1,
@@ -640,10 +648,22 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     handleCloseUpdateByBibDialog();
   };
 
-  const handleExportCsv = () => {
-    if (gridRef.current) {
+  const handleExportCsv = async () => {
+    try {
+      const blob = await ParticipantService.exportParticipants(eventId, raceId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
       const timestamp = new Date().toISOString().slice(0, 10);
-      gridRef.current.exportToCsv(`participants_${timestamp}.csv`);
+      a.download = `participants_${timestamp}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      // fall back to CSV export
+      if (gridRef.current) {
+        const timestamp = new Date().toISOString().slice(0, 10);
+        gridRef.current.exportToCsv(`participants_${timestamp}.csv`);
+      }
     }
   };
 
@@ -806,6 +826,23 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
     },
     {
+      headerName: "EPC",
+      field: "chipId",
+      width: 70,
+      sortable: false,
+      filter: false,
+      cellRenderer: (params: any) => {
+        const mapped = !!(params.value?.trim());
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <span style={{ color: mapped ? '#2e7d32' : '#d32f2f', fontWeight: 700, fontSize: '1rem' }}>
+              {mapped ? '✔' : '✖'}
+            </span>
+          </Box>
+        );
+      },
+    },
+    {
       field: "status",
       headerName: "Status",
       width: 110,
@@ -839,7 +876,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     },
     {
       headerName: "Actions",
-      width: 80,
+      width: 120,
       pinned: "right" as const,
       cellRenderer: (params: any) => (
         <Stack
@@ -858,6 +895,17 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
             title="View Details"
           >
             <Visibility fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditParticipant(params.data);
+            }}
+            title="Edit"
+          >
+            <Edit fontSize="small" />
           </IconButton>
           <IconButton
             size="small"
@@ -1167,6 +1215,8 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           enableSorting={true}
           enableFiltering={true}
           animateRows={true}
+          onGridReady={handleGridReady}
+          onFirstDataRendered={handleFirstDataRendered}
           loading={participantsLoading}
           useCustomPagination={true}
           pageNumber={filters.pageNumber}

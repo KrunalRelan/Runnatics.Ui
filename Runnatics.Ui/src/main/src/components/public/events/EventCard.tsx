@@ -10,9 +10,9 @@ function EventCard({ event }: EventCardProps) {
   return (
     <Card>
       <div style={{ aspectRatio: '16/9', backgroundColor: '#E5E7EB', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {event.bannerImageUrl ? (
+        {event.bannerBase64 ? (
           <img
-            src={event.bannerImageUrl}
+            src={`data:image/png;base64,${event.bannerBase64}`}
             alt={event.name}
             loading="lazy"
             decoding="async"

@@ -13,10 +13,15 @@ import {
   Button,
   Checkbox,
   CircularProgress,
+  FormControl,
   FormControlLabel,
   IconButton,
+  InputLabel,
   LinearProgress,
+  MenuItem,
+  Pagination,
   Paper,
+  Select,
   TextField,
   Tooltip,
   Typography,
@@ -133,6 +138,21 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
   const [overrideWorking, setOverrideWorking] = useState(false);
   const [clearTarget, setClearTarget] = useState<MappingRow | null>(null);
   const [clearWorking, setClearWorking] = useState(false);
+
+  const [filterStatus, setFilterStatus] = useState<'all' | 'mapped' | 'unmapped' | 'skipped'>('all');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
+
+  const filteredRows = useMemo(() => {
+    if (filterStatus === 'all') return visibleRows;
+    return visibleRows.filter((r) => r.status === filterStatus);
+  }, [visibleRows, filterStatus]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const paginatedRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Reset to page 1 on search or filter change
+  useEffect(() => { setPage(1); }, [search, filterStatus]);
 
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     try {
@@ -366,24 +386,39 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
         </Box>
       </Paper>
 
-      {/* Search */}
-      <TextField
-        inputRef={searchRef}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search by BIB or name…"
-        size="small"
-        fullWidth
-        slotProps={{
-          input: {
-            startAdornment: (
-              <Box sx={{ display: 'flex', alignItems: 'center', pr: 1, color: 'text.secondary' }}>
-                <Search size={18} />
-              </Box>
-            ),
-          },
-        }}
-      />
+      {/* Search + Filter */}
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <TextField
+          inputRef={searchRef}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by BIB or name…"
+          size="small"
+          sx={{ flex: 1 }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <Box sx={{ display: 'flex', alignItems: 'center', pr: 1, color: 'text.secondary' }}>
+                  <Search size={18} />
+                </Box>
+              ),
+            },
+          }}
+        />
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={filterStatus}
+            label="Status"
+            onChange={(e) => setFilterStatus(e.target.value as any)}
+          >
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="mapped">Mapped</MenuItem>
+            <MenuItem value="unmapped">Unmapped</MenuItem>
+            <MenuItem value="skipped">Skipped</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
 
       {/* Table */}
       <Paper sx={{ p: 0, overflow: 'hidden' }}>
@@ -415,7 +450,7 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
               </Box>
             </Box>
             <Box component="tbody">
-              {visibleRows.map((row) => (
+              {paginatedRows.map((row) => (
                 <Row
                   key={row.participantId}
                   row={row}
@@ -434,6 +469,20 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
                 />
               ))}
             </Box>
+          </Box>
+        )}
+        {!isLoading && !loadError && filteredRows.length > 0 && (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="body2" color="text.secondary">
+              Showing {Math.min((page - 1) * PAGE_SIZE + 1, filteredRows.length)}–{Math.min(page * PAGE_SIZE, filteredRows.length)} of {filteredRows.length}
+            </Typography>
+            <Pagination
+              count={totalPages}
+              page={page}
+              onChange={(_e, v) => setPage(v)}
+              size="small"
+              color="primary"
+            />
           </Box>
         )}
       </Paper>

@@ -93,8 +93,8 @@ function EventResults({ slug }: { slug: string }) {
         tone="dark"
         style={{
           padding: 'clamp(4rem, 8vw, 6rem) 0',
-          ...(eventDetail?.bannerImageUrl ? {
-            backgroundImage: `linear-gradient(rgba(10,18,32,0.75), rgba(10,18,32,0.75)), url(${eventDetail.bannerImageUrl})`,
+          ...(eventDetail?.bannerBase64 ? {
+            backgroundImage: `linear-gradient(rgba(10,18,32,0.75), rgba(10,18,32,0.75)), url(data:image/png;base64,${eventDetail.bannerBase64})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           } : {}),

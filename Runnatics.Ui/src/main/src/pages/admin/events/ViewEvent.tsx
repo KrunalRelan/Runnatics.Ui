@@ -236,15 +236,24 @@ const ViewEvent: React.FC = () => {
               />
             )}
           </Box>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleAddRace}
-            size="large"
-          >
-            Add Race
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              onClick={() => navigate(`/events/events-edit/${eventId}`)}
+              size="large"
+            >
+              Edit Event
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleAddRace}
+              size="large"
+            >
+              Add Race
+            </Button>
+          </Stack>
         </Box>
       </Box>
 

@@ -56,6 +56,7 @@ export const CreateEvent: React.FC = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerBase64, setBannerBase64] = useState<string | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState<string>("");
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
@@ -379,9 +380,19 @@ export const CreateEvent: React.FC = () => {
     }
   };
 
-  // Handle file upload
+  // Handle file upload — convert to base64
   const handleFileChange = (file: File | null) => {
     setBannerFile(file);
+    if (!file) {
+      setBannerBase64(null);
+    } else {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setBannerBase64(result.split(',')[1] ?? null);
+      };
+      reader.readAsDataURL(file);
+    }
     if (errors.bannerImage) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -466,6 +477,7 @@ export const CreateEvent: React.FC = () => {
         zipCode: apiData.zipCode || null,
         venueLatitude: null,
         venueLongitude: null,
+        bannerBase64: bannerBase64 ?? undefined,
         eventType: EventType.Marathon,
         eventSettings: eventSettings
           ? {
@@ -562,9 +574,6 @@ export const CreateEvent: React.FC = () => {
       });
       // Redirect after 1 second (1000 ms)
       setTimeout(async () => {
-        if (bannerFile && newEventId) {
-          await EventService.uploadBannerImage(String(newEventId), bannerFile);
-        }
         if (newEventId) {
           navigate(`/events/event-details/${newEventId}`);
         } else {
@@ -888,6 +897,15 @@ export const CreateEvent: React.FC = () => {
                     }}
                   />
                 </Button>
+                {bannerBase64 && (
+                  <Box sx={{ mt: 1, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+                    <img
+                      src={`data:image/png;base64,${bannerBase64}`}
+                      alt="Banner Preview"
+                      style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }}
+                    />
+                  </Box>
+                )}
                 {errors.bannerImage && (
                   <FormHelperText error>{errors.bannerImage}</FormHelperText>
                 )}

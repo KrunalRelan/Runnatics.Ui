@@ -164,6 +164,14 @@ export class ParticipantService {
         return response.data;
     }
 
+    static async exportParticipants(eventId: string, raceId: string): Promise<Blob> {
+        const response = await apiClient.get(
+            ServiceUrl.exportParticipants(eventId, raceId),
+            { responseType: 'blob' }
+        );
+        return response.data;
+    }
+
     public static async getParticipantDetails(eventId: string, raceId: string, participantId: string): Promise<AxiosResponse<ResponseBase<ParticipantDetailsResponse>>> {
         const url = ServiceUrl.getParticipantDetails(eventId, raceId, participantId);
         return await apiClient.get<ResponseBase<ParticipantDetailsResponse>>(url);

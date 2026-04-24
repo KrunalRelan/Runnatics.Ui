@@ -815,6 +815,21 @@ const ParticipantDetail: React.FC = () => {
                       }}
                     />
                   )}
+                  {participant.epc ? (
+                    <Chip
+                      icon={<CheckCircle sx={{ fontSize: 16 }} />}
+                      label="EPC Mapped"
+                      size="small"
+                      sx={{ bgcolor: alpha('#22c55e', 0.25), color: '#bbf7d0', border: `1px solid ${alpha('#22c55e', 0.4)}`, fontWeight: 600, "& .MuiChip-icon": { color: '#bbf7d0' } }}
+                    />
+                  ) : (
+                    <Chip
+                      icon={<Warning sx={{ fontSize: 16 }} />}
+                      label="EPC Not Mapped"
+                      size="small"
+                      sx={{ bgcolor: alpha('#ef4444', 0.25), color: '#fca5a5', border: `1px solid ${alpha('#ef4444', 0.4)}`, fontWeight: 600, "& .MuiChip-icon": { color: '#fca5a5' } }}
+                    />
+                  )}
                 </Stack>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Flag sx={{ fontSize: 18, opacity: 0.9 }} />
