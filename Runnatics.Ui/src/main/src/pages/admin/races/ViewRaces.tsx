@@ -308,8 +308,9 @@ const ViewRaces: React.FC = () => {
               {races.map((raceItem) => (
                 <Chip
                   key={raceItem.id}
-                  label={`${raceItem.distance ? `${raceItem.distance} KM` : ""
-                    } - ${raceItem.title}`}
+                  label={`${
+                    raceItem.distance ? `${raceItem.distance} KM` : ""
+                  } - ${raceItem.title}`}
                   onClick={() => handleRaceChange(raceItem.id)}
                   color={selectedRaceId === raceItem.id ? "primary" : "default"}
                   variant={
@@ -360,20 +361,10 @@ const ViewRaces: React.FC = () => {
             label="Event Dashboard"
           />
           <Tab icon={<Edit />} iconPosition="start" label="Event Details" />
+          <Tab icon={<Edit />} iconPosition="start" label="Edit Race" />
           <Tab icon={<People />} iconPosition="start" label="Participants" />
-          <Tab icon={<TrendingUp />} iconPosition="start" label="Dashboard" />
+
           <Tab icon={<Place />} iconPosition="start" label="Checkpoints" />
-          <Tab icon={<Timer />} iconPosition="start" label="Segments" />
-          <Tab
-            icon={<EmojiEvents />}
-            iconPosition="start"
-            label="Add Certificate"
-          />
-          <Tab
-            icon={<LeaderboardIcon />}
-            iconPosition="start"
-            label="Leaderboard"
-          />
           <Tab
             icon={<Nfc />}
             iconPosition="start"
@@ -382,12 +373,23 @@ const ViewRaces: React.FC = () => {
             sx={{
               ...(!hasParticipants && {
                 opacity: 0.5,
-                cursor: 'not-allowed',
+                cursor: "not-allowed",
               }),
             }}
           />
-          <Tab icon={<Edit />} iconPosition="start" label="Edit Race" />
         </Tabs>
+        <Tab icon={<Timer />} iconPosition="start" label="Segments" />
+        <Tab
+          icon={<EmojiEvents />}
+          iconPosition="start"
+          label="Add Certificate"
+        />
+        <Tab icon={<TrendingUp />} iconPosition="start" label="Dashboard" />
+        <Tab
+          icon={<LeaderboardIcon />}
+          iconPosition="start"
+          label="Leaderboard"
+        />
       </Paper>
 
       {/* Content Area */}
