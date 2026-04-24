@@ -450,7 +450,13 @@ export const EditEvent: React.FC = () => {
         timeZone: timeZone,
         smsText: apiData.smsText || "",
         leaderBoardSettings: leaderBoardSettings,
-        eventSettings: eventSettings,
+        eventSettings: {
+          ...eventSettings,
+          removeBanner: false,
+          allowParticipantEdit: false,
+          useOldData: false,
+          showResultSummaryForRaces: false,
+        },
         eventType: apiData.eventType,
         venueName: apiData.venueName || "",
         venueAddress:
@@ -889,27 +895,6 @@ export const EditEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={eventSettings.removeBanner}
-                          onChange={(e) =>
-                            setEventSettings((prev) => ({
-                              ...prev,
-                              removeBanner: e.target.checked,
-                            }))
-                          }
-                        />
-                      }
-                      label={
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                          Remove Banner
-                          <Tooltip title="Removes the event banner image from the public website and results page." placement="right">
-                            <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
-                          </Tooltip>
-                        </Box>
-                      }
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
                           checked={eventSettings.published}
                           onChange={(e) =>
                             setEventSettings((prev) => ({
@@ -952,51 +937,6 @@ export const EditEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={eventSettings.allowParticipantEdit}
-                          onChange={(e) =>
-                            setEventSettings((prev) => ({
-                              ...prev,
-                              allowParticipantEdit: e.target.checked,
-                            }))
-                          }
-                        />
-                      }
-                      label={
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                          Allow Participant Name Editing
-                          <Tooltip title="Permits participants to update their registered name after registration." placement="right">
-                            <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
-                          </Tooltip>
-                        </Box>
-                      }
-                    />
-                  </Stack>
-
-                  <Stack spacing={2} sx={{ flex: 1 }}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={eventSettings.useOldData}
-                          onChange={(e) =>
-                            setEventSettings((prev) => ({
-                              ...prev,
-                              useOldData: e.target.checked,
-                            }))
-                          }
-                        />
-                      }
-                      label={
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                          Use Old Data
-                          <Tooltip title="Allows reusing participant and timing data from a previous edition of this event." placement="right">
-                            <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
-                          </Tooltip>
-                        </Box>
-                      }
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
                           checked={eventSettings.confirmedEvent}
                           onChange={(e) =>
                             setEventSettings((prev) => ({
@@ -1031,27 +971,6 @@ export const EditEvent: React.FC = () => {
                         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                           Allow Name Check
                           <Tooltip title="Enables name verification against the registration database during check-in." placement="right">
-                            <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
-                          </Tooltip>
-                        </Box>
-                      }
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={eventSettings.showResultSummaryForRaces}
-                          onChange={(e) =>
-                            setEventSettings((prev) => ({
-                              ...prev,
-                              showResultSummaryForRaces: e.target.checked,
-                            }))
-                          }
-                        />
-                      }
-                      label={
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                          Show Result Summary
-                          <Tooltip title="Displays a summary view on the results page." placement="right">
                             <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
                           </Tooltip>
                         </Box>

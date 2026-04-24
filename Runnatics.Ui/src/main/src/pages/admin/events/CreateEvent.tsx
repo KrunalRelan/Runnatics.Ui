@@ -469,36 +469,30 @@ export const CreateEvent: React.FC = () => {
         eventType: EventType.Marathon,
         eventSettings: eventSettings
           ? {
-            removeBanner: eventSettings.removeBanner || false,
+            removeBanner: false,
             published: eventSettings.published || false,
             rankOnNet:
               eventSettings.rankOnNet !== undefined
                 ? eventSettings.rankOnNet
                 : true,
-            showResultSummaryForRaces:
-              eventSettings.showResultSummaryForRaces !== undefined
-                ? eventSettings.showResultSummaryForRaces
-                : true,
-            useOldData: eventSettings.useOldData || false,
+            showResultSummaryForRaces: false,
+            useOldData: false,
             confirmedEvent: eventSettings.confirmedEvent || false,
             allowNameCheck:
               eventSettings.allowNameCheck !== undefined
                 ? eventSettings.allowNameCheck
                 : true,
-            allowParticipantEdit:
-              eventSettings.allowParticipantEdit !== undefined
-                ? eventSettings.allowParticipantEdit
-                : true,
+            allowParticipantEdit: false,
           }
           : {
             removeBanner: false,
             published: false,
             rankOnNet: true,
-            showResultSummaryForRaces: true,
+            showResultSummaryForRaces: false,
             useOldData: false,
             confirmedEvent: false,
             allowNameCheck: true,
-            allowParticipantEdit: true,
+            allowParticipantEdit: false,
           },
 
         leaderboardSettings: leaderBoardSettings
@@ -1040,20 +1034,6 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={eventSettings.removeBanner}
-                          onChange={(e) =>
-                            setEventSettings((prev) => ({
-                              ...prev,
-                              removeBanner: e.target.checked,
-                            }))
-                          }
-                        />
-                      }
-                      label="Remove Banner"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
                           checked={eventSettings.published}
                           onChange={(e) =>
                             setEventSettings((prev) => ({
@@ -1082,37 +1062,6 @@ export const CreateEvent: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={eventSettings.allowParticipantEdit}
-                          onChange={(e) =>
-                            setEventSettings((prev) => ({
-                              ...prev,
-                              allowParticipantEdit: e.target.checked,
-                            }))
-                          }
-                        />
-                      }
-                      label="Allow Participant Edit"
-                    />
-                  </Stack>
-
-                  <Stack spacing={2} sx={{ flex: 1 }}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={eventSettings.useOldData}
-                          onChange={(e) =>
-                            setEventSettings((prev) => ({
-                              ...prev,
-                              useOldData: e.target.checked,
-                            }))
-                          }
-                        />
-                      }
-                      label="Use Old Data"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
                           checked={eventSettings.confirmedEvent}
                           onChange={(e) =>
                             setEventSettings((prev) => ({
@@ -1137,20 +1086,6 @@ export const CreateEvent: React.FC = () => {
                         />
                       }
                       label="Allow Name Check"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={eventSettings.showResultSummaryForRaces}
-                          onChange={(e) =>
-                            setEventSettings((prev) => ({
-                              ...prev,
-                              showResultSummaryForRaces: e.target.checked,
-                            }))
-                          }
-                        />
-                      }
-                      label="Show Result Summary"
                     />
                   </Stack>
                 </Stack>
