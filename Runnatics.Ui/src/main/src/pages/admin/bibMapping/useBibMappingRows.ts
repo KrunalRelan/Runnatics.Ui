@@ -81,7 +81,7 @@ export function useBibMappingRows(
       BibMappingService.getParticipantsWithMappingStatus(raceId, {
         pageNumber: page,
         pageSize,
-        searchString: search,
+        ...(search.trim() ? { searchString: search.trim() } : {}),
         status,
         sortFieldName: 'bib',
         sortDirection: 0,
