@@ -27,6 +27,7 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { EventService } from "../../../services/EventService";
+import { base64ToDataUrl } from "../../../utility";
 import {
   EventOrganizer,
   EventType,
@@ -697,7 +698,7 @@ export const EditEvent: React.FC = () => {
                   <Box>
                     <Box sx={{ borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider', mb: 1 }}>
                       <img
-                        src={`data:image/png;base64,${existingBannerBase64}`}
+                        src={base64ToDataUrl(existingBannerBase64)}
                         alt="Event Banner"
                         style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }}
                       />
@@ -728,7 +729,7 @@ export const EditEvent: React.FC = () => {
                     {bannerBase64 && (
                       <Box sx={{ mt: 1, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
                         <img
-                          src={`data:image/png;base64,${bannerBase64}`}
+                          src={base64ToDataUrl(bannerBase64)}
                           alt="Banner Preview"
                           style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }}
                         />

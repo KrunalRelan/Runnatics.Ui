@@ -32,6 +32,7 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import { SelectChangeEvent } from "@mui/material/Select";
 
 import { EventService } from "../../../services/EventService";
+import { base64ToDataUrl } from "../../../utility";
 import {
   EventOrganizer,
   EventType,
@@ -900,7 +901,7 @@ export const CreateEvent: React.FC = () => {
                 {bannerBase64 && (
                   <Box sx={{ mt: 1, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
                     <img
-                      src={`data:image/png;base64,${bannerBase64}`}
+                      src={base64ToDataUrl(bannerBase64)}
                       alt="Banner Preview"
                       style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }}
                     />

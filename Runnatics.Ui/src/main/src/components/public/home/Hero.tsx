@@ -3,6 +3,7 @@ import { Calendar, MapPin, ChevronLeft, ChevronRight, Activity } from 'lucide-re
 import { Button, Container } from '../ui';
 import usePublicApi from '../../../hooks/usePublicApi';
 import { getUpcomingEvents, type PublicEvent } from '../../../services/publicApi';
+import { base64ToDataUrl } from '../../../utility';
 
 const AUTO_ADVANCE_MS = 5000;
 
@@ -23,7 +24,7 @@ function HeroSlide({ event, isActive }: { event: PublicEvent; isActive: boolean 
     >
       {event.bannerBase64 ? (
         <img
-          src={`data:image/png;base64,${event.bannerBase64}`}
+          src={{base64ToDataUrl(event.bannerBase64)}}
           alt={event.name}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />

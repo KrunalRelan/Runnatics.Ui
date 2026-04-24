@@ -1,4 +1,5 @@
 import { Calendar, MapPin, Activity } from 'lucide-react';
+import { base64ToDataUrl } from '../../../utility';
 import { Badge, Button, Card } from '../ui';
 import type { PublicEvent } from '../../../services/publicApi';
 
@@ -12,7 +13,7 @@ function EventCard({ event }: EventCardProps) {
       <div style={{ aspectRatio: '16/9', backgroundColor: '#E5E7EB', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {event.bannerBase64 ? (
           <img
-            src={`data:image/png;base64,${event.bannerBase64}`}
+            src={base64ToDataUrl(event.bannerBase64)}
             alt={event.name}
             loading="lazy"
             decoding="async"

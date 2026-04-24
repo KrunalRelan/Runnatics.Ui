@@ -5,6 +5,7 @@ import CTABanner from '../../components/public/shared/CTABanner';
 import { ErrorState } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
 import { getEventDetail } from '../../services/publicApi';
+import { base64ToDataUrl } from '../../utility';
 
 const shimmer = {
   background: 'linear-gradient(90deg,rgba(255,255,255,0.08) 25%,rgba(255,255,255,0.15) 50%,rgba(255,255,255,0.08) 75%)',
@@ -74,7 +75,7 @@ function EventDetailPage() {
         style={{
           padding: 'clamp(4rem, 8vw, 6rem) 0',
           ...(ev.bannerBase64 ? {
-            backgroundImage: `linear-gradient(rgba(10,18,32,0.72), rgba(10,18,32,0.72)), url(data:image/png;base64,${ev.bannerBase64})`,
+            backgroundImage: `linear-gradient(rgba(10,18,32,0.72), rgba(10,18,32,0.72)), url(${base64ToDataUrl(ev.bannerBase64)})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           } : {}),
