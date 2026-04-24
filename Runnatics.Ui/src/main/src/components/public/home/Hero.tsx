@@ -3,7 +3,7 @@ import { Calendar, MapPin, ChevronLeft, ChevronRight, Activity } from 'lucide-re
 import { Button, Container } from '../ui';
 import usePublicApi from '../../../hooks/usePublicApi';
 import { getUpcomingEvents, type PublicEvent } from '../../../services/publicApi';
-
+import { base64ToDataUrl } from '../../../utility';
 
 const AUTO_ADVANCE_MS = 5000;
 
@@ -22,9 +22,9 @@ function HeroSlide({ event, isActive }: { event: PublicEvent; isActive: boolean 
         overflow: 'hidden',
       }}
     >
-      {event.bannerUrl ? (
+      {event.bannerBase64 ? (
         <img
-          src={event.bannerUrl}
+          src={base64ToDataUrl(event.bannerBase64)}
           alt={event.name}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
@@ -42,7 +42,7 @@ function HeroSlide({ event, isActive }: { event: PublicEvent; isActive: boolean 
         style={{
           position: 'absolute',
           inset: 0,
-          background: event.bannerUrl
+          background: event.bannerBase64
             ? 'linear-gradient(180deg, rgba(11,28,50,0.55) 0%, rgba(11,28,50,0.75) 100%)'
             : 'radial-gradient(circle at 20% 50%, rgba(232,93,42,0.10) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.04) 0%, transparent 40%)',
         }}
