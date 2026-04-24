@@ -12,7 +12,6 @@ import {
   TableSkeleton,
 } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
-import { base64ToDataUrl } from '../../utility';
 import useDebounce from '../../hooks/useDebounce';
 import { getEventResults, getEventDetail, getPastEvents } from '../../services/publicApi';
 import type { ResultRow } from '../../services/publicApi';
@@ -94,8 +93,8 @@ function EventResults({ slug }: { slug: string }) {
         tone="dark"
         style={{
           padding: 'clamp(4rem, 8vw, 6rem) 0',
-          ...(eventDetail?.bannerBase64 ? {
-            backgroundImage: `linear-gradient(rgba(10,18,32,0.75), rgba(10,18,32,0.75)), url(${base64ToDataUrl(eventDetail.bannerBase64)})`,
+          ...(eventDetail?.bannerUrl ? {
+            backgroundImage: `linear-gradient(rgba(10,18,32,0.75), rgba(10,18,32,0.75)), url(${eventDetail.bannerUrl})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           } : {}),
