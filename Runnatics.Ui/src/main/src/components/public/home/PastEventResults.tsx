@@ -1,4 +1,4 @@
-import { Section, Container, Heading, Button } from '../ui';
+import { Section, Container, Heading } from '../ui';
 import useScrollReveal from '../../../hooks/useScrollReveal';
 import usePublicApi from '../../../hooks/usePublicApi';
 import { getPastEvents } from '../../../services/publicApi';
@@ -37,9 +37,6 @@ function PastEventResults() {
           )}
         </div>
 
-        <div style={{ textAlign: 'center' }}>
-          <Button variant="outline" size="md" href="/results">View All Results →</Button>
-        </div>
       </Container>
     </Section>
   );

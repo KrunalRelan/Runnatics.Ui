@@ -13,67 +13,161 @@ function EventCard({ event, portrait }: EventCardProps) {
     return (
       <div
         style={{
-          position: 'relative',
-          aspectRatio: '3/4',
-          borderRadius: '10px',
+          backgroundColor: '#fff',
+          borderRadius: '12px',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
           overflow: 'hidden',
-          backgroundColor: '#D1D5DB',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          transition: 'box-shadow 0.3s, transform 0.3s',
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 30px rgba(0,0,0,0.14)';
+          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)';
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.08)';
+          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
         }}
       >
-        {event.bannerBase64 ? (
-          <img
-            src={base64ToDataUrl(event.bannerBase64)}
-            alt={event.name}
-            loading="lazy"
-            decoding="async"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
-          />
-        ) : (
-          <div
+        {/* Banner image — constrained to 3:4 inside card */}
+        <div
+          style={{
+            width: '100%',
+            aspectRatio: '3/4',
+            overflow: 'hidden',
+            backgroundColor: '#E5E7EB',
+            flexShrink: 0,
+          }}
+        >
+          {event.bannerBase64 ? (
+            <img
+              src={base64ToDataUrl(event.bannerBase64)}
+              alt={event.name}
+              loading="lazy"
+              decoding="async"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1rem',
+              }}
+            >
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: '#9CA3AF', textAlign: 'center' }}>
+                {event.name}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Card content */}
+        <div
+          style={{
+            padding: '0.875rem',
+            display: 'flex',
+            flexDirection: 'column',
+            flex: 1,
+          }}
+        >
+          {/* Event name — max 2 lines */}
+          <h3
             style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '1rem',
-            }}
+              fontFamily: 'var(--font-heading)',
+              fontWeight: 700,
+              fontSize: '0.875rem',
+              margin: '0 0 0.5rem',
+              color: 'var(--color-text)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+            } as React.CSSProperties}
           >
-            <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 500, color: '#6B7280', textAlign: 'center' }}>
-              {event.name}
+            {event.name}
+          </h3>
+
+          {/* Date + City */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '0.5rem' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontFamily: 'var(--font-body)', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+              <Calendar size={11} /> {event.date}
             </span>
+            {event.city && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontFamily: 'var(--font-body)', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                <MapPin size={11} /> {event.city}
+              </span>
+            )}
           </div>
-        )}
-        {event.hasPublishedResults && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: '0.875rem',
-              left: 0,
-              right: 0,
-              display: 'flex',
-              justifyContent: 'center',
-            }}
-          >
+
+          {/* Distance chips */}
+          {event.categories.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginBottom: '0.5rem' }}>
+              {event.categories.map((cat) => (
+                <span
+                  key={cat}
+                  style={{
+                    display: 'inline-block',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '0.6875rem',
+                    padding: '0.125rem 0.5rem',
+                    borderRadius: '4px',
+                    border: '1px solid var(--color-border)',
+                    color: 'var(--color-text-muted)',
+                    backgroundColor: 'transparent',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {cat}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Spacer — pushes button to bottom */}
+          <div style={{ flex: 1 }} />
+
+          {/* View Result button */}
+          {event.hasPublishedResults && (
             <a
               href={`/events/${event.slug}/results`}
               style={{
-                display: 'inline-block',
-                backgroundColor: 'rgba(255,255,255,0.92)',
-                color: 'var(--color-accent)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.25rem',
+                width: '100%',
+                padding: '0.4375rem 1rem',
+                border: '1px solid var(--color-accent)',
+                borderRadius: '9999px',
                 fontFamily: 'var(--font-body)',
                 fontSize: '0.8125rem',
                 fontWeight: 600,
-                padding: '0.375rem 1rem',
-                borderRadius: '9999px',
-                backdropFilter: 'blur(4px)',
+                color: 'var(--color-accent)',
                 textDecoration: 'none',
+                marginTop: '0.5rem',
+                boxSizing: 'border-box',
+                transition: 'background-color 0.15s, color 0.15s',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'var(--color-accent)';
+                (e.currentTarget as HTMLAnchorElement).style.color = '#fff';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'transparent';
+                (e.currentTarget as HTMLAnchorElement).style.color = 'var(--color-accent)';
               }}
             >
               View Result →
             </a>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   }
