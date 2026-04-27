@@ -126,14 +126,33 @@ function normaliseEvent(e: ApiEvent): PublicEvent {
   };
 }
 
-export async function getUpcomingEvents(signal?: AbortSignal): Promise<PublicEvent[]> {
-  const page = await fetchPublicApi<ApiPage<ApiEvent>>('/events?status=upcoming', signal);
+export interface GetEventsParams {
+  status?: 'upcoming' | 'past' | 'recent';
+  take?: number;
+  page?: number;
+  pageSize?: number;
+  city?: string;
+  q?: string;
+}
+
+export async function getEvents(params: GetEventsParams = {}, signal?: AbortSignal): Promise<PublicEvent[]> {
+  const qs = new URLSearchParams();
+  if (params.status) qs.set('status', params.status);
+  if (params.take) qs.set('take', String(params.take));
+  if (params.page) qs.set('page', String(params.page));
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+  if (params.city) qs.set('city', params.city);
+  if (params.q) qs.set('q', params.q);
+  const page = await fetchPublicApi<ApiPage<ApiEvent>>(`/events?${qs.toString()}`, signal);
   return page.items.map(normaliseEvent);
 }
 
+export async function getUpcomingEvents(signal?: AbortSignal): Promise<PublicEvent[]> {
+  return getEvents({ status: 'upcoming', take: 5 }, signal);
+}
+
 export async function getPastEvents(signal?: AbortSignal): Promise<PublicEvent[]> {
-  const page = await fetchPublicApi<ApiPage<ApiEvent>>('/events?status=past', signal);
-  return page.items.map(normaliseEvent);
+  return getEvents({ status: 'past', take: 10 }, signal);
 }
 
 export function getEventDetail(slug: string, signal?: AbortSignal): Promise<PublicEventDetail> {
