@@ -12,7 +12,7 @@ function PastEventResults() {
     [],
   );
 
-  const preview = events?.slice(0, 6) ?? [];
+  const preview = events?.slice(0, 5) ?? [];
 
   return (
     <Section tone="alt">
@@ -31,8 +31,8 @@ function PastEventResults() {
             <EmptyState title="No past events yet" subtitle="Results from completed events will appear here." />
           )}
           {!loading && !error && preview.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-              {preview.map((ev) => <EventCard key={ev.slug} event={ev} />)}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '1rem' }}>
+              {preview.map((ev) => <EventCard key={ev.slug} event={ev} portrait />)}
             </div>
           )}
         </div>

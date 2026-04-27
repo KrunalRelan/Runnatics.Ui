@@ -21,6 +21,12 @@ export type { ResultRow };
 
 const PAGE_SIZE = 20;
 
+const MEDAL = [
+  { place: 2, label: '2nd', color: '#C0C0C0', textColor: '#4A4A4A', barHeight: '80px' },
+  { place: 1, label: '1st', color: '#FFD700', textColor: '#7C5A00', barHeight: '100px' },
+  { place: 3, label: '3rd', color: '#CD7F32', textColor: '#5C3000', barHeight: '64px' },
+];
+
 function EventSelector() {
   const { data: events, loading, error, refetch } = usePublicApi(
     (signal) => getPastEvents(signal),
@@ -62,6 +68,7 @@ function EventResults({ slug }: { slug: string }) {
   const [race, setRace] = useState('All');
   const [gender, setGender] = useState('All');
   const [page, setPage] = useState(1);
+  const [openCat, setOpenCat] = useState<string | null>(null);
 
   const debouncedSearch = useDebounce(search, 350);
 
@@ -83,6 +90,7 @@ function EventResults({ slug }: { slug: string }) {
   const results = data?.results ?? [];
   const totalPages = data ? Math.ceil(data.totalCount / PAGE_SIZE) : 0;
   const availableRaces = data?.races ?? [];
+  const podium = !loading && !error && page === 1 && results.length >= 3 ? results.slice(0, 3) : null;
 
   const handleSearch = (s: string) => { setSearch(s); setPage(1); };
   const handleRace = (r: string) => { setRace(r); setPage(1); };
@@ -90,6 +98,7 @@ function EventResults({ slug }: { slug: string }) {
 
   return (
     <>
+      {/* Hero */}
       <Section
         tone="dark"
         style={{
@@ -117,6 +126,7 @@ function EventResults({ slug }: { slug: string }) {
         </Container>
       </Section>
 
+      {/* Filters */}
       <ResultFilters
         search={search}
         race={race}
@@ -127,34 +137,268 @@ function EventResults({ slug }: { slug: string }) {
         onGenderChange={handleGender}
       />
 
+      {/* Main content + sidebar */}
       <Section tone="light">
         <Container>
-          {error && <ErrorState message={error} onRetry={refetch} />}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1fr) clamp(240px, 28%, 320px)',
+              gap: '2rem',
+              alignItems: 'start',
+            }}
+          >
+            {/* ── Left: leaderboard + table ── */}
+            <div>
+              {/* Leaderboard header band + podium */}
+              {podium && (
+                <div style={{ marginBottom: '2rem' }}>
+                  <div
+                    style={{
+                      backgroundColor: 'var(--color-primary)',
+                      color: '#fff',
+                      padding: '0.875rem 1.25rem',
+                      borderRadius: '10px 10px 0 0',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.0625rem' }}>
+                      Leaderboard
+                    </span>
+                    {data && (
+                      <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', opacity: 0.8 }}>
+                        {data.totalCount.toLocaleString()} finishers
+                      </span>
+                    )}
+                  </div>
 
-          {!error && (
-            <>
-              {loading ? (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: 'var(--color-primary)', color: '#fff' }}>
-                        {['Rank', 'Bib', 'Name', 'Race', 'Gender', 'Gun Time', 'Net Time', 'Cat Rank', 'Gen Rank', ''].map((h) => (
-                          <th key={h} style={{ padding: '0.875rem 1rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <TableSkeleton rows={10} cols={10} />
-                  </table>
+                  <div
+                    style={{
+                      backgroundColor: 'var(--color-bg-alt)',
+                      borderRadius: '0 0 10px 10px',
+                      padding: '1.5rem 1rem',
+                      display: 'flex',
+                      gap: '0.75rem',
+                      alignItems: 'flex-end',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {MEDAL.map(({ place, label, color, textColor, barHeight }) => {
+                      const r = podium[place - 1];
+                      return (
+                        <div
+                          key={place}
+                          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.375rem', maxWidth: '180px' }}
+                        >
+                          <div
+                            style={{
+                              fontFamily: 'var(--font-body)',
+                              fontSize: '0.875rem',
+                              fontWeight: 600,
+                              color: 'var(--color-text)',
+                              textAlign: 'center',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxWidth: '100%',
+                            }}
+                          >
+                            {r.name}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                            {r.netTime}
+                          </div>
+                          <div
+                            style={{
+                              width: '100%',
+                              backgroundColor: color,
+                              borderRadius: '6px 6px 0 0',
+                              height: barHeight,
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              justifyContent: 'center',
+                              paddingTop: '0.5rem',
+                            }}
+                          >
+                            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.25rem', color: textColor }}>
+                              {label}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              ) : (
-                <ResultsTable results={results} />
               )}
 
-              {!loading && totalPages > 1 && (
-                <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+              {/* Results table */}
+              {error && <ErrorState message={error} onRetry={refetch} />}
+
+              {!error && (
+                <>
+                  {loading ? (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: 'var(--color-primary)', color: '#fff' }}>
+                            {['Rank', 'Bib', 'Name', 'Race', 'Gender', 'Gun Time', 'Net Time', 'Cat Rank', 'Gen Rank', ''].map((h) => (
+                              <th key={h} style={{ padding: '0.875rem 1rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem' }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <TableSkeleton rows={10} cols={10} />
+                      </table>
+                    </div>
+                  ) : (
+                    <ResultsTable results={results} />
+                  )}
+
+                  {!loading && totalPages > 1 && (
+                    <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                  )}
+                </>
               )}
-            </>
-          )}
+            </div>
+
+            {/* ── Right: event card + race rules ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Event info card */}
+              {eventDetail && (
+                <div
+                  style={{
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: '#fff',
+                  }}
+                >
+                  {eventDetail.bannerBase64 && (
+                    <img
+                      src={base64ToDataUrl(eventDetail.bannerBase64)}
+                      alt={eventDetail.name}
+                      style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }}
+                    />
+                  )}
+                  <div style={{ padding: '1rem' }}>
+                    <div
+                      style={{
+                        fontFamily: 'var(--font-heading)',
+                        fontWeight: 600,
+                        fontSize: '1rem',
+                        color: 'var(--color-text)',
+                        marginBottom: '0.5rem',
+                      }}
+                    >
+                      {eventDetail.name}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginBottom: '0.25rem' }}>
+                      {eventDetail.date}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
+                      {eventDetail.city}{eventDetail.venue ? `, ${eventDetail.venue}` : ''}
+                    </div>
+                    {eventDetail.participants > 0 && (
+                      <div
+                        style={{
+                          marginTop: '0.75rem',
+                          fontFamily: 'var(--font-body)',
+                          fontSize: '0.8125rem',
+                          color: 'var(--color-accent)',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {eventDetail.participants.toLocaleString()}+ participants
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Race rules accordion */}
+              {eventDetail && eventDetail.categories.length > 0 && (
+                <div
+                  style={{
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '0.875rem 1rem',
+                      backgroundColor: 'var(--color-bg-alt)',
+                      borderBottom: '1px solid var(--color-border)',
+                      fontFamily: 'var(--font-heading)',
+                      fontWeight: 600,
+                      fontSize: '0.9375rem',
+                      color: 'var(--color-text)',
+                    }}
+                  >
+                    Race Rules
+                  </div>
+                  {eventDetail.categories.map((cat, i) => (
+                    <div
+                      key={cat.name}
+                      style={{
+                        borderBottom: i < eventDetail.categories.length - 1 ? '1px solid var(--color-border)' : 'none',
+                      }}
+                    >
+                      <button
+                        onClick={() => setOpenCat(openCat === cat.name ? null : cat.name)}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '0.75rem 1rem',
+                          backgroundColor: '#fff',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontFamily: 'var(--font-body)',
+                          fontSize: '0.9375rem',
+                          color: 'var(--color-text)',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <span>{cat.name}</span>
+                        <span
+                          style={{
+                            fontSize: '0.7rem',
+                            color: 'var(--color-text-muted)',
+                            display: 'inline-block',
+                            transform: openCat === cat.name ? 'rotate(180deg)' : 'none',
+                            transition: 'transform 0.2s',
+                          }}
+                        >
+                          ▼
+                        </span>
+                      </button>
+                      {openCat === cat.name && (
+                        <div
+                          style={{
+                            padding: '0.75rem 1rem 1rem',
+                            backgroundColor: 'var(--color-bg-alt)',
+                            fontFamily: 'var(--font-body)',
+                            fontSize: '0.875rem',
+                            color: 'var(--color-text-muted)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.375rem',
+                          }}
+                        >
+                          <div>Distance: {cat.distance}</div>
+                          <div>Entry Fee: {cat.price}</div>
+                          <div>Participants: {cat.count.toLocaleString()}</div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </Container>
       </Section>
     </>

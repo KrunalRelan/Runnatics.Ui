@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, MapPin, ChevronLeft, ChevronRight, Activity } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Activity } from 'lucide-react';
 import { Button, Container } from '../ui';
 import usePublicApi from '../../../hooks/usePublicApi';
 import { getUpcomingEvents, type PublicEvent } from '../../../services/publicApi';
@@ -16,105 +16,14 @@ function HeroSlide({ event, isActive }: { event: PublicEvent; isActive: boolean 
         opacity: isActive ? 1 : 0,
         transition: 'opacity 700ms ease-in-out',
         pointerEvents: isActive ? 'auto' : 'none',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
         overflow: 'hidden',
       }}
     >
-      {event.bannerBase64 ? (
-        <img
-          src={base64ToDataUrl(event.bannerBase64)}
-          alt={event.name}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-      ) : (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(135deg, var(--color-bg-dark) 0%, #0F2744 55%, #1A3D6A 100%)',
-          }}
-        />
-      )}
-      {/* dark overlay for legibility */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: event.bannerBase64
-            ? 'linear-gradient(180deg, rgba(11,28,50,0.55) 0%, rgba(11,28,50,0.75) 100%)'
-            : 'radial-gradient(circle at 20% 50%, rgba(232,93,42,0.10) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.04) 0%, transparent 40%)',
-        }}
+      <img
+        src={base64ToDataUrl(event.bannerBase64!)}
+        alt={event.name}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
       />
-
-      <Container style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '4rem 1.5rem', color: '#fff' }}>
-        <div
-          style={{
-            display: 'inline-block',
-            backgroundColor: 'rgba(232,93,42,0.15)',
-            color: 'var(--color-accent)',
-            fontFamily: 'var(--font-body)',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            padding: '0.375rem 1rem',
-            borderRadius: '9999px',
-            marginBottom: '1.25rem',
-            border: '1px solid rgba(232,93,42,0.3)',
-          }}
-        >
-          Upcoming Event
-        </div>
-
-        <h1
-          style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: 'clamp(2.25rem, 5.5vw, 4rem)',
-            fontWeight: 700,
-            lineHeight: 1.1,
-            margin: '0 auto 1.25rem',
-            maxWidth: '900px',
-          }}
-        >
-          {event.name}
-        </h1>
-
-        <div
-          style={{
-            display: 'flex',
-            gap: '1.5rem',
-            justifyContent: 'center',
-            flexWrap: 'wrap',
-            marginBottom: '2rem',
-            fontFamily: 'var(--font-body)',
-            fontSize: '1rem',
-            color: 'rgba(255,255,255,0.85)',
-          }}
-        >
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Calendar size={16} /> {event.date}
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-            <MapPin size={16} /> {event.city}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <Button variant="primary" size="lg" href={`/events/${event.slug}`}>
-            Register Now
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            href={`/events/${event.slug}`}
-            style={{ borderColor: 'rgba(255,255,255,0.55)', color: '#fff' }}
-          >
-            View Details
-          </Button>
-        </div>
-      </Container>
     </div>
   );
 }
@@ -187,7 +96,7 @@ function HeroFallback() {
 
 function Hero() {
   const { data: events, loading } = usePublicApi((signal) => getUpcomingEvents(signal), []);
-  const slides = events ?? [];
+  const slides = (events ?? []).filter((ev) => !!ev.bannerBase64);
   const [index, setIndex] = useState(0);
 
   // Clamp index if list shrinks

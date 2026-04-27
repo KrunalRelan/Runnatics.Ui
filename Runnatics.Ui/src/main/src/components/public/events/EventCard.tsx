@@ -5,9 +5,63 @@ import type { PublicEvent } from '../../../services/publicApi';
 
 interface EventCardProps {
   event: PublicEvent;
+  portrait?: boolean;
 }
 
-function EventCard({ event }: EventCardProps) {
+function EventCard({ event, portrait }: EventCardProps) {
+  if (portrait) {
+    return (
+      <a
+        href={`/events/${event.slug}/results`}
+        style={{
+          display: 'block',
+          textDecoration: 'none',
+          position: 'relative',
+          aspectRatio: '3/4',
+          borderRadius: '10px',
+          overflow: 'hidden',
+          backgroundColor: '#D1D5DB',
+        }}
+      >
+        {event.bannerBase64 ? (
+          <img
+            src={base64ToDataUrl(event.bannerBase64)}
+            alt={event.name}
+            loading="lazy"
+            decoding="async"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
+          />
+        ) : null}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '0.875rem',
+            left: 0,
+            right: 0,
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <span
+            style={{
+              display: 'inline-block',
+              backgroundColor: 'rgba(255,255,255,0.92)',
+              color: 'var(--color-accent)',
+              fontFamily: 'var(--font-body)',
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              padding: '0.375rem 1rem',
+              borderRadius: '9999px',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            View Result →
+          </span>
+        </div>
+      </a>
+    );
+  }
+
   return (
     <Card>
       <div style={{ aspectRatio: '16/9', backgroundColor: '#E5E7EB', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
