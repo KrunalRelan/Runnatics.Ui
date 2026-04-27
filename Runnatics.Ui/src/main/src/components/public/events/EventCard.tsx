@@ -11,11 +11,8 @@ interface EventCardProps {
 function EventCard({ event, portrait }: EventCardProps) {
   if (portrait) {
     return (
-      <a
-        href={`/events/${event.slug}/results`}
+      <div
         style={{
-          display: 'block',
-          textDecoration: 'none',
           position: 'relative',
           aspectRatio: '3/4',
           borderRadius: '10px',
@@ -31,34 +28,53 @@ function EventCard({ event, portrait }: EventCardProps) {
             decoding="async"
             style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
           />
-        ) : null}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '0.875rem',
-            left: 0,
-            right: 0,
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
-          <span
+        ) : (
+          <div
             style={{
-              display: 'inline-block',
-              backgroundColor: 'rgba(255,255,255,0.92)',
-              color: 'var(--color-accent)',
-              fontFamily: 'var(--font-body)',
-              fontSize: '0.8125rem',
-              fontWeight: 600,
-              padding: '0.375rem 1rem',
-              borderRadius: '9999px',
-              backdropFilter: 'blur(4px)',
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1rem',
             }}
           >
-            View Result →
-          </span>
-        </div>
-      </a>
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 500, color: '#6B7280', textAlign: 'center' }}>
+              {event.name}
+            </span>
+          </div>
+        )}
+        {event.hasPublishedResults && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '0.875rem',
+              left: 0,
+              right: 0,
+              display: 'flex',
+              justifyContent: 'center',
+            }}
+          >
+            <a
+              href={`/events/${event.slug}/results`}
+              style={{
+                display: 'inline-block',
+                backgroundColor: 'rgba(255,255,255,0.92)',
+                color: 'var(--color-accent)',
+                fontFamily: 'var(--font-body)',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                padding: '0.375rem 1rem',
+                borderRadius: '9999px',
+                backdropFilter: 'blur(4px)',
+                textDecoration: 'none',
+              }}
+            >
+              View Result →
+            </a>
+          </div>
+        )}
+      </div>
     );
   }
 

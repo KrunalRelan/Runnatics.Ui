@@ -59,6 +59,7 @@ interface ApiEvent {
   registrationOpen: boolean;
   venue?: string;
   bannerBase64?: string | null;
+  hasPublishedResults?: boolean;
 }
 
 // ── Normalised shapes used by components ──────────────────────────
@@ -72,6 +73,8 @@ export interface PublicEvent {
   registrationOpen: boolean;
   isPast: boolean;
   bannerBase64?: string | null;
+  /** True when at least one published race has ShowResultTable enabled. */
+  hasPublishedResults: boolean;
 }
 
 export interface PublicEventCategory {
@@ -119,6 +122,7 @@ function normaliseEvent(e: ApiEvent): PublicEvent {
     registrationOpen: e.registrationOpen,
     isPast: new Date(e.eventDate) < new Date(),
     bannerBase64: e.bannerBase64 ?? null,
+    hasPublishedResults: e.hasPublishedResults ?? false,
   };
 }
 
@@ -139,30 +143,79 @@ export function getEventDetail(slug: string, signal?: AbortSignal): Promise<Publ
 // ── Results ───────────────────────────────────────────────────────
 
 export interface ResultSplit {
-  checkpoint: string;
-  time: string;
+  checkpointName: string;
+  time: string;      // TimeSpan serialised as "HH:mm:ss"
   rank: number;
 }
 
+/** Matches PublicResultDto (camelCase serialised by ASP.NET Core). */
 export interface ResultRow {
-  rank: number;
-  bib: string;
-  name: string;
-  race: string;
-  gender: string;
-  gunTime: string;
-  netTime: string;
-  catRank: number;
-  genderRank: number;
-  splits: ResultSplit[];
+  overallRank?: number;
+  bibNumber: string;
+  participantName: string;
+  raceName: string;
+  gender?: string;
+  ageGroup?: string;
+  gunTime?: string;   // "HH:mm:ss" or null
+  netTime?: string;   // "HH:mm:ss" or null
+  categoryRank?: number;
+  genderRank?: number;
+  splits?: ResultSplit[];
 }
 
+export interface PublicLeaderboardSettings {
+  showOverallResults: boolean;
+  showCategoryResults: boolean;
+  showGenderResults: boolean;
+  showAgeGroupResults: boolean;
+  sortByOverallChipTime: boolean;
+  sortByOverallGunTime: boolean;
+  sortByCategoryChipTime: boolean;
+  sortByCategoryGunTime: boolean;
+  enableLiveLeaderboard: boolean;
+  showSplitTimes: boolean;
+  showPace: boolean;
+  showTeamResults: boolean;
+  showMedalIcon: boolean;
+  autoRefreshIntervalSec: number;
+  maxDisplayedRecords: number;
+  numberOfResultsToShowOverall: number;
+  numberOfResultsToShowCategory: number;
+}
+
+const DEFAULT_LEADERBOARD_SETTINGS: PublicLeaderboardSettings = {
+  showOverallResults: true,
+  showCategoryResults: true,
+  showGenderResults: false,
+  showAgeGroupResults: false,
+  sortByOverallChipTime: true,
+  sortByOverallGunTime: false,
+  sortByCategoryChipTime: true,
+  sortByCategoryGunTime: false,
+  enableLiveLeaderboard: false,
+  showSplitTimes: false,
+  showPace: false,
+  showTeamResults: false,
+  showMedalIcon: true,
+  autoRefreshIntervalSec: 30,
+  maxDisplayedRecords: 0,
+  numberOfResultsToShowOverall: 0,
+  numberOfResultsToShowCategory: 0,
+};
+
+/** Matches PublicResultsResponseDto (camelCase). */
 export interface ResultsResponse {
   results: ResultRow[];
+  races: string[];
   totalCount: number;
   page: number;
   pageSize: number;
-  races: string[];
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  leaderboardSettings: PublicLeaderboardSettings;
+  isPublished: boolean;
+  statusMessage?: string;
 }
 
 export interface ResultsParams {
@@ -190,6 +243,8 @@ export function getEventResults(
     signal,
   );
 }
+
+export { DEFAULT_LEADERBOARD_SETTINGS };
 
 // ── Gallery ───────────────────────────────────────────────────────
 
