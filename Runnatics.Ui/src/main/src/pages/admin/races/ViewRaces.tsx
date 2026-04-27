@@ -53,7 +53,7 @@ const ViewRaces: React.FC = () => {
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<number>(2);
+  const [activeTab, setActiveTab] = useState<number>(3);
   const [selectedRaceId, setSelectedRaceId] = useState<string | undefined>(undefined);
   const [hasParticipants, setHasParticipants] = useState<boolean>(false);
 
@@ -165,16 +165,16 @@ const ViewRaces: React.FC = () => {
       case 1:
         navigate(`/events/events-edit/${eventId}`);
         break;
-      case 9:
+      case 2:
         if (selectedRaceId) navigate(`/events/event-details/${eventId}/race/edit/${selectedRaceId}`);
         break;
-      case 2:
       case 3:
       case 4:
       case 5:
       case 6:
       case 7:
       case 8:
+      case 9:
         // Stay on current page, just change the active tab
         break;
       default:
@@ -196,9 +196,17 @@ const ViewRaces: React.FC = () => {
     if (!eventId || !selectedRaceId) return null;
 
     switch (activeTab) {
-      case 2:
-        return <ViewParticipants eventId={eventId} raceId={selectedRaceId} />;
       case 3:
+        return <ViewParticipants eventId={eventId} raceId={selectedRaceId} />;
+      case 4:
+        return <ViewCheckPoints eventId={eventId} raceId={selectedRaceId} races={races} />;
+      case 5:
+        return <BibMapping eventId={eventId} raceId={selectedRaceId} />;
+      case 6:
+        return <Segments eventId={eventId} raceId={selectedRaceId} />;
+      case 7:
+        return <AddOrEditCertificate eventId={eventId} raceId={selectedRaceId} />;
+      case 8:
         return (
           <RaceDashboard
             raceId={selectedRaceId}
@@ -206,19 +214,8 @@ const ViewRaces: React.FC = () => {
             webhookBaseUrl={config.apiBaseUrl.replace(/\/api$/, '')}
           />
         );
-      case 4:
-        return <ViewCheckPoints eventId={eventId} raceId={selectedRaceId} races={races} />;
-      case 5:
-        return <Segments eventId={eventId} raceId={selectedRaceId} />;
-      case 6:
-        return <AddOrEditCertificate eventId={eventId} raceId={selectedRaceId} />;
-      case 7:
-        return <Leaderboard eventId={eventId} raceId={selectedRaceId} />;
-      case 8:
-        return <BibMapping eventId={eventId} raceId={selectedRaceId} />;
       case 9:
-        navigate(`/events/event-details/${eventId}/race/edit/${selectedRaceId}`);
-        return null;
+        return <Leaderboard eventId={eventId} raceId={selectedRaceId} />;
       default:
         return null;
     }
