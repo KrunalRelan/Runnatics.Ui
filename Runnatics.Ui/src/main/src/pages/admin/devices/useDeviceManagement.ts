@@ -45,6 +45,7 @@ export function useDeviceManagement(): UseDeviceManagementReturn {
   const extractErrorMessage = (err: unknown, fallback: string): string => {
     const e = err as any;
     return (
+      e?.response?.data?.error ||
       e?.response?.data?.message ||
       e?.response?.data?.title ||
       (typeof e?.response?.data === 'string' ? e.response.data : null) ||
@@ -87,6 +88,7 @@ export function useDeviceManagement(): UseDeviceManagementReturn {
       setDeleteConfirmId(null);
     },
     onError: (err) => {
+      setDeleteConfirmId(null); // ✅ close dialog on failure too
       toast.error(extractErrorMessage(err, 'Failed to delete device'));
     },
   });

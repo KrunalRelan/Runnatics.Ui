@@ -39,6 +39,62 @@ interface ViewCheckPointsProps {
     races: Race[];
 }
 
+/**
+ * Sorts checkpoints so that each child immediately follows its parent,
+ * regardless of distance. Parents are ordered by distance ASC, then by id.
+ *
+ * Relationship: child.parentDeviceId === parent.deviceId
+ */
+const sortCheckpointsWithChildren = (checkpoints: Checkpoint[]): Checkpoint[] => {
+    const isChild = (cp: Checkpoint) => !!(cp.parentDeviceId?.trim());
+
+    // Split into parents and children
+    const parents = checkpoints
+        .filter(cp => !isChild(cp))
+        .sort((a, b) => {
+            const distDiff = Number(a.distanceFromStart) - Number(b.distanceFromStart); // ✅ distance first
+            if (distDiff !== 0) return distDiff;
+            return Number(a.id) - Number(b.id); // ✅ same distance → creation order
+        });
+
+    const children = checkpoints.filter(cp => isChild(cp));
+
+    // Build a lookup: deviceId → children[]
+    const childrenByParentDeviceId = new Map<string, Checkpoint[]>();
+    for (const child of children) {
+        const key = child.parentDeviceId!.trim();
+        if (!childrenByParentDeviceId.has(key)) {
+            childrenByParentDeviceId.set(key, []);
+        }
+        childrenByParentDeviceId.get(key)!.push(child);
+    }
+
+    // Interleave: parent → its children → next parent → its children …
+    const result: Checkpoint[] = [];
+    const placedChildIds = new Set<string>();
+
+    for (const parent of parents) {
+        result.push(parent);
+
+        const myChildren = (childrenByParentDeviceId.get(String(parent.deviceId)) ?? [])
+            .sort((a, b) => a.id.localeCompare(b.id));
+
+        for (const child of myChildren) {
+            result.push(child);
+            placedChildIds.add(child.id);
+        }
+    }
+
+    // Safety net: orphaned children whose parent wasn't found
+    for (const child of children) {
+        if (!placedChildIds.has(child.id)) {
+            result.push(child);
+        }
+    }
+
+    return result;
+};
+
 const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, races }) => {
 
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -62,7 +118,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
 
     const fetchRaceCheckpointCounts = async () => {
         if (!eventId) return;
-        
+
         const counts: Record<string, number> = {};
         for (const race of races) {
             try {
@@ -178,15 +234,8 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
             });
             const checkpoints = response.message || [];
             // Sort by distance ASC, then primary device (no parent) before paired device
-            const sortedCheckpoints = [...checkpoints].sort((a, b) => {
-                const distDiff = Number(a.distanceFromStart) - Number(b.distanceFromStart);
-                if (distDiff !== 0) return distDiff;
-                const aHasParent = !!(a.parentDeviceId?.trim());
-                const bHasParent = !!(b.parentDeviceId?.trim());
-                if (!aHasParent && bHasParent) return -1;
-                if (aHasParent && !bHasParent) return 1;
-                return a.id.localeCompare(b.id);
-            });
+            const sortedCheckpoints = sortCheckpointsWithChildren(checkpoints);
+
             setLocalCheckpoints(sortedCheckpoints);
             setTotalCount(checkpoints.length);
             setTotalPages(1);
@@ -770,8 +819,8 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                     {/* Warning for missing finish checkpoint */}
                     {isMissingFinish && (
                         <Alert severity="warning" sx={{ mb: 2 }}>
-                            <strong>Missing Finish Checkpoint!</strong> Checkpoints cover up to {loopParams.maxCheckpointDistance} KM, 
-                            but the race is {raceDistance} KM. Please add a checkpoint at {raceDistance} KM to cover the 
+                            <strong>Missing Finish Checkpoint!</strong> Checkpoints cover up to {loopParams.maxCheckpointDistance} KM,
+                            but the race is {raceDistance} KM. Please add a checkpoint at {raceDistance} KM to cover the
                             remaining {missingDistance} KM.
                         </Alert>
                     )}
@@ -852,7 +901,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                                 {/* Warning for missing finish */}
                                 {isMissingFinish && (
                                     <Alert severity="warning" sx={{ mb: 2 }}>
-                                        Checkpoints only cover up to {loopParams.maxCheckpointDistance} KM. 
+                                        Checkpoints only cover up to {loopParams.maxCheckpointDistance} KM.
                                         Missing {missingDistance} KM to reach finish at {raceDistance} KM.
                                     </Alert>
                                 )}
