@@ -9,8 +9,13 @@ import {
   IconButton,
   Card,
   CardContent,
-  TextField,
   Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  CircularProgress,
+  FormHelperText,
 } from "@mui/material";
 import {
   CloudUpload,
@@ -18,8 +23,11 @@ import {
   CheckCircle,
   InsertDriveFile,
 } from "@mui/icons-material";
+import { useQuery } from "@tanstack/react-query";
 import PageContainer from "@/main/src/components/PageContainer";
 import { RFIDService } from "@/main/src/services/RFIDService";
+import { EventService } from "@/main/src/services/EventService";
+import { RaceService } from "@/main/src/services/RaceService";
 
 interface UploadState {
   selectedFile: File | null;
@@ -31,9 +39,9 @@ interface UploadState {
 }
 
 const EPCMappingUpload: React.FC = () => {
-  const [eventId, setEventId] = useState("");
-  const [raceId, setRaceId] = useState("");
-  const [eventIdError, setEventIdError] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [selectedRaceId, setSelectedRaceId] = useState<string>("");
+  const [eventError, setEventError] = useState("");
   const [state, setState] = useState<UploadState>({
     selectedFile: null,
     isUploading: false,
@@ -44,6 +52,24 @@ const EPCMappingUpload: React.FC = () => {
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const eventsQuery = useQuery({
+    queryKey: ["events", "future"],
+    queryFn: () => EventService.getFutureEvents(),
+  });
+
+  const racesQuery = useQuery({
+    queryKey: ["races", selectedEventId],
+    queryFn: () =>
+      RaceService.getAllRaces({
+        eventId: selectedEventId,
+        searchCriteria: { pageNumber: 1, pageSize: 100 },
+      }),
+    enabled: !!selectedEventId,
+  });
+
+  const events = eventsQuery.data?.message ?? [];
+  const races = racesQuery.data?.message ?? [];
 
   const updateState = (updates: Partial<UploadState>) => {
     setState((prev) => ({ ...prev, ...updates }));
@@ -82,22 +108,28 @@ const EPCMappingUpload: React.FC = () => {
     if (file) validateAndSetFile(file);
   };
 
+  const handleEventChange = (eventId: string) => {
+    setSelectedEventId(eventId);
+    setSelectedRaceId("");
+    if (eventId) setEventError("");
+  };
+
   const handleUpload = async () => {
     if (!state.selectedFile) return;
 
-    if (!eventId.trim()) {
-      setEventIdError("Event ID is required");
+    if (!selectedEventId) {
+      setEventError("Please select an event");
       return;
     }
-    setEventIdError("");
+    setEventError("");
 
     updateState({ isUploading: true, error: null, uploadResult: null, uploadProgress: 0 });
 
     try {
       const response = await RFIDService.uploadEPCMapping(
-        eventId.trim(),
+        selectedEventId,
         state.selectedFile,
-        raceId.trim() || undefined,
+        selectedRaceId || undefined,
         (progress) => updateState({ uploadProgress: progress })
       );
 
@@ -142,7 +174,7 @@ const EPCMappingUpload: React.FC = () => {
           <Typography variant="body2">
             Upload a CSV file containing EPC to BIB number mappings for a specific event and race.
             <br />
-            <strong>Required:</strong> Event ID &nbsp;|&nbsp; <strong>Optional:</strong> Race ID
+            <strong>Required:</strong> Event &nbsp;|&nbsp; <strong>Optional:</strong> Race
           </Typography>
         </Alert>
 
@@ -162,7 +194,9 @@ const EPCMappingUpload: React.FC = () => {
                     Upload Successful!
                   </Typography>
                   <Typography variant="body2" color="success.dark">
-                    {typeof state.uploadResult === "string" ? state.uploadResult : "EPC mapping file processed."}
+                    {typeof state.uploadResult === "string"
+                      ? state.uploadResult
+                      : "EPC mapping file processed."}
                   </Typography>
                 </Box>
               </Box>
@@ -176,35 +210,71 @@ const EPCMappingUpload: React.FC = () => {
 
         {!state.uploadResult && (
           <>
-            {/* Event / Race ID inputs */}
+            {/* Event / Race dropdowns */}
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                 Event Details
               </Typography>
               <Box display="flex" gap={2} flexWrap="wrap">
-                <TextField
-                  label="Event ID"
-                  value={eventId}
-                  onChange={(e) => {
-                    setEventId(e.target.value);
-                    if (e.target.value.trim()) setEventIdError("");
-                  }}
-                  error={!!eventIdError}
-                  helperText={eventIdError || "Required"}
+                {/* Event dropdown */}
+                <FormControl
+                  size="small"
+                  sx={{ minWidth: 260 }}
                   required
-                  size="small"
-                  sx={{ minWidth: 200 }}
+                  error={!!eventError}
                   disabled={state.isUploading}
-                />
-                <TextField
-                  label="Race ID"
-                  value={raceId}
-                  onChange={(e) => setRaceId(e.target.value)}
-                  helperText="Optional"
+                >
+                  <InputLabel>Event</InputLabel>
+                  <Select
+                    value={selectedEventId}
+                    label="Event"
+                    onChange={(e) => handleEventChange(e.target.value)}
+                    endAdornment={
+                      eventsQuery.isLoading ? (
+                        <CircularProgress size={16} sx={{ mr: 2 }} />
+                      ) : undefined
+                    }
+                  >
+                    {eventsQuery.error && (
+                      <MenuItem disabled>Failed to load events</MenuItem>
+                    )}
+                    {events.map((event) => (
+                      <MenuItem key={event.id} value={event.id!}>
+                        {event.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>{eventError || "Required"}</FormHelperText>
+                </FormControl>
+
+                {/* Race dropdown */}
+                <FormControl
                   size="small"
-                  sx={{ minWidth: 200 }}
-                  disabled={state.isUploading}
-                />
+                  sx={{ minWidth: 260 }}
+                  disabled={!selectedEventId || state.isUploading}
+                >
+                  <InputLabel>Race</InputLabel>
+                  <Select
+                    value={selectedRaceId}
+                    label="Race"
+                    onChange={(e) => setSelectedRaceId(e.target.value)}
+                    endAdornment={
+                      racesQuery.isLoading ? (
+                        <CircularProgress size={16} sx={{ mr: 2 }} />
+                      ) : undefined
+                    }
+                  >
+                    <MenuItem value="">
+                      <em>All races</em>
+                    </MenuItem>
+                    {races.map((race) => (
+                      <MenuItem key={race.id} value={race.id}>
+                        {race.title}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>Optional</FormHelperText>
+                </FormControl>
               </Box>
             </Paper>
 
@@ -237,7 +307,9 @@ const EPCMappingUpload: React.FC = () => {
               onDragOver={!state.isUploading ? handleDragOver : undefined}
               onDragLeave={!state.isUploading ? handleDragLeave : undefined}
               onDrop={!state.isUploading ? handleDrop : undefined}
-              onClick={() => !state.isUploading && !state.selectedFile && fileInputRef.current?.click()}
+              onClick={() =>
+                !state.isUploading && !state.selectedFile && fileInputRef.current?.click()
+              }
             >
               <input
                 ref={fileInputRef}
@@ -261,7 +333,10 @@ const EPCMappingUpload: React.FC = () => {
                       </Typography>
                     </Box>
                     <IconButton
-                      onClick={(e) => { e.stopPropagation(); handleClear(); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClear();
+                      }}
                       disabled={state.isUploading}
                       size="small"
                     >
@@ -287,14 +362,20 @@ const EPCMappingUpload: React.FC = () => {
                       <Button
                         variant="contained"
                         color="primary"
-                        onClick={(e) => { e.stopPropagation(); handleUpload(); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUpload();
+                        }}
                         startIcon={<CloudUpload />}
                       >
                         Upload File
                       </Button>
                       <Button
                         variant="outlined"
-                        onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fileInputRef.current?.click();
+                        }}
                       >
                         Choose Different File
                       </Button>
@@ -312,7 +393,10 @@ const EPCMappingUpload: React.FC = () => {
                   </Typography>
                   <Button
                     variant="contained"
-                    onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
                   >
                     Browse Files
                   </Button>
@@ -338,10 +422,10 @@ const EPCMappingUpload: React.FC = () => {
               <strong>Content:</strong> EPC to BIB number mapping rows
             </Typography>
             <Typography component="li" variant="body2" color="text.secondary">
-              <strong>Event ID:</strong> Must match an existing event in the system
+              <strong>Event:</strong> Required — must select an existing event
             </Typography>
             <Typography component="li" variant="body2" color="text.secondary">
-              <strong>Race ID:</strong> Optional — filters mapping to a specific race
+              <strong>Race:</strong> Optional — leave as "All races" to apply mapping across all races
             </Typography>
           </Box>
         </Paper>
