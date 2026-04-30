@@ -188,6 +188,36 @@ export class RFIDService {
         return response.data;
     }
 
+    static async uploadEPCMapping(
+        eventId: string,
+        file: File,
+        raceId?: string,
+        onProgress?: (progress: number) => void
+    ): Promise<ResponseBase<any>> {
+        const formData = new FormData();
+        formData.append('File', file);
+
+        const params: Record<string, string> = {};
+        if (raceId) params.raceId = raceId;
+
+        const response: AxiosResponse<ResponseBase<any>> = await apiClient.post(
+            ServiceUrl.uploadEPCMapping(eventId),
+            formData,
+            {
+                params,
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+                    if (progressEvent.total && onProgress) {
+                        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        onProgress(progress);
+                    }
+                },
+            }
+        );
+
+        return response.data;
+    }
+
     static async clearProcessedData(
         eventId: string,
         raceId: string,
