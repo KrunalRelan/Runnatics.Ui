@@ -52,9 +52,9 @@ const sortCheckpointsWithChildren = (checkpoints: Checkpoint[]): Checkpoint[] =>
     const parents = checkpoints
         .filter(cp => !isChild(cp))
         .sort((a, b) => {
-            const distDiff = Number(a.distanceFromStart) - Number(b.distanceFromStart);
+            const distDiff = Number(a.distanceFromStart) - Number(b.distanceFromStart); // ✅ distance first
             if (distDiff !== 0) return distDiff;
-            return a.id.localeCompare(b.id);
+            return Number(a.id) - Number(b.id); // ✅ same distance → creation order
         });
 
     const children = checkpoints.filter(cp => isChild(cp));
@@ -118,7 +118,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
 
     const fetchRaceCheckpointCounts = async () => {
         if (!eventId) return;
-        
+
         const counts: Record<string, number> = {};
         for (const race of races) {
             try {
@@ -819,8 +819,8 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                     {/* Warning for missing finish checkpoint */}
                     {isMissingFinish && (
                         <Alert severity="warning" sx={{ mb: 2 }}>
-                            <strong>Missing Finish Checkpoint!</strong> Checkpoints cover up to {loopParams.maxCheckpointDistance} KM, 
-                            but the race is {raceDistance} KM. Please add a checkpoint at {raceDistance} KM to cover the 
+                            <strong>Missing Finish Checkpoint!</strong> Checkpoints cover up to {loopParams.maxCheckpointDistance} KM,
+                            but the race is {raceDistance} KM. Please add a checkpoint at {raceDistance} KM to cover the
                             remaining {missingDistance} KM.
                         </Alert>
                     )}
@@ -901,7 +901,7 @@ const ViewCheckPoints: React.FC<ViewCheckPointsProps> = ({ eventId, raceId, race
                                 {/* Warning for missing finish */}
                                 {isMissingFinish && (
                                     <Alert severity="warning" sx={{ mb: 2 }}>
-                                        Checkpoints only cover up to {loopParams.maxCheckpointDistance} KM. 
+                                        Checkpoints only cover up to {loopParams.maxCheckpointDistance} KM.
                                         Missing {missingDistance} KM to reach finish at {raceDistance} KM.
                                     </Alert>
                                 )}
