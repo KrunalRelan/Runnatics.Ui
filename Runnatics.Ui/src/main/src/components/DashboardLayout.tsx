@@ -187,6 +187,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
       path: "/uploads",
       submenu: [
         { text: "RFID File Upload", icon: <UploadIcon />, path: "/rfid/upload" },
+        { text: "EPC & BIB Mapping", icon: <UploadIcon />, path: "/rfid/epc-mapping" },
       ],
     },
     {
