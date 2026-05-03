@@ -206,6 +206,7 @@ export class RFIDService {
             {
                 params,
                 headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: 0, // disable timeout for file uploads
                 onUploadProgress: (progressEvent: AxiosProgressEvent) => {
                     if (progressEvent.total && onProgress) {
                         const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);

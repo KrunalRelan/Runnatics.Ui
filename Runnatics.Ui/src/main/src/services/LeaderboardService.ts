@@ -22,4 +22,26 @@ export class LeaderboardService {
       );
     return response.data;
   }
+
+  /**
+   * Export leaderboard results as Excel (.xlsx).
+   * Honours all leaderboard display settings (columns, splits, pace, DNF, rank type).
+   */
+  static async exportLeaderboard(
+    eventId: string,
+    raceId: string,
+    rankBy: string = 'Overall',
+    gender?: string,
+    category?: string,
+  ): Promise<Blob> {
+    const params: Record<string, string> = { rankBy };
+    if (gender) params.gender = gender;
+    if (category) params.category = category;
+
+    const response = await apiClient.get(
+      ServiceUrl.exportLeaderboard(eventId, raceId),
+      { params, responseType: 'blob' },
+    );
+    return response.data;
+  }
 }

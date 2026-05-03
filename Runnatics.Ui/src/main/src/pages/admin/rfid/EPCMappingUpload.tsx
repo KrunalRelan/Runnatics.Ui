@@ -53,7 +53,12 @@ const EPCMappingUpload: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const eventsQuery = useQuery({
+  const pastEventsQuery = useQuery({
+    queryKey: ["events", "past"],
+    queryFn: () => EventService.getPastEvents(),
+  });
+
+  const futureEventsQuery = useQuery({
     queryKey: ["events", "future"],
     queryFn: () => EventService.getFutureEvents(),
   });
@@ -68,7 +73,12 @@ const EPCMappingUpload: React.FC = () => {
     enabled: !!selectedEventId,
   });
 
-  const events = eventsQuery.data?.message ?? [];
+  const events = [
+    ...(futureEventsQuery.data?.message ?? []),
+    ...(pastEventsQuery.data?.message ?? []),
+  ];
+  const eventsLoading = pastEventsQuery.isLoading || futureEventsQuery.isLoading;
+  const eventsError = pastEventsQuery.error || futureEventsQuery.error;
   const races = racesQuery.data?.message ?? [];
 
   const updateState = (updates: Partial<UploadState>) => {
@@ -230,12 +240,12 @@ const EPCMappingUpload: React.FC = () => {
                     label="Event"
                     onChange={(e) => handleEventChange(e.target.value)}
                     endAdornment={
-                      eventsQuery.isLoading ? (
+                      eventsLoading ? (
                         <CircularProgress size={16} sx={{ mr: 2 }} />
                       ) : undefined
                     }
                   >
-                    {eventsQuery.error && (
+                    {eventsError && (
                       <MenuItem disabled>Failed to load events</MenuItem>
                     )}
                     {events.map((event) => (

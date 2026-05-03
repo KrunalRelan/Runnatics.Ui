@@ -671,6 +671,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eventId, raceId }) => {
   const [displaySettings, setDisplaySettings] =
     useState<LeaderboardDisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
   const [error, setError] = useState<LeaderboardError>(null);
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   // Categories (lazy loaded)
   const [categories, setCategories] = useState<Category[]>([]);
@@ -829,6 +830,32 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eventId, raceId }) => {
     }
   };
 
+  const handleExportExcel = async () => {
+    if (!eventId || !raceId) return;
+    setExportingExcel(true);
+    try {
+      const blob = await LeaderboardService.exportLeaderboard(
+        eventId,
+        raceId,
+        filters.rankBy || 'Overall',
+        filters.gender || undefined,
+        filters.category || undefined,
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `results_${filters.rankBy?.toLowerCase() ?? 'overall'}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Export failed:', err);
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
   // -------------------------------------------------------------------
   // Columns – rebuilt when settings or results change
   // -------------------------------------------------------------------
@@ -940,12 +967,13 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eventId, raceId }) => {
               )}
             </ToggleButtonGroup>
             <Button
-              variant="outlined"
-              startIcon={<FileDownload />}
+              variant="contained"
+              startIcon={exportingExcel ? <CircularProgress size={16} color="inherit" /> : <FileDownload />}
               sx={{ textTransform: "none", fontWeight: 500 }}
-              onClick={handleExportCsv}
+              onClick={handleExportExcel}
+              disabled={exportingExcel || results.length === 0}
             >
-              Export
+              {exportingExcel ? "Exporting…" : "Export Excel"}
             </Button>
           </Stack>
         </Box>

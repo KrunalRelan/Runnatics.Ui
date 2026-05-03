@@ -48,48 +48,39 @@ interface ViewCheckPointsProps {
 const sortCheckpointsWithChildren = (checkpoints: Checkpoint[]): Checkpoint[] => {
     const isChild = (cp: Checkpoint) => !!(cp.parentDeviceId?.trim());
 
-    // Split into parents and children
     const parents = checkpoints
         .filter(cp => !isChild(cp))
         .sort((a, b) => {
-            const distDiff = Number(a.distanceFromStart) - Number(b.distanceFromStart); // ✅ distance first
+            const distDiff = Number(a.distanceFromStart) - Number(b.distanceFromStart);
             if (distDiff !== 0) return distDiff;
-            return Number(a.id) - Number(b.id); // ✅ same distance → creation order
+            return Number(a.id) - Number(b.id);
         });
 
     const children = checkpoints.filter(cp => isChild(cp));
 
-    // Build a lookup: deviceId → children[]
-    const childrenByParentDeviceId = new Map<string, Checkpoint[]>();
+    const childrenByKey = new Map<string, Checkpoint[]>();
     for (const child of children) {
-        const key = child.parentDeviceId!.trim();
-        if (!childrenByParentDeviceId.has(key)) {
-            childrenByParentDeviceId.set(key, []);
-        }
-        childrenByParentDeviceId.get(key)!.push(child);
+        const key = `${child.parentDeviceId!.trim()}@${Number(child.distanceFromStart)}`;
+        if (!childrenByKey.has(key)) childrenByKey.set(key, []);
+        childrenByKey.get(key)!.push(child);
     }
 
-    // Interleave: parent → its children → next parent → its children …
     const result: Checkpoint[] = [];
     const placedChildIds = new Set<string>();
 
     for (const parent of parents) {
         result.push(parent);
-
-        const myChildren = (childrenByParentDeviceId.get(String(parent.deviceId)) ?? [])
-            .sort((a, b) => a.id.localeCompare(b.id));
-
+        const key = `${String(parent.deviceId)}@${Number(parent.distanceFromStart)}`;
+        const myChildren = (childrenByKey.get(key) ?? [])
+            .sort((a, b) => Number(a.id) - Number(b.id));
         for (const child of myChildren) {
             result.push(child);
-            placedChildIds.add(child.id);
+            placedChildIds.add(String(child.id));
         }
     }
 
-    // Safety net: orphaned children whose parent wasn't found
     for (const child of children) {
-        if (!placedChildIds.has(child.id)) {
-            result.push(child);
-        }
+        if (!placedChildIds.has(String(child.id))) result.push(child);
     }
 
     return result;

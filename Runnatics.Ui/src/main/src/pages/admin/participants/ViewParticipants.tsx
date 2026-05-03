@@ -104,11 +104,15 @@ const DialogLoader: React.FC = () => (
 interface ViewParticipantsProps {
   eventId: string;
   raceId: string;
+  eventName?: string;
+  raceName?: string;
 }
 
 const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   eventId,
   raceId,
+  eventName,
+  raceName,
 }) => {
   // Navigation
   const navigate = useNavigate();
@@ -649,20 +653,21 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   };
 
   const handleExportCsv = async () => {
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const safeName = (s?: string) =>
+      (s || '').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+    const filename = `${safeName(eventName)}_${safeName(raceName)}_participantdata_${timestamp}`;
     try {
       const blob = await ParticipantService.exportParticipants(eventId, raceId);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const timestamp = new Date().toISOString().slice(0, 10);
-      a.download = `participants_${timestamp}.xlsx`;
+      a.download = `${filename}.xlsx`;
       a.click();
       window.URL.revokeObjectURL(url);
     } catch {
-      // fall back to CSV export
       if (gridRef.current) {
-        const timestamp = new Date().toISOString().slice(0, 10);
-        gridRef.current.exportToCsv(`participants_${timestamp}.csv`);
+        gridRef.current.exportToCsv(`${filename}.csv`);
       }
     }
   };

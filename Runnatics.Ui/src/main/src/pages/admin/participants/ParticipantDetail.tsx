@@ -65,6 +65,7 @@ import { ParticipantService as _PS } from "@/main/src/services/ParticipantServic
 import { RaceService } from "@/main/src/services/RaceService";
 import { Race } from "@/main/src/models/races/Race";
 import DeleteParticipant from "./DeleteParticipant";
+import EpcMappingField from "./EpcMappingField";
 import { Participant } from "@/main/src/models/races/Participant";
 import PageContainer from "@/main/src/components/PageContainer";
 import { SplitTimeInfo, RfidReadingDetail, ParticipantDetailsResponse, CheckpointTime } from "@/main/src/models/participants";
@@ -1097,6 +1098,26 @@ const ParticipantDetail: React.FC = () => {
                   )}
                 </Select>
               </FormControl>
+
+              {/* EPC / Chip Mapping */}
+              {participantId && (
+                <EpcMappingField
+                  participantId={participantId}
+                  bibNumber={participant?.bibNumber || ""}
+                  participantName={participant?.fullName || ""}
+                  raceId={editRaceId || raceId || ""}
+                  eventId={eventId || ""}
+                  hasRfidReadings={!!participant?.rfidReadings?.length}
+                  onMappingChange={async () => {
+                    if (eventId && raceId && participantId) {
+                      try {
+                        const response = await _PS.getParticipantDetails(eventId, raceId, participantId);
+                        if (response.data.message) setParticipant(response.data.message);
+                      } catch {}
+                    }
+                  }}
+                />
+              )}
             </Stack>
           </CardContent>
         </Card>

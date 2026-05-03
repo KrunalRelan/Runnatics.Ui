@@ -72,6 +72,7 @@ export const ServiceUrl = {
 
     //leaderboard
     getLeaderboard: () => `Results/leaderboard`,
+    exportLeaderboard: (eventId: string, raceId: string) => `Results/${eventId}/${raceId}/export-excel`,
 
     //bib-mappings
     createBibMapping: () => 'bib-mappings',

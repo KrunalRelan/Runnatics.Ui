@@ -197,7 +197,14 @@ const ViewRaces: React.FC = () => {
 
     switch (activeTab) {
       case 3:
-        return <ViewParticipants eventId={eventId} raceId={selectedRaceId} />;
+        return (
+          <ViewParticipants
+            eventId={eventId}
+            raceId={selectedRaceId}
+            eventName={race?.event?.name}
+            raceName={race?.title}
+          />
+        );
       case 4:
         return <ViewCheckPoints eventId={eventId} raceId={selectedRaceId} races={races} />;
       case 5:

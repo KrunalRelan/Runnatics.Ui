@@ -59,6 +59,7 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasRfidReadings, setHasRfidReadings] = useState<boolean>(false);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -140,6 +141,24 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
       setSelectedRaceId(raceToSelect);
     }
   }, [participant, open, raceId]);
+
+  // Fetch rfid readings status to lock EPC editing if readings exist
+  useEffect(() => {
+    if (!open || !participant?.id) {
+      if (!open) setHasRfidReadings(false);
+      return;
+    }
+    const currentEventId = eventId || participant.eventId;
+    const currentRaceId = raceId || participant.raceId;
+    if (!currentEventId || !currentRaceId) return;
+
+    ParticipantService.getParticipantDetails(currentEventId, currentRaceId, participant.id)
+      .then((response) => {
+        const readings = response.data.message?.rfidReadings ?? [];
+        setHasRfidReadings(readings.length > 0);
+      })
+      .catch(() => setHasRfidReadings(false));
+  }, [open, participant?.id, eventId, raceId, participant?.eventId, participant?.raceId]);
 
   const handleFormChange = (
     field: keyof Participant,
@@ -403,6 +422,7 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
                 }
                 raceId={selectedRaceId}
                 eventId={formData.eventId || eventId || ""}
+                hasRfidReadings={hasRfidReadings}
               />
             )}
 
