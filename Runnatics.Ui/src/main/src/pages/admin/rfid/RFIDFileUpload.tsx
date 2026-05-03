@@ -204,22 +204,22 @@ const RFIDFileUpload: React.FC = () => {
 
         {/* Success Result */}
         {state.uploadResult && (
-          <Card sx={{ mb: 3, bgcolor: "success.dark" }}>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={2} mb={2}>
-                <CheckCircle sx={{ fontSize: 40, color: "common.white" }} />
-                <Box>
-                  <Typography variant="h6" color="common.white" fontWeight={700}>
-                    Upload Successful!
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>
-                    File has been processed and data extracted
-                  </Typography>
-                </Box>
+          <Card sx={{ mb: 3, overflow: "hidden" }}>
+            {/* Green success banner — header only */}
+            <Box sx={{ bgcolor: "success.dark", px: 3, py: 2, display: "flex", alignItems: "center", gap: 2 }}>
+              <CheckCircle sx={{ fontSize: 36, color: "common.white" }} />
+              <Box>
+                <Typography variant="h6" color="common.white" fontWeight={700}>
+                  Upload Successful!
+                </Typography>
+                <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>
+                  File has been processed and data extracted
+                </Typography>
               </Box>
+            </Box>
 
-              <Divider sx={{ my: 2, borderColor: "rgba(255,255,255,0.3)" }} />
-
+            {/* Details on normal background */}
+            <CardContent>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <Box display="flex" alignItems="center" gap={1} mb={1}>
@@ -276,9 +276,9 @@ const RFIDFileUpload: React.FC = () => {
                       Status
                     </Typography>
                   </Box>
-                  <Chip 
-                    size="small" 
-                    label={state.uploadResult.status.toUpperCase()} 
+                  <Chip
+                    size="small"
+                    label={state.uploadResult.status.toUpperCase()}
                     color={getStatusColor(state.uploadResult.status)}
                   />
                 </Grid>
@@ -342,7 +342,7 @@ const RFIDFileUpload: React.FC = () => {
               )}
 
               <Box mt={3}>
-                <Button variant="contained" onClick={handleUploadAnother} sx={{ bgcolor: "common.white", color: "success.dark", "&:hover": { bgcolor: "grey.100" } }}>
+                <Button variant="contained" onClick={handleUploadAnother}>
                   Upload Another File
                 </Button>
               </Box>

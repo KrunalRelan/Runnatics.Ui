@@ -9,7 +9,6 @@ import {
   IconButton,
   Card,
   CardContent,
-  Divider,
   FormControl,
   InputLabel,
   Select,
@@ -195,23 +194,22 @@ const EPCMappingUpload: React.FC = () => {
         )}
 
         {state.uploadResult && (
-          <Card sx={{ mb: 3, bgcolor: "success.dark" }}>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={2} mb={2}>
-                <CheckCircle sx={{ fontSize: 40, color: "common.white" }} />
-                <Box>
-                  <Typography variant="h6" color="common.white" fontWeight={700}>
-                    Upload Successful!
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>
-                    {typeof state.uploadResult === "string"
-                      ? state.uploadResult
-                      : "EPC mapping file processed."}
-                  </Typography>
-                </Box>
+          <Card sx={{ mb: 3, overflow: "hidden" }}>
+            <Box sx={{ bgcolor: "success.dark", px: 3, py: 2, display: "flex", alignItems: "center", gap: 2 }}>
+              <CheckCircle sx={{ fontSize: 36, color: "common.white" }} />
+              <Box>
+                <Typography variant="h6" color="common.white" fontWeight={700}>
+                  Upload Successful!
+                </Typography>
+                <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>
+                  {typeof state.uploadResult === "string"
+                    ? state.uploadResult
+                    : "EPC mapping file processed."}
+                </Typography>
               </Box>
-              <Divider sx={{ my: 2, borderColor: "rgba(255,255,255,0.3)" }} />
-              <Button variant="contained" onClick={handleUploadAnother} sx={{ bgcolor: "common.white", color: "success.dark", "&:hover": { bgcolor: "grey.100" } }}>
+            </Box>
+            <CardContent>
+              <Button variant="contained" onClick={handleUploadAnother}>
                 Upload Another File
               </Button>
             </CardContent>
