@@ -195,23 +195,23 @@ const EPCMappingUpload: React.FC = () => {
         )}
 
         {state.uploadResult && (
-          <Card sx={{ mb: 3, bgcolor: "success.light" }}>
+          <Card sx={{ mb: 3, bgcolor: "success.dark" }}>
             <CardContent>
               <Box display="flex" alignItems="center" gap={2} mb={2}>
-                <CheckCircle sx={{ fontSize: 40, color: "success.main" }} />
+                <CheckCircle sx={{ fontSize: 40, color: "common.white" }} />
                 <Box>
-                  <Typography variant="h6" color="success.dark">
+                  <Typography variant="h6" color="common.white" fontWeight={700}>
                     Upload Successful!
                   </Typography>
-                  <Typography variant="body2" color="success.dark">
+                  <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>
                     {typeof state.uploadResult === "string"
                       ? state.uploadResult
                       : "EPC mapping file processed."}
                   </Typography>
                 </Box>
               </Box>
-              <Divider sx={{ my: 2 }} />
-              <Button variant="contained" onClick={handleUploadAnother}>
+              <Divider sx={{ my: 2, borderColor: "rgba(255,255,255,0.3)" }} />
+              <Button variant="contained" onClick={handleUploadAnother} sx={{ bgcolor: "common.white", color: "success.dark", "&:hover": { bgcolor: "grey.100" } }}>
                 Upload Another File
               </Button>
             </CardContent>
@@ -303,9 +303,9 @@ const EPCMappingUpload: React.FC = () => {
                 borderRadius: 2,
                 textAlign: "center",
                 bgcolor: state.isDragging
-                  ? "primary.light"
+                  ? "primary.dark"
                   : state.selectedFile
-                  ? "success.light"
+                  ? "action.selected"
                   : "action.hover",
                 transition: "all 0.2s ease",
                 cursor: state.isUploading ? "default" : "pointer",

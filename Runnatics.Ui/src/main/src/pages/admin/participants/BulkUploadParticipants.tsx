@@ -205,7 +205,7 @@ const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
             <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ bgcolor: "primary.light" }}>
+                  <TableRow sx={{ bgcolor: "primary.main" }}>
                     <TableCell sx={{ fontWeight: 700, color: "primary.contrastText" }}>Column Name</TableCell>
                     <TableCell sx={{ fontWeight: 700, color: "primary.contrastText" }}>Required</TableCell>
                     <TableCell sx={{ fontWeight: 700, color: "primary.contrastText" }}>Description</TableCell>
@@ -287,7 +287,7 @@ const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
                 sx={{
                   mt: 2,
                   p: 2,
-                  bgcolor: "primary.light",
+                  bgcolor: "primary.dark",
                   borderRadius: 1,
                   display: "flex",
                   alignItems: "center",
@@ -295,14 +295,14 @@ const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
                 }}
               >
                 <Box>
-                  <Typography variant="body2" fontWeight={500} color="primary.contrastText">
+                  <Typography variant="body2" fontWeight={500} color="common.white">
                     {selectedFile.name}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: "primary.contrastText", opacity: 0.8 }}>
+                  <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.75)" }}>
                     {(selectedFile.size / 1024).toFixed(2)} KB
                   </Typography>
                 </Box>
-                <IconButton onClick={handleRemoveFile} size="small" sx={{ color: "primary.contrastText" }}>
+                <IconButton onClick={handleRemoveFile} size="small" sx={{ color: "common.white" }}>
                   <Close />
                 </IconButton>
               </Box>
@@ -317,7 +317,7 @@ const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
               </Box>
             )}
 
-            <Box sx={{ mt: 3, p: 2, bgcolor: "info.light", borderRadius: 1 }}>
+            <Box sx={{ mt: 3, p: 2, bgcolor: "action.selected", borderRadius: 1 }}>
               <Typography variant="subtitle2" fontWeight={600} gutterBottom>
                 CSV Format Requirements:
               </Typography>
@@ -346,19 +346,19 @@ const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
                   Total Records
                 </Typography>
               </Paper>
-              <Paper sx={{ flex: 1, p: 2, textAlign: "center", bgcolor: "success.light" }}>
-                <Typography variant="h4" color="success.dark">
+              <Paper sx={{ flex: 1, p: 2, textAlign: "center", bgcolor: "success.dark" }}>
+                <Typography variant="h4" color="common.white">
                   {uploadResult.validRecords}
                 </Typography>
-                <Typography variant="body2" color="success.dark">
+                <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>
                   Valid Records
                 </Typography>
               </Paper>
-              <Paper sx={{ flex: 1, p: 2, textAlign: "center", bgcolor: "error.light" }}>
-                <Typography variant="h4" color="error.dark">
+              <Paper sx={{ flex: 1, p: 2, textAlign: "center", bgcolor: "error.dark" }}>
+                <Typography variant="h4" color="common.white">
                   {uploadResult.invalidRecords}
                 </Typography>
-                <Typography variant="body2" color="error.dark">
+                <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>
                   Invalid Records
                 </Typography>
               </Paper>
@@ -440,20 +440,20 @@ const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
             </Typography>
 
             <Box display="flex" gap={2} justifyContent="center" my={3}>
-              <Paper sx={{ p: 3, minWidth: 150, bgcolor: "success.light" }}>
-                <Typography variant="h3" color="success.dark">
+              <Paper sx={{ p: 3, minWidth: 150, bgcolor: "success.dark" }}>
+                <Typography variant="h3" color="common.white">
                   {processResult.successCount}
                 </Typography>
-                <Typography variant="body2" color="success.dark">
+                <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>
                   Successfully Created
                 </Typography>
               </Paper>
               {processResult.errorCount > 0 && (
-                <Paper sx={{ p: 3, minWidth: 150, bgcolor: "error.light" }}>
-                  <Typography variant="h3" color="error.dark">
+                <Paper sx={{ p: 3, minWidth: 150, bgcolor: "error.dark" }}>
+                  <Typography variant="h3" color="common.white">
                     {processResult.errorCount}
                   </Typography>
-                  <Typography variant="body2" color="error.dark">
+                  <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>
                     Errors
                   </Typography>
                 </Paper>
