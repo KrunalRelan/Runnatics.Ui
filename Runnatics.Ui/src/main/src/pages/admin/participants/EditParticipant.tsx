@@ -22,6 +22,7 @@ import { Participant } from "@/main/src/models/races/Participant";
 import { ParticipantService } from "@/main/src/services/ParticipantService";
 import { Race } from "@/main/src/models/races/Race";
 import { RaceService } from "@/main/src/services/RaceService";
+import EpcMappingField from "./EpcMappingField";
 
 interface EditParticipantProps {
   open: boolean;
@@ -200,7 +201,6 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
         phone: formData.phone?.trim() || undefined,
         gender: formData.gender?.trim() || undefined,
         category: formData.category?.trim() || undefined,
-        chipId: formData.chipId?.trim() || undefined,
         checkIn: formData.checkIn || false,
         status: formData.status || undefined,
         dateOfBirth: formData.dateOfBirth?.trim() || undefined,
@@ -370,36 +370,41 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
               />
             </Stack>
 
-            {/* Chip ID and Status - Optional */}
-            <Stack direction="row" spacing={2}>
-              <TextField
-                label="Chip ID / EPC"
-                value={formData.chipId}
-                onChange={(e) => handleFormChange("chipId", e.target.value)}
-                fullWidth
-                size="small"
-                placeholder="RFID chip identifier"
+            {/* Run Status */}
+            <FormControl fullWidth size="small">
+              <InputLabel>Run Status</InputLabel>
+              <Select
+                value={formData.status}
+                label="Run Status"
+                onChange={(e: SelectChangeEvent) =>
+                  handleFormChange("status", e.target.value as any)
+                }
+              >
+                <MenuItem value="Registered">Registered</MenuItem>
+                <MenuItem value="Started">Started</MenuItem>
+                <MenuItem value="Finished">Finished</MenuItem>
+                <MenuItem value="DNF">DNF (Did Not Finish)</MenuItem>
+                <MenuItem value="DNS">DNS (Did Not Start)</MenuItem>
+                <MenuItem value="DQ">DQ (Disqualified)</MenuItem>
+                <MenuItem value="Pending">Pending</MenuItem>
+                <MenuItem value="Cancelled">Cancelled</MenuItem>
+              </Select>
+            </FormControl>
+
+            {/* EPC / Chip Mapping */}
+            {formData.id && (
+              <EpcMappingField
+                participantId={formData.id}
+                bibNumber={formData.bib}
+                participantName={
+                  formData.fullName ||
+                  `${formData.firstName || ""} ${formData.lastName || ""}`.trim() ||
+                  formData.bib
+                }
+                raceId={selectedRaceId}
+                eventId={formData.eventId || eventId || ""}
               />
-              <FormControl fullWidth size="small">
-                <InputLabel>Run Status</InputLabel>
-                <Select
-                  value={formData.status}
-                  label="Run Status"
-                  onChange={(e: SelectChangeEvent) =>
-                    handleFormChange("status", e.target.value as any)
-                  }
-                >
-                  <MenuItem value="Registered">Registered</MenuItem>
-                  <MenuItem value="Started">Started</MenuItem>
-                  <MenuItem value="Finished">Finished</MenuItem>
-                  <MenuItem value="DNF">DNF (Did Not Finish)</MenuItem>
-                  <MenuItem value="DNS">DNS (Did Not Start)</MenuItem>
-                  <MenuItem value="DQ">DQ (Disqualified)</MenuItem>
-                  <MenuItem value="Pending">Pending</MenuItem>
-                  <MenuItem value="Cancelled">Cancelled</MenuItem>
-                </Select>
-              </FormControl>
-            </Stack>
+            )}
 
             {/* Date of Birth and Age Category */}
             <Stack direction="row" spacing={2}>

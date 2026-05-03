@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc --noEmit)"
+      "Bash(npx tsc --noEmit)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(Get-Process -Name \"Runnatics*\",\"dotnet\")",
+      "Bash(Select-Object Id, ProcessName, MainWindowTitle)",
+      "Bash(tasklist)"
     ]
   }
 }
