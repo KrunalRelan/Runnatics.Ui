@@ -44,6 +44,17 @@ async function fetchPublicApi<T>(
   return json.message;
 }
 
+// ── Results public API (separate base path: /api/Results/public/…) ─
+async function fetchResultsPublicApi<T>(path: string, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(`${BASE_URL}/api/Results/public${path}`, {
+    signal,
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error(`Results API error: ${res.status} ${res.statusText}`);
+  const json: ApiEnvelope<T> = await res.json();
+  return json.message;
+}
+
 // ── Events ────────────────────────────────────────────────────────
 
 // ── Raw shapes from API ───────────────────────────────────────────
@@ -78,6 +89,8 @@ export interface PublicEvent {
 }
 
 export interface PublicEventCategory {
+  id?: string;
+  raceId?: string;
   name: string;
   distance: string;
   price: string;
@@ -90,6 +103,7 @@ export interface PublicEventSponsor {
 }
 
 export interface PublicEventDetail {
+  id?: string;
   slug: string;
   name: string;
   date: string;
@@ -169,6 +183,7 @@ export interface ResultSplit {
 
 /** Matches PublicResultDto (camelCase serialised by ASP.NET Core). */
 export interface ResultRow {
+  participantId?: string;
   overallRank?: number;
   bibNumber: string;
   participantName: string;
@@ -317,4 +332,125 @@ export async function submitContactForm(
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+// ── Public leaderboard (GET /api/Results/public/{eventId}/{raceId}/leaderboard) ─
+
+export interface PublicLeaderboardEntry {
+  rank: number;
+  participantId: string;
+  bib: string;
+  fullName: string;
+  firstName: string;
+  lastName: string;
+  gender: string;
+  category?: string;
+  age?: number;
+  gunTime?: string;
+  netTime?: string;
+  overallRank?: number;
+  genderRank?: number;
+  categoryRank?: number;
+  averagePaceFormatted?: string;
+  status: string;
+  splits?: PublicEntrySplit[];
+}
+
+export interface PublicEntrySplit {
+  checkpointName?: string;
+  distance?: string;
+  distanceKm?: number;
+  splitTime?: string;
+  cumulativeTime?: string;
+  pace?: string;
+  speed?: number;
+  overallRank?: number;
+}
+
+export interface PublicLeaderboardDisplaySettings {
+  showSplitTimes: boolean;
+  showPace: boolean;
+  showMedalIcon: boolean;
+  rankOnNet: boolean;
+  sortTimeField: string;
+  maxResultsOverall?: number;
+  maxResultsCategory?: number;
+}
+
+export interface PublicLeaderboardResponse {
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  eventName?: string;
+  raceName?: string;
+  raceDistance?: number;
+  results: PublicLeaderboardEntry[];
+  displaySettings: PublicLeaderboardDisplaySettings;
+}
+
+export function getPublicLeaderboard(
+  eventId: string,
+  raceId: string,
+  signal?: AbortSignal,
+): Promise<PublicLeaderboardResponse> {
+  return fetchResultsPublicApi<PublicLeaderboardResponse>(`/${eventId}/${raceId}/leaderboard`, signal);
+}
+
+// ── Public participant detail (GET /api/Results/public/participant/{participantId}) ─
+
+export interface PublicParticipantSplit {
+  checkpointName?: string;
+  distance?: string;
+  distanceKm?: number;
+  splitTime?: string;
+  cumulativeTime?: string;
+  pace?: string;
+  speed?: number;
+  overallRank?: number;
+  genderRank?: number;
+  categoryRank?: number;
+}
+
+export interface PublicParticipantDetail {
+  id?: string;
+  bibNumber?: string;
+  fullName: string;
+  firstName?: string;
+  lastName?: string;
+  gender?: string;
+  age?: number;
+  ageCategory?: string;
+  status?: string;
+  eventId?: string;
+  eventName?: string;
+  eventDate?: string;
+  raceId?: string;
+  raceName?: string;
+  raceDistance?: number;
+  chipTime?: string;
+  gunTime?: string;
+  performance?: {
+    averagePace?: string;
+    averageSpeed?: number;
+  };
+  rankings?: {
+    overallRank?: number;
+    totalParticipants?: number;
+    overallPercentage?: number;
+    genderRank?: number;
+    totalInGender?: number;
+    genderPercentage?: number;
+    categoryRank?: number;
+    totalInCategory?: number;
+    categoryPercentage?: number;
+  };
+  splitTimes?: PublicParticipantSplit[];
+}
+
+export function getPublicParticipant(
+  participantId: string,
+  signal?: AbortSignal,
+): Promise<PublicParticipantDetail> {
+  return fetchResultsPublicApi<PublicParticipantDetail>(`/participant/${participantId}`, signal);
 }

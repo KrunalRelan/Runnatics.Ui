@@ -14,7 +14,9 @@
       "Bash(npm install *)",
       "Bash(git update-index *)",
       "Bash(git checkout *)",
-      "Bash(grep -E \"\\\\.cs$\")"
+      "Bash(grep -E \"\\\\.cs$\")",
+      "Bash(cat)",
+      "Read(//tmp/**)"
     ],
     "deny": [],
     "ask": []

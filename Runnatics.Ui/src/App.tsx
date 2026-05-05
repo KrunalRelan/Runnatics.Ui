@@ -26,6 +26,9 @@ import ServicesPage from "./main/src/pages/public/ServicesPage";
 import EventsPage from "./main/src/pages/public/EventsPage";
 import EventDetailPage from "./main/src/pages/public/EventDetailPage";
 import ResultsPage from "./main/src/pages/public/ResultsPage";
+import EventResultsPage from "./main/src/pages/public/EventResultsPage";
+import LeaderboardPage from "./main/src/pages/public/LeaderboardPage";
+import ParticipantDetailPage from "./main/src/pages/public/ParticipantDetailPage";
 import GalleryPage from "./main/src/pages/public/GalleryPage";
 import ContactPage from "./main/src/pages/public/ContactPage";
 import PrivacyPage from "./main/src/pages/public/PrivacyPage";
@@ -70,6 +73,10 @@ function App() {
               <Route path="/events/:slug" element={<EventDetailPage />} />
               <Route path="/events/:slug/results" element={<ResultsPage />} />
               <Route path="/results" element={<ResultsPage />} />
+              {/* Runizen-style public results pages */}
+              <Route path="/e/:eventSlug" element={<EventResultsPage />} />
+              <Route path="/c/:eventId/:raceId/l" element={<LeaderboardPage />} />
+              <Route path="/p/:participantId" element={<ParticipantDetailPage />} />
               <Route path="/gallery" element={<GalleryPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
