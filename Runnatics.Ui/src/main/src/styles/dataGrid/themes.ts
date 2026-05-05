@@ -14,19 +14,20 @@ export const lightTheme = themeQuartz.withParams({
   borderColor: "#E0E3E7", // muiGrey[200]
   borderRadius: 4,
   browserColorScheme: "light",
-  chromeBackgroundColor: "#F3F6F9", // muiGrey[50]
-  columnBorder: true,
+  chromeBackgroundColor: "#EDF1F5",
+  columnBorder: false,
   fontFamily: '"IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  fontSize: 14,
+  fontSize: 13,
   foregroundColor: "#1A2027", // muiGrey[900]
-  headerBackgroundColor: "#F3F6F9", // muiGrey[50]
-  headerFontSize: 14,
+  headerBackgroundColor: "#DDE3EA",
+  headerFontSize: 13,
   headerFontWeight: 600,
   headerTextColor: "#1A2027", // muiGrey[900]
-  oddRowBackgroundColor: "#F0F7FF", // muiBlue[50]
+  oddRowBackgroundColor: "#F5F9FF",
   rowBorder: true,
-  spacing: 4,
-  cellHorizontalPaddingScale: 0.5,
+  rowHoverColor: "#EBF3FF",
+  spacing: 3,
+  cellHorizontalPaddingScale: 0.6,
 });
 
 /**
@@ -44,19 +45,18 @@ export const darkTheme = themeQuartz.withParams({
   borderRadius: 6,
   browserColorScheme: "dark",
   chromeBackgroundColor: "#2C3547", // Slightly lighter header
-  columnBorder: true,
+  columnBorder: false,
   fontFamily: '"IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  fontSize: 14,
+  fontSize: 13,
   foregroundColor: "#E8EAED", // Soft white text (matches theme)
-  headerBackgroundColor: "#2C3547", // Lighter header background
-  headerFontSize: 14,
+  headerBackgroundColor: "#242C3C",
+  headerFontSize: 13,
   headerFontWeight: 600,
   headerTextColor: "#E8EAED", // Match text color
   oddRowBackgroundColor: "#2A3341", // Very subtle zebra striping
   rowBorder: true,
-  spacing: 4,
-  cellHorizontalPaddingScale: 0.5,
-  // Additional modern dark theme enhancements
+  spacing: 3,
+  cellHorizontalPaddingScale: 0.6,
   rowHoverColor: "#323A4D", // Subtle hover effect
   selectedRowBackgroundColor: "#2B5A8F", // Blue selection with good contrast
 });

@@ -776,7 +776,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   const staticColumns: ColDef<Participant>[] = [
     {
       headerName: "#",
-      width: 50,
+      width: 40,
       sortable: false,
       filter: false,
       pinned: "left" as const,
@@ -791,7 +791,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       field: "bib",
       headerName: "Bib",
-      width: 80,
+      width: 70,
       sortable: true,
       filter: true,
       pinned: "left" as const,
@@ -825,7 +825,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       field: "fullName",
       headerName: "Name",
       flex: 1,
-      minWidth: 150,
+      minWidth: 160,
       sortable: true,
       filter: true,
       pinned: "left" as const,
@@ -844,7 +844,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       field: "gender",
       headerName: "Gender",
-      width: 90,
+      width: 80,
       sortable: true,
       filter: true,
       cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
@@ -852,7 +852,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       field: "category",
       headerName: "Category",
-      width: 110,
+      width: 100,
       sortable: true,
       filter: true,
       cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
@@ -860,8 +860,9 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       headerName: "EPC",
       field: "chipId",
-      width: 60,
+      width: 50,
       hide: isMobile,
+      headerClass: "ag-center-aligned-header",
       sortable: false,
       filter: false,
       cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
@@ -879,30 +880,32 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       field: "status",
       headerName: "Status",
-      width: 100,
+      width: 90,
       sortable: true,
       filter: true,
       cellRenderer: (params: any) => {
         if (!params.value) return null;
         const statusConfig: Record<string, { color: string; bgColor: string }> = {
-          Finished: { color: "#2e7d32", bgColor: "#e8f5e9" },
-          DNF: { color: "#d32f2f", bgColor: "#ffebee" },
-          DNS: { color: "#ed6c02", bgColor: "#fff3e0" },
-          Registered: { color: "#1976d2", bgColor: "#e3f2fd" },
-          Pending: { color: "#ed6c02", bgColor: "#fff3e0" },
-          Cancelled: { color: "#d32f2f", bgColor: "#ffebee" },
+          Finished: { color: "#1b5e20", bgColor: "#c8e6c9" },
+          DNF: { color: "#b71c1c", bgColor: "#ffcdd2" },
+          DNS: { color: "#e65100", bgColor: "#ffe0b2" },
+          Registered: { color: "#0d47a1", bgColor: "#bbdefb" },
+          Pending: { color: "#e65100", bgColor: "#ffe0b2" },
+          Cancelled: { color: "#b71c1c", bgColor: "#ffcdd2" },
         };
-        const config = statusConfig[params.value] || { color: "#757575", bgColor: "#f5f5f5" };
+        const config = statusConfig[params.value] || { color: "#424242", bgColor: "#eeeeee" };
         return (
           <Chip
             label={params.value}
             size="small"
             sx={{
               fontWeight: 600,
+              fontSize: "0.7rem",
+              height: 20,
+              width: 75,
               color: config.color,
               backgroundColor: config.bgColor,
-              borderColor: config.color,
-              border: "1px solid",
+              "& .MuiChip-label": { px: 0.5 },
             }}
           />
         );
@@ -964,71 +967,51 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     .filter((checkpoint) => !checkpoint.parentDeviceName || checkpoint.parentDeviceName === "N/A")
     .map((checkpoint) => ({
       headerName: checkpoint.name,
-      width: 90,
+      width: 85,
       sortable: false,
       filter: false,
-    cellRenderer: (params: any) => {
-      // Get checkpoint time from participant's checkpointTimes object
-      const checkpointTimes = params.data?.checkpointTimes;
-      const time = checkpointTimes && checkpointTimes[checkpoint.name];
-      
-      if (time) {
+      cellRenderer: (params: any) => {
+        const checkpointTimes = params.data?.checkpointTimes;
+        const time = checkpointTimes && checkpointTimes[checkpoint.name];
         return (
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
             <Typography
               variant="body2"
               sx={{
-                fontWeight: 700,
-                fontSize: "0.9rem",
-                color: "success.main",
+                fontWeight: time ? 700 : 400,
+                fontSize: "0.78rem",
+                color: time ? "success.main" : "text.disabled",
                 fontFamily: "monospace",
-                letterSpacing: "0.5px",
+                letterSpacing: "0.3px",
               }}
             >
-              {time}
+              {time || "—"}
             </Typography>
           </Box>
         );
-      }
-      
-      // Show placeholder for no data
-      return (
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-          <Typography
-            variant="body2"
-            sx={{
-              fontSize: "0.9rem",
-              color: "text.disabled",
-              fontFamily: "monospace",
-            }}
-          >
-            —
-          </Typography>
-        </Box>
-      );
-    },
-    headerTooltip: `Checkpoint: ${checkpoint.name} (${checkpoint.distanceFromStart} KM)`,
-  }));
+      },
+      headerTooltip: `Checkpoint: ${checkpoint.name} (${checkpoint.distanceFromStart} KM)`,
+    }));
 
   // Timing columns (Gun Time & Chip Time)
   const timingColumns: ColDef<Participant>[] = [
     {
       field: "netTime",
       headerName: "Chip Time",
-      width: 100,
+      width: 85,
       sortable: true,
       filter: true,
-      cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' },
+      cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace', fontSize: '0.78rem' },
       valueGetter: (params: any) => params.data?.netTime || "—",
     },
     {
       field: "gunTime",
       headerName: "Gun Time",
-      width: 100,
+      width: 85,
       hide: isMobile,
       sortable: true,
       filter: true,
-      cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' },
+      cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace', fontSize: '0.78rem' },
       valueGetter: (params: any) => params.data?.gunTime || "—",
     }
   ];
@@ -1060,12 +1043,15 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   });
 
   return (
-    <Card sx={{ 
-      width: "100%", 
+    <Card sx={{
+      width: "100%",
       maxWidth: "100%",
       '& .participant-name-cell:hover': {
         textDecoration: 'underline',
-      }
+      },
+      '& .ag-center-aligned-header .ag-header-cell-label': {
+        justifyContent: 'center',
+      },
     }}>
       <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
         {/* Header and Action Buttons */}
@@ -1138,7 +1124,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               {processingResults ? "Processing..." : "Process Result"}
             </Button>
             <Button
-              variant="outlined"
+              variant="contained"
               color="success"
               startIcon={<TableChart />}
               sx={{ textTransform: "none", fontWeight: 500 }}
@@ -1274,6 +1260,8 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               onPageChange={handlePageChange}
               onPageSizeChange={handlePageSizeChange}
               gridRef={gridRef}
+              rowHeight={40}
+              headerHeight={40}
             />
           </Box>
         </Box>
