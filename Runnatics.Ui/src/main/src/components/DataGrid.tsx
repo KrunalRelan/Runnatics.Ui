@@ -294,7 +294,7 @@ export const DataGrid = <T extends any>({
         sx={{
           border: (theme) => `1px solid ${theme.palette.divider}`,
           borderRadius: 2,
-          overflow: "hidden",
+          overflow: "clip",
           display: "flex",
           flexDirection: "column",
         }}

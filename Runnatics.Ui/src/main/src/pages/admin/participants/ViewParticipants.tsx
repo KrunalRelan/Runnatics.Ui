@@ -16,11 +16,13 @@ import {
   Chip,
   CircularProgress,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Add,
   FileUpload,
   FileDownload,
+  TableChart,
   Edit,
   Delete,
   ViewWeek,
@@ -46,6 +48,7 @@ import { Category } from "@/main/src/models/participants/Category";
 import { CheckpointsService } from "@/main/src/services/CheckpointsService";
 import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
 import { RFIDService } from "@/main/src/services/RFIDService";
+import { LeaderboardService } from "@/main/src/services/LeaderboardService";
 
 // LAZY LOAD DIALOG COMPONENTS - Only loaded when needed
 const AddParticipant = lazy(
@@ -159,12 +162,14 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   // Grid ref for export functionality
   const gridRef = useRef<DataGridRef>(null);
 
-  const handleGridReady = (params: GridReadyEvent) => {
-    params.api.autoSizeAllColumns();
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
+  const handleGridReady = (_params: GridReadyEvent) => {
+    // Column sizing is controlled via ColDef width/flex — do not autoSize
   };
 
-  const handleFirstDataRendered = (params: FirstDataRenderedEvent) => {
-    params.api.autoSizeAllColumns();
+  const handleFirstDataRendered = (_params: FirstDataRenderedEvent) => {
+    // Column sizing is controlled via ColDef width/flex — do not autoSize
   };
 
   const genderMap: Record<string, number | null> = {
@@ -672,6 +677,29 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     }
   };
 
+  const [exportingResults, setExportingResults] = useState<boolean>(false);
+
+  const handleExportResultsExcel = async () => {
+    try {
+      setExportingResults(true);
+      const blob = await LeaderboardService.exportLeaderboard(eventId, raceId);
+      const timestamp = new Date().toISOString().slice(0, 10);
+      const safeName = (s?: string) =>
+        (s || '').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+      const filename = `${safeName(eventName)}_${safeName(raceName)}_results_${timestamp}.xlsx`;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      alert(`Failed to export results: ${error.message || "Unknown error"}`);
+    } finally {
+      setExportingResults(false);
+    }
+  };
+
   const handleProcessResults = async () => {
     try {
       setProcessingResults(true);
@@ -748,7 +776,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   const staticColumns: ColDef<Participant>[] = [
     {
       headerName: "#",
-      width: 60,
+      width: 50,
       sortable: false,
       filter: false,
       pinned: "left" as const,
@@ -796,7 +824,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       field: "fullName",
       headerName: "Name",
-      flex: 2,
+      flex: 1,
       minWidth: 150,
       sortable: true,
       filter: true,
@@ -824,8 +852,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       field: "category",
       headerName: "Category",
-      flex: 1,
-      minWidth: 120,
+      width: 110,
       sortable: true,
       filter: true,
       cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
@@ -833,9 +860,11 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       headerName: "EPC",
       field: "chipId",
-      width: 70,
+      width: 60,
+      hide: isMobile,
       sortable: false,
       filter: false,
+      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
       cellRenderer: (params: any) => {
         const mapped = !!(params.value?.trim());
         return (
@@ -850,7 +879,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       field: "status",
       headerName: "Status",
-      width: 110,
+      width: 100,
       sortable: true,
       filter: true,
       cellRenderer: (params: any) => {
@@ -881,7 +910,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     },
     {
       headerName: "Actions",
-      width: 120,
+      width: 90,
       pinned: "right" as const,
       cellRenderer: (params: any) => (
         <Stack
@@ -935,7 +964,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     .filter((checkpoint) => !checkpoint.parentDeviceName || checkpoint.parentDeviceName === "N/A")
     .map((checkpoint) => ({
       headerName: checkpoint.name,
-      width: 100,
+      width: 90,
       sortable: false,
       filter: false,
     cellRenderer: (params: any) => {
@@ -986,7 +1015,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       field: "netTime",
       headerName: "Chip Time",
-      width: 110,
+      width: 100,
       sortable: true,
       filter: true,
       cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' },
@@ -995,7 +1024,8 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     {
       field: "gunTime",
       headerName: "Gun Time",
-      width: 110,
+      width: 100,
+      hide: isMobile,
       sortable: true,
       filter: true,
       cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' },
@@ -1109,6 +1139,17 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
             </Button>
             <Button
               variant="outlined"
+              color="success"
+              startIcon={<TableChart />}
+              sx={{ textTransform: "none", fontWeight: 500 }}
+              onClick={handleExportResultsExcel}
+              disabled={exportingResults || !hasProcessedResults}
+              title={!hasProcessedResults ? "No processed results available" : "Export leaderboard results as Excel"}
+            >
+              {exportingResults ? "Exporting..." : "Export Results (Excel)"}
+            </Button>
+            <Button
+              variant="outlined"
               color="error"
               sx={{ textTransform: "none", fontWeight: 500 }}
               onClick={handleClearProcessedResults}
@@ -1200,10 +1241,10 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               variant="outlined"
               onClick={handleResetFilters}
               sx={{
-                flex: 1,
-                minWidth: 200,
+                minWidth: 90,
                 textTransform: "none",
                 fontWeight: 500,
+                ml: "auto",
               }}
             >
               Reset
@@ -1212,26 +1253,30 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
         </Card>
 
         {/* DataGrid Component */}
-        <DataGrid<Participant>
-          rowData={participants}
-          columnDefs={columnDefs}
-          pagination={false}
-          domLayout="autoHeight"
-          enableSorting={true}
-          enableFiltering={true}
-          animateRows={true}
-          onGridReady={handleGridReady}
-          onFirstDataRendered={handleFirstDataRendered}
-          loading={participantsLoading}
-          useCustomPagination={true}
-          pageNumber={filters.pageNumber}
-          totalRecords={totalRecords}
-          totalPages={totalPages}
-          paginationPageSize={filters.pageSize}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-          gridRef={gridRef}
-        />
+        <Box sx={{ overflowX: "auto", width: "100%" }}>
+          <Box sx={{ minWidth: 800 }}>
+            <DataGrid<Participant>
+              rowData={participants}
+              columnDefs={columnDefs}
+              pagination={false}
+              domLayout="autoHeight"
+              enableSorting={true}
+              enableFiltering={true}
+              animateRows={true}
+              onGridReady={handleGridReady}
+              onFirstDataRendered={handleFirstDataRendered}
+              loading={participantsLoading}
+              useCustomPagination={true}
+              pageNumber={filters.pageNumber}
+              totalRecords={totalRecords}
+              totalPages={totalPages}
+              paginationPageSize={filters.pageSize}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              gridRef={gridRef}
+            />
+          </Box>
+        </Box>
       </CardContent>
 
       {/* LAZY LOADED DIALOGS - Only load component when dialog is opened */}
