@@ -6,6 +6,7 @@
 // VITE_API_BASE_URL ends with /api (e.g. https://…azurewebsites.net/api).
 // Strip the trailing /api so we can build /api/public/… paths ourselves.
 const BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL ?? '').replace(/\/api$/, '');
+const PUBLIC_API_KEY: string = (import.meta as any).env?.VITE_PUBLIC_API_KEY ?? '';
 
 // API envelope: { message: <payload>, totalCount?: number }
 // "message" holds the actual data (not "data", no "success" flag).
@@ -33,7 +34,7 @@ async function fetchPublicApi<T>(
   const res = await fetch(`${BASE_URL}/api/public${path}`, {
     signal,
     ...options,
-    headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) },
+    headers: { 'Content-Type': 'application/json', 'X-Public-Key': PUBLIC_API_KEY, ...(options?.headers ?? {}) },
   });
 
   if (!res.ok) {
@@ -48,7 +49,7 @@ async function fetchPublicApi<T>(
 async function fetchResultsPublicApi<T>(path: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`${BASE_URL}/api/Results/public${path}`, {
     signal,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Public-Key': PUBLIC_API_KEY },
   });
   if (!res.ok) throw new Error(`Results API error: ${res.status} ${res.statusText}`);
   const json: ApiEnvelope<T> = await res.json();
