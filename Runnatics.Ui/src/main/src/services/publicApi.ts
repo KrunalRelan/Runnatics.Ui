@@ -150,14 +150,18 @@ export interface GetEventsParams {
 }
 
 export async function getEvents(params: GetEventsParams = {}, signal?: AbortSignal): Promise<PublicEvent[]> {
-  const qs = new URLSearchParams();
-  if (params.status) qs.set('status', params.status);
-  if (params.take) qs.set('take', String(params.take));
-  if (params.page) qs.set('page', String(params.page));
-  if (params.pageSize) qs.set('pageSize', String(params.pageSize));
-  if (params.city) qs.set('city', params.city);
-  if (params.q) qs.set('q', params.q);
-  const page = await fetchPublicApi<ApiPage<ApiEvent>>(`/events?${qs.toString()}`, signal);
+  const body = {
+    status: params.status ?? 'upcoming',
+    city: params.city ?? null,
+    take: params.take ?? null,
+    searchString: params.q ?? null,
+    pageNumber: params.page ?? 1,
+    pageSize: params.pageSize ?? 12,
+  };
+  const page = await fetchPublicApi<ApiPage<ApiEvent>>('/events/search', signal, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
   return page.items.map(normaliseEvent);
 }
 
@@ -265,17 +269,17 @@ export function getEventResults(
   params?: ResultsParams,
   signal?: AbortSignal,
 ): Promise<ResultsResponse> {
-  const qs = new URLSearchParams();
-  if (params?.race && params.race !== 'All') qs.set('race', params.race);
-  if (params?.gender && params.gender !== 'All') qs.set('gender', params.gender);
-  if (params?.search?.trim()) qs.set('search', params.search.trim());
-  if (params?.page) qs.set('page', String(params.page));
-  if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
-  const query = qs.toString();
-  return fetchPublicApi<ResultsResponse>(
-    `/events/${slug}/results${query ? `?${query}` : ''}`,
-    signal,
-  );
+  const body = {
+    race: (params?.race && params.race !== 'All') ? params.race : null,
+    gender: (params?.gender && params.gender !== 'All') ? params.gender : null,
+    searchString: params?.search?.trim() || null,
+    pageNumber: params?.page ?? 1,
+    pageSize: params?.pageSize ?? 50,
+  };
+  return fetchPublicApi<ResultsResponse>(`/events/${slug}/results`, signal, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }
 
 export { DEFAULT_LEADERBOARD_SETTINGS };
@@ -394,7 +398,10 @@ export function getPublicLeaderboard(
   raceId: string,
   signal?: AbortSignal,
 ): Promise<PublicLeaderboardResponse> {
-  return fetchResultsPublicApi<PublicLeaderboardResponse>(`/${eventId}/${raceId}/leaderboard`, signal);
+  return fetchPublicApi<PublicLeaderboardResponse>(`/${eventId}/${raceId}/leaderboard`, signal, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 }
 
 // ── Public participant detail (GET /api/Results/public/participant/{participantId}) ─

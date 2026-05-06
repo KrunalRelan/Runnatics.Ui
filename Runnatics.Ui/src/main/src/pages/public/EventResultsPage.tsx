@@ -4,8 +4,8 @@ import { Section, Container } from '../../components/public/ui';
 import { ErrorState, TableSkeleton } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
 import useDebounce from '../../hooks/useDebounce';
-import { getEventDetail, getEventResults } from '../../services/publicApi';
-import type { ResultRow } from '../../services/publicApi';
+import { publicApi } from '../../../../api/publicApi';
+import type { PublicResultItem } from '../../../../api/publicApi';
 
 // ── Disclaimer banner ──────────────────────────────────────────────
 function DisclaimerBanner() {
@@ -38,7 +38,7 @@ function DisclaimerBanner() {
 }
 
 // ── Participant search result card ─────────────────────────────────
-function ParticipantCard({ row }: { row: ResultRow }) {
+function ParticipantCard({ row }: { row: PublicResultItem }) {
   const timeLabel = row.netTime ? 'Chip Time' : 'Gun Time';
   const time = row.netTime ?? row.gunTime;
 
@@ -155,7 +155,7 @@ function ParticipantCard({ row }: { row: ResultRow }) {
   );
 }
 
-// ── Race tab strip ─────────────────────────────────────────────────
+// ── Race tab ───────────────────────────────────────────────────────
 function RaceTab({
   name,
   active,
@@ -217,13 +217,7 @@ function RaceTab({
 }
 
 // ── Search bar ─────────────────────────────────────────────────────
-function SearchBar({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
+function SearchBar({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div style={{ position: 'relative', maxWidth: '480px' }}>
       <span
@@ -258,46 +252,71 @@ function SearchBar({
           outline: 'none',
           boxSizing: 'border-box',
         }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = '#4da1c0';
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = 'var(--color-border)';
-        }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = '#4da1c0'; }}
+        onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; }}
       />
     </div>
   );
 }
 
+// ── Gender filter ──────────────────────────────────────────────────
+function GenderFilter({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{
+        padding: '0.75rem 1rem',
+        border: '1.5px solid var(--color-border)',
+        borderRadius: '8px',
+        fontFamily: 'var(--font-body)',
+        fontSize: '0.9375rem',
+        color: 'var(--color-text)',
+        backgroundColor: '#fff',
+        cursor: 'pointer',
+      }}
+    >
+      <option value="">All Genders</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+    </select>
+  );
+}
+
 // ── Event results body ─────────────────────────────────────────────
 function EventResultsBody({ slug }: { slug: string }) {
-  const [selectedRace, setSelectedRace] = useState<string>('All');
+  const [selectedRace, setSelectedRace] = useState<string>('');
   const [search, setSearch] = useState('');
+  const [gender, setGender] = useState('');
+  const [page, setPage] = useState(1);
+
   const debouncedSearch = useDebounce(search, 350);
 
-  const { data: ev, loading: evLoading } = usePublicApi(
-    (signal) => getEventDetail(slug, signal),
+  const { data: ev } = usePublicApi(
+    (signal) => publicApi.getEventBySlug(slug, signal),
     [slug],
   );
 
-  const { data, loading: resultsLoading, error, refetch } = usePublicApi(
+  const { data, loading, error, refetch } = usePublicApi(
     (signal) =>
-      getEventResults(
+      publicApi.getEventResults(
         slug,
         {
-          race: selectedRace === 'All' ? undefined : selectedRace,
-          search: debouncedSearch || undefined,
+          searchString: debouncedSearch || undefined,
+          race: selectedRace || undefined,
+          gender: gender || undefined,
+          pageNumber: page,
+          pageSize: 50,
         },
         signal,
       ),
-    [slug, selectedRace, debouncedSearch],
+    [slug, selectedRace, debouncedSearch, gender, page],
   );
 
   const races = data?.races ?? [];
   const results = data?.results ?? [];
   const isSearching = debouncedSearch.trim().length > 0;
-
-  const activeRace = selectedRace === 'All' ? races[0] ?? 'All' : selectedRace;
+  const activeRace = selectedRace || races[0] || '';
 
   return (
     <>
@@ -317,45 +336,32 @@ function EventResultsBody({ slug }: { slug: string }) {
               ← Events
             </Link>
           </div>
-          {evLoading ? (
-            <div
-              style={{
-                height: '2rem',
-                width: '60%',
-                borderRadius: '6px',
-                backgroundColor: 'rgba(255,255,255,0.1)',
-              }}
-            />
-          ) : (
-            <>
-              <h1
-                style={{
-                  fontFamily: 'var(--font-heading)',
-                  fontWeight: 800,
-                  fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
-                  color: '#fff',
-                  margin: '0 0 0.5rem',
-                  lineHeight: 1.15,
-                }}
-              >
-                {ev?.name ?? 'Event Results'}
-              </h1>
-              <div
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  fontSize: '0.9375rem',
-                  color: 'rgba(255,255,255,0.65)',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem 1.5rem',
-                }}
-              >
-                {ev?.date && <span>{ev.date}</span>}
-                {ev?.city && <span>{ev.city}</span>}
-                {ev?.venue && <span>{ev.venue}</span>}
-              </div>
-            </>
-          )}
+          <h1
+            style={{
+              fontFamily: 'var(--font-heading)',
+              fontWeight: 800,
+              fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
+              color: '#fff',
+              margin: '0 0 0.5rem',
+              lineHeight: 1.15,
+            }}
+          >
+            {ev?.name ?? 'Event Results'}
+          </h1>
+          <div
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: '0.9375rem',
+              color: 'rgba(255,255,255,0.65)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.5rem 1.5rem',
+            }}
+          >
+            {ev?.date && <span>{ev.date}</span>}
+            {ev?.city && <span>{ev.city}</span>}
+            {ev?.venue && <span>{ev.venue}</span>}
+          </div>
         </Container>
       </Section>
 
@@ -381,7 +387,10 @@ function EventResultsBody({ slug }: { slug: string }) {
               padding: '1rem 0',
             }}
           >
-            <SearchBar value={search} onChange={setSearch} />
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} />
+              <GenderFilter value={gender} onChange={(v) => { setGender(v); setPage(1); }} />
+            </div>
 
             {/* Race tabs */}
             {races.length > 0 && (
@@ -399,11 +408,8 @@ function EventResultsBody({ slug }: { slug: string }) {
                     <RaceTab
                       key={race}
                       name={race}
-                      active={
-                        selectedRace === race ||
-                        (selectedRace === 'All' && race === races[0])
-                      }
-                      onSelect={() => setSelectedRace(race)}
+                      active={selectedRace === race || (!selectedRace && race === races[0])}
+                      onSelect={() => { setSelectedRace(race); setPage(1); }}
                       eventId={ev?.id}
                       raceId={cat?.raceId}
                     />
@@ -420,6 +426,7 @@ function EventResultsBody({ slug }: { slug: string }) {
         <Container>
           {error && <ErrorState message={error} onRetry={refetch} />}
 
+          {/* Search results view */}
           {!error && isSearching && (
             <div>
               <div
@@ -430,11 +437,11 @@ function EventResultsBody({ slug }: { slug: string }) {
                   marginBottom: '1rem',
                 }}
               >
-                {resultsLoading
+                {loading
                   ? 'Searching…'
                   : `${results.length} result${results.length === 1 ? '' : 's'} for "${debouncedSearch}"`}
               </div>
-              {!resultsLoading && results.length === 0 && (
+              {!loading && results.length === 0 && (
                 <div
                   style={{
                     textAlign: 'center',
@@ -455,7 +462,8 @@ function EventResultsBody({ slug }: { slug: string }) {
             </div>
           )}
 
-          {!error && !isSearching && !resultsLoading && data?.isPublished === false && (
+          {/* Unpublished state */}
+          {!error && !isSearching && !loading && data?.isPublished === false && (
             <div
               style={{
                 textAlign: 'center',
@@ -469,6 +477,7 @@ function EventResultsBody({ slug }: { slug: string }) {
             </div>
           )}
 
+          {/* Results table */}
           {!error && !isSearching && (data?.isPublished ?? true) && (
             <div
               style={{
@@ -478,7 +487,6 @@ function EventResultsBody({ slug }: { slug: string }) {
                 overflow: 'hidden',
               }}
             >
-              {/* Table header */}
               <div
                 style={{
                   backgroundColor: 'var(--color-primary)',
@@ -490,21 +498,13 @@ function EventResultsBody({ slug }: { slug: string }) {
                 }}
               >
                 <span
-                  style={{
-                    fontFamily: 'var(--font-heading)',
-                    fontWeight: 700,
-                    fontSize: '1rem',
-                  }}
+                  style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1rem' }}
                 >
-                  {activeRace !== 'All' ? activeRace : 'Results'}
+                  {activeRace || 'Results'}
                 </span>
-                {!resultsLoading && data?.totalCount != null && (
+                {!loading && data?.totalCount != null && (
                   <span
-                    style={{
-                      fontFamily: 'var(--font-body)',
-                      fontSize: '0.8125rem',
-                      opacity: 0.7,
-                    }}
+                    style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', opacity: 0.7 }}
                   >
                     {data.totalCount.toLocaleString()} finishers
                   </span>
@@ -512,9 +512,7 @@ function EventResultsBody({ slug }: { slug: string }) {
               </div>
 
               <div style={{ overflowX: 'auto' }}>
-                <table
-                  style={{ width: '100%', borderCollapse: 'collapse' }}
-                >
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr
                       style={{
@@ -542,7 +540,7 @@ function EventResultsBody({ slug }: { slug: string }) {
                       )}
                     </tr>
                   </thead>
-                  {resultsLoading ? (
+                  {loading ? (
                     <TableSkeleton rows={8} cols={7} />
                   ) : (
                     <tbody>
@@ -655,7 +653,7 @@ function EventResultsBody({ slug }: { slug: string }) {
                           </td>
                         </tr>
                       ))}
-                      {!resultsLoading && results.length === 0 && (
+                      {!loading && results.length === 0 && (
                         <tr>
                           <td
                             colSpan={7}
@@ -675,6 +673,40 @@ function EventResultsBody({ slug }: { slug: string }) {
                   )}
                 </table>
               </div>
+
+              {/* Pagination */}
+              {!loading && (data?.totalPages ?? 0) > 1 && (
+                <div
+                  style={{
+                    padding: '1rem',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    borderTop: '1px solid var(--color-border)',
+                  }}
+                >
+                  {Array.from({ length: data!.totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '6px',
+                        border: '1px solid var(--color-border)',
+                        backgroundColor: p === page ? 'var(--color-primary)' : '#fff',
+                        color: p === page ? '#fff' : 'var(--color-text)',
+                        fontFamily: 'var(--font-body)',
+                        fontSize: '0.875rem',
+                        fontWeight: p === page ? 600 : 400,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </Container>

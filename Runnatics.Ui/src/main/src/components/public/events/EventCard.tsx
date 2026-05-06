@@ -134,7 +134,7 @@ function EventCard({ event, portrait }: EventCardProps) {
           <div style={{ flex: 1 }} />
 
           {/* View Result button */}
-          {event.hasPublishedResults && (
+          {event.hasPublishedResults && event.slug && (
             <a
               href={`/events/${event.slug}/results`}
               style={{
@@ -207,7 +207,7 @@ function EventCard({ event, portrait }: EventCardProps) {
           <Button variant="ghost" size="sm" href={`/events/${event.slug}`}>
             View Details →
           </Button>
-          {event.isPast && (
+          {event.isPast && event.slug && (
             <Button variant="outline" size="sm" href={`/events/${event.slug}/results`}>
               Results
             </Button>

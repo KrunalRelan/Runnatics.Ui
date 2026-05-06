@@ -16,7 +16,10 @@
       "Bash(git checkout *)",
       "Bash(grep -E \"\\\\.cs$\")",
       "Bash(cat)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(git stash *)",
+      "Bash(Leaderboard)",
+      "Bash(Participant\")"
     ],
     "deny": [],
     "ask": []

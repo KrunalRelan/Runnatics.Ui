@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Mail, MapPin, Clock } from 'lucide-react';
 import { Section, Container, Heading } from '../../components/public/ui';
 import CTABanner from '../../components/public/shared/CTABanner';
-import { submitContactForm, type ContactFormPayload } from '../../services/publicApi';
+import { publicApi } from '../../../../api/publicApi';
 
 const subjectOptions = ['General Enquiry', 'Event Timing', 'Registration', 'Sponsorship', 'Technical Support', 'Other'];
 
@@ -88,15 +88,14 @@ function ContactPage() {
 
     setSubmitStatus('submitting');
     try {
-      const payload: ContactFormPayload = {
+      await publicApi.submitContact({
         name: form.name,
         email: form.email,
         phone: form.phone || undefined,
         subject: form.subject,
-        event: form.event || undefined,
+        eventName: form.event || undefined,
         message: form.message,
-      };
-      await submitContactForm(payload);
+      });
       setSubmitStatus('success');
       setForm(EMPTY_FORM);
     } catch {

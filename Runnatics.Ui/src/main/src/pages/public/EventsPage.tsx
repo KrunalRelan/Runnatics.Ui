@@ -7,7 +7,8 @@ import CTABanner from '../../components/public/shared/CTABanner';
 import { Container, Section } from '../../components/public/ui';
 import { CardGridSkeleton, ErrorState, EmptyState } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
-import { getUpcomingEvents, getPastEvents } from '../../services/publicApi';
+import useDebounce from '../../hooks/useDebounce';
+import { publicApi } from '../../../../api/publicApi';
 
 const PAGE_SIZE = 6;
 
@@ -17,41 +18,38 @@ function EventsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  const { data: upcoming, loading: loadingUp, error: errorUp, refetch: refetchUp } = usePublicApi(
-    (signal) => getUpcomingEvents(signal),
-    [],
+  const debouncedSearch = useDebounce(search, 350);
+
+  const { data, loading, error, refetch } = usePublicApi(
+    (signal) =>
+      publicApi.searchEvents(
+        {
+          status: tab,
+          city: city !== 'All' ? city : undefined,
+          searchString: debouncedSearch || undefined,
+          pageNumber: page,
+          pageSize: PAGE_SIZE,
+        },
+        signal,
+      ),
+    [tab, city, debouncedSearch, page],
   );
 
-  const { data: past, loading: loadingPast, error: errorPast, refetch: refetchPast } = usePublicApi(
-    (signal) => getPastEvents(signal),
-    [],
+  const items = data?.items ?? [];
+  const totalPages = data?.totalPages ?? 0;
+
+  // Derive unique cities from current results for the dropdown
+  const availableCities = useMemo(
+    () => [...new Set(items.map((e) => e.city).filter(Boolean))].sort(),
+    [items],
   );
 
-  const source = tab === 'upcoming' ? upcoming : past;
-  const loading = tab === 'upcoming' ? loadingUp : loadingPast;
-  const error = tab === 'upcoming' ? errorUp : errorPast;
-  const refetch = tab === 'upcoming' ? refetchUp : refetchPast;
-
-  // Derive unique cities from the current tab's data for the city dropdown
-  const availableCities = useMemo(() => {
-    const cities = Array.from(new Set((source ?? []).map((e) => e.city))).sort();
-    return cities;
-  }, [source]);
-
-  const filtered = useMemo(() => {
-    if (!source) return [];
-    const q = search.toLowerCase();
-    return source.filter((e) => {
-      const matchCity = city === 'All' || e.city === city;
-      const matchSearch = !q || e.name.toLowerCase().includes(q);
-      return matchCity && matchSearch;
-    });
-  }, [source, city, search]);
-
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const handleTabChange = (t: 'upcoming' | 'past') => { setTab(t); setPage(1); setCity('All'); setSearch(''); };
+  const handleTabChange = (t: 'upcoming' | 'past') => {
+    setTab(t);
+    setPage(1);
+    setCity('All');
+    setSearch('');
+  };
   const handleCityChange = (c: string) => { setCity(c); setPage(1); };
   const handleSearchChange = (s: string) => { setSearch(s); setPage(1); };
 
@@ -69,7 +67,7 @@ function EventsPage() {
       />
       <Section tone="light">
         <Container>
-          {loading && <CardGridSkeleton count={6} />}
+          {loading && <CardGridSkeleton count={PAGE_SIZE} />}
 
           {!loading && error && (
             <ErrorState
@@ -78,16 +76,28 @@ function EventsPage() {
             />
           )}
 
-          {!loading && !error && paged.length === 0 && (
+          {!loading && !error && items.length === 0 && (
             <EmptyState
-              title={search || city !== 'All' ? 'No matching events' : `No ${tab} events`}
-              subtitle={search || city !== 'All' ? 'Try adjusting your filters.' : 'Check back soon — new events are added regularly.'}
+              title={debouncedSearch || city !== 'All' ? 'No matching events' : `No ${tab} events`}
+              subtitle={
+                debouncedSearch || city !== 'All'
+                  ? 'Try adjusting your filters.'
+                  : 'Check back soon — new events are added regularly.'
+              }
             />
           )}
 
-          {!loading && !error && paged.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-              {paged.map((ev) => <EventCard key={ev.slug} event={ev} />)}
+          {!loading && !error && items.length > 0 && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '1.5rem',
+              }}
+            >
+              {items.map((ev) => (
+                <EventCard key={ev.slug} event={ev as any} />
+              ))}
             </div>
           )}
 

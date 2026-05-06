@@ -2,16 +2,18 @@ import { useParams, Link } from 'react-router-dom';
 import { Container } from '../../components/public/ui';
 import { ErrorState } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
-import { getPublicParticipant } from '../../services/publicApi';
-import type { PublicParticipantDetail } from '../../services/publicApi';
+import { publicApi } from '../../../../api/publicApi';
+import type { PublicParticipantDetailResponse } from '../../../../api/publicApi';
 
 // ── Share buttons ──────────────────────────────────────────────────
 function ShareButtons({ participantName }: { participantName: string }) {
   const pageUrl = window.location.href;
   const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`;
-  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out ${participantName}'s race results!`)}&url=${encodeURIComponent(pageUrl)}`;
+  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+    `Check out ${participantName}'s race results!`,
+  )}&url=${encodeURIComponent(pageUrl)}`;
 
-  const btnStyle: React.CSSProperties = {
+  const btnBase: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '0.4rem',
@@ -31,7 +33,7 @@ function ShareButtons({ participantName }: { participantName: string }) {
         href={fbUrl}
         target="_blank"
         rel="noopener noreferrer"
-        style={{ ...btnStyle, backgroundColor: '#1877F2', color: '#fff' }}
+        style={{ ...btnBase, backgroundColor: '#1877F2', color: '#fff' }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
           <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.791-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.268h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z" />
@@ -42,7 +44,7 @@ function ShareButtons({ participantName }: { participantName: string }) {
         href={twitterUrl}
         target="_blank"
         rel="noopener noreferrer"
-        style={{ ...btnStyle, backgroundColor: '#000', color: '#fff' }}
+        style={{ ...btnBase, backgroundColor: '#000', color: '#fff' }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
           <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -179,7 +181,7 @@ function TimingSection({
   label: string;
   time?: string | null;
   pace?: string | null;
-  rankings?: PublicParticipantDetail['rankings'];
+  rankings?: PublicParticipantDetailResponse['rankings'];
 }) {
   if (!time) return null;
 
@@ -193,7 +195,6 @@ function TimingSection({
         marginBottom: '1.5rem',
       }}
     >
-      {/* Section header */}
       <div
         style={{
           backgroundColor: 'var(--color-primary)',
@@ -245,13 +246,7 @@ function TimingSection({
         </div>
 
         {/* Rank badges */}
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '0.875rem',
-          }}
-        >
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.875rem' }}>
           <RankBadge
             label="Overall"
             rank={rankings?.overallRank}
@@ -280,7 +275,7 @@ function TimingSection({
 }
 
 // ── Splits table ────────────────────────────────────────────────────
-function SplitsTable({ splits }: { splits: PublicParticipantDetail['splitTimes'] }) {
+function SplitsTable({ splits }: { splits: PublicParticipantDetailResponse['splitTimes'] }) {
   if (!splits || splits.length === 0) return null;
 
   return (
@@ -309,25 +304,36 @@ function SplitsTable({ splits }: { splits: PublicParticipantDetail['splitTimes']
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '560px' }}>
           <thead>
-            <tr style={{ backgroundColor: '#F5F7FA', borderBottom: '1px solid var(--color-border)' }}>
-              {['Split', 'Split Time', 'Race Time', 'Race Rank', 'Split Dist', 'Pace (min/km)', 'Speed (km/hr)'].map(
-                (h) => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: '0.625rem 0.875rem',
-                      textAlign: 'left',
-                      fontFamily: 'var(--font-body)',
-                      fontWeight: 600,
-                      fontSize: '0.8125rem',
-                      color: 'var(--color-text-muted)',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {h}
-                  </th>
-                ),
-              )}
+            <tr
+              style={{
+                backgroundColor: '#F5F7FA',
+                borderBottom: '1px solid var(--color-border)',
+              }}
+            >
+              {[
+                'Split',
+                'Split Time',
+                'Race Time',
+                'Race Rank',
+                'Split Dist',
+                'Pace (min/km)',
+                'Speed (km/hr)',
+              ].map((h) => (
+                <th
+                  key={h}
+                  style={{
+                    padding: '0.625rem 0.875rem',
+                    textAlign: 'left',
+                    fontFamily: 'var(--font-body)',
+                    fontWeight: 600,
+                    fontSize: '0.8125rem',
+                    color: 'var(--color-text-muted)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -389,7 +395,9 @@ function SplitsTable({ splits }: { splits: PublicParticipantDetail['splitTimes']
                     color: 'var(--color-text-muted)',
                   }}
                 >
-                  {split.distanceKm != null ? `${split.distanceKm.toFixed(1)} km` : split.distance ?? '—'}
+                  {split.distanceKm != null
+                    ? `${split.distanceKm.toFixed(1)} km`
+                    : split.distance ?? '—'}
                 </td>
                 <td
                   style={{
@@ -465,7 +473,7 @@ function ParticipantDetailPage() {
   const { participantId } = useParams<{ participantId: string }>();
 
   const { data, loading, error, refetch } = usePublicApi(
-    (signal) => getPublicParticipant(participantId!, signal),
+    (signal) => publicApi.getParticipantDetail(participantId!, signal),
     [participantId],
   );
 
@@ -495,34 +503,32 @@ function ParticipantDetailPage() {
               ← Back to Event
             </Link>
           </div>
-          <div>
-            <h1
+          <h1
+            style={{
+              fontFamily: 'var(--font-heading)',
+              fontWeight: 800,
+              fontSize: 'clamp(1.5rem, 3vw, 2.25rem)',
+              color: '#fff',
+              margin: '0 0 0.375rem',
+            }}
+          >
+            {loading ? 'Loading…' : (data?.fullName ?? 'Participant Results')}
+          </h1>
+          {!loading && data && (
+            <div
               style={{
-                fontFamily: 'var(--font-heading)',
-                fontWeight: 800,
-                fontSize: 'clamp(1.5rem, 3vw, 2.25rem)',
-                color: '#fff',
-                margin: '0 0 0.375rem',
+                fontFamily: 'var(--font-body)',
+                fontSize: '0.9rem',
+                color: 'rgba(255,255,255,0.65)',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.5rem 1.5rem',
               }}
             >
-              {loading ? 'Loading…' : (data?.fullName ?? 'Participant Results')}
-            </h1>
-            {!loading && data && (
-              <div
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  fontSize: '0.9rem',
-                  color: 'rgba(255,255,255,0.65)',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem 1.5rem',
-                }}
-              >
-                {data.eventName && <span>{data.eventName}</span>}
-                {data.eventDate && <span>{data.eventDate}</span>}
-              </div>
-            )}
-          </div>
+              {data.eventName && <span>{data.eventName}</span>}
+              {data.eventDate && <span>{data.eventDate}</span>}
+            </div>
+          )}
         </Container>
       </div>
 
@@ -541,12 +547,7 @@ function ParticipantDetailPage() {
 
               {/* Info cards */}
               <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '0.875rem',
-                  marginBottom: '2rem',
-                }}
+                style={{ display: 'flex', flexWrap: 'wrap', gap: '0.875rem', marginBottom: '2rem' }}
               >
                 <InfoCard label="Bib Number" value={data.bibNumber} />
                 <InfoCard label="Gender" value={data.gender} />
@@ -561,7 +562,7 @@ function ParticipantDetailPage() {
                 />
               </div>
 
-              {/* Chip time section */}
+              {/* Chip time */}
               <TimingSection
                 label="Chip time"
                 time={data.chipTime}
@@ -569,7 +570,7 @@ function ParticipantDetailPage() {
                 rankings={data.rankings}
               />
 
-              {/* Gun time section */}
+              {/* Gun time */}
               <TimingSection
                 label="Gun time"
                 time={data.gunTime}
@@ -577,7 +578,7 @@ function ParticipantDetailPage() {
                 rankings={data.rankings}
               />
 
-              {/* Splits table */}
+              {/* Splits */}
               <SplitsTable splits={data.splitTimes} />
             </>
           )}

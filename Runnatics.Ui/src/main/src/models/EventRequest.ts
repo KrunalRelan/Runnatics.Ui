@@ -4,6 +4,7 @@ import { LeaderBoardSettings } from "./LeaderBoardSettings";
 export interface EventRequest{
     eventOrganizerId?: string | null;
     name: string;
+    slug?: string;
     description?: string;
     eventDate: Date | string;
     timeZone: string;

@@ -51,6 +51,7 @@ export const EditEvent: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [existingSlug, setExistingSlug] = useState<string | undefined>(undefined);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerBase64, setBannerBase64] = useState<string | null>(null);
   const [existingBannerBase64, setExistingBannerBase64] = useState<string | null>(null);
@@ -275,6 +276,7 @@ export const EditEvent: React.FC = () => {
       },
     };
 
+    setExistingSlug(event.slug || undefined);
     setFormData(mappedFormData);
 
     // Set existing banner base64 if present
@@ -463,6 +465,7 @@ export const EditEvent: React.FC = () => {
       const requestPayload: EventRequest = {
         eventOrganizerId: eventOrganizerIdForApi,
         name: apiData.name,
+        slug: existingSlug || apiData.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
         description: apiData.description || "",
         eventDate: eventDateUTC,
         timeZone: timeZone,

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Projects/Runnatics.Ui/**)",
+      "Read(//c/Projects/Runnatics.API/Runnatics/src/Runnatics.Models.Data/Entities/**)",
+      "Read(//c/Projects/Runnatics.API/Runnatics/src/Runnatics.Services/**)",
+      "Bash(grep -i \"\\\\.cs$\")"
+    ]
+  }
+}

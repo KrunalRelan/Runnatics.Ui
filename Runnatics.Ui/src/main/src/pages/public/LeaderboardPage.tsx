@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { Search } from 'lucide-react';
 import { Container } from '../../components/public/ui';
 import { ErrorState } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
-import { getPublicLeaderboard } from '../../services/publicApi';
-import type { PublicLeaderboardEntry } from '../../services/publicApi';
+import useDebounce from '../../hooks/useDebounce';
+import { publicApi } from '../../../../api/publicApi';
+import type { PublicLeaderboardEntry } from '../../../../api/publicApi';
 
-// ── Category order for sorting ─────────────────────────────────────
+// ── Category order ─────────────────────────────────────────────────
 function getCategoryStartAge(cat: string): number {
   const match = cat.match(/\d+/);
   return match ? parseInt(match[0], 10) : 999;
@@ -28,7 +30,11 @@ function groupByCategory(
 
 // ── Time badge ─────────────────────────────────────────────────────
 function TimeBadge({ time }: { time?: string }) {
-  if (!time) return <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>—</span>;
+  if (!time) {
+    return (
+      <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>—</span>
+    );
+  }
   return (
     <span
       style={{
@@ -77,7 +83,6 @@ function CategorySection({
         overflow: 'hidden',
       }}
     >
-      {/* Category header */}
       <div
         style={{
           backgroundColor: '#E8F4FD',
@@ -92,10 +97,14 @@ function CategorySection({
         {category} — based on {timeLabel}
       </div>
 
-      {/* Table */}
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ backgroundColor: '#F5F7FA', borderBottom: '1px solid var(--color-border)' }}>
+          <tr
+            style={{
+              backgroundColor: '#F5F7FA',
+              borderBottom: '1px solid var(--color-border)',
+            }}
+          >
             {['#', 'Name', 'Bib', 'Chip Time'].map((h) => (
               <th
                 key={h}
@@ -128,7 +137,14 @@ function CategorySection({
                   fontFamily: 'var(--font-body)',
                   fontWeight: 700,
                   fontSize: '0.875rem',
-                  color: i === 0 ? '#B7791F' : i === 1 ? '#718096' : i === 2 ? '#9C4221' : 'var(--color-text-muted)',
+                  color:
+                    i === 0
+                      ? '#B7791F'
+                      : i === 1
+                      ? '#718096'
+                      : i === 2
+                      ? '#9C4221'
+                      : 'var(--color-text-muted)',
                   width: '2.5rem',
                 }}
               >
@@ -168,7 +184,6 @@ function CategorySection({
         </tbody>
       </table>
 
-      {/* Show more / less */}
       {entries.length > SHOW_DEFAULT && (
         <button
           onClick={onToggle}
@@ -185,7 +200,7 @@ function CategorySection({
             fontWeight: 500,
           }}
         >
-          {showAll ? `Show less` : `Show all ${entries.length} finishers`}
+          {showAll ? 'Show less' : `Show all ${entries.length} finishers`}
         </button>
       )}
     </div>
@@ -198,11 +213,13 @@ function GenderColumn({
   entries,
   timeField,
   rankOnNet,
+  showAll,
 }: {
   label: string;
   entries: PublicLeaderboardEntry[];
   timeField: string;
   rankOnNet: boolean;
+  showAll: boolean;
 }) {
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
   const grouped = groupByCategory(entries);
@@ -247,7 +264,7 @@ function GenderColumn({
           key={category}
           category={category}
           entries={catEntries}
-          showAll={expandedCats.has(category)}
+          showAll={showAll || expandedCats.has(category)}
           onToggle={() => toggle(category)}
           timeField={timeField}
           rankOnNet={rankOnNet}
@@ -269,13 +286,7 @@ function LeaderboardSkeleton() {
   return (
     <>
       <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '2rem',
-        }}
-      >
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
         {[0, 1].map((col) => (
           <div key={col}>
             <div style={{ ...shimmer, height: '1.5rem', width: '40%', marginBottom: '1.5rem' }} />
@@ -289,14 +300,7 @@ function LeaderboardSkeleton() {
                   overflow: 'hidden',
                 }}
               >
-                <div
-                  style={{
-                    ...shimmer,
-                    height: '2.25rem',
-                    borderRadius: 0,
-                    backgroundColor: '#E8F4FD',
-                  }}
-                />
+                <div style={{ ...shimmer, height: '2.25rem', borderRadius: 0 }} />
                 {[0, 1, 2].map((r) => (
                   <div
                     key={r}
@@ -325,10 +329,22 @@ function LeaderboardSkeleton() {
 // ── Main page ───────────────────────────────────────────────────────
 function LeaderboardPage() {
   const { eventId, raceId } = useParams<{ eventId: string; raceId: string }>();
+  const [searchInput, setSearchInput] = useState('');
+  const [showAll, setShowAll] = useState(false);
+  const debouncedSearch = useDebounce(searchInput, 350);
 
   const { data, loading, error, refetch } = usePublicApi(
-    (signal) => getPublicLeaderboard(eventId!, raceId!, signal),
-    [eventId, raceId],
+    (signal) =>
+      publicApi.getGroupedLeaderboard(
+        eventId!,
+        raceId!,
+        {
+          search: debouncedSearch || undefined,
+          showAll,
+        },
+        signal,
+      ),
+    [eventId, raceId, debouncedSearch, showAll],
   );
 
   const eventName = data?.eventName ?? 'Event';
@@ -350,7 +366,7 @@ function LeaderboardPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)' }}>
-      {/* Breadcrumb + Title */}
+      {/* Header */}
       <div
         style={{
           backgroundColor: 'var(--color-primary)',
@@ -408,7 +424,7 @@ function LeaderboardPage() {
             >
               {raceTitle} Leaderboard
             </h1>
-          ) : (
+          ) : loading ? (
             <div
               style={{
                 height: '2rem',
@@ -417,7 +433,93 @@ function LeaderboardPage() {
                 backgroundColor: 'rgba(255,255,255,0.1)',
               }}
             />
-          )}
+          ) : null}
+        </Container>
+      </div>
+
+      {/* Search + Show All controls */}
+      <div
+        style={{
+          backgroundColor: '#fff',
+          borderBottom: '1px solid var(--color-border)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+        }}
+      >
+        <Container>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              padding: '0.875rem 0',
+              flexWrap: 'wrap',
+            }}
+          >
+            {/* Search input */}
+            <div style={{ position: 'relative', flex: '1', minWidth: '200px', maxWidth: '400px' }}>
+              <Search
+                size={16}
+                style={{
+                  position: 'absolute',
+                  left: '0.75rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--color-text-muted)',
+                }}
+              />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search participant name…"
+                style={{
+                  width: '100%',
+                  paddingLeft: '2.25rem',
+                  paddingRight: '0.75rem',
+                  paddingTop: '0.5rem',
+                  paddingBottom: '0.5rem',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.9375rem',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Show All toggle */}
+            <button
+              onClick={() => setShowAll((v) => !v)}
+              style={{
+                padding: '0.5rem 1.125rem',
+                border: '1px solid var(--color-border)',
+                borderRadius: '8px',
+                backgroundColor: showAll ? 'var(--color-primary)' : '#fff',
+                color: showAll ? '#fff' : 'var(--color-text)',
+                fontFamily: 'var(--font-body)',
+                fontSize: '0.9rem',
+                fontWeight: showAll ? 600 : 400,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {showAll ? 'Show Top 3' : 'Show All'}
+            </button>
+
+            {!loading && data?.totalCount != null && (
+              <span
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.875rem',
+                  color: 'var(--color-text-muted)',
+                  marginLeft: 'auto',
+                }}
+              >
+                {data.totalCount.toLocaleString()} finishers
+              </span>
+            )}
+          </div>
         </Container>
       </div>
 
@@ -425,12 +527,10 @@ function LeaderboardPage() {
       <Container>
         <div style={{ padding: '2rem 0 4rem' }}>
           {error && <ErrorState message={error} onRetry={refetch} />}
-
           {loading && <LeaderboardSkeleton />}
 
           {!loading && !error && (
             <>
-              {/* Two-column leaderboard */}
               <div
                 style={{
                   display: 'grid',
@@ -444,12 +544,14 @@ function LeaderboardPage() {
                   entries={maleEntries}
                   timeField={timeField}
                   rankOnNet={rankOnNet}
+                  showAll={showAll}
                 />
                 <GenderColumn
                   label="Female"
                   entries={femaleEntries}
                   timeField={timeField}
                   rankOnNet={rankOnNet}
+                  showAll={showAll}
                 />
               </div>
 
@@ -468,8 +570,8 @@ function LeaderboardPage() {
                 }}
               >
                 <strong>*Gun Time:</strong> Your finish time with reference to the race starting
-                time.{' '}
-                <strong>*Chip Time:</strong> Your finish time with reference to your starting time.
+                time. <strong>*Chip Time:</strong> Your finish time with reference to your starting
+                time.
               </div>
             </>
           )}
