@@ -1,10 +1,10 @@
 import { Calendar, MapPin, Activity } from 'lucide-react';
 import { base64ToDataUrl } from '../../../utility';
 import { Badge, Button, Card } from '../ui';
-import type { PublicEvent } from '../../../services/publicApi';
+import type { PublicEventItem } from '../../../../../api/publicApi';
 
 interface EventCardProps {
-  event: PublicEvent;
+  event: PublicEventItem;
   portrait?: boolean;
 }
 
@@ -133,10 +133,10 @@ function EventCard({ event, portrait }: EventCardProps) {
           {/* Spacer — pushes button to bottom */}
           <div style={{ flex: 1 }} />
 
-          {/* View Result button */}
-          {event.hasPublishedResults && event.slug && (
+          {/* View Results button */}
+          {event.hasPublishedResults && event.encryptedId && (
             <a
-              href={`/events/${event.slug}/results`}
+              href={`/e/${event.encryptedId}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -144,27 +144,26 @@ function EventCard({ event, portrait }: EventCardProps) {
                 gap: '0.25rem',
                 width: '100%',
                 padding: '0.4375rem 1rem',
-                border: '1px solid var(--color-accent)',
+                border: 'none',
                 borderRadius: '9999px',
                 fontFamily: 'var(--font-body)',
                 fontSize: '0.8125rem',
                 fontWeight: 600,
-                color: 'var(--color-accent)',
+                color: '#fff',
+                backgroundColor: '#EA580C',
                 textDecoration: 'none',
                 marginTop: '0.5rem',
                 boxSizing: 'border-box',
-                transition: 'background-color 0.15s, color 0.15s',
+                transition: 'background-color 0.15s',
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'var(--color-accent)';
-                (e.currentTarget as HTMLAnchorElement).style.color = '#fff';
+                (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#C2410C';
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'transparent';
-                (e.currentTarget as HTMLAnchorElement).style.color = 'var(--color-accent)';
+                (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#EA580C';
               }}
             >
-              View Result →
+              View Results →
             </a>
           )}
         </div>
@@ -207,9 +206,9 @@ function EventCard({ event, portrait }: EventCardProps) {
           <Button variant="ghost" size="sm" href={`/events/${event.slug}`}>
             View Details →
           </Button>
-          {event.isPast && event.slug && (
-            <Button variant="outline" size="sm" href={`/events/${event.slug}/results`}>
-              Results
+          {event.hasPublishedResults && event.encryptedId && (
+            <Button variant="primary" size="sm" href={`/e/${event.encryptedId}`}>
+              View Results →
             </Button>
           )}
         </div>

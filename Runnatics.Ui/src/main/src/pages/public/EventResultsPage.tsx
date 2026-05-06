@@ -51,7 +51,7 @@ function EventDetailSkeleton() {
 }
 
 function EventResultsPage() {
-  const { eventId = '' } = useParams();
+  const { eventSlug: eventId = '' } = useParams();
 
   const { data: ev, loading, error } = usePublicApi(
     (signal) => publicApi.getEventBySlug(eventId, signal),
@@ -67,7 +67,7 @@ function EventResultsPage() {
           <ErrorState message={error} />
           <div style={{ textAlign: 'center', marginTop: '1rem' }}>
             <Link
-              to="/results"
+              to="/"
               style={{
                 fontFamily: 'var(--font-body)',
                 fontSize: '0.9375rem',
@@ -75,7 +75,7 @@ function EventResultsPage() {
                 textDecoration: 'none',
               }}
             >
-              ← Back to Results
+              ← Back to Events
             </Link>
           </div>
         </Container>
@@ -104,7 +104,7 @@ function EventResultsPage() {
         <Container>
           <div style={{ marginBottom: '0.75rem' }}>
             <Link
-              to="/results"
+              to="/"
               style={{
                 fontFamily: 'var(--font-body)',
                 fontSize: '0.9375rem',
@@ -112,7 +112,7 @@ function EventResultsPage() {
                 textDecoration: 'none',
               }}
             >
-              ← Back to Results
+              ← Back to Events
             </Link>
           </div>
           <h1

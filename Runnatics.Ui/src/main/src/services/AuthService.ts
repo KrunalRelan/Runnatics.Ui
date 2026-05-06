@@ -3,8 +3,6 @@
 import { apiClient, tokenManager } from '../utils/axios.config';
 import { LoginRequest, LoginResponse, RegisterRequest, RegisterOrganizationRequest } from '../models/Auth';
 import { ServiceUrl } from '../models/ServiceUrls';
-import { encryptPassword } from '../utils/encryption';
-
 /**
  * Authentication Service
  * Handles all authentication-related API calls
@@ -19,7 +17,7 @@ class AuthService {
         try {
             const payload: LoginRequest = {
                 email: credentials.email,
-                password: await encryptPassword(credentials.password),
+                password: credentials.password,
             };
             const response = await apiClient.post<LoginResponse>(ServiceUrl.login(), payload);
 

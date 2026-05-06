@@ -96,7 +96,7 @@ function EventsPage() {
               }}
             >
               {items.map((ev) => (
-                <EventCard key={ev.slug} event={ev as any} />
+                <EventCard key={ev.encryptedId || ev.slug} event={ev} />
               ))}
             </div>
           )}

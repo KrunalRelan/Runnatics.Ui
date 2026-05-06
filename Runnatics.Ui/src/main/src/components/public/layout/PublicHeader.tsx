@@ -8,7 +8,6 @@ const navLinks = [
   { label: 'About Us', to: '/about' },
   { label: 'Services', to: '/services' },
   { label: 'Contact Us', to: '/contact' },
-  { label: 'Result', to: '/results' },
 ];
 
 function PublicHeader() {

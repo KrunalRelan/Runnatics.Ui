@@ -1,18 +1,18 @@
 import { Section, Container, Heading } from '../ui';
 import useScrollReveal from '../../../hooks/useScrollReveal';
 import usePublicApi from '../../../hooks/usePublicApi';
-import { getPastEvents } from '../../../services/publicApi';
+import { publicApi } from '../../../../../api/publicApi';
 import EventCard from '../events/EventCard';
 import { CardGridSkeleton, ErrorState, EmptyState } from '../shared/ApiStates';
 
 function PastEventResults() {
   const ref = useScrollReveal();
-  const { data: events, loading, error, refetch } = usePublicApi(
-    (signal) => getPastEvents(signal),
+  const { data: page, loading, error, refetch } = usePublicApi(
+    (signal) => publicApi.searchEvents({ status: 'past', pageSize: 5 }, signal),
     [],
   );
 
-  const preview = events?.slice(0, 5) ?? [];
+  const preview = page?.items ?? [];
 
   return (
     <Section tone="alt">
@@ -32,7 +32,7 @@ function PastEventResults() {
           )}
           {!loading && !error && preview.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '1rem' }}>
-              {preview.map((ev) => <EventCard key={ev.slug} event={ev} portrait />)}
+              {preview.map((ev) => <EventCard key={ev.encryptedId || ev.slug} event={ev} portrait />)}
             </div>
           )}
         </div>
