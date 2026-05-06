@@ -19,7 +19,7 @@ import type {
   GridApi,
 } from "ag-grid-community";
 import { ModuleRegistry, AllCommunityModule } from "ag-grid-community";
-import { DataGridProps, DataGridRef } from "@/main/src/models/dataGrid";
+import { DataGridProps } from "@/main/src/models/dataGrid";
 import { lightTheme, darkTheme } from "@/main/src/styles/dataGrid";
 
 // Register AG Grid modules

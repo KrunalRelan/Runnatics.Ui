@@ -86,7 +86,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                 if (checkpointToEdit.deviceName) {
                     const device = devices.find(d => d.name === checkpointToEdit.deviceName);
                     if (device) {
-                        finalDeviceId = device.id;
+                        finalDeviceId = String(device.id);
                     }
                 }
 
@@ -94,23 +94,23 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
                 if (checkpointToEdit.parentDeviceName) {
                     const parentDevice = devices.find(d => d.name === checkpointToEdit.parentDeviceName);
                     if (parentDevice) {
-                        finalParentDeviceId = parentDevice.id;
+                        finalParentDeviceId = String(parentDevice.id);
                     }
                 }
 
                 // Fallback: If names didn't work, try matching by ID
                 // (in case API returns matching IDs in the future)
                 if (!finalDeviceId && checkpointToEdit.deviceId) {
-                    const deviceById = devices.find(d => d.id === checkpointToEdit.deviceId);
+                    const deviceById = devices.find(d => String(d.id) === checkpointToEdit.deviceId);
                     if (deviceById) {
-                        finalDeviceId = deviceById.id;
+                        finalDeviceId = String(deviceById.id);
                     }
                 }
 
                 if (!finalParentDeviceId && checkpointToEdit.parentDeviceId) {
-                    const parentDeviceById = devices.find(d => d.id === checkpointToEdit.parentDeviceId);
+                    const parentDeviceById = devices.find(d => String(d.id) === checkpointToEdit.parentDeviceId);
                     if (parentDeviceById) {
-                        finalParentDeviceId = parentDeviceById.id;
+                        finalParentDeviceId = String(parentDeviceById.id);
                     }
                 }
             }
@@ -179,7 +179,7 @@ const AddOrEditCheckpoint: React.FC<AddOrEditCheckpointProps> = ({
             if (parentCheckpoint.deviceName && devices.length > 0) {
                 const device = devices.find(d => d.name === parentCheckpoint.deviceName);
                 if (device) {
-                    parentDeviceId = device.id; // This is the encrypted ID
+                    parentDeviceId = String(device.id); // This is the encrypted ID
                 }
             }
             

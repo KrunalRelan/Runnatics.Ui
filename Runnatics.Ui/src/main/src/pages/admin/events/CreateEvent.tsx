@@ -2,11 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   TextField,
-  Select,
-  MenuItem,
   Button,
-  FormControl,
-  InputLabel,
   FormHelperText,
   Box,
   Typography,
@@ -27,9 +23,6 @@ import {
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-// If your project requires it, you can instead do:
-// import { SelectChangeEvent } from "@mui/material/Select";
-import { SelectChangeEvent } from "@mui/material/Select";
 
 import { EventService } from "../../../services/EventService";
 import { base64ToDataUrl } from "../../../utility";
@@ -238,26 +231,6 @@ export const CreateEvent: React.FC = () => {
     }));
 
     if (errors[name]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
-  };
-
-  // Handle Select changes
-  const handleSelectChange = (e: SelectChangeEvent<string | number>) => {
-    const { name, value } = e.target;
-
-    const processedValue = value === "" ? null : value;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name as string]: processedValue,
-    }));
-
-    if (name && errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[name];

@@ -91,10 +91,7 @@ export const EditRace: React.FC = () => {
     leaderboardSettings: undefined, // Will be set when override is enabled
   });
 
-  // Calculate eventDateMin for datetime-local input fields
-  const eventDateMin = formData?.startTime
-    ? new Date(formData.startTime).toISOString().slice(0, 16)
-    : undefined;
+
 
   // Fetch race data and populate form
   useEffect(() => {

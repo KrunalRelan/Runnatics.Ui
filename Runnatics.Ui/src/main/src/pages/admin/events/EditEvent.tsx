@@ -490,7 +490,7 @@ export const EditEvent: React.FC = () => {
         ...(!existingBannerBase64 && bannerBase64 ? { bannerBase64 } : {}),
       };
 
-      const updatedEvent = await EventService.updateEvent(id!, requestPayload);
+      await EventService.updateEvent(id!, requestPayload);
 
 
       setSnackbar({

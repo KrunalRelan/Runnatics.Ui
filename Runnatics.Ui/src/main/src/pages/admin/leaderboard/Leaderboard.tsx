@@ -823,12 +823,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eventId, raceId }) => {
   const handlePageSizeChange = (size: number) =>
     setFilters((prev) => ({ ...prev, pageNumber: 1, pageSize: size }));
 
-  const handleExportCsv = () => {
-    if (gridRef.current) {
-      const ts = new Date().toISOString().slice(0, 10);
-      gridRef.current.exportToCsv(`leaderboard_${ts}.csv`);
-    }
-  };
+
 
   const handleExportExcel = async () => {
     if (!eventId || !raceId) return;

@@ -36,31 +36,31 @@ function ResultsTable({ results }: ResultsTableProps) {
           {results.map((r, i) => (
             <>
               <tr
-                key={r.bib}
-                style={{ backgroundColor: i % 2 === 0 ? '#fff' : 'var(--color-bg-alt)', cursor: r.splits?.length > 0 ? 'pointer' : 'default' }}
-                onClick={() => r.splits?.length > 0 && setExpanded(expanded === r.rank ? null : r.rank)}
+                key={r.bibNumber}
+                style={{ backgroundColor: i % 2 === 0 ? '#fff' : 'var(--color-bg-alt)', cursor: (r.splits?.length ?? 0) > 0 ? 'pointer' : 'default' }}
+                onClick={() => (r.splits?.length ?? 0) > 0 && setExpanded(expanded === (r.overallRank ?? i) ? null : (r.overallRank ?? i))}
               >
-                <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: r.rank <= 3 ? 'var(--color-accent)' : 'var(--color-text)' }}>{r.rank}</td>
-                <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)' }}>{r.bib}</td>
-                <td style={{ padding: '0.75rem 1rem', fontWeight: 500, color: 'var(--color-text)' }}>{r.name}</td>
-                <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{r.race}</td>
+                <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: (r.overallRank ?? 0) <= 3 ? 'var(--color-accent)' : 'var(--color-text)' }}>{r.overallRank}</td>
+                <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)' }}>{r.bibNumber}</td>
+                <td style={{ padding: '0.75rem 1rem', fontWeight: 500, color: 'var(--color-text)' }}>{r.participantName}</td>
+                <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{r.raceName}</td>
                 <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)' }}>{r.gender}</td>
                 <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)' }}>{r.gunTime}</td>
                 <td style={{ padding: '0.75rem 1rem', fontWeight: 500, color: 'var(--color-text)' }}>{r.netTime}</td>
-                <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)' }}>{r.catRank}</td>
+                <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)' }}>{r.categoryRank}</td>
                 <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)' }}>{r.genderRank}</td>
                 <td style={{ padding: '0.75rem 1rem' }}>
-                  {r.splits?.length > 0 && (expanded === r.rank ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
+                  {(r.splits?.length ?? 0) > 0 && (expanded === (r.overallRank ?? i) ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
                 </td>
               </tr>
-              {expanded === r.rank && r.splits?.length > 0 && (
-                <tr key={`${r.bib}-splits`} style={{ backgroundColor: '#EFF6FF' }}>
+              {expanded === (r.overallRank ?? i) && (r.splits?.length ?? 0) > 0 && (
+                <tr key={`${r.bibNumber}-splits`} style={{ backgroundColor: '#EFF6FF' }}>
                   <td colSpan={10} style={{ padding: '1rem 2rem' }}>
                     <strong style={{ fontFamily: 'var(--font-heading)', fontSize: '0.875rem', color: 'var(--color-primary)' }}>Splits</strong>
                     <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                      {r.splits.map((s) => (
-                        <div key={s.checkpoint} style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem' }}>
-                          <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>{s.checkpoint}</div>
+                      {r.splits!.map((s) => (
+                        <div key={s.checkpointName} style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem' }}>
+                          <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>{s.checkpointName}</div>
                           <div style={{ fontWeight: 600, color: 'var(--color-text)' }}>{s.time}</div>
                           <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>#{s.rank}</div>
                         </div>

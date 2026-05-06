@@ -58,7 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     };
 
-    const register = async (userData: RegisterRequest) => {
+    const register = async (userData: RegisterRequest | RegisterOrganizationRequest) => {
         try {
             setIsLoading(true);
             const response = await authService.register(userData);

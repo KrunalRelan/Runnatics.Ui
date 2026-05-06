@@ -285,7 +285,7 @@ const RegisterPage: React.FC = () => {
                             </Box>
 
                             <Grid container spacing={2}>
-                                <Grid item xs={6}>
+                                <Grid size={6}>
                                     <TextField
                                         fullWidth
                                         label="First name"
@@ -299,7 +299,7 @@ const RegisterPage: React.FC = () => {
                                         autoComplete="given-name"
                                     />
                                 </Grid>
-                                <Grid item xs={6}>
+                                <Grid size={6}>
                                     <TextField
                                         fullWidth
                                         label="Last name"
