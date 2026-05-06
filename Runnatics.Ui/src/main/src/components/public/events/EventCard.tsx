@@ -1,10 +1,10 @@
 import { Calendar, MapPin, Activity } from 'lucide-react';
 import { base64ToDataUrl } from '../../../utility';
 import { Badge, Button, Card } from '../ui';
-import type { PublicEventItem } from '../../../../../api/publicApi';
+import type { PublicEvent } from '../../../services/publicApi';
 
 interface EventCardProps {
-  event: PublicEventItem;
+  event: PublicEvent;
   portrait?: boolean;
 }
 

@@ -1,18 +1,18 @@
 import { Section, Container, Heading } from '../ui';
 import useScrollReveal from '../../../hooks/useScrollReveal';
 import usePublicApi from '../../../hooks/usePublicApi';
-import { publicApi } from '../../../../../api/publicApi';
+import { getPastEvents } from '../../../services/publicApi';
 import EventCard from '../events/EventCard';
 import { CardGridSkeleton, ErrorState, EmptyState } from '../shared/ApiStates';
 
 function PastEventResults() {
   const ref = useScrollReveal();
-  const { data: page, loading, error, refetch } = usePublicApi(
-    (signal) => publicApi.searchEvents({ status: 'past', pageSize: 5 }, signal),
+  const { data: events, loading, error, refetch } = usePublicApi(
+    (signal) => getPastEvents(signal),
     [],
   );
 
-  const preview = page?.items ?? [];
+  const preview = events?.slice(0, 5) ?? [];
 
   return (
     <Section tone="alt">

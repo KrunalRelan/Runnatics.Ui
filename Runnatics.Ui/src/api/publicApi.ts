@@ -69,21 +69,6 @@ const GET = <T>(path: string, signal?: AbortSignal) =>
 const POST = <T>(path: string, body: unknown, signal?: AbortSignal) =>
   req<T>('POST', path, body, signal);
 
-// ── Date helpers ──────────────────────────────────────────────────
-
-function formatDate(iso?: string | null): string {
-  if (!iso) return '';
-  try {
-    return new Date(iso).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  } catch {
-    return iso;
-  }
-}
-
 // ── Request types ─────────────────────────────────────────────────
 
 export interface SearchCriteriaBase {
@@ -92,13 +77,6 @@ export interface SearchCriteriaBase {
   sortDirection?: 'Ascending' | 'Descending';
   pageNumber?: number;
   pageSize?: number;
-}
-
-export interface GetPublicEventsRequest extends SearchCriteriaBase {
-  status?: 'upcoming' | 'past';
-  city?: string;
-  year?: number;
-  take?: number;
 }
 
 export interface GetPublicEventResultsRequest extends SearchCriteriaBase {
@@ -122,65 +100,7 @@ export interface PublicContactRequest {
   eventName?: string;
 }
 
-// ── Raw API shapes (before normalisation) ─────────────────────────
-
-interface ApiEvent {
-  encryptedId?: string;
-  slug?: string;
-  name: string;
-  city?: string;
-  state?: string;
-  eventDate?: string;
-  raceCategories?: string[];
-  registrationOpen?: boolean;
-  bannerBase64?: string | null;
-  hasPublishedResults?: boolean;
-}
-
-interface ApiPage<T> {
-  // PascalCase
-  Items?: T[];
-  TotalCount?: number;
-  Page?: number;
-  PageSize?: number;
-  TotalPages?: number;
-  HasNext?: boolean;
-  HasPrevious?: boolean;
-  // camelCase
-  items?: T[];
-  totalCount?: number;
-  page?: number;
-  pageSize?: number;
-  totalPages?: number;
-  hasNext?: boolean;
-  hasPrevious?: boolean;
-}
-
 // ── Response types ────────────────────────────────────────────────
-
-/** Matches the shape expected by EventCard (structurally identical to old PublicEvent). */
-export interface PublicEventItem {
-  encryptedId: string;
-  slug: string;
-  name: string;
-  date: string;
-  city: string;
-  categories: string[];
-  registrationOpen: boolean;
-  isPast: boolean;
-  bannerBase64?: string | null;
-  hasPublishedResults: boolean;
-}
-
-export interface PublicEventsPage {
-  items: PublicEventItem[];
-  totalCount: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
-}
 
 export interface PublicEventCategoryItem {
   id?: string;
@@ -337,54 +257,10 @@ export interface PublicStats {
   pastEvents: number;
 }
 
-// ── Normalisers ───────────────────────────────────────────────────
-
-function normaliseEvent(e: ApiEvent): PublicEventItem {
-  const date = e.eventDate ? new Date(e.eventDate) : null;
-  return {
-    encryptedId: e.encryptedId ?? '',
-    slug: e.slug ?? '',
-    name: e.name,
-    date: formatDate(e.eventDate),
-    city: e.city ?? e.state ?? '',
-    categories: e.raceCategories ?? [],
-    registrationOpen: e.registrationOpen ?? false,
-    isPast: date ? date < new Date() : false,
-    bannerBase64: e.bannerBase64 ?? null,
-    hasPublishedResults: e.hasPublishedResults ?? false,
-  };
-}
-
-function normalisePage<Raw, Out>(
-  raw: ApiPage<Raw>,
-  mapFn: (item: Raw) => Out,
-  fallbackPageSize: number,
-): { items: Out[]; totalCount: number; page: number; pageSize: number; totalPages: number; hasNext: boolean; hasPrevious: boolean } {
-  const items = (raw.Items ?? raw.items ?? []).map(mapFn);
-  return {
-    items,
-    totalCount: raw.TotalCount ?? raw.totalCount ?? items.length,
-    page: raw.Page ?? raw.page ?? 1,
-    pageSize: raw.PageSize ?? raw.pageSize ?? fallbackPageSize,
-    totalPages: raw.TotalPages ?? raw.totalPages ?? 1,
-    hasNext: raw.HasNext ?? raw.hasNext ?? false,
-    hasPrevious: raw.HasPrevious ?? raw.hasPrevious ?? false,
-  };
-}
-
 // ── API object ────────────────────────────────────────────────────
 
 export const publicApi = {
-  /** Search / list events (upcoming or past) with filtering and pagination. */
-  searchEvents: async (
-    request: GetPublicEventsRequest = {},
-    signal?: AbortSignal,
-  ): Promise<PublicEventsPage> => {
-    const raw = await POST<ApiPage<ApiEvent>>('/api/public/events/search', request, signal);
-    return normalisePage(raw, normaliseEvent, request.pageSize ?? 12);
-  },
-
-  /** Get full event details by slug. */
+  /** Get full event details by encrypted event ID. */
   getEventBySlug: (slug: string, signal?: AbortSignal): Promise<PublicEventDetailItem> =>
     GET<PublicEventDetailItem>(`/api/public/events/${encodeURIComponent(slug)}`, signal),
 

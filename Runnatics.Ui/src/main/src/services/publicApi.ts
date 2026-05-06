@@ -60,6 +60,7 @@ async function fetchResultsPublicApi<T>(path: string, signal?: AbortSignal): Pro
 // ── Raw shapes from API ───────────────────────────────────────────
 
 interface ApiEvent {
+  encryptedId?: string;
   slug?: string;
   name: string;
   city?: string;
@@ -76,6 +77,7 @@ interface ApiEvent {
 // ── Normalised shapes used by components ──────────────────────────
 
 export interface PublicEvent {
+  encryptedId: string;
   slug: string;
   name: string;
   date: string;            // human-readable e.g. "22 Apr 2026"
@@ -128,6 +130,7 @@ function formatEventDate(iso: string): string {
 
 function normaliseEvent(e: ApiEvent): PublicEvent {
   return {
+    encryptedId: e.encryptedId ?? '',
     slug: e.slug ?? '',
     name: e.name,
     date: formatEventDate(e.eventDate),
@@ -171,6 +174,40 @@ export async function getUpcomingEvents(signal?: AbortSignal): Promise<PublicEve
 
 export async function getPastEvents(signal?: AbortSignal): Promise<PublicEvent[]> {
   return getEvents({ status: 'past', take: 10 }, signal);
+}
+
+export interface PublicEventsPage {
+  items: PublicEvent[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export async function getEventsPaged(params: GetEventsParams = {}, signal?: AbortSignal): Promise<PublicEventsPage> {
+  const body = {
+    status: params.status ?? 'upcoming',
+    city: params.city ?? null,
+    take: params.take ?? null,
+    searchString: params.q ?? null,
+    pageNumber: params.page ?? 1,
+    pageSize: params.pageSize ?? 12,
+  };
+  const raw = await fetchPublicApi<ApiPage<ApiEvent>>('/events/search', signal, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  return {
+    items: raw.items.map(normaliseEvent),
+    totalCount: raw.totalCount,
+    page: raw.page,
+    pageSize: raw.pageSize,
+    totalPages: raw.totalPages,
+    hasNext: raw.hasNext,
+    hasPrevious: raw.hasPrevious,
+  };
 }
 
 export function getEventDetail(slug: string, signal?: AbortSignal): Promise<PublicEventDetail> {

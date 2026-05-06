@@ -72,7 +72,6 @@ function App() {
               <Route path="/events" element={<EventsPage />} />
               <Route path="/events/:slug" element={<EventDetailPage />} />
               <Route path="/events/:slug/results" element={<ResultsPage />} />
-              <Route path="/results" element={<ResultsPage />} />
               {/* Runizen-style public results pages */}
               <Route path="/e/:eventSlug" element={<EventResultsPage />} />
               <Route path="/c/:eventId/:raceId/l" element={<LeaderboardPage />} />

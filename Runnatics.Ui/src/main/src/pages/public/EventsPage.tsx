@@ -8,7 +8,7 @@ import { Container, Section } from '../../components/public/ui';
 import { CardGridSkeleton, ErrorState, EmptyState } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
 import useDebounce from '../../hooks/useDebounce';
-import { publicApi } from '../../../../api/publicApi';
+import { getEventsPaged } from '../../services/publicApi';
 
 const PAGE_SIZE = 6;
 
@@ -22,12 +22,12 @@ function EventsPage() {
 
   const { data, loading, error, refetch } = usePublicApi(
     (signal) =>
-      publicApi.searchEvents(
+      getEventsPaged(
         {
           status: tab,
           city: city !== 'All' ? city : undefined,
-          searchString: debouncedSearch || undefined,
-          pageNumber: page,
+          q: debouncedSearch || undefined,
+          page,
           pageSize: PAGE_SIZE,
         },
         signal,
