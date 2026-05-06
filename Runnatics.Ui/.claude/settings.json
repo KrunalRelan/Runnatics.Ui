@@ -5,6 +5,9 @@
       "Read(//c/Projects/Runnatics.API/Runnatics/src/Runnatics.Models.Data/Entities/**)",
       "Read(//c/Projects/Runnatics.API/Runnatics/src/Runnatics.Services/**)",
       "Bash(grep -i \"\\\\.cs$\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Projects\\Runnatics.Ui\\.github\\workflows"
     ]
   }
 }

@@ -33,6 +33,7 @@ jobs:
         working-directory: ./Runnatics.Ui
         env:
           VITE_ENCRYPTION_KEY: ${{ secrets.VITE_ENCRYPTION_KEY }}
+          VITE_PUBLIC_API_KEY: ${{ secrets.VITE_PUBLIC_API_KEY }}
         run: npm run build
 
       - name: Deploy to Azure Static Web Apps

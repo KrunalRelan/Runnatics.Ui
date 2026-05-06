@@ -5,8 +5,8 @@
  * Response envelope: { Message: <data>, Error?: { Message: string } }
  */
 
-const BASE_URL = ((import.meta as any).env?.VITE_PUBLIC_API_URL ?? '').replace(/\/$/, '');
-const PUBLIC_API_KEY: string = (import.meta as any).env?.VITE_PUBLIC_API_KEY ?? '';
+const BASE_URL = (import.meta.env.VITE_PUBLIC_API_URL ?? '').replace(/\/$/, '');
+const PUBLIC_API_KEY: string = import.meta.env.VITE_PUBLIC_API_KEY ?? '';
 
 // ASP.NET ResponseBase<T> envelope — check both PascalCase and camelCase to be safe
 interface ApiEnvelope<T> {
