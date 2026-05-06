@@ -123,6 +123,7 @@ export interface PublicContactRequest {
 // ── Raw API shapes (before normalisation) ─────────────────────────
 
 interface ApiEvent {
+  encryptedId?: string;
   slug?: string;
   name: string;
   city?: string;
@@ -157,6 +158,7 @@ interface ApiPage<T> {
 
 /** Matches the shape expected by EventCard (structurally identical to old PublicEvent). */
 export interface PublicEventItem {
+  encryptedId: string;
   slug: string;
   name: string;
   date: string;
@@ -181,6 +183,7 @@ export interface PublicEventsPage {
 export interface PublicEventCategoryItem {
   id?: string;
   raceId?: string;
+  encryptedRaceId?: string;
   name: string;
   distance: string;
   price: string;
@@ -337,6 +340,7 @@ export interface PublicStats {
 function normaliseEvent(e: ApiEvent): PublicEventItem {
   const date = e.eventDate ? new Date(e.eventDate) : null;
   return {
+    encryptedId: e.encryptedId ?? '',
     slug: e.slug ?? '',
     name: e.name,
     date: formatDate(e.eventDate),

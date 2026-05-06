@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { Calendar, MapPin } from 'lucide-react';
 import { Section, Container, Heading } from '../../components/public/ui';
 import FilterBar from '../../components/public/FilterBar';
 import Podium from '../../components/public/Podium';
 import ResultsTable from '../../components/public/ResultsTable';
 import Pagination from '../../components/public/shared/Pagination';
-import EventCard from '../../components/public/events/EventCard';
 import {
   CardGridSkeleton,
   EmptyState,
@@ -18,10 +18,10 @@ import useDebounce from '../../hooks/useDebounce';
 import {
   getEventResults,
   getEventDetail,
-  getPastEvents,
   DEFAULT_LEADERBOARD_SETTINGS,
 } from '../../services/publicApi';
 import type { ResultRow } from '../../services/publicApi';
+import { publicApi } from '../../../../api/publicApi';
 
 export type { ResultRow };
 
@@ -31,11 +31,18 @@ type ResultTab = 'overall' | 'category' | 'gender' | 'ageGroup';
 
 // ── Event selector (no slug) ──────────────────────────────────────────────────
 function EventSelector() {
-  const { data: events, loading, error, refetch } = usePublicApi(
-    (signal) => getPastEvents(signal),
-    [],
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
+
+  const { data, loading, error, refetch } = usePublicApi(
+    (signal) =>
+      publicApi.searchEvents(
+        { searchString: debouncedSearch || undefined, pageNumber: 1, pageSize: 12 },
+        signal,
+      ),
+    [debouncedSearch],
   );
-  const list = events ?? [];
+  const list = data?.items ?? [];
 
   return (
     <>
@@ -45,6 +52,28 @@ function EventSelector() {
           <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.65)', marginTop: '0.75rem', fontSize: '1.125rem' }}>
             Browse results from all past events.
           </p>
+          <div style={{ marginTop: '1.5rem', position: 'relative', maxWidth: '480px' }}>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search events…"
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem 0.75rem 1rem',
+                border: '1.5px solid rgba(255,255,255,0.3)',
+                borderRadius: '8px',
+                fontFamily: 'var(--font-body)',
+                fontSize: '0.9375rem',
+                color: '#fff',
+                backgroundColor: 'rgba(255,255,255,0.12)',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.7)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
+            />
+          </div>
         </Container>
       </Section>
 
@@ -53,11 +82,78 @@ function EventSelector() {
           {loading && <CardGridSkeleton count={6} />}
           {!loading && error && <ErrorState message={error} onRetry={refetch} />}
           {!loading && !error && list.length === 0 && (
-            <EmptyState title="No past events yet" subtitle="Results from completed events will appear here." />
+            <EmptyState
+              title={debouncedSearch ? `No events matching "${debouncedSearch}"` : 'No events found'}
+              subtitle="Results from completed events will appear here."
+            />
           )}
           {!loading && !error && list.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-              {list.map((ev) => <EventCard key={ev.slug} event={ev} />)}
+              {list.map((ev) => (
+                <div
+                  key={ev.encryptedId || ev.slug}
+                  style={{
+                    backgroundColor: '#fff',
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                    border: '1px solid var(--color-border)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+                  }}
+                >
+                  {ev.bannerBase64 && (
+                    <img
+                      src={base64ToDataUrl(ev.bannerBase64)}
+                      alt={ev.name}
+                      loading="lazy"
+                      style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }}
+                    />
+                  )}
+                  {!ev.bannerBase64 && (
+                    <div style={{ width: '100%', aspectRatio: '16/9', backgroundColor: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: '#9CA3AF' }}>No image</span>
+                    </div>
+                  )}
+                  <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                    <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '1rem', margin: '0 0 0.5rem', color: 'var(--color-text)' }}>
+                      {ev.name}
+                    </h3>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', marginBottom: '0.875rem' }}>
+                      {ev.date && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
+                          <Calendar size={12} /> {ev.date}
+                        </span>
+                      )}
+                      {ev.city && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
+                          <MapPin size={12} /> {ev.city}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }} />
+                    {ev.encryptedId && (
+                      <Link
+                        to={`/e/${ev.encryptedId}`}
+                        style={{
+                          display: 'inline-block',
+                          padding: '0.5rem 1rem',
+                          backgroundColor: 'var(--color-primary)',
+                          color: '#fff',
+                          fontFamily: 'var(--font-body)',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          borderRadius: '6px',
+                          textDecoration: 'none',
+                          textAlign: 'center',
+                        }}
+                      >
+                        View Details →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </Container>
