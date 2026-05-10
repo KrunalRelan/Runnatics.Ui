@@ -6,26 +6,15 @@ import { ErrorState } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
 import useDebounce from '../../hooks/useDebounce';
 import { publicApi } from '../../../../api/publicApi';
-import type { PublicLeaderboardEntry } from '../../../../api/publicApi';
+import type {
+  GroupedLeaderboardCategory,
+  GroupedLeaderboardParticipant,
+} from '../../../../api/publicApi';
 
 // ── Category order ─────────────────────────────────────────────────
 function getCategoryStartAge(cat: string): number {
   const match = cat.match(/\d+/);
   return match ? parseInt(match[0], 10) : 999;
-}
-
-function groupByCategory(
-  entries: PublicLeaderboardEntry[],
-): Array<{ category: string; entries: PublicLeaderboardEntry[] }> {
-  const map = new Map<string, PublicLeaderboardEntry[]>();
-  for (const entry of entries) {
-    const cat = entry.category || 'Open';
-    if (!map.has(cat)) map.set(cat, []);
-    map.get(cat)!.push(entry);
-  }
-  return Array.from(map.entries())
-    .sort(([a], [b]) => getCategoryStartAge(a) - getCategoryStartAge(b))
-    .map(([category, entries]) => ({ category, entries }));
 }
 
 // ── Time badge ─────────────────────────────────────────────────────
@@ -57,22 +46,17 @@ function TimeBadge({ time }: { time?: string }) {
 // ── Category section ────────────────────────────────────────────────
 function CategorySection({
   category,
-  entries,
+  participants,
   showAll,
   onToggle,
-  timeField,
-  rankOnNet,
 }: {
   category: string;
-  entries: PublicLeaderboardEntry[];
+  participants: GroupedLeaderboardParticipant[];
   showAll: boolean;
   onToggle: () => void;
-  timeField: string;
-  rankOnNet: boolean;
 }) {
   const SHOW_DEFAULT = 3;
-  const displayed = showAll ? entries : entries.slice(0, SHOW_DEFAULT);
-  const timeLabel = rankOnNet ? 'Chip time' : 'Gun time';
+  const displayed = showAll ? participants : participants.slice(0, SHOW_DEFAULT);
 
   return (
     <div
@@ -94,7 +78,7 @@ function CategorySection({
           borderBottom: '1px solid #BEE3F8',
         }}
       >
-        {category} — based on {timeLabel}
+        {category} — based on Chip time
       </div>
 
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -123,9 +107,9 @@ function CategorySection({
           </tr>
         </thead>
         <tbody>
-          {displayed.map((entry, i) => (
+          {displayed.map((p, i) => (
             <tr
-              key={entry.participantId || i}
+              key={p.participantDetailUrl || i}
               style={{
                 borderBottom: '1px solid var(--color-border)',
                 backgroundColor: i % 2 === 0 ? '#fff' : '#FAFAFA',
@@ -138,21 +122,21 @@ function CategorySection({
                   fontWeight: 700,
                   fontSize: '0.875rem',
                   color:
-                    i === 0
+                    p.rank === 1
                       ? '#B7791F'
-                      : i === 1
+                      : p.rank === 2
                       ? '#718096'
-                      : i === 2
+                      : p.rank === 3
                       ? '#9C4221'
                       : 'var(--color-text-muted)',
                   width: '2.5rem',
                 }}
               >
-                {i + 1}
+                {p.rank}
               </td>
               <td style={{ padding: '0.625rem 0.75rem' }}>
                 <Link
-                  to={`/p/${entry.participantId}`}
+                  to={p.participantDetailUrl}
                   style={{
                     fontFamily: 'var(--font-body)',
                     fontWeight: 500,
@@ -161,7 +145,7 @@ function CategorySection({
                     textDecoration: 'none',
                   }}
                 >
-                  {entry.fullName}
+                  {p.name}
                 </Link>
               </td>
               <td
@@ -172,19 +156,17 @@ function CategorySection({
                   color: 'var(--color-text-muted)',
                 }}
               >
-                {entry.bib}
+                {p.bib}
               </td>
               <td style={{ padding: '0.625rem 0.75rem' }}>
-                <TimeBadge
-                  time={timeField === 'NetTime' ? entry.netTime : entry.gunTime}
-                />
+                <TimeBadge time={p.chipTime} />
               </td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {entries.length > SHOW_DEFAULT && (
+      {participants.length > SHOW_DEFAULT && (
         <button
           onClick={onToggle}
           style={{
@@ -200,7 +182,7 @@ function CategorySection({
             fontWeight: 500,
           }}
         >
-          {showAll ? 'Show less' : `Show all ${entries.length} finishers`}
+          {showAll ? 'Show less' : `Show all ${participants.length} finishers`}
         </button>
       )}
     </div>
@@ -210,19 +192,18 @@ function CategorySection({
 // ── Gender column ───────────────────────────────────────────────────
 function GenderColumn({
   label,
-  entries,
-  timeField,
-  rankOnNet,
+  categories,
   showAll,
 }: {
   label: string;
-  entries: PublicLeaderboardEntry[];
-  timeField: string;
-  rankOnNet: boolean;
+  categories: GroupedLeaderboardCategory[];
   showAll: boolean;
 }) {
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
-  const grouped = groupByCategory(entries);
+
+  const sorted = [...categories].sort(
+    (a, b) => getCategoryStartAge(a.categoryName) - getCategoryStartAge(b.categoryName),
+  );
 
   const toggle = (cat: string) => {
     setExpandedCats((prev) => {
@@ -248,7 +229,7 @@ function GenderColumn({
       >
         {label}
       </div>
-      {grouped.length === 0 && (
+      {sorted.length === 0 && (
         <p
           style={{
             fontFamily: 'var(--font-body)',
@@ -259,15 +240,13 @@ function GenderColumn({
           No results.
         </p>
       )}
-      {grouped.map(({ category, entries: catEntries }) => (
+      {sorted.map(({ categoryName, participants }) => (
         <CategorySection
-          key={category}
-          category={category}
-          entries={catEntries}
-          showAll={showAll || expandedCats.has(category)}
-          onToggle={() => toggle(category)}
-          timeField={timeField}
-          rankOnNet={rankOnNet}
+          key={categoryName}
+          category={categoryName}
+          participants={participants}
+          showAll={showAll || expandedCats.has(categoryName)}
+          onToggle={() => toggle(categoryName)}
         />
       ))}
     </div>
@@ -350,13 +329,12 @@ function LeaderboardPage() {
   const eventName = data?.eventName ?? 'Event';
   const raceName = data?.raceName ?? '';
   const raceDistance = data?.raceDistance;
-  const results = data?.results ?? [];
-  const settings = data?.displaySettings;
-  const timeField = settings?.sortTimeField ?? 'NetTime';
-  const rankOnNet = settings?.rankOnNet ?? true;
+  const genderCategories = data?.genderCategories ?? [];
 
-  const maleEntries = results.filter((r) => r.gender?.toLowerCase() === 'male');
-  const femaleEntries = results.filter((r) => r.gender?.toLowerCase() === 'female');
+  const maleCategories =
+    genderCategories.find((g) => g.gender.toLowerCase() === 'male')?.categories ?? [];
+  const femaleCategories =
+    genderCategories.find((g) => g.gender.toLowerCase() === 'female')?.categories ?? [];
 
   const raceTitle = raceName
     ? raceDistance
@@ -507,7 +485,7 @@ function LeaderboardPage() {
               {showAll ? 'Show Top 3' : 'Show All'}
             </button>
 
-            {!loading && data?.totalCount != null && (
+            {!loading && data?.totalFinishers != null && (
               <span
                 style={{
                   fontFamily: 'var(--font-body)',
@@ -516,7 +494,7 @@ function LeaderboardPage() {
                   marginLeft: 'auto',
                 }}
               >
-                {data.totalCount.toLocaleString()} finishers
+                {data.totalFinishers.toLocaleString()} finishers
               </span>
             )}
           </div>
@@ -541,16 +519,12 @@ function LeaderboardPage() {
               >
                 <GenderColumn
                   label="Male"
-                  entries={maleEntries}
-                  timeField={timeField}
-                  rankOnNet={rankOnNet}
+                  categories={maleCategories}
                   showAll={showAll}
                 />
                 <GenderColumn
                   label="Female"
-                  entries={femaleEntries}
-                  timeField={timeField}
-                  rankOnNet={rankOnNet}
+                  categories={femaleCategories}
                   showAll={showAll}
                 />
               </div>

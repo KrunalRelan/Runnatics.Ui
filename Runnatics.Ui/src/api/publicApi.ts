@@ -207,6 +207,37 @@ export interface PublicLeaderboardResponse {
   displaySettings: PublicLeaderboardDisplaySettings;
 }
 
+export interface GroupedLeaderboardParticipant {
+  rank: number;
+  name: string;
+  bib: string;
+  chipTime?: string;
+  gunTime?: string;
+  participantDetailUrl: string;
+}
+
+export interface GroupedLeaderboardCategory {
+  categoryName: string;
+  rankBy: string;
+  participants: GroupedLeaderboardParticipant[];
+}
+
+export interface GroupedLeaderboardGender {
+  gender: string;
+  categories: GroupedLeaderboardCategory[];
+}
+
+export interface GroupedLeaderboardResponse {
+  eventName?: string;
+  raceName?: string;
+  raceDate?: string;
+  raceDistance?: number;
+  rankBy?: string;
+  genderCategories: GroupedLeaderboardGender[];
+  totalFinishers?: number;
+  totalParticipants?: number;
+}
+
 export interface PublicParticipantSplit {
   checkpointName?: string;
   distance?: string;
@@ -326,8 +357,8 @@ export const publicApi = {
     raceId: string,
     request: GetPublicLeaderboardRequest = {},
     signal?: AbortSignal,
-  ): Promise<PublicLeaderboardResponse> =>
-    POST<PublicLeaderboardResponse>(
+  ): Promise<GroupedLeaderboardResponse> =>
+    POST<GroupedLeaderboardResponse>(
       `/api/public/${encodeURIComponent(eventId)}/${encodeURIComponent(raceId)}/leaderboard`,
       request,
       signal,
