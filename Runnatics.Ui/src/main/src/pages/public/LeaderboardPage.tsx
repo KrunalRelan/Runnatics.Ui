@@ -9,7 +9,83 @@ import { publicApi } from '../../../../api/publicApi';
 import type {
   GroupedLeaderboardCategory,
   GroupedLeaderboardParticipant,
+  GroupedLeaderboardGender,
 } from '../../../../api/publicApi';
+
+// ── Podium ─────────────────────────────────────────────────────────
+
+function derivePodium(genderCategories: GroupedLeaderboardGender[]): GroupedLeaderboardParticipant[] {
+  const all = genderCategories.flatMap((gc) => gc.categories.flatMap((c) => c.participants));
+  const seen = new Set<string>();
+  const unique = all.filter((p) => {
+    if (!p.chipTime || seen.has(p.bib)) return false;
+    seen.add(p.bib);
+    return true;
+  });
+  return unique.sort((a, b) => (a.chipTime ?? '').localeCompare(b.chipTime ?? '')).slice(0, 3);
+}
+
+const PODIUM_ORDER = [1, 0, 2] as const;
+const PODIUM_COLORS = ['#C0C0C0', '#FFD700', '#CD7F32'] as const;
+const PODIUM_TEXT   = ['#4A4A4A', '#7C5A00', '#5C3000'] as const;
+const PODIUM_LABELS = ['2nd', '1st', '3rd'] as const;
+const PODIUM_ICONS  = ['🥈', '🥇', '🥉'] as const;
+const PODIUM_BARS   = ['80px', '104px', '64px'] as const;
+
+function LeaderboardPodium({ genderCategories }: { genderCategories: GroupedLeaderboardGender[] }) {
+  const top3 = derivePodium(genderCategories);
+  if (top3.length < 3) return null;
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: '0.75rem',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        padding: '1.75rem 1rem 0',
+        backgroundColor: '#F0F4FF',
+        borderBottom: '1px solid var(--color-border)',
+        marginBottom: '1.5rem',
+      }}
+    >
+      {PODIUM_ORDER.map((srcIdx, colIdx) => {
+        const p = top3[srcIdx];
+        if (!p) return null;
+        return (
+          <div key={p.bib} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem', maxWidth: '220px' }}>
+            <span style={{ fontSize: '1.875rem', lineHeight: 1 }}>{PODIUM_ICONS[colIdx]}</span>
+            <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-text)', textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {p.name}
+            </div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: '#1a56db', fontWeight: 600 }}>
+              BIB {p.bib}
+            </div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+              {p.chipTime ?? '—'}
+            </div>
+            <div
+              style={{
+                width: '100%',
+                backgroundColor: PODIUM_COLORS[colIdx],
+                borderRadius: '6px 6px 0 0',
+                height: PODIUM_BARS[colIdx],
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'center',
+                paddingTop: '0.5rem',
+              }}
+            >
+              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.25rem', color: PODIUM_TEXT[colIdx] }}>
+                {PODIUM_LABELS[colIdx]}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // ── Category order ─────────────────────────────────────────────────
 function getCategoryStartAge(cat: string): number {
@@ -509,6 +585,11 @@ function LeaderboardPage() {
 
           {!loading && !error && (
             <>
+              {/* Podium — top 3 overall by chip time */}
+              {genderCategories.length > 0 && (
+                <LeaderboardPodium genderCategories={genderCategories} />
+              )}
+
               <div
                 style={{
                   display: 'grid',

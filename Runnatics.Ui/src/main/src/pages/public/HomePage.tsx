@@ -11,9 +11,9 @@ function HomePage() {
   return (
     <>
       <Hero />
-      <PastEventResults />
-      <PlatformOverview />
       <UpcomingRaces />
+      <PlatformOverview />
+      <PastEventResults />
       <ParticipantInsights />
       <RaceMoments />
       <Sponsorship />

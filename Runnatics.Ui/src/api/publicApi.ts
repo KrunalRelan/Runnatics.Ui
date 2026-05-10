@@ -359,10 +359,70 @@ export interface PublicEventDetail {
   schedule?: string | null;
   routeMapUrl?: string | null;
   races?: PublicRaceCategory[];
+  categories?: PublicEventCategoryItem[];  // API may return this instead of races
   registrationDeadline?: string | null;
   contactEmail?: string | null;
   showResultSummary?: boolean;
   showBanner?: boolean;
+}
+
+// ── Results filter types (for /results search page) ───────────────
+
+export interface PublicResultFiltersResponse {
+  years: number[];
+  events: { encryptedId: string; name: string; eventDate: string; year: number }[];
+}
+
+export interface PublicRaceFilterItem {
+  encryptedRaceId: string;
+  name: string;
+  distance: string;
+}
+
+export interface PublicRaceFilterResponse {
+  races: PublicRaceFilterItem[];
+}
+
+export interface PublicBracketItem {
+  name: string;
+  gender: string;
+  category: string;
+}
+
+export interface PublicBracketFilterResponse {
+  brackets: PublicBracketItem[];
+}
+
+export interface CompareParticipantsRequest {
+  participantId1: string;
+  participantId2: string;
+}
+
+export interface ParticipantComparisonParticipant {
+  name: string;
+  bib: string;
+  chipTime: string;
+  gunTime: string;
+  pace: string;
+  splits: { checkpoint: string; time: string; pace: string }[];
+}
+
+export interface ParticipantComparisonResponse {
+  participant1: ParticipantComparisonParticipant;
+  participant2: ParticipantComparisonParticipant;
+  differences: { checkpoint: string; timeDiff: string; faster: 1 | 2 }[];
+}
+
+export interface ParticipantSearchItem {
+  encryptedId: string;
+  name: string;
+  bib: string;
+  raceName: string;
+  chipTime: string | null;
+}
+
+export interface ParticipantSearchResponse {
+  participants: ParticipantSearchItem[];
 }
 
 // ── API object ────────────────────────────────────────────────────
@@ -415,4 +475,24 @@ export const publicApi = {
   /** Get platform-level stats (total events, upcoming, past). */
   getStats: (signal?: AbortSignal): Promise<PublicStats> =>
     GET<PublicStats>('/api/public/stats', signal),
+
+  /** Get filter metadata for the /results search page (years + events). */
+  getResultFilters: (year?: number, signal?: AbortSignal): Promise<PublicResultFiltersResponse> =>
+    GET<PublicResultFiltersResponse>(`/api/public/results/filters${year ? `?year=${year}` : ''}`, signal),
+
+  /** Get races for a given event (for /results filter cascade). */
+  getResultRaces: (eventId: string, signal?: AbortSignal): Promise<PublicRaceFilterResponse> =>
+    GET<PublicRaceFilterResponse>(`/api/public/results/filters/${encodeURIComponent(eventId)}/races`, signal),
+
+  /** Get brackets for a given event+race (for /results filter cascade). */
+  getResultBrackets: (eventId: string, raceId: string, signal?: AbortSignal): Promise<PublicBracketFilterResponse> =>
+    GET<PublicBracketFilterResponse>(`/api/public/results/filters/${encodeURIComponent(eventId)}/${encodeURIComponent(raceId)}/brackets`, signal),
+
+  /** Compare two participants side-by-side. */
+  compareParticipants: (request: CompareParticipantsRequest, signal?: AbortSignal): Promise<ParticipantComparisonResponse> =>
+    POST<ParticipantComparisonResponse>('/api/public/participant/compare', request, signal),
+
+  /** Search participants within an event (for comparison feature). */
+  searchParticipants: (eventId: string, q: string, signal?: AbortSignal): Promise<ParticipantSearchResponse> =>
+    GET<ParticipantSearchResponse>(`/api/public/participant/search?eventId=${encodeURIComponent(eventId)}&q=${encodeURIComponent(q)}`, signal),
 };

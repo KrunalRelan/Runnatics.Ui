@@ -21,7 +21,6 @@ function PublicHeader() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Close drawer on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
@@ -43,6 +42,13 @@ function PublicHeader() {
           width: auto !important;
         }
         .header-logo-link:hover .header-logo { transform: scale(1.03); }
+        .pub-nav-desktop { display: none; }
+        .pub-nav-hamburger { display: flex; }
+        @media (min-width: 768px) {
+          .pub-nav-desktop { display: flex; }
+          .pub-nav-hamburger { display: none; }
+          .header-logo { height: 40px !important; }
+        }
         @media (max-width: 767px) {
           .header-logo { height: 32px !important; }
         }
@@ -77,8 +83,8 @@ function PublicHeader() {
             <RacetikLogo variant="png" width={160} className="header-logo" />
           </Link>
 
-          {/* Desktop nav */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} className="hidden md:flex">
+          {/* Desktop nav — visibility controlled by CSS class only (no inline display override) */}
+          <nav className="pub-nav-desktop" style={{ alignItems: 'center', gap: '0.25rem' }}>
             {navLinks.map((link) => (
               <Link
                 key={link.to}
@@ -97,10 +103,55 @@ function PublicHeader() {
                 {link.label}
               </Link>
             ))}
+
+            {/* Results — blue filled */}
+            <Link
+              to="/results"
+              style={{
+                marginLeft: '0.5rem',
+                fontFamily: 'var(--font-body)',
+                fontWeight: 600,
+                fontSize: '0.9375rem',
+                color: '#fff',
+                backgroundColor: '#1a56db',
+                textDecoration: 'none',
+                padding: '0.4375rem 1rem',
+                borderRadius: '8px',
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#1e40af'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#1a56db'; }}
+            >
+              Results
+            </Link>
+
+            {/* Log In — outline */}
+            <Link
+              to="/login"
+              style={{
+                marginLeft: '0.375rem',
+                fontFamily: 'var(--font-body)',
+                fontWeight: 600,
+                fontSize: '0.9375rem',
+                color: 'var(--color-text)',
+                backgroundColor: 'transparent',
+                textDecoration: 'none',
+                padding: '0.4375rem 1rem',
+                borderRadius: '8px',
+                border: '1.5px solid var(--color-border)',
+                transition: 'border-color 0.2s, color 0.2s',
+              }}
+              onMouseEnter={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.borderColor = 'var(--color-primary)'; el.style.color = 'var(--color-primary)'; }}
+              onMouseLeave={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.borderColor = 'var(--color-border)'; el.style.color = 'var(--color-text)'; }}
+            >
+              Log In
+            </Link>
+
+            {/* Get Started — orange */}
             <Link
               to="/contact"
               style={{
-                marginLeft: '0.75rem',
+                marginLeft: '0.375rem',
                 fontFamily: 'var(--font-body)',
                 fontWeight: 600,
                 fontSize: '0.9375rem',
@@ -111,23 +162,19 @@ function PublicHeader() {
                 borderRadius: '8px',
                 transition: 'background-color 0.2s',
               }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'var(--color-accent-hover)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'var(--color-accent)';
-              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'var(--color-accent-hover)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'var(--color-accent)'; }}
             >
               Get Started
             </Link>
           </nav>
 
-          {/* Hamburger */}
+          {/* Hamburger — visibility controlled by CSS class */}
           <button
             aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
             onClick={() => setMobileOpen((o) => !o)}
+            className="pub-nav-hamburger"
             style={{
-              display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               background: 'none',
@@ -136,7 +183,6 @@ function PublicHeader() {
               color: 'var(--color-primary)',
               padding: '0.5rem',
             }}
-            className="md:hidden"
           >
             {mobileOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -174,11 +220,51 @@ function PublicHeader() {
                 {link.label}
               </Link>
             ))}
+
+            {/* Results */}
+            <Link
+              to="/results"
+              style={{
+                display: 'block',
+                fontFamily: 'var(--font-body)',
+                fontSize: '1rem',
+                fontWeight: 600,
+                color: '#1a56db',
+                textDecoration: 'none',
+                padding: '0.625rem 0',
+                borderBottom: '1px solid var(--color-border)',
+              }}
+            >
+              Results
+            </Link>
+
+            {/* Log In */}
+            <Link
+              to="/login"
+              style={{
+                display: 'block',
+                marginTop: '0.75rem',
+                fontFamily: 'var(--font-body)',
+                fontWeight: 600,
+                fontSize: '1rem',
+                color: 'var(--color-text)',
+                border: '1.5px solid var(--color-border)',
+                textDecoration: 'none',
+                padding: '0.75rem 1.25rem',
+                borderRadius: '8px',
+                textAlign: 'center',
+                marginBottom: '0.5rem',
+              }}
+            >
+              Log In
+            </Link>
+
+            {/* Get Started */}
             <Link
               to="/contact"
               style={{
                 display: 'block',
-                marginTop: '1rem',
+                marginTop: '0.5rem',
                 fontFamily: 'var(--font-body)',
                 fontWeight: 600,
                 fontSize: '1rem',

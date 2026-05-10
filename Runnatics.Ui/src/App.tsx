@@ -33,6 +33,7 @@ import GalleryPage from "./main/src/pages/public/GalleryPage";
 import ContactPage from "./main/src/pages/public/ContactPage";
 import PrivacyPage from "./main/src/pages/public/PrivacyPage";
 import NotFoundPage from "./main/src/pages/public/NotFoundPage";
+import GlobalResultsPage from "./main/src/pages/public/GlobalResultsPage";
 
 // Layout wrapper for auth pages (header only, no side nav)
 const AuthLayoutWrapper = () => {
@@ -76,6 +77,7 @@ function App() {
               <Route path="/e/:eventSlug" element={<EventResultsPage />} />
               <Route path="/c/:eventId/:raceId/l" element={<LeaderboardPage />} />
               <Route path="/p/:participantId" element={<ParticipantDetailPage />} />
+              <Route path="/results" element={<GlobalResultsPage />} />
               <Route path="/gallery" element={<GalleryPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />

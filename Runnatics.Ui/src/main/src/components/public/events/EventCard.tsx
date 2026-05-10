@@ -130,11 +130,11 @@ function EventCard({ event, portrait }: EventCardProps) {
             </div>
           )}
 
-          {/* Spacer — pushes button to bottom */}
+          {/* Spacer — pushes buttons to bottom */}
           <div style={{ flex: 1 }} />
 
-          {/* View Results button */}
-          {event.hasPublishedResults && event.encryptedId && (
+          {/* View Results button (only when results are published) */}
+          {event.hasPublishedResults && event.encryptedId ? (
             <a
               href={`/e/${event.encryptedId}`}
               style={{
@@ -156,14 +156,37 @@ function EventCard({ event, portrait }: EventCardProps) {
                 boxSizing: 'border-box',
                 transition: 'background-color 0.15s',
               }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#C2410C';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#EA580C';
-              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#C2410C'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#EA580C'; }}
             >
               View Results →
+            </a>
+          ) : (
+            /* Fallback — navigate to event detail page */
+            <a
+              href={`/events/${event.slug}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+                padding: '0.4375rem 1rem',
+                border: '1px solid var(--color-border)',
+                borderRadius: '9999px',
+                fontFamily: 'var(--font-body)',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                color: 'var(--color-text)',
+                backgroundColor: 'transparent',
+                textDecoration: 'none',
+                marginTop: '0.5rem',
+                boxSizing: 'border-box',
+                transition: 'border-color 0.15s, color 0.15s',
+              }}
+              onMouseEnter={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.borderColor = 'var(--color-primary)'; el.style.color = 'var(--color-primary)'; }}
+              onMouseLeave={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.borderColor = 'var(--color-border)'; el.style.color = 'var(--color-text)'; }}
+            >
+              View Details →
             </a>
           )}
         </div>

@@ -1,39 +1,9 @@
-import { Activity, Calendar, MapPin } from 'lucide-react';
-import { Section, Container, Heading, Badge, Button, Card } from '../ui';
+import { Section, Container, Heading, Button } from '../ui';
 import useScrollReveal from '../../../hooks/useScrollReveal';
 import usePublicApi from '../../../hooks/usePublicApi';
-import { getUpcomingEvents, type PublicEvent } from '../../../services/publicApi';
+import { getUpcomingEvents } from '../../../services/publicApi';
+import EventCard from '../events/EventCard';
 import { CardGridSkeleton, ErrorState, EmptyState } from '../shared/ApiStates';
-
-function EventCardMini({ ev }: { ev: PublicEvent }) {
-  return (
-    <Card>
-      <div style={{ aspectRatio: '16/9', backgroundColor: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Activity size={36} color="#9CA3AF" />
-      </div>
-      <div style={{ padding: '1.25rem' }}>
-        <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '1.0625rem', margin: '0 0 0.5rem', color: 'var(--color-text)' }}>
-          {ev.name}
-        </h3>
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
-            <Calendar size={13} /> {ev.date}
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
-            <MapPin size={13} /> {ev.city}
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-          {ev.categories.map((c) => <Badge key={c} variant="default">{c}</Badge>)}
-          {ev.registrationOpen && <Badge variant="success">Reg Open</Badge>}
-        </div>
-        <Button variant="ghost" size="sm" href={`/events/${ev.slug}`}>
-          View Details →
-        </Button>
-      </div>
-    </Card>
-  );
-}
 
 function UpcomingRaces() {
   const ref = useScrollReveal();
@@ -42,7 +12,6 @@ function UpcomingRaces() {
     [],
   );
 
-  // Show at most 3 on the home page
   const preview = events?.slice(0, 3) ?? [];
 
   return (
@@ -63,7 +32,9 @@ function UpcomingRaces() {
           )}
           {!loading && !error && preview.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-              {preview.map((ev) => <EventCardMini key={ev.slug} ev={ev} />)}
+              {preview.map((ev) => (
+                <EventCard key={ev.encryptedId || ev.slug} event={ev} />
+              ))}
             </div>
           )}
         </div>

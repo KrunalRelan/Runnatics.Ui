@@ -29,12 +29,7 @@ function EventDetailSkeleton() {
   return (
     <>
       <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
-      <div
-        style={{
-          backgroundColor: 'var(--color-primary)',
-          padding: 'clamp(3rem, 6vw, 5rem) 0',
-        }}
-      >
+      <div style={{ backgroundColor: 'var(--color-primary)', padding: 'clamp(3rem, 6vw, 5rem) 0' }}>
         <Container>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ ...shimmer, height: '2.5rem', width: '55%', background: 'rgba(255,255,255,0.15)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', borderRadius: '6px' }} />
@@ -46,14 +41,7 @@ function EventDetailSkeleton() {
         <Container>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                style={{
-                  ...shimmer,
-                  height: '64px',
-                  borderRadius: '8px',
-                }}
-              />
+              <div key={i} style={{ ...shimmer, height: '64px', borderRadius: '8px' }} />
             ))}
           </div>
         </Container>
@@ -78,15 +66,7 @@ function EventResultsPage() {
         <Container>
           <ErrorState message={error} />
           <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-            <Link
-              to="/"
-              style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: '0.9375rem',
-                color: 'var(--color-primary)',
-                textDecoration: 'none',
-              }}
-            >
+            <Link to="/events" style={{ fontFamily: 'var(--font-body)', fontSize: '0.9375rem', color: 'var(--color-primary)', textDecoration: 'none' }}>
               ← Back to Events
             </Link>
           </div>
@@ -98,7 +78,19 @@ function EventResultsPage() {
   if (!ev) return null;
 
   const showBannerBg = ev.showBanner && ev.bannerBase64;
-  const races = ev.races ?? [];
+
+  // Normalize race list — API may return `races` or `categories` depending on endpoint version
+  const races = ev.races?.length
+    ? ev.races
+    : (ev.categories ?? []).map((c) => ({
+        encryptedRaceId: c.encryptedRaceId ?? '',
+        name: c.name,
+        distance: c.distance ?? null,
+        price: null,
+        participantLimit: null,
+        registeredCount: c.count ?? null,
+        hasResults: c.hasResults ?? false,
+      }));
 
   return (
     <>
@@ -119,13 +111,8 @@ function EventResultsPage() {
         <Container>
           <div style={{ marginBottom: '0.75rem' }}>
             <Link
-              to="/"
-              style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: '0.9375rem',
-                color: 'rgba(255,255,255,0.6)',
-                textDecoration: 'none',
-              }}
+              to="/events"
+              style={{ fontFamily: 'var(--font-body)', fontSize: '0.9375rem', color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}
             >
               ← Back to Events
             </Link>
@@ -176,7 +163,7 @@ function EventResultsPage() {
         </Container>
       </Section>
 
-      {/* Races */}
+      {/* Race list */}
       <Section tone="light">
         <Container>
           <h2
@@ -192,13 +179,7 @@ function EventResultsPage() {
           </h2>
 
           {races.length === 0 ? (
-            <p
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-muted)',
-                fontSize: '1rem',
-              }}
-            >
+            <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)', fontSize: '1rem' }}>
               No races available for this event.
             </p>
           ) : (
@@ -244,13 +225,13 @@ function EventResultsPage() {
                     </div>
                   </div>
 
-                  {race.hasResults && (
+                  {race.hasResults && race.encryptedRaceId && (
                     <Link
                       to={`/c/${eventId}/${race.encryptedRaceId}/l`}
                       style={{
                         display: 'inline-block',
                         padding: '0.5rem 1.25rem',
-                        backgroundColor: '#E67E22',
+                        backgroundColor: '#1a56db',
                         color: '#fff',
                         fontFamily: 'var(--font-body)',
                         fontSize: '0.875rem',
