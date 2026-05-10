@@ -482,11 +482,11 @@ export const publicApi = {
 
   /** Get races for a given event (for /results filter cascade). */
   getResultRaces: (eventId: string, signal?: AbortSignal): Promise<PublicRaceFilterResponse> =>
-    GET<PublicRaceFilterResponse>(`/api/public/results/filters/${encodeURIComponent(eventId)}/races`, signal),
+    GET<PublicRaceFilterResponse>(`/api/public/results/${encodeURIComponent(eventId)}/races`, signal),
 
   /** Get brackets for a given event+race (for /results filter cascade). */
   getResultBrackets: (eventId: string, raceId: string, signal?: AbortSignal): Promise<PublicBracketFilterResponse> =>
-    GET<PublicBracketFilterResponse>(`/api/public/results/filters/${encodeURIComponent(eventId)}/${encodeURIComponent(raceId)}/brackets`, signal),
+    GET<PublicBracketFilterResponse>(`/api/public/results/${encodeURIComponent(eventId)}/${encodeURIComponent(raceId)}/brackets`, signal),
 
   /** Compare two participants side-by-side. */
   compareParticipants: (request: CompareParticipantsRequest, signal?: AbortSignal): Promise<ParticipantComparisonResponse> =>
