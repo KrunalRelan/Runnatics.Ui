@@ -94,10 +94,12 @@ export interface PublicEvent {
 export interface PublicEventCategory {
   id?: string;
   raceId?: string;
+  encryptedRaceId?: string;
   name: string;
   distance: string;
   price: string;
   count: number;
+  hasResults?: boolean;
 }
 
 export interface PublicEventSponsor {

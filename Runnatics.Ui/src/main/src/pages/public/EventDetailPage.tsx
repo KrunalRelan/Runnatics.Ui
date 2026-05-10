@@ -304,9 +304,9 @@ function EventDetailPage() {
                         {cat.count.toLocaleString()}
                       </td>
                       <td style={{ padding: '0.875rem 1rem' }}>
-                        {ev.id && cat.raceId && (
+                        {cat.hasResults && cat.encryptedRaceId && ev.id && (
                           <Link
-                            to={`/c/${ev.id}/${cat.raceId}/l`}
+                            to={`/c/${ev.id}/${cat.encryptedRaceId}/l`}
                             style={{
                               display: 'inline-block',
                               padding: '0.3rem 0.875rem',

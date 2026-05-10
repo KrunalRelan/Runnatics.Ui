@@ -4,7 +4,9 @@
       "Read(//c/Projects/Runnatics.Ui/**)",
       "Read(//c/Projects/Runnatics.API/Runnatics/src/Runnatics.Models.Data/Entities/**)",
       "Read(//c/Projects/Runnatics.API/Runnatics/src/Runnatics.Services/**)",
-      "Bash(grep -i \"\\\\.cs$\")"
+      "Bash(grep -i \"\\\\.cs$\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Projects\\\\Runnatics.Ui\\\\Runnatics.Ui\\\\src\" -Recurse -Directory)",
+      "Bash(Select-Object -First 20)"
     ],
     "additionalDirectories": [
       "c:\\Projects\\Runnatics.Ui\\.github\\workflows"

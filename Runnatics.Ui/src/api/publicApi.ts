@@ -110,6 +110,7 @@ export interface PublicEventCategoryItem {
   distance: string;
   price: string;
   count: number;
+  hasResults?: boolean;
 }
 
 export interface PublicEventSponsorItem {
