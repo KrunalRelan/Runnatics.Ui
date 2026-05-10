@@ -97,8 +97,12 @@ function EventResultsPage() {
 
   if (!ev) return null;
 
+  const evRaw = ev as unknown as Record<string, unknown>;
+  // Temporary: log the raw event shape to confirm which field holds races
+  console.log('[EventResultsPage] ev keys:', Object.keys(ev), 'races:', evRaw.races, 'raceCategories:', evRaw.raceCategories);
+
   const showBannerBg = ev.showBanner && ev.bannerBase64;
-  const races = ev.races ?? [];
+  const races = ev.races ?? (evRaw.raceCategories as typeof ev.races) ?? [];
 
   return (
     <>
