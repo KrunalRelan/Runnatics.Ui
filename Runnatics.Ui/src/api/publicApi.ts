@@ -141,7 +141,6 @@ export interface PublicResultSplit {
 }
 
 export interface PublicResultItem {
-  participantId?: string;
   overallRank?: number;
   bibNumber: string;
   participantName: string;
@@ -164,6 +163,7 @@ export interface PublicResultsPage {
   totalPages: number;
   hasNext: boolean;
   hasPrevious: boolean;
+  leaderboardSettings: PublicLeaderboardDisplaySettings;
   isPublished: boolean;
   statusMessage?: string;
 }
@@ -258,12 +258,54 @@ export interface PublicStats {
   pastEvents: number;
 }
 
+/** Maps to Runnatics.Models.Client.Public.PublicRaceCategoryDto */
+export interface PublicRaceCategory {
+  encryptedRaceId: string;
+  name: string;
+  distance: string | null;
+  price: number | null;
+  participantLimit: number | null;
+  registeredCount: number | null;
+  hasResults: boolean;
+}
+
+/** Maps to Runnatics.Models.Client.Public.PublicEventDetailDto (extends PublicEventSummaryDto) */
+export interface PublicEventDetail {
+  encryptedId: string;
+  name: string;
+  city: string | null;
+  state?: string | null;
+  eventDate: string;
+  heroImageUrl?: string | null;
+  bannerBase64: string | null;
+  description?: string | null;
+  raceCategories: string[];
+  participantCount: number | null;
+  registrationOpen: boolean;
+  registrationUrl?: string | null;
+  venue: string | null;
+  hasPublishedResults: boolean;
+  // PublicEventDetailDto extensions
+  fullDescription?: string | null;
+  schedule?: string | null;
+  routeMapUrl?: string | null;
+  races: PublicRaceCategory[];
+  registrationDeadline?: string | null;
+  contactEmail?: string | null;
+  showResultSummary: boolean;
+  showBanner: boolean;
+}
+
 // ── API object ────────────────────────────────────────────────────
 
 export const publicApi = {
   /** Get full event details by encrypted event ID. */
   getEventBySlug: (slug: string, signal?: AbortSignal): Promise<PublicEventDetailItem> =>
     GET<PublicEventDetailItem>(`/api/public/events/${encodeURIComponent(slug)}`, signal),
+
+  /** Get full event detail (including per-race results info) for the /e/:eventId page. */
+  getEventDetail: (eventId: string, signal?: AbortSignal): Promise<PublicEventDetail> =>
+    GET<PublicEventDetail>(`/api/public/events/${encodeURIComponent(eventId)}`, signal),
 
   /** Search event results (paginated). POST body supports searchString, race, gender. */
   getEventResults: (

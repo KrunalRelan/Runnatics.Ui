@@ -6,6 +6,18 @@ import usePublicApi from '../../hooks/usePublicApi';
 import { publicApi } from '../../../../api/publicApi';
 import { base64ToDataUrl } from '../../utility';
 
+function formatEventDate(isoDate: string): string {
+  try {
+    return new Date(isoDate).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return isoDate;
+  }
+}
+
 const shimmer = {
   background: 'linear-gradient(90deg,#E5E7EB 25%,#F3F4F6 50%,#E5E7EB 75%)',
   backgroundSize: '200% 100%',
@@ -54,7 +66,7 @@ function EventResultsPage() {
   const { eventSlug: eventId = '' } = useParams();
 
   const { data: ev, loading, error } = usePublicApi(
-    (signal) => publicApi.getEventBySlug(eventId, signal),
+    (signal) => publicApi.getEventDetail(eventId, signal),
     [eventId],
   );
 
@@ -85,6 +97,8 @@ function EventResultsPage() {
 
   if (!ev) return null;
 
+  const showBannerBg = ev.showBanner && ev.bannerBase64;
+
   return (
     <>
       {/* Hero */}
@@ -92,9 +106,9 @@ function EventResultsPage() {
         tone="dark"
         style={{
           padding: 'clamp(3rem, 6vw, 5rem) 0',
-          ...(ev.bannerBase64
+          ...(showBannerBg
             ? {
-                backgroundImage: `linear-gradient(rgba(10,18,32,0.72), rgba(10,18,32,0.72)), url(${base64ToDataUrl(ev.bannerBase64)})`,
+                backgroundImage: `linear-gradient(rgba(10,18,32,0.72), rgba(10,18,32,0.72)), url(${base64ToDataUrl(ev.bannerBase64!)})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }
@@ -137,9 +151,9 @@ function EventResultsPage() {
               color: 'rgba(255,255,255,0.7)',
             }}
           >
-            {ev.date && (
+            {ev.eventDate && (
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Calendar size={15} /> {ev.date}
+                <Calendar size={15} /> {formatEventDate(ev.eventDate)}
               </span>
             )}
             {ev.city && (
@@ -147,11 +161,21 @@ function EventResultsPage() {
                 <MapPin size={15} /> {ev.city}
               </span>
             )}
+            {ev.venue && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <MapPin size={15} /> {ev.venue}
+              </span>
+            )}
+            {ev.participantCount != null && ev.participantCount > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                {ev.participantCount.toLocaleString()} participants
+              </span>
+            )}
           </div>
         </Container>
       </Section>
 
-      {/* Race categories */}
+      {/* Races */}
       <Section tone="light">
         <Container>
           <h2
@@ -163,10 +187,10 @@ function EventResultsPage() {
               marginBottom: '1.25rem',
             }}
           >
-            Race Categories
+            Races
           </h2>
 
-          {ev.categories.length === 0 ? (
+          {ev.races.length === 0 ? (
             <p
               style={{
                 fontFamily: 'var(--font-body)',
@@ -174,75 +198,72 @@ function EventResultsPage() {
                 fontSize: '1rem',
               }}
             >
-              No race categories available for this event.
+              No races available for this event.
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {ev.categories.map((race) => {
-                const raceId = race.encryptedRaceId ?? race.raceId;
-                return (
-                  <div
-                    key={race.name}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '1rem 1.25rem',
-                      backgroundColor: '#fff',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: '8px',
-                      gap: '1rem',
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <div>
-                      <div
-                        style={{
-                          fontFamily: 'var(--font-heading)',
-                          fontWeight: 600,
-                          fontSize: '1rem',
-                          color: 'var(--color-text)',
-                        }}
-                      >
-                        {race.name}
-                      </div>
-                      {race.distance && (
-                        <div
-                          style={{
-                            fontFamily: 'var(--font-body)',
-                            fontSize: '0.8125rem',
-                            color: 'var(--color-text-muted)',
-                            marginTop: '0.2rem',
-                          }}
-                        >
-                          {race.distance}
-                          {race.count > 0 ? ` · ${race.count.toLocaleString()} participants` : ''}
-                        </div>
-                      )}
+              {ev.races.map((race) => (
+                <div
+                  key={race.encryptedRaceId}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '1rem 1.25rem',
+                    backgroundColor: '#fff',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px',
+                    gap: '1rem',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontFamily: 'var(--font-heading)',
+                        fontWeight: 600,
+                        fontSize: '1rem',
+                        color: 'var(--color-text)',
+                      }}
+                    >
+                      {race.name}
                     </div>
-
-                    {raceId && (
-                      <Link
-                        to={`/c/${eventId}/${raceId}/l`}
-                        style={{
-                          display: 'inline-block',
-                          padding: '0.5rem 1.25rem',
-                          backgroundColor: '#4da1c0',
-                          color: '#fff',
-                          fontFamily: 'var(--font-body)',
-                          fontSize: '0.875rem',
-                          fontWeight: 600,
-                          borderRadius: '6px',
-                          textDecoration: 'none',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        Leaderboard
-                      </Link>
-                    )}
+                    <div
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        fontSize: '0.8125rem',
+                        color: 'var(--color-text-muted)',
+                        marginTop: '0.2rem',
+                      }}
+                    >
+                      {race.distance ? `${race.distance} KM` : ''}
+                      {race.registeredCount != null && race.registeredCount > 0
+                        ? `${race.distance ? ' · ' : ''}${race.registeredCount.toLocaleString()} participants`
+                        : ''}
+                    </div>
                   </div>
-                );
-              })}
+
+                  {race.hasResults && (
+                    <Link
+                      to={`/c/${eventId}/${race.encryptedRaceId}/l`}
+                      style={{
+                        display: 'inline-block',
+                        padding: '0.5rem 1.25rem',
+                        backgroundColor: '#E67E22',
+                        color: '#fff',
+                        fontFamily: 'var(--font-body)',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      View Leaderboard
+                    </Link>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </Container>
