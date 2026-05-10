@@ -284,6 +284,43 @@ export interface PublicParticipantDetailResponse {
   splitTimes?: PublicParticipantSplit[];
 }
 
+/** Maps to the actual /api/public/participant/:id response shape */
+export interface ParticipantInfo {
+  name: string;
+  bib: string;
+  gender: string;
+  category: string;
+  distance: string;
+}
+
+export interface ParticipantTimeDetail {
+  time: string;
+  averagePace?: string;
+  overallRank?: number;
+  totalOverall?: number;
+  genderRank?: number;
+  totalGender?: number;
+  categoryRank?: number;
+  totalCategory?: number;
+}
+
+export interface ParticipantSplit {
+  checkpoint: string;
+  splitTime: string;
+  raceTime: string;
+  splitDist: number;
+  speed?: number;
+}
+
+export interface ParticipantDetailResponse {
+  eventName?: string;
+  raceDate?: string;
+  participant: ParticipantInfo;
+  chipTime?: ParticipantTimeDetail;
+  gunTime?: ParticipantTimeDetail;
+  splits?: ParticipantSplit[];
+}
+
 export interface PublicStats {
   totalEvents: number;
   upcomingEvents: number;
@@ -368,8 +405,8 @@ export const publicApi = {
   getParticipantDetail: (
     participantId: string,
     signal?: AbortSignal,
-  ): Promise<PublicParticipantDetailResponse> =>
-    GET<PublicParticipantDetailResponse>(`/api/public/participant/${encodeURIComponent(participantId)}`, signal),
+  ): Promise<ParticipantDetailResponse> =>
+    GET<ParticipantDetailResponse>(`/api/public/participant/${encodeURIComponent(participantId)}`, signal),
 
   /** Submit a contact/enquiry form. */
   submitContact: (request: PublicContactRequest, signal?: AbortSignal): Promise<void> =>

@@ -3,7 +3,7 @@ import { Container } from '../../components/public/ui';
 import { ErrorState } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
 import { publicApi } from '../../../../api/publicApi';
-import type { PublicParticipantDetailResponse } from '../../../../api/publicApi';
+import type { ParticipantTimeDetail, ParticipantSplit } from '../../../../api/publicApi';
 
 // ── Share buttons ──────────────────────────────────────────────────
 function ShareButtons({ participantName }: { participantName: string }) {
@@ -172,18 +172,21 @@ function RankBadge({
 }
 
 // ── Timing section ─────────────────────────────────────────────────
-function TimingSection({
-  label,
-  time,
-  pace,
-  rankings,
-}: {
-  label: string;
-  time?: string | null;
-  pace?: string | null;
-  rankings?: PublicParticipantDetailResponse['rankings'];
-}) {
-  if (!time) return null;
+function TimingSection({ label, detail }: { label: string; detail?: ParticipantTimeDetail }) {
+  if (!detail?.time) return null;
+
+  const overallPct =
+    detail.overallRank && detail.totalOverall
+      ? (detail.overallRank / detail.totalOverall) * 100
+      : null;
+  const genderPct =
+    detail.genderRank && detail.totalGender
+      ? (detail.genderRank / detail.totalGender) * 100
+      : null;
+  const categoryPct =
+    detail.categoryRank && detail.totalCategory
+      ? (detail.categoryRank / detail.totalCategory) * 100
+      : null;
 
   return (
     <div
@@ -209,7 +212,6 @@ function TimingSection({
       </div>
 
       <div style={{ padding: '1.5rem' }}>
-        {/* Large time display */}
         <div
           style={{
             backgroundColor: '#1A1A2E',
@@ -229,9 +231,9 @@ function TimingSection({
               lineHeight: 1,
             }}
           >
-            {time}
+            {detail.time}
           </div>
-          {pace && (
+          {detail.averagePace && (
             <div
               style={{
                 fontFamily: 'var(--font-body)',
@@ -240,32 +242,31 @@ function TimingSection({
                 marginTop: '0.625rem',
               }}
             >
-              Average Pace: {pace} min/km
+              Average Pace: {detail.averagePace} min/km
             </div>
           )}
         </div>
 
-        {/* Rank badges */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.875rem' }}>
           <RankBadge
             label="Overall"
-            rank={rankings?.overallRank}
-            total={rankings?.totalParticipants}
-            percentage={rankings?.overallPercentage}
+            rank={detail.overallRank}
+            total={detail.totalOverall}
+            percentage={overallPct}
             color="#4da1c0"
           />
           <RankBadge
             label="Gender"
-            rank={rankings?.genderRank}
-            total={rankings?.totalInGender}
-            percentage={rankings?.genderPercentage}
+            rank={detail.genderRank}
+            total={detail.totalGender}
+            percentage={genderPct}
             color="#C0392B"
           />
           <RankBadge
             label="Category"
-            rank={rankings?.categoryRank}
-            total={rankings?.totalInCategory}
-            percentage={rankings?.categoryPercentage}
+            rank={detail.categoryRank}
+            total={detail.totalCategory}
+            percentage={categoryPct}
             color="#148F77"
           />
         </div>
@@ -275,7 +276,7 @@ function TimingSection({
 }
 
 // ── Splits table ────────────────────────────────────────────────────
-function SplitsTable({ splits }: { splits: PublicParticipantDetailResponse['splitTimes'] }) {
+function SplitsTable({ splits }: { splits?: ParticipantSplit[] }) {
   if (!splits || splits.length === 0) return null;
 
   return (
@@ -302,7 +303,7 @@ function SplitsTable({ splits }: { splits: PublicParticipantDetailResponse['spli
       </div>
 
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '560px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
           <thead>
             <tr
               style={{
@@ -310,15 +311,7 @@ function SplitsTable({ splits }: { splits: PublicParticipantDetailResponse['spli
                 borderBottom: '1px solid var(--color-border)',
               }}
             >
-              {[
-                'Split',
-                'Split Time',
-                'Race Time',
-                'Race Rank',
-                'Split Dist',
-                'Pace (min/km)',
-                'Speed (km/hr)',
-              ].map((h) => (
+              {['Split', 'Split Time', 'Race Time', 'Distance', 'Speed (km/hr)'].map((h) => (
                 <th
                   key={h}
                   style={{
@@ -355,7 +348,7 @@ function SplitsTable({ splits }: { splits: PublicParticipantDetailResponse['spli
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {split.checkpointName ?? `Split ${i + 1}`}
+                  {split.checkpoint}
                 </td>
                 <td
                   style={{
@@ -365,7 +358,7 @@ function SplitsTable({ splits }: { splits: PublicParticipantDetailResponse['spli
                     color: 'var(--color-text)',
                   }}
                 >
-                  {split.splitTime ?? '—'}
+                  {split.splitTime}
                 </td>
                 <td
                   style={{
@@ -375,7 +368,7 @@ function SplitsTable({ splits }: { splits: PublicParticipantDetailResponse['spli
                     color: 'var(--color-text)',
                   }}
                 >
-                  {split.cumulativeTime ?? '—'}
+                  {split.raceTime}
                 </td>
                 <td
                   style={{
@@ -385,7 +378,7 @@ function SplitsTable({ splits }: { splits: PublicParticipantDetailResponse['spli
                     color: 'var(--color-text-muted)',
                   }}
                 >
-                  {split.overallRank ?? '—'}
+                  {split.splitDist > 0 ? `${split.splitDist.toFixed(1)} km` : '—'}
                 </td>
                 <td
                   style={{
@@ -395,29 +388,7 @@ function SplitsTable({ splits }: { splits: PublicParticipantDetailResponse['spli
                     color: 'var(--color-text-muted)',
                   }}
                 >
-                  {split.distanceKm != null
-                    ? `${split.distanceKm.toFixed(1)} km`
-                    : split.distance ?? '—'}
-                </td>
-                <td
-                  style={{
-                    padding: '0.625rem 0.875rem',
-                    fontFamily: 'var(--font-body)',
-                    fontSize: '0.875rem',
-                    color: 'var(--color-text-muted)',
-                  }}
-                >
-                  {split.pace ?? '—'}
-                </td>
-                <td
-                  style={{
-                    padding: '0.625rem 0.875rem',
-                    fontFamily: 'var(--font-body)',
-                    fontSize: '0.875rem',
-                    color: 'var(--color-text-muted)',
-                  }}
-                >
-                  {split.speed != null ? split.speed.toFixed(2) : '—'}
+                  {split.speed != null && split.speed > 0 ? split.speed.toFixed(2) : '—'}
                 </td>
               </tr>
             ))}
@@ -477,9 +448,6 @@ function ParticipantDetailPage() {
     [participantId],
   );
 
-  const backEventId = data?.eventId;
-  const backLink = backEventId ? `/e/${backEventId}` : '/events';
-
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)' }}>
       {/* Header */}
@@ -492,7 +460,11 @@ function ParticipantDetailPage() {
         <Container>
           <div style={{ marginBottom: '0.5rem' }}>
             <Link
-              to={backLink}
+              to="/"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.back();
+              }}
               style={{
                 fontFamily: 'var(--font-body)',
                 fontSize: '0.875rem',
@@ -500,7 +472,7 @@ function ParticipantDetailPage() {
                 textDecoration: 'none',
               }}
             >
-              ← Back to Event
+              ← Back
             </Link>
           </div>
           <h1
@@ -512,7 +484,7 @@ function ParticipantDetailPage() {
               margin: '0 0 0.375rem',
             }}
           >
-            {loading ? 'Loading…' : (data?.fullName ?? 'Participant Results')}
+            {loading ? 'Loading…' : (data?.participant.name ?? 'Participant Results')}
           </h1>
           {!loading && data && (
             <div
@@ -526,7 +498,7 @@ function ParticipantDetailPage() {
               }}
             >
               {data.eventName && <span>{data.eventName}</span>}
-              {data.eventDate && <span>{data.eventDate}</span>}
+              {data.raceDate && <span>{data.raceDate}</span>}
             </div>
           )}
         </Container>
@@ -542,44 +514,34 @@ function ParticipantDetailPage() {
             <>
               {/* Share buttons */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <ShareButtons participantName={data.fullName} />
+                <ShareButtons participantName={data.participant.name} />
               </div>
 
               {/* Info cards */}
               <div
                 style={{ display: 'flex', flexWrap: 'wrap', gap: '0.875rem', marginBottom: '2rem' }}
               >
-                <InfoCard label="Bib Number" value={data.bibNumber} />
-                <InfoCard label="Gender" value={data.gender} />
-                <InfoCard label="Category" value={data.ageCategory} />
+                <InfoCard label="Bib Number" value={data.participant.bib} />
+                <InfoCard label="Gender" value={data.participant.gender} />
+                <InfoCard label="Category" value={data.participant.category} />
                 <InfoCard
                   label="Distance"
                   value={
-                    data.raceDistance != null
-                      ? `${data.raceDistance.toFixed(1)} km`
-                      : data.raceName
+                    data.participant.distance
+                      ? `${parseFloat(data.participant.distance).toFixed(1)} km`
+                      : '—'
                   }
                 />
               </div>
 
               {/* Chip time */}
-              <TimingSection
-                label="Chip time"
-                time={data.chipTime}
-                pace={data.performance?.averagePace}
-                rankings={data.rankings}
-              />
+              <TimingSection label="Chip time" detail={data.chipTime} />
 
               {/* Gun time */}
-              <TimingSection
-                label="Gun time"
-                time={data.gunTime}
-                pace={data.performance?.averagePace}
-                rankings={data.rankings}
-              />
+              <TimingSection label="Gun time" detail={data.gunTime} />
 
               {/* Splits */}
-              <SplitsTable splits={data.splitTimes} />
+              <SplitsTable splits={data.splits} />
             </>
           )}
 
