@@ -58,8 +58,9 @@ async function req<T>(
     throw new ApiError(res.status, msg);
   }
 
-  // Unwrap envelope — handle both PascalCase and camelCase
-  const data = json.Message ?? json.message;
+  // Unwrap envelope — handle both PascalCase and camelCase.
+  // If neither key is present the backend returned the data directly (no wrapper).
+  const data = json.Message ?? json.message ?? (json as unknown as T);
   return data as T;
 }
 
@@ -289,11 +290,11 @@ export interface PublicEventDetail {
   fullDescription?: string | null;
   schedule?: string | null;
   routeMapUrl?: string | null;
-  races: PublicRaceCategory[];
+  races?: PublicRaceCategory[];
   registrationDeadline?: string | null;
   contactEmail?: string | null;
-  showResultSummary: boolean;
-  showBanner: boolean;
+  showResultSummary?: boolean;
+  showBanner?: boolean;
 }
 
 // ── API object ────────────────────────────────────────────────────

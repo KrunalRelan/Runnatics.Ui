@@ -98,6 +98,7 @@ function EventResultsPage() {
   if (!ev) return null;
 
   const showBannerBg = ev.showBanner && ev.bannerBase64;
+  const races = ev.races ?? [];
 
   return (
     <>
@@ -190,7 +191,7 @@ function EventResultsPage() {
             Races
           </h2>
 
-          {ev.races.length === 0 ? (
+          {races.length === 0 ? (
             <p
               style={{
                 fontFamily: 'var(--font-body)',
@@ -202,7 +203,7 @@ function EventResultsPage() {
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {ev.races.map((race) => (
+              {races.map((race) => (
                 <div
                   key={race.encryptedRaceId}
                   style={{
