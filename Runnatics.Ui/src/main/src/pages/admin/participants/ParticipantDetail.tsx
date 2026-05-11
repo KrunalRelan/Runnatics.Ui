@@ -68,7 +68,7 @@ import DeleteParticipant from "./DeleteParticipant";
 import EpcMappingField from "./EpcMappingField";
 import { Participant } from "@/main/src/models/races/Participant";
 import PageContainer from "@/main/src/components/PageContainer";
-import { SplitTimeInfo, RfidReadingDetail, ParticipantDetailsResponse, CheckpointTime } from "@/main/src/models/participants";
+import { SplitTimeInfo, RfidReadingDetail, RfidRawReadingDto, ParticipantDetailsResponse, CheckpointTime } from "@/main/src/models/participants";
 import { ParticipantService } from "@/main/src/services";
 import { RFIDService } from "@/main/src/services/RFIDService";
 import { CertificateService } from "@/main/src/services/CertificateService";
@@ -367,6 +367,7 @@ const ParticipantDetail: React.FC = () => {
   const [editTimeValue, setEditTimeValue] = useState<string>("");
   const [savingTime, setSavingTime] = useState(false);
   const [downloadingCertificate, setDownloadingCertificate] = useState(false);
+  const [showRfidDuplicates, setShowRfidDuplicates] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
     open: false,
     message: "",
@@ -1518,178 +1519,210 @@ const ParticipantDetail: React.FC = () => {
       </Card>
 
       {/* RFID Tag Readings Section */}
-      <Typography 
-        variant="h6" 
-        sx={{ 
-          fontWeight: 700, 
-          mb: 2.5,
-          color: colors.text.primary,
-          fontSize: '1.25rem',
-        }}
-      >
-        <Nfc sx={{ mr: 1, verticalAlign: "middle" }} />
-        RFID Tag Readings
-      </Typography>
-      <Card sx={{ 
-        mb: 4,
-        border: `1px solid ${colors.border.light}`,
-        background: colors.background.paper,
-        borderRadius: '12px',
-        boxShadow: isDark 
-          ? `0 4px 20px ${alpha('#000', 0.3)}`
-          : `0 2px 12px ${alpha('#000', 0.08)}`,
-        overflow: 'hidden',
-      }}>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow
-                sx={{
-                  bgcolor: alpha(colors.primary.main, isDark ? 0.1 : 0.06),
-                }}
-              >
-                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Local Time</TableCell>
-                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Date</TableCell>
-                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Checkpoint</TableCell>
-                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Device</TableCell>
-                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Gun Time</TableCell>
-                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Net Time</TableCell>
-                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Chip ID</TableCell>
-                <TableCell sx={{ fontWeight: 700, color: colors.text.primary }}>Manual</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {(participant.rfidReadings || []).map((reading: RfidReadingDetail) => {
-                const readDateTime = new Date(reading.readTimeUtc);
+      {(() => {
+        const rawReadings: RfidRawReadingDto[] = participant.rawRfidTagReadings ?? [];
+        const hasRaw = rawReadings.length > 0;
 
-                return (
-                  <TableRow
-                    key={reading.readingId}
-                    sx={{
-                      "&:hover": {
-                        bgcolor: alpha(colors.primary.main, 0.05),
-                      },
-                    }}
-                  >
-                    <TableCell>
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <AccessTime
-                          sx={{
-                            fontSize: 18,
-                            color: colors.primary.main,
-                          }}
-                        />
-                        <Typography variant="body2" fontWeight={600}>
-                          {reading.readTimeLocal || readDateTime.toLocaleTimeString('en-US', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit',
-                            hour12: false,
-                          })}
-                        </Typography>
-                      </Stack>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
-                        {readDateTime.toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'short', 
-                          day: 'numeric' 
-                        })}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <LocationOn
-                          sx={{
-                            fontSize: 18,
-                            color: colors.pace.main,
-                          }}
-                        />
-                        <Typography variant="body2" fontWeight={600}>
-                          {reading.checkpointName || '-'}
-                        </Typography>
-                      </Stack>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={500} sx={{ color: colors.text.secondary }}>
-                        {reading.deviceName || 'N/A'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={600}>
-                        {reading.gunTimeFormatted || '-'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={600}>
-                        {reading.netTimeFormatted || '-'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography 
-                        variant="caption" 
-                        sx={{ 
-                          fontFamily: 'monospace',
-                          color: colors.text.secondary,
-                          fontSize: '0.7rem',
-                        }}
-                      >
-                        {reading.chipId || 'N/A'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        label={reading.isManualEntry ? 'Yes' : 'No'}
-                        size="small"
-                        sx={{
-                          fontWeight: 700,
-                          bgcolor: reading.isManualEntry 
-                            ? alpha(colors.warning.main, isDark ? 0.2 : 0.1)
-                            : alpha(colors.success.main, isDark ? 0.2 : 0.1),
-                          color: reading.isManualEntry ? colors.warning.main : colors.success.main,
-                          border: `1px solid ${alpha(reading.isManualEntry ? colors.warning.main : colors.success.main, 0.3)}`,
-                        }}
-                      />
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        
-        {/* Processing Notes Section */}
-        {participant.processingNotes && participant.processingNotes.length > 0 && (
-          <Box sx={{ p: 2, bgcolor: colors.background.subtle, borderTop: `1px solid ${colors.border.light}` }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: colors.text.primary }}>
-              Processing Notes:
-            </Typography>
-            {[...new Set(participant.processingNotes)].map((note, idx) => (
-                <Typography 
-                  key={idx} 
-                  variant="caption" 
-                  sx={{ 
-                    display: 'block',
-                    color: colors.text.secondary,
-                    mb: 0.5,
-                  }}
+        // Counts for the summary bar
+        const normalizedCount = rawReadings.filter(r => r.isNormalized).length;
+        const duplicateCount  = rawReadings.filter(r => r.isDuplicate && !r.isNormalized).length;
+        const unassignedCount = rawReadings.filter(r => !r.checkpoint).length;
+
+        // What to display
+        const displayed = hasRaw
+          ? (showRfidDuplicates ? rawReadings : rawReadings.filter(r => !r.isDuplicate || r.isNormalized))
+          : [];
+
+        const thCell = { fontWeight: 700, color: colors.text.primary, py: 1, fontSize: '0.8125rem' };
+
+        return (
+          <>
+            {/* Section header */}
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: colors.text.primary, fontSize: '1.25rem' }}>
+                <Nfc sx={{ mr: 1, verticalAlign: 'middle' }} />
+                RFID Tag Readings
+                {hasRaw && (
+                  <Typography component="span" variant="caption" sx={{ ml: 1.5, color: colors.text.secondary, fontWeight: 500 }}>
+                    {rawReadings.length} total
+                    {' · '}
+                    <Box component="span" sx={{ color: colors.success.main }}>{normalizedCount} normalized</Box>
+                    {duplicateCount > 0 && <> · <Box component="span" sx={{ color: colors.text.disabled }}>{duplicateCount} duplicates</Box></>}
+                    {unassignedCount > 0 && <> · <Box component="span" sx={{ color: colors.warning.main }}>{unassignedCount} unassigned</ Box></>}
+                  </Typography>
+                )}
+              </Typography>
+              {hasRaw && duplicateCount > 0 && (
+                <Button
+                  size="small"
+                  variant={showRfidDuplicates ? 'contained' : 'outlined'}
+                  onClick={() => setShowRfidDuplicates(v => !v)}
+                  sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
                 >
-                  • {note}
-                </Typography>
-              ))}
-          </Box>
-        )}
+                  {showRfidDuplicates ? 'Hide Duplicates' : `Show All (${rawReadings.length})`}
+                </Button>
+              )}
+            </Stack>
 
-        {/* EPC Info */}
-        {participant.epc && (
-          <Box sx={{ p: 2, bgcolor: colors.background.subtle, borderTop: `1px solid ${colors.border.light}` }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: colors.text.primary }}>
-              EPC: <Typography component="span" variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{participant.epc}</Typography>
-            </Typography>
-          </Box>
-        )}
-      </Card>
+            <Card sx={{
+              mb: 4,
+              border: `1px solid ${colors.border.light}`,
+              background: colors.background.paper,
+              borderRadius: '12px',
+              boxShadow: isDark ? `0 4px 20px ${alpha('#000', 0.3)}` : `0 2px 12px ${alpha('#000', 0.08)}`,
+              overflow: 'hidden',
+            }}>
+              <TableContainer sx={{ maxHeight: 480 }}>
+                <Table stickyHeader size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: alpha(colors.primary.main, isDark ? 0.1 : 0.06) }}>
+                      <TableCell sx={thCell}>Status</TableCell>
+                      <TableCell sx={thCell}>Time</TableCell>
+                      <TableCell sx={thCell}>Date</TableCell>
+                      <TableCell sx={thCell}>Checkpoint</TableCell>
+                      <TableCell sx={thCell}>Device</TableCell>
+                      <TableCell sx={thCell}>Gun Time</TableCell>
+                      <TableCell sx={thCell}>Net Time</TableCell>
+                      <TableCell sx={thCell}>Chip ID</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {hasRaw ? displayed.map((r: RfidRawReadingDto) => {
+                      const isNorm  = r.isNormalized;
+                      const isDupe  = r.isDuplicate && !r.isNormalized;
+                      const rowBg   = isNorm
+                        ? alpha(colors.success.main, isDark ? 0.08 : 0.05)
+                        : undefined;
+                      const textSx  = isDupe ? { color: colors.text.disabled } : {};
+
+                      let statusLabel = 'Unassigned';
+                      let statusColor: 'success' | 'default' | 'warning' = 'warning';
+                      if (isNorm)  { statusLabel = 'Normalized'; statusColor = 'success'; }
+                      else if (isDupe) { statusLabel = 'Duplicate';  statusColor = 'default'; }
+
+                      return (
+                        <TableRow
+                          key={r.id}
+                          sx={{
+                            bgcolor: rowBg,
+                            '&:hover': { bgcolor: alpha(colors.primary.main, 0.04) },
+                          }}
+                        >
+                          <TableCell>
+                            <Tooltip title={r.processResult || ''} placement="right">
+                              <Chip
+                                label={statusLabel}
+                                size="small"
+                                color={statusColor}
+                                variant="outlined"
+                                sx={{ fontWeight: 600, fontSize: '0.6875rem', height: 20 }}
+                              />
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight={isNorm ? 700 : 400} sx={textSx}>
+                              {r.localTime || '-'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={textSx}>{r.date || '-'}</Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight={isNorm ? 600 : 400} sx={textSx}>
+                              {r.checkpoint
+                                ? (r.checkpointDistance != null ? `${r.checkpoint} (${r.checkpointDistance} km)` : r.checkpoint)
+                                : <Box component="span" sx={{ color: colors.warning.main, fontStyle: 'italic' }}>Unassigned</Box>}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip title={r.deviceId || ''}>
+                              <Typography variant="body2" sx={{ ...textSx, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {r.device || r.deviceId || 'N/A'}
+                              </Typography>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight={isNorm ? 600 : 400} sx={textSx}>
+                              {r.gunTime || '-'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight={isNorm ? 600 : 400} sx={textSx}>
+                              {r.netTime || '-'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.7rem', ...textSx }}>
+                              {r.chipId || 'N/A'}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }) : (participant.rfidReadings || []).map((reading: RfidReadingDetail) => {
+                      // Fallback to old normalized-only data
+                      const readDateTime = new Date(reading.readTimeUtc);
+                      return (
+                        <TableRow key={reading.readingId} sx={{ '&:hover': { bgcolor: alpha(colors.primary.main, 0.05) } }}>
+                          <TableCell>
+                            <Chip label="Normalized" size="small" color="success" variant="outlined"
+                              sx={{ fontWeight: 600, fontSize: '0.6875rem', height: 20 }} />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight={600}>
+                              {reading.readTimeLocal || readDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {readDateTime.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight={600}>{reading.checkpointName || '-'}</Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ color: colors.text.secondary }}>{reading.deviceName || 'N/A'}</Typography>
+                          </TableCell>
+                          <TableCell><Typography variant="body2" fontWeight={600}>{reading.gunTimeFormatted || '-'}</Typography></TableCell>
+                          <TableCell><Typography variant="body2" fontWeight={600}>{reading.netTimeFormatted || '-'}</Typography></TableCell>
+                          <TableCell>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.7rem', color: colors.text.secondary }}>
+                              {reading.chipId || 'N/A'}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Processing Notes */}
+              {participant.processingNotes && participant.processingNotes.length > 0 && (
+                <Box sx={{ p: 2, bgcolor: colors.background.subtle, borderTop: `1px solid ${colors.border.light}` }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: colors.text.primary }}>
+                    Processing Notes:
+                  </Typography>
+                  {[...new Set(participant.processingNotes)].map((note, idx) => (
+                    <Typography key={idx} variant="caption" sx={{ display: 'block', color: colors.text.secondary, mb: 0.5 }}>
+                      • {note}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+
+              {/* EPC Info */}
+              {participant.epc && (
+                <Box sx={{ p: 2, bgcolor: colors.background.subtle, borderTop: `1px solid ${colors.border.light}` }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: colors.text.primary }}>
+                    EPC: <Typography component="span" variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{participant.epc}</Typography>
+                  </Typography>
+                </Box>
+              )}
+            </Card>
+          </>
+        );
+      })()}
 
       {/* Pace Chart Visualization */}
       <Typography 

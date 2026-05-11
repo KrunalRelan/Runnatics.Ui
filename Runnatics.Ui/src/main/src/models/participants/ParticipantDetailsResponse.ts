@@ -5,6 +5,7 @@ import { RankingInfo } from './RankingInfo';
 import { SplitTimeInfo } from './SplitTimeInfo';
 import { PaceProgressionInfo } from './PaceProgressionInfo';
 import { RfidReadingDetail } from './RfidReadingDetail';
+import { RfidRawReadingDto } from './RfidRawReadingDto';
 import { CheckpointTime } from './CheckpointTime';
 
 export interface ParticipantDetailsResponse {
@@ -49,5 +50,6 @@ export interface ParticipantDetailsResponse {
   // RFID Information
   epc: string | null;
   rfidReadings: RfidReadingDetail[] | null;
+  rawRfidTagReadings?: RfidRawReadingDto[] | null;
   processingNotes: string[] | null;
 }
