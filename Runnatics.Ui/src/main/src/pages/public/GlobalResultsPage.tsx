@@ -22,21 +22,21 @@ function derivePodium(genderCategories: { gender: string; categories: { category
 
 // ── Podium display ────────────────────────────────────────────────
 
-const MEDAL_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32'] as const;
-const MEDAL_TEXT = ['#7C5A00', '#4A4A4A', '#5C3000'] as const;
-const MEDAL_LABELS = ['1st', '2nd', '3rd'] as const;
-const MEDAL_ICONS = ['🥇', '🥈', '🥉'] as const;
-const PODIUM_ORDER = [1, 0, 2] as const; // 2nd left, 1st center, 3rd right
-const BAR_HEIGHTS = ['80px', '104px', '64px'] as const;
+// All arrays indexed by COLUMN position: [left=2nd, center=1st, right=3rd]
+const PODIUM_ORDER   = [1, 0, 2] as const;
+const COL_ICONS      = ['🥈', '🥇', '🥉'] as const;
+const COL_LABELS     = ['2nd', '1st', '3rd'] as const;
+const COL_HEIGHTS    = ['90px', '120px', '70px'] as const;
+const COL_TEXT       = ['#4A4A4A', '#7C5A00', '#5C3000'] as const;
+const COL_GRADIENTS  = [
+  'linear-gradient(to bottom, #C0C0C0, #A8A8A8)',
+  'linear-gradient(to bottom, #FFD700, #FFA500)',
+  'linear-gradient(to bottom, #CD7F32, #8B4513)',
+] as const;
 
 function PodiumSection({ participants }: { participants: GroupedLeaderboardParticipant[] }) {
   if (participants.length < 1) return null;
   const ordered = PODIUM_ORDER.map((i) => participants[i]).filter(Boolean);
-  const heights = PODIUM_ORDER.map((i) => BAR_HEIGHTS[i]);
-  const colors = PODIUM_ORDER.map((i) => MEDAL_COLORS[i]);
-  const textColors = PODIUM_ORDER.map((i) => MEDAL_TEXT[i]);
-  const labels = PODIUM_ORDER.map((i) => MEDAL_LABELS[i]);
-  const icons = PODIUM_ORDER.map((i) => MEDAL_ICONS[i]);
 
   return (
     <div
@@ -51,12 +51,12 @@ function PodiumSection({ participants }: { participants: GroupedLeaderboardParti
         marginBottom: 0,
       }}
     >
-      {ordered.map((p, i) => (
+      {ordered.map((p, col) => (
         <div
-          key={p?.bib ?? i}
+          key={p?.bib ?? col}
           style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.375rem', maxWidth: '220px' }}
         >
-          <span style={{ fontSize: '2rem', lineHeight: 1 }}>{icons[i]}</span>
+          <span style={{ fontSize: '2rem', lineHeight: 1 }}>{COL_ICONS[col]}</span>
           <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-text)', textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {p?.name ?? '—'}
           </div>
@@ -69,17 +69,17 @@ function PodiumSection({ participants }: { participants: GroupedLeaderboardParti
           <div
             style={{
               width: '100%',
-              backgroundColor: colors[i],
+              background: COL_GRADIENTS[col],
               borderRadius: '6px 6px 0 0',
-              height: heights[i],
+              height: COL_HEIGHTS[col],
               display: 'flex',
               alignItems: 'flex-start',
               justifyContent: 'center',
               paddingTop: '0.625rem',
             }}
           >
-            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.375rem', color: textColors[i] }}>
-              {labels[i]}
+            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.375rem', color: COL_TEXT[col] }}>
+              {COL_LABELS[col]}
             </span>
           </div>
         </div>

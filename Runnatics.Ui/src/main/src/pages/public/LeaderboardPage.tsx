@@ -25,12 +25,17 @@ function derivePodium(genderCategories: GroupedLeaderboardGender[]): GroupedLead
   return unique.sort((a, b) => (a.chipTime ?? '').localeCompare(b.chipTime ?? '')).slice(0, 3);
 }
 
-const PODIUM_ORDER = [1, 0, 2] as const;
-const PODIUM_COLORS = ['#C0C0C0', '#FFD700', '#CD7F32'] as const;
-const PODIUM_TEXT   = ['#4A4A4A', '#7C5A00', '#5C3000'] as const;
-const PODIUM_LABELS = ['2nd', '1st', '3rd'] as const;
-const PODIUM_ICONS  = ['🥈', '🥇', '🥉'] as const;
-const PODIUM_BARS   = ['80px', '104px', '64px'] as const;
+// All arrays indexed by COLUMN position: [left=2nd, center=1st, right=3rd]
+const PODIUM_ORDER     = [1, 0, 2] as const;
+const PODIUM_ICONS     = ['🥈', '🥇', '🥉'] as const;
+const PODIUM_LABELS    = ['2nd', '1st', '3rd'] as const;
+const PODIUM_TEXT      = ['#4A4A4A', '#7C5A00', '#5C3000'] as const;
+const PODIUM_BARS      = ['90px', '120px', '70px'] as const;
+const PODIUM_GRADIENTS = [
+  'linear-gradient(to bottom, #C0C0C0, #A8A8A8)',
+  'linear-gradient(to bottom, #FFD700, #FFA500)',
+  'linear-gradient(to bottom, #CD7F32, #8B4513)',
+] as const;
 
 function LeaderboardPodium({ genderCategories }: { genderCategories: GroupedLeaderboardGender[] }) {
   const top3 = derivePodium(genderCategories);
@@ -67,7 +72,7 @@ function LeaderboardPodium({ genderCategories }: { genderCategories: GroupedLead
             <div
               style={{
                 width: '100%',
-                backgroundColor: PODIUM_COLORS[colIdx],
+                background: PODIUM_GRADIENTS[colIdx],
                 borderRadius: '6px 6px 0 0',
                 height: PODIUM_BARS[colIdx],
                 display: 'flex',
