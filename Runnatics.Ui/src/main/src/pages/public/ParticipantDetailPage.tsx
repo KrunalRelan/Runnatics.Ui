@@ -423,22 +423,70 @@ function ComparisonTab({ participantId, eventId }: { participantId: string; even
 }
 
 // ── Certificate tab ────────────────────────────────────────────────
-function CertificateTab({ participantId }: { participantId: string }) {
+const CERT_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/api$/, '');
+const CERT_KEY: string = import.meta.env.VITE_PUBLIC_API_KEY ?? '';
+
+function CertificateTab({ participantId, participantName }: { participantId: string; participantName: string }) {
+  const [certUrl, setCertUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let objectUrl: string;
+    (async () => {
+      setLoading(true);
+      setError(false);
+      try {
+        const res = await fetch(
+          `${CERT_BASE}/api/public/participant/${participantId}/certificate`,
+          { headers: { 'X-Public-Key': CERT_KEY } },
+        );
+        if (!res.ok) { setError(true); return; }
+        const blob = await res.blob();
+        objectUrl = URL.createObjectURL(blob);
+        setCertUrl(objectUrl);
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    })();
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [participantId]);
+
+  const download = () => {
+    if (!certUrl) return;
+    const a = document.createElement('a');
+    a.href = certUrl;
+    a.download = `Certificate_${participantName}.png`;
+    a.click();
+  };
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '4rem 1rem', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)' }}>
+        Loading certificate…
+      </div>
+    );
+  }
+
+  if (error || !certUrl) {
+    return (
+      <div style={{ textAlign: 'center', padding: '4rem 1rem', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)' }}>
+        Certificate is not available yet.
+      </div>
+    );
+  }
+
   return (
-    <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-      <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', fontSize: '2.5rem' }}>
-        🏅
-      </div>
-      <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.125rem', color: 'var(--color-text)', marginBottom: '0.625rem' }}>
-        Race Certificate
-      </div>
-      <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)', marginBottom: '1.5rem', maxWidth: '360px', margin: '0 auto 1.5rem' }}>
-        Download your personalized race completion certificate as a PDF.
-      </p>
-      <a
-        href={`/api/public/participant/${participantId}/certificate`}
-        target="_blank"
-        rel="noopener noreferrer"
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', padding: '2rem 1rem' }}>
+      <img
+        src={certUrl}
+        alt="Race Certificate"
+        style={{ maxWidth: '100%', borderRadius: '8px', boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}
+      />
+      <button
+        onClick={download}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -450,14 +498,12 @@ function CertificateTab({ participantId }: { participantId: string }) {
           fontFamily: 'var(--font-body)',
           fontWeight: 600,
           fontSize: '1rem',
-          textDecoration: 'none',
+          border: 'none',
+          cursor: 'pointer',
         }}
       >
         ⬇ Download Certificate
-      </a>
-      <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginTop: '1rem' }}>
-        If the download doesn't start, the certificate may not be available yet.
-      </p>
+      </button>
     </div>
   );
 }
@@ -601,7 +647,7 @@ function ParticipantDetailPage() {
 
               {/* ── Certificate tab ─────────────────────────────── */}
               {activeTab === 'certificate' && (
-                <CertificateTab participantId={participantId!} />
+                <CertificateTab participantId={participantId!} participantName={data.participant.name} />
               )}
 
               {/* ── Share tab ───────────────────────────────────── */}
