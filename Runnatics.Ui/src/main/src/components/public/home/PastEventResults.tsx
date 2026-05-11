@@ -4,6 +4,7 @@ import usePublicApi from '../../../hooks/usePublicApi';
 import { getPastEvents } from '../../../services/publicApi';
 import EventCard from '../events/EventCard';
 import { CardGridSkeleton, ErrorState, EmptyState } from '../shared/ApiStates';
+import EventCarousel from './EventCarousel';
 
 function PastEventResults() {
   const ref = useScrollReveal();
@@ -44,13 +45,7 @@ function PastEventResults() {
             />
           )}
           {!loading && !error && preview.length > 0 && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                gap: "1.5rem",
-              }}
-            >
+            <EventCarousel cardWidth={260} gap={24}>
               {preview.map((ev) => (
                 <EventCard
                   key={ev.encryptedId || ev.slug}
@@ -58,7 +53,7 @@ function PastEventResults() {
                   portrait
                 />
               ))}
-            </div>
+            </EventCarousel>
           )}
         </div>
       </Container>

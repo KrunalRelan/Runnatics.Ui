@@ -4,6 +4,7 @@ import usePublicApi from '../../../hooks/usePublicApi';
 import { getUpcomingEvents } from '../../../services/publicApi';
 import EventCard from '../events/EventCard';
 import { CardGridSkeleton, ErrorState, EmptyState } from '../shared/ApiStates';
+import EventCarousel from './EventCarousel';
 
 function UpcomingRaces() {
   const ref = useScrollReveal();
@@ -31,11 +32,11 @@ function UpcomingRaces() {
             <EmptyState title="No upcoming events" subtitle="Check back soon — new events are added regularly." />
           )}
           {!loading && !error && preview.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+            <EventCarousel cardWidth={180} gap={16}>
               {preview.map((ev) => (
                 <EventCard key={ev.encryptedId || ev.slug} event={ev} />
               ))}
-            </div>
+            </EventCarousel>
           )}
         </div>
 
