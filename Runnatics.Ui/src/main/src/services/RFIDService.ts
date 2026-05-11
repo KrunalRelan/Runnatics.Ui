@@ -177,12 +177,16 @@ export class RFIDService {
         eventId: string,
         raceId: string,
         participantId: string,
-        checkpointId: string,
+        _checkpointId: string,
         time: string
     ): Promise<ResponseBase<any>> {
+        // Backend expects elapsed time as milliseconds (FinishTimeMs), not a string
+        const [h = 0, m = 0, s = 0] = time.split(':').map(Number);
+        const finishTimeMs = (h * 3600 + m * 60 + s) * 1000;
+
         const response: AxiosResponse<ResponseBase<any>> = await apiClient.post(
             ServiceUrl.addManualTime(eventId, raceId, participantId),
-            { checkpointId, time }
+            { finishTimeMs }
         );
 
         return response.data;

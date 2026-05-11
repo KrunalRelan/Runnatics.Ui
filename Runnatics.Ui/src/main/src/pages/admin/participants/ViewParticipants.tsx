@@ -257,19 +257,21 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
 
   // Helper function to normalize status value
   const normalizeStatus = (statusValue: unknown): string => {
+    // These must match exactly the union in Participant.status
+    const VALID_STATUSES = ['Registered', 'Pending', 'Cancelled', 'Started', 'Finished', 'DNF', 'DNS', 'DQ'];
+
     if (!statusValue) return "Registered";
-    
-    // If it's a number, convert to string using reverse map (capitalize first letter)
+
     if (typeof statusValue === "number") {
-      const mapped = reverseStatusMap[statusValue];
-      return mapped ? mapped.charAt(0).toUpperCase() + mapped.slice(1) : "Registered";
+      const mapped = reverseStatusMap[statusValue] ?? "";
+      return VALID_STATUSES.find(s => s.toLowerCase() === mapped.toLowerCase()) ?? "Registered";
     }
-    
-    // If it's already a string, capitalize first letter
+
     if (typeof statusValue === "string") {
-      return statusValue.charAt(0).toUpperCase() + statusValue.slice(1).toLowerCase();
+      // Case-insensitive match against the valid set preserves all-caps codes (DNF, DNS, DQ)
+      return VALID_STATUSES.find(s => s.toLowerCase() === statusValue.toLowerCase()) ?? statusValue;
     }
-    
+
     return "Registered";
   };
 
@@ -403,6 +405,10 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           status: normalizeStatus(participant.status),
           checkIn: participant.checkedIn || false,
           chipId: participant.chipId || "",
+          raceId: (participant.raceId as string) || "",
+          eventId: (participant.eventId as string) || "",
+          ageCategory: (participant.ageCategory as string) || "",
+          dateOfBirth: (participant.dateOfBirth as string) || "",
           checkpointTimes: checkpointTimesObj,
           gunTime: participant.gunTime || null,
           netTime: participant.netTime || null,

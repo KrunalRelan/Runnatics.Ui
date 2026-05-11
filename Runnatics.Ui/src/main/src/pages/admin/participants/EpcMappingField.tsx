@@ -36,6 +36,8 @@ const pulseBlue = keyframes`
 
 type Mode = 'idle' | 'editing' | 'scanning';
 
+const MULTIPLE_EPC_SENTINEL = 'Multiple EPC';
+
 interface EpcMappingFieldProps {
   participantId: string;
   bibNumber: string;
@@ -73,6 +75,7 @@ const EpcMappingField: React.FC<EpcMappingFieldProps> = ({
   const [epcError, setEpcError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [multipleEpcDetected, setMultipleEpcDetected] = useState(false);
   const [duplicateInfo, setDuplicateInfo] = useState<DuplicateInfo | null>(null);
   const [overriding, setOverriding] = useState(false);
 
@@ -179,6 +182,17 @@ const EpcMappingField: React.FC<EpcMappingFieldProps> = ({
   // React to incoming RFID scans
   useEffect(() => {
     if (!lastEpc) return;
+
+    // Sentinel sent by the backend when multiple chips are on the reader simultaneously
+    if (lastEpc === MULTIPLE_EPC_SENTINEL) {
+      setMultipleEpcDetected(true);
+      if (mode === 'editing') {
+        setEpcError('Multiple chips detected. Please scan one at a time.');
+      }
+      return;
+    }
+
+    setMultipleEpcDetected(false);
     const epc = sanitizeEpc(lastEpc);
 
     if (mode === 'scanning') {
@@ -218,6 +232,7 @@ const EpcMappingField: React.FC<EpcMappingFieldProps> = ({
     setMode('idle');
     setPendingEpc('');
     setEpcError(null);
+    setMultipleEpcDetected(false);
   };
 
   const handleEpcChange = (value: string) => {
@@ -450,6 +465,10 @@ const EpcMappingField: React.FC<EpcMappingFieldProps> = ({
                     Saving…
                   </Typography>
                 </>
+              ) : multipleEpcDetected ? (
+                <Typography variant="body2" color="warning.main" sx={{ fontWeight: 500 }}>
+                  Multiple chips detected. Please scan one at a time.
+                </Typography>
               ) : (
                 <Typography variant="body2" color="primary.main" sx={{ fontWeight: 500 }}>
                   Waiting for chip scan…

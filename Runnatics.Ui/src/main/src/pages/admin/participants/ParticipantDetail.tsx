@@ -350,7 +350,6 @@ const ParticipantDetail: React.FC = () => {
   const [editAgeCategory, setEditAgeCategory] = useState("");
   const [editRunStatus, setEditRunStatus] = useState("");
   const [editDisqualificationReason, setEditDisqualificationReason] = useState("");
-  const [editManualDistance, setEditManualDistance] = useState<string>("");
   const [editLoopCount, setEditLoopCount] = useState<string>("");
   const [editManualTime, setEditManualTime] = useState("");
   const [editRaceId, setEditRaceId] = useState("");
@@ -416,7 +415,6 @@ const ParticipantDetail: React.FC = () => {
         status: editRunStatus || undefined,
         raceId: editRaceId || undefined,
         disqualificationReason: editRunStatus === "Disqualified" ? editDisqualificationReason || undefined : undefined,
-        manualDistance: editManualDistance ? parseFloat(editManualDistance) : undefined,
         loopCount: editLoopCount ? parseInt(editLoopCount, 10) : undefined,
         manualTime: editManualTime || undefined,
       });
@@ -1051,15 +1049,6 @@ const ParticipantDetail: React.FC = () => {
                 />
               )}
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Manual Distance (km)"
-                  type="number"
-                  value={editManualDistance}
-                  onChange={(e) => setEditManualDistance(e.target.value)}
-                  inputProps={{ min: 0, step: 0.01 }}
-                />
                 <TextField
                   fullWidth
                   size="small"

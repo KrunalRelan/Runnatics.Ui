@@ -11,7 +11,6 @@ export interface ParticipantRequest {
   status?: string;
   raceId?: string;
   disqualificationReason?: string;
-  manualDistance?: number;
   loopCount?: number;
   manualTime?: string;
 }
