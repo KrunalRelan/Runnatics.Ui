@@ -133,8 +133,8 @@ function EventCard({ event, portrait }: EventCardProps) {
           {/* Spacer — pushes buttons to bottom */}
           <div style={{ flex: 1 }} />
 
-          {/* View Results button (only when results are published) */}
-          {event.hasPublishedResults && event.encryptedId ? (
+          {/* View Results button (only for past events with published results) */}
+          {event.isPast && event.hasPublishedResults && event.encryptedId ? (
             <a
               href={`/e/${event.encryptedId}`}
               style={{
@@ -229,7 +229,7 @@ function EventCard({ event, portrait }: EventCardProps) {
           <Button variant="ghost" size="sm" href={`/events/${event.slug}`}>
             View Details →
           </Button>
-          {event.hasPublishedResults && event.encryptedId && (
+          {event.isPast && event.hasPublishedResults && event.encryptedId && (
             <Button variant="primary" size="sm" href={`/e/${event.encryptedId}`}>
               View Results →
             </Button>
