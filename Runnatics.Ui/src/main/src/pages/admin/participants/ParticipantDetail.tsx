@@ -541,11 +541,15 @@ const ParticipantDetail: React.FC = () => {
       setSavingTime(true);
       await RFIDService.addManualTime(eventId, raceId, participantId, checkpointId, editTimeValue.trim());
 
-      // Refresh participant data to get updated times and manual flags
+      // TODO: remove delay once the backend's split/rank recalculation pipeline is
+      // synchronous. Until then, wait for the server to recompute before re-fetching.
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
-      if (response.data.message) {
-        setParticipant(response.data.message);
+      if (!response.data.message) {
+        throw new Error("Empty response from server after time update");
       }
+      setParticipant(response.data.message);
 
       setSnackbar({ open: true, message: "Time updated successfully! Marked as manual entry.", severity: "success" });
       setEditingCheckpointId(null);
@@ -554,7 +558,7 @@ const ParticipantDetail: React.FC = () => {
       console.error("Error saving manual time:", err);
       setSnackbar({
         open: true,
-        message: err.response?.data?.message || "Failed to save time. Please try again.",
+        message: err.response?.data?.message || err.message || "Failed to save time. Please try again.",
         severity: "error",
       });
     } finally {
