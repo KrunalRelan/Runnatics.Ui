@@ -71,6 +71,7 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
   });
   const [races, setRaces] = useState<Race[]>([]);
   const [selectedRaceId, setSelectedRaceId] = useState<string>("");
+  const [epcRaceId, setEpcRaceId] = useState<string>("");
   const [racesLoading, setRacesLoading] = useState<boolean>(false);
 
   // Fetch races when dialog opens and pre-select the race
@@ -139,6 +140,9 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
       // Set initial race selection: prioritize raceId prop (current tab), then participant's raceId
       const raceToSelect = raceId || participant.raceId || "";
       setSelectedRaceId(raceToSelect);
+      // Lock EpcMappingField to the participant's actual current race so that
+      // changing the race dropdown does not affect the chip/EPC display.
+      setEpcRaceId(raceToSelect);
     }
   }, [participant, open, raceId]);
 
@@ -420,7 +424,7 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
                   `${formData.firstName || ""} ${formData.lastName || ""}`.trim() ||
                   formData.bib
                 }
-                raceId={selectedRaceId}
+                raceId={epcRaceId}
                 eventId={formData.eventId || eventId || ""}
                 hasRfidReadings={hasRfidReadings}
               />
