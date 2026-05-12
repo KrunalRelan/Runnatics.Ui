@@ -541,19 +541,19 @@ const ParticipantDetail: React.FC = () => {
       setSavingTime(true);
       await RFIDService.addManualTime(eventId, raceId, participantId, checkpointId, editTimeValue.trim());
 
-      // TODO: remove delay once the backend's split/rank recalculation pipeline is
-      // synchronous. Until then, wait for the server to recompute before re-fetching.
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
       const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
-      if (!response.data.message) {
-        throw new Error("Empty response from server after time update");
+      if (response.data.message) {
+        setParticipant(response.data.message);
+        setEditingCheckpointId(null);
+        setEditTimeValue("");
+        setSnackbar({ open: true, message: "Time updated successfully! Marked as manual entry.", severity: "success" });
+      } else {
+        setSnackbar({
+          open: true,
+          message: "Time saved but could not refresh the display. Please reload the page.",
+          severity: "error",
+        });
       }
-      setParticipant(response.data.message);
-
-      setSnackbar({ open: true, message: "Time updated successfully! Marked as manual entry.", severity: "success" });
-      setEditingCheckpointId(null);
-      setEditTimeValue("");
     } catch (err: any) {
       console.error("Error saving manual time:", err);
       setSnackbar({
@@ -861,16 +861,42 @@ const ParticipantDetail: React.FC = () => {
                       >
                         Chip Time
                       </Typography>
-                      <Typography 
-                        variant="h3" 
-                        sx={{ 
-                          fontWeight: 800, 
-                          letterSpacing: 3,
-                          textShadow: "2px 2px 8px rgba(0,0,0,0.3)",
-                        }}
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        spacing={1}
+                        sx={{ justifyContent: { xs: 'flex-start', md: 'flex-end' } }}
                       >
-                        {participant.chipTime}
-                      </Typography>
+                        <Typography
+                          variant="h3"
+                          sx={{
+                            fontWeight: 800,
+                            letterSpacing: 3,
+                            textShadow: "2px 2px 8px rgba(0,0,0,0.3)",
+                          }}
+                        >
+                          {participant.chipTime}
+                        </Typography>
+                        {participant.isManualResult && (
+                          <Tooltip title="Manually entered time" arrow>
+                            <Chip
+                              icon={<Edit sx={{ fontSize: '0.65rem !important' }} />}
+                              label="Manual"
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: '0.65rem',
+                                fontWeight: 700,
+                                bgcolor: alpha('#F59E0B', 0.2),
+                                color: '#F59E0B',
+                                border: `1px solid ${alpha('#F59E0B', 0.4)}`,
+                                '& .MuiChip-icon': { color: '#F59E0B', fontSize: '0.65rem' },
+                                '& .MuiChip-label': { px: 0.75 },
+                              }}
+                            />
+                          </Tooltip>
+                        )}
+                      </Stack>
                     </Box>
                   )}
                 </Box>
@@ -1382,9 +1408,30 @@ const ParticipantDetail: React.FC = () => {
                           />
                         </Stack>
                       ) : (
-                        <Typography variant="body2" fontWeight={600} sx={{ color: colors.text.primary }}>
-                          {checkpointTime?.time || '-'}
-                        </Typography>
+                        <Stack direction="row" alignItems="center" spacing={0.75}>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: colors.text.primary }}>
+                            {checkpointTime?.time || '-'}
+                          </Typography>
+                          {split.isManual && (
+                            <Tooltip title="Manually entered time" arrow>
+                              <Chip
+                                icon={<Edit sx={{ fontSize: '0.65rem !important' }} />}
+                                label="Manual"
+                                size="small"
+                                sx={{
+                                  height: 18,
+                                  fontSize: '0.65rem',
+                                  fontWeight: 700,
+                                  bgcolor: alpha('#F59E0B', isDark ? 0.2 : 0.15),
+                                  color: '#F59E0B',
+                                  border: `1px solid ${alpha('#F59E0B', 0.4)}`,
+                                  '& .MuiChip-icon': { color: '#F59E0B', fontSize: '0.65rem' },
+                                  '& .MuiChip-label': { px: 0.75 },
+                                }}
+                              />
+                            </Tooltip>
+                          )}
+                        </Stack>
                       )}
                     </TableCell>
                     <TableCell>
@@ -1393,18 +1440,39 @@ const ParticipantDetail: React.FC = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography
-                        variant="body2"
-                        fontWeight={700}
-                        sx={{
-                          color:
-                            index === splits.length - 1
-                              ? colors.success.main
-                              : colors.text.primary,
-                        }}
-                      >
-                        {split.cumulativeTime || '-'}
-                      </Typography>
+                      <Stack direction="row" alignItems="center" spacing={0.75}>
+                        <Typography
+                          variant="body2"
+                          fontWeight={700}
+                          sx={{
+                            color:
+                              index === splits.length - 1
+                                ? colors.success.main
+                                : colors.text.primary,
+                          }}
+                        >
+                          {split.cumulativeTime || '-'}
+                        </Typography>
+                        {index === splits.length - 1 && participant.isManualResult && (
+                          <Tooltip title="Manually entered time" arrow>
+                            <Chip
+                              icon={<Edit sx={{ fontSize: '0.65rem !important' }} />}
+                              label="Manual"
+                              size="small"
+                              sx={{
+                                height: 18,
+                                fontSize: '0.65rem',
+                                fontWeight: 700,
+                                bgcolor: alpha('#F59E0B', isDark ? 0.2 : 0.15),
+                                color: '#F59E0B',
+                                border: `1px solid ${alpha('#F59E0B', 0.4)}`,
+                                '& .MuiChip-icon': { color: '#F59E0B', fontSize: '0.65rem' },
+                                '& .MuiChip-label': { px: 0.75 },
+                              }}
+                            />
+                          </Tooltip>
+                        )}
+                      </Stack>
                     </TableCell>
                     <TableCell>
                       <Stack direction="row" alignItems="center" spacing={0.5}>
