@@ -186,7 +186,7 @@ export class RFIDService {
 
         const response: AxiosResponse<ResponseBase<any>> = await apiClient.put(
             ServiceUrl.addManualTime(eventId, raceId, participantId),
-            { finishTimeMs, checkpointId: Number(checkpointId) }
+            { finishTimeMs, checkpointId }
         );
 
         return response.data;
