@@ -184,7 +184,7 @@ export class RFIDService {
         const [h = 0, m = 0, s = 0] = time.split(':').map(Number);
         const finishTimeMs = (h * 3600 + m * 60 + s) * 1000;
 
-        const response: AxiosResponse<ResponseBase<any>> = await apiClient.put(
+        const response: AxiosResponse<ResponseBase<any>> = await apiClient.post(
             ServiceUrl.addManualTime(eventId, raceId, participantId),
             { finishTimeMs, checkpointId: Number(checkpointId) }
         );
