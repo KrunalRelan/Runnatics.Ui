@@ -41,6 +41,7 @@ export interface ParticipantDetailsResponse {
   finishTime: string | null;
   checkpointTimes: CheckpointTime[] | null;
   isManualResult?: boolean | null;
+  isManual?: boolean;
 
   // Performance and Analytics
   performance: PerformanceOverview | null;
