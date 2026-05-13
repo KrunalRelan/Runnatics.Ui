@@ -525,6 +525,7 @@ const ParticipantDetail: React.FC = () => {
   };
 
   const handleStartEdit = (checkpointId: string, currentTime: string) => {
+    console.log('handleStartEdit checkpointId:', checkpointId);
     setEditingCheckpointId(checkpointId);
     setEditTimeValue(currentTime || "");
   };
@@ -535,6 +536,7 @@ const ParticipantDetail: React.FC = () => {
   };
 
   const handleSaveTime = async (checkpointId: string) => {
+    console.log('handleSaveTime checkpointId:', checkpointId);
     if (!eventId || !raceId || !participantId || !editTimeValue.trim()) return;
 
     try {
@@ -1606,7 +1608,7 @@ const ParticipantDetail: React.FC = () => {
                         <Tooltip title="Edit Time" arrow>
                           <IconButton
                             size="small"
-                            onClick={() => split.checkpointId && handleStartEdit(split.checkpointId, checkpointTime?.time || '')}
+                            onClick={() => { console.log('split object:', split); split.checkpointId && handleStartEdit(split.checkpointId, checkpointTime?.time || ''); }}
                             sx={{ 
                               color: colors.primary.main,
                               '&:hover': { bgcolor: alpha(colors.primary.main, 0.1) },
