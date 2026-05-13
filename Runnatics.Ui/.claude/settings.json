@@ -7,10 +7,14 @@
       "Bash(grep -i \"\\\\.cs$\")",
       "Bash(Get-ChildItem -Path \"c:\\\\Projects\\\\Runnatics.Ui\\\\Runnatics.Ui\\\\src\" -Recurse -Directory)",
       "Bash(Select-Object -First 20)",
-      "Read(//c/Projects/**)"
+      "Read(//c/Projects/**)",
+      "Bash(Select-String -Path \"c:\\\\Projects\\\\Runnatics.API\\\\Runnatics\\\\src\\\\Runnatics.Models.Data\\\\Entities\\\\Checkpoint.cs\" -Pattern \"IsFinish|SortOrder\" -Context 2)",
+      "Bash(Get-Content \"c:\\\\Projects\\\\Runnatics.API\\\\Runnatics\\\\src\\\\Runnatics.Models.Data\\\\Entities\\\\Checkpoint.cs\")",
+      "Bash(Select-Object -Last 50)"
     ],
     "additionalDirectories": [
-      "c:\\Projects\\Runnatics.Ui\\.github\\workflows"
+      "c:\\Projects\\Runnatics.Ui\\.github\\workflows",
+      "c:\\Projects\\Runnatics.API\\Runnatics\\src\\Runnatics.Services"
     ]
   }
 }
