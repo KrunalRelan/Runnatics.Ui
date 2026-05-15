@@ -185,7 +185,7 @@ export class ParticipantService {
         participantId: string,
         checkpointId?: string
     ): Promise<ResponseBase<ParticipantDetectionsResponse>> {
-        const url = `Results/${eventId}/${raceId}/participant/${participantId}/detections${checkpointId ? `?checkpointId=${checkpointId}` : ''}`;
+        const url = `participants/${eventId}/${raceId}/${participantId}/detections${checkpointId ? `?checkpointId=${checkpointId}` : ''}`;
         const response = await apiClient.get<ResponseBase<ParticipantDetectionsResponse>>(url);
         return response.data;
     }
