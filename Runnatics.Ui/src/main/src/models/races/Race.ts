@@ -19,6 +19,7 @@ export interface Race {
     createdAt?: Date | string;
     updatedAt?: Date | string;
     isActive: boolean;
+    isTimed: boolean;
     raceSettings?: RaceSettings;
     leaderboardSettings?: LeaderBoardSettings & { overrideSettings?: boolean };
     event?: Event;

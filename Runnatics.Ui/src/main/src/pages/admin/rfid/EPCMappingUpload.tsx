@@ -79,6 +79,8 @@ const EPCMappingUpload: React.FC = () => {
   const eventsLoading = pastEventsQuery.isLoading || futureEventsQuery.isLoading;
   const eventsError = pastEventsQuery.error || futureEventsQuery.error;
   const races = racesQuery.data?.message ?? [];
+  const selectedRace = races.find(r => r.id === selectedRaceId);
+  const isNonTimedRace = selectedRace ? (selectedRace.raceSettings?.isTimed === false) : false;
 
   const updateState = (updates: Partial<UploadState>) => {
     setState((prev) => ({ ...prev, ...updates }));
@@ -286,6 +288,13 @@ const EPCMappingUpload: React.FC = () => {
               </Box>
             </Paper>
 
+            {/* Non-timed race alert (UI-7) */}
+            {isNonTimedRace && (
+              <Alert severity="info" sx={{ mb: 3 }}>
+                EPC mapping is not required for non-timed races.
+              </Alert>
+            )}
+
             {/* File drop zone */}
             <Paper
               sx={{
@@ -375,6 +384,7 @@ const EPCMappingUpload: React.FC = () => {
                           handleUpload();
                         }}
                         startIcon={<CloudUpload />}
+                        disabled={isNonTimedRace}
                       >
                         Upload File
                       </Button>

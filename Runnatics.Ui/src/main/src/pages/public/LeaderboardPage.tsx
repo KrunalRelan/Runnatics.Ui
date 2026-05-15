@@ -128,16 +128,11 @@ function TimeBadge({ time }: { time?: string }) {
 function CategorySection({
   category,
   participants,
-  showAll,
-  onToggle,
 }: {
   category: string;
   participants: GroupedLeaderboardParticipant[];
-  showAll: boolean;
-  onToggle: () => void;
 }) {
-  const SHOW_DEFAULT = 3;
-  const displayed = showAll ? participants : participants.slice(0, SHOW_DEFAULT);
+  const displayed = participants;
 
   return (
     <div
@@ -247,25 +242,6 @@ function CategorySection({
         </tbody>
       </table>
 
-      {participants.length > SHOW_DEFAULT && (
-        <button
-          onClick={onToggle}
-          style={{
-            width: '100%',
-            padding: '0.5rem',
-            background: '#F5F7FA',
-            border: 'none',
-            borderTop: '1px solid var(--color-border)',
-            fontFamily: 'var(--font-body)',
-            fontSize: '0.8125rem',
-            color: '#4da1c0',
-            cursor: 'pointer',
-            fontWeight: 500,
-          }}
-        >
-          {showAll ? 'Show less' : `Show all ${participants.length} finishers`}
-        </button>
-      )}
     </div>
   );
 }
@@ -274,26 +250,13 @@ function CategorySection({
 function GenderColumn({
   label,
   categories,
-  showAll,
 }: {
   label: string;
   categories: GroupedLeaderboardCategory[];
-  showAll: boolean;
 }) {
-  const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
-
   const sorted = [...categories].sort(
     (a, b) => getCategoryStartAge(a.categoryName) - getCategoryStartAge(b.categoryName),
   );
-
-  const toggle = (cat: string) => {
-    setExpandedCats((prev) => {
-      const next = new Set(prev);
-      if (next.has(cat)) next.delete(cat);
-      else next.add(cat);
-      return next;
-    });
-  };
 
   return (
     <div>
@@ -326,8 +289,6 @@ function GenderColumn({
           key={categoryName}
           category={categoryName}
           participants={participants}
-          showAll={showAll || expandedCats.has(categoryName)}
-          onToggle={() => toggle(categoryName)}
         />
       ))}
     </div>
@@ -390,7 +351,6 @@ function LeaderboardSkeleton() {
 function LeaderboardPage() {
   const { eventId, raceId } = useParams<{ eventId: string; raceId: string }>();
   const [searchInput, setSearchInput] = useState('');
-  const [showAll, setShowAll] = useState(false);
   const debouncedSearch = useDebounce(searchInput, 350);
 
   const { data, loading, error, refetch } = usePublicApi(
@@ -400,11 +360,11 @@ function LeaderboardPage() {
         raceId!,
         {
           search: debouncedSearch || undefined,
-          showAll,
+          showAll: true,
         },
         signal,
       ),
-    [eventId, raceId, debouncedSearch, showAll],
+    [eventId, raceId, debouncedSearch],
   );
 
   const eventName = data?.eventName ?? 'Event';
@@ -547,25 +507,6 @@ function LeaderboardPage() {
               />
             </div>
 
-            {/* Show All toggle */}
-            <button
-              onClick={() => setShowAll((v) => !v)}
-              style={{
-                padding: '0.5rem 1.125rem',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                backgroundColor: showAll ? 'var(--color-primary)' : '#fff',
-                color: showAll ? '#fff' : 'var(--color-text)',
-                fontFamily: 'var(--font-body)',
-                fontSize: '0.9rem',
-                fontWeight: showAll ? 600 : 400,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {showAll ? 'Show Top 3' : 'Show All'}
-            </button>
-
             {!loading && data?.totalFinishers != null && (
               <span
                 style={{
@@ -606,12 +547,10 @@ function LeaderboardPage() {
                 <GenderColumn
                   label="Male"
                   categories={maleCategories}
-                  showAll={showAll}
                 />
                 <GenderColumn
                   label="Female"
                   categories={femaleCategories}
-                  showAll={showAll}
                 />
               </div>
 

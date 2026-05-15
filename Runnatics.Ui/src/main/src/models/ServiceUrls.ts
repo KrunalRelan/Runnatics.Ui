@@ -42,6 +42,9 @@ export const ServiceUrl = {
     updateParticipantsByBib: (eventId: string, raceId: string) => `participants/${eventId}/${raceId}/update-by-bib`,
     exportParticipants: (eventId: string, raceId: string) => `participants/${eventId}/${raceId}/export`,
     getParticipantDetails: (eventId: string, raceId: string, participantId: string) => `Results/${eventId}/${raceId}/participant/${participantId}/details`,
+    getParticipantDetections: (eventId: string, raceId: string, participantId: string) => `Results/${eventId}/${raceId}/participant/${participantId}/detections`,
+    changeRaceCategory: (participantId: string) => `participants/${participantId}/race-category`,
+    processParticipantResult: (eventId: string, raceId: string, participantId: string) => `Results/${eventId}/${raceId}/participant/${participantId}/process-result`,
     //checkpoints
     searchCheckpoints: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,
     addCheckpoint: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,
@@ -69,6 +72,8 @@ export const ServiceUrl = {
 
     //dashboard
     dashboardStats: () => "dashboard/stats",
+    dashboardEventStats: (eventId: string) => `dashboard/event/${eventId}/stats`,
+    dashboardRaceStats: (eventId: string, raceId: string) => `dashboard/race/${eventId}/${raceId}/stats`,
 
     //leaderboard
     getLeaderboard: () => `Results/leaderboard`,

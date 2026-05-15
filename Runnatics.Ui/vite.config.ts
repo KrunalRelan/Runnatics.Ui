@@ -8,14 +8,19 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      // '@/components': path.resolve(__dirname, './src/main/src/components'),
-      // '@/pages': path.resolve(__dirname, './src/main/src/pages'),
-      // '@/hooks': path.resolve(__dirname, './src/main/src/hooks'),
-      // '@/contexts': path.resolve(__dirname, './src/main/src/contexts'),
-      // '@/utility': path.resolve(__dirname, './src/main/src/utility'),
-      // '@/models': path.resolve(__dirname, './src/main/src/models'),
-      // '@/types': path.resolve(__dirname, './src/main/src/types')
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          mui: ['@mui/material', '@mui/icons-material'],
+          aggrid: ['ag-grid-react', 'ag-grid-community'],
+          recharts: ['recharts'],
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
   },
   server: {
     port: 5173,

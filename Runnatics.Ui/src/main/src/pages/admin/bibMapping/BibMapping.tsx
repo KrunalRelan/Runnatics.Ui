@@ -551,6 +551,7 @@ const Row: React.FC<RowProps> = ({
   const isSaving = row.status === 'saving';
   const isError = row.status === 'error';
   const isSkipped = row.status === 'skipped';
+  const isMultipleEpc = row.isMultipleEpc === true;
   const displayedEpc = isMapped ? row.epc : row.pendingEpc;
 
   const rowSx: any = {
@@ -577,41 +578,73 @@ const Row: React.FC<RowProps> = ({
         <Typography variant="body2">{row.name || '—'}</Typography>
       </Box>
       <Box component="td" sx={tdStyle}>
-        <TextField
-          inputRef={registerInput}
-          value={displayedEpc}
-          onChange={(e) => onChangeEpc(sanitizeEpc(e.target.value))}
-          onKeyDown={onKeyDown}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          disabled={isMapped || isSaving || isSkipped}
-          size="small"
-          fullWidth
-          autoComplete="off"
-          spellCheck={false}
-          placeholder={isMapped ? '' : `Scan chip or type ${EPC_MIN_LEN}–${EPC_MAX_LEN} hex chars`}
-          error={isError}
-          helperText={isError ? asText(row.errorMessage, 'Error') : ' '}
-          slotProps={{
-            htmlInput: {
-              style: { fontFamily: 'monospace', letterSpacing: 0.5 },
-              maxLength: EPC_MAX_LEN,
-            },
-          }}
-        />
+        {isMultipleEpc ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'error.main', fontWeight: 700 }}>
+              {displayedEpc || '—'}
+            </Typography>
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                px: 1,
+                py: 0.25,
+                borderRadius: 1,
+                bgcolor: 'error.main',
+                color: 'common.white',
+                fontSize: '0.6875rem',
+                fontWeight: 700,
+              }}
+            >
+              Multiple EPC
+            </Box>
+          </Box>
+        ) : (
+          <TextField
+            inputRef={registerInput}
+            value={displayedEpc}
+            onChange={(e) => onChangeEpc(sanitizeEpc(e.target.value))}
+            onKeyDown={onKeyDown}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            disabled={isMapped || isSaving || isSkipped}
+            size="small"
+            fullWidth
+            autoComplete="off"
+            spellCheck={false}
+            placeholder={isMapped ? '' : `Scan chip or type ${EPC_MIN_LEN}–${EPC_MAX_LEN} hex chars`}
+            error={isError}
+            helperText={isError ? asText(row.errorMessage, 'Error') : ' '}
+            slotProps={{
+              htmlInput: {
+                style: { fontFamily: 'monospace', letterSpacing: 0.5 },
+                maxLength: EPC_MAX_LEN,
+              },
+            }}
+          />
+        )}
       </Box>
       <Box component="td" sx={tdStyle}>
         <StatusCell row={row} isFocused={isFocused} justMapped={justMapped} />
       </Box>
       <Box component="td" sx={{ ...tdStyle, textAlign: 'right' }}>
-        {isMapped && (
+        {isMapped && !isMultipleEpc && (
           <Tooltip title="Clear this mapping">
             <IconButton size="small" color="default" onClick={onClear}>
               <Trash2 size={16} />
             </IconButton>
           </Tooltip>
         )}
-        {!isMapped && !isSkipped && (
+        {isMultipleEpc && (
+          <Tooltip title="Multiple EPCs detected on this read. Cannot map to a single participant.">
+            <span>
+              <IconButton size="small" disabled>
+                <SkipForward size={18} />
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
+        {!isMapped && !isSkipped && !isMultipleEpc && (
           <Tooltip title="Skip this BIB (e.g. bad chip)">
             <span>
               <IconButton size="small" onClick={onSkip} disabled={isSaving}>
@@ -620,7 +653,7 @@ const Row: React.FC<RowProps> = ({
             </span>
           </Tooltip>
         )}
-        {isSkipped && (
+        {isSkipped && !isMultipleEpc && (
           <Button size="small" variant="text" onClick={onUnskip}>
             Unskip
           </Button>

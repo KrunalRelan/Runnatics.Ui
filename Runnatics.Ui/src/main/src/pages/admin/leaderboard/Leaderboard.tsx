@@ -139,6 +139,11 @@ const buildColumns = (
       minWidth: 80,
       sortable: true,
       filter: true,
+      valueGetter: (params: any) => {
+        const g = params.data?.gender;
+        if (!g || g === 'Unknown') return '—';
+        return g;
+      },
     },
     {
       field: "category",
@@ -252,18 +257,32 @@ const buildSplitColumns = (
   const sample = results.find((r) => r.splits && r.splits.length > 0);
   if (!sample?.splits) return [];
 
-  return sample.splits.map((split, idx) => ({
-    headerName: split.checkpointName,
-    flex: 0.9,
-    minWidth: 90,
-    sortable: false,
-    filter: false,
-    valueGetter: (params: any) => {
-      const s = params.data?.splits?.[idx];
-      return s?.splitTime || "—";
+  return sample.splits.flatMap((split, idx) => [
+    {
+      headerName: `${split.checkpointName} Split`,
+      flex: 0.9,
+      minWidth: 90,
+      sortable: false,
+      filter: false,
+      valueGetter: (params: any) => {
+        const s = params.data?.splits?.[idx];
+        return s?.splitTime || s?.segmentTime || "—";
+      },
+      headerTooltip: `${split.checkpointName} split time`,
     },
-    headerTooltip: `${split.checkpointName} (${split.distanceKm} km)`,
-  }));
+    {
+      headerName: `${split.checkpointName} Cumul.`,
+      flex: 0.9,
+      minWidth: 90,
+      sortable: false,
+      filter: false,
+      valueGetter: (params: any) => {
+        const s = params.data?.splits?.[idx];
+        return s?.segmentTime || "—";
+      },
+      headerTooltip: `${split.checkpointName} cumulative time`,
+    },
+  ]);
 };
 
 // Default display settings when API hasn't responded yet

@@ -17,6 +17,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Snackbar,
 } from "@mui/material";
 import {
   CloudUpload,
@@ -41,6 +42,8 @@ const RFIDFileUpload: React.FC = () => {
     error: null,
     isDragging: false,
   });
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'warning' | 'error' }>({ open: false, message: '', severity: 'success' });
+  const [warningSnackbar, setWarningSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -111,16 +114,26 @@ const RFIDFileUpload: React.FC = () => {
       );
 
       if (response.message) {
+        const result = response.message;
         updateState({
-          uploadResult: response.message,
+          uploadResult: result,
           selectedFile: null,
           isUploading: false,
           uploadProgress: 100,
         });
-        
+
         // Clear file input
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
+        }
+
+        // Show toast notifications (UI-9)
+        const uploadedTags = (result as any).uploadedTags ?? result.totalReadings ?? 0;
+        const totalTags = (result as any).totalTags ?? result.totalReadings ?? 0;
+        const fileName = result.fileName ?? '';
+        setSnackbar({ open: true, message: `Uploaded ${uploadedTags} of ${totalTags} tags from ${fileName}.`, severity: 'success' });
+        if (uploadedTags < totalTags) {
+          setWarningSnackbar({ open: true, message: `${totalTags - uploadedTags} tags could not be processed.` });
         }
       }
     } catch (err: any) {
@@ -521,6 +534,16 @@ const RFIDFileUpload: React.FC = () => {
           </Box>
         </Paper>
       </Box>
+      <Snackbar open={snackbar.open} autoHideDuration={5000} onClose={() => setSnackbar(p => ({ ...p, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+        <Alert severity={snackbar.severity} onClose={() => setSnackbar(p => ({ ...p, open: false }))} variant="filled" sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+      <Snackbar open={warningSnackbar.open} autoHideDuration={7000} onClose={() => setWarningSnackbar(p => ({ ...p, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity="warning" onClose={() => setWarningSnackbar(p => ({ ...p, open: false }))} variant="filled" sx={{ width: '100%' }}>
+          {warningSnackbar.message}
+        </Alert>
+      </Snackbar>
     </PageContainer>
   );
 };

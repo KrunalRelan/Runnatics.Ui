@@ -25,4 +25,6 @@ export interface Participant {
   overallRank?: number | null;
   genderRank?: number | null;
   categoryRank?: number | null;
+  manualDistance?: number | null;
+  epcMapped?: boolean;
 }

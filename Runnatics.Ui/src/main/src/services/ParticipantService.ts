@@ -2,6 +2,8 @@ import { ServiceUrl } from '../models';
 import { apiClient } from '../utils/axios.config';
 import { AxiosResponse } from 'axios';
 import { UploadResponse, ProcessResponse, ProcessImportRequest, ParticipantSearchRequest, ParticipantSearchResponse, ParticipantRequest, AddParticipantRangeRequest, AddParticipantRangeResponse, UpdateParticipantsByBibResponse, ParticipantDetailsResponse } from '../models/participants';
+import { ParticipantDetectionsResponse } from '../models/participants/ParticipantDetectionsResponse';
+import { ProcessParticipantResultResponse } from '../models/results/ProcessParticipantResultResponse';
 import { ResponseBase } from '../models/ResponseBase';
 import { Category } from '../models/participants/Category';
 
@@ -175,6 +177,27 @@ export class ParticipantService {
     public static async getParticipantDetails(eventId: string, raceId: string, participantId: string): Promise<AxiosResponse<ResponseBase<ParticipantDetailsResponse>>> {
         const url = ServiceUrl.getParticipantDetails(eventId, raceId, participantId);
         return await apiClient.get<ResponseBase<ParticipantDetailsResponse>>(url);
+    }
+
+    static async getParticipantDetections(
+        eventId: string,
+        raceId: string,
+        participantId: string,
+        checkpointId?: string
+    ): Promise<ResponseBase<ParticipantDetectionsResponse>> {
+        const url = `Results/${eventId}/${raceId}/participant/${participantId}/detections${checkpointId ? `?checkpointId=${checkpointId}` : ''}`;
+        const response = await apiClient.get<ResponseBase<ParticipantDetectionsResponse>>(url);
+        return response.data;
+    }
+
+    static async processParticipantResult(
+        eventId: string,
+        raceId: string,
+        participantId: string
+    ): Promise<ResponseBase<ProcessParticipantResultResponse>> {
+        const url = ServiceUrl.processParticipantResult(eventId, raceId, participantId);
+        const response = await apiClient.post<ResponseBase<ProcessParticipantResultResponse>>(url);
+        return response.data;
     }
 
 }

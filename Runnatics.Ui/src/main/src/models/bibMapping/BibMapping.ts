@@ -38,6 +38,7 @@ export interface BibMappingParticipantResponse {
   participantName: string;
   epc?: string;
   isEpcMapped: boolean;
+  isMultipleEpc?: boolean;
   chipId?: string;
   eventId?: string;
   createdAt?: string;
