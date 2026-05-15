@@ -18,6 +18,7 @@ export interface MappingRow {
   chipId?: string;
   eventId?: string;
   createdAt?: string;
+  isMultipleEpc?: boolean;
 }
 
 /** Info passed to the duplicate-EPC confirmation dialog. */

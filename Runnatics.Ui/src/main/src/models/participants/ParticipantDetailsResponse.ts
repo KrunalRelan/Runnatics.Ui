@@ -42,6 +42,7 @@ export interface ParticipantDetailsResponse {
   checkpointTimes: CheckpointTime[] | null;
   isManualResult?: boolean | null;
   isManual?: boolean;
+  manualDistance?: number | null;
 
   // Performance and Analytics
   performance: PerformanceOverview | null;

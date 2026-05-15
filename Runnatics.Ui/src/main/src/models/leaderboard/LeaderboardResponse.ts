@@ -78,3 +78,39 @@ export interface LeaderboardSplit {
   genderRank: number;
   categoryRank: number;
 }
+
+export interface PublicLeaderboardEntry {
+  rank: number;
+  participantId: string;
+  bib: string;
+  fullName: string | null;
+  gender: string;
+  category: string | null;
+  age: number | null;
+  gunTime: string | null;
+  chipTime: string | null;
+  overallRank: number | null;
+  genderRank: number | null;
+  categoryRank: number | null;
+  averagePaceFormatted: string | null;
+  status: string;
+  splits: { checkpointId: string; checkpointName: string; splitTime: string | null; cumulativeTime: string | null; }[] | null;
+}
+
+export interface AgeCategorySection {
+  categoryName: string;
+  entries: PublicLeaderboardEntry[];
+}
+
+export interface RaceCategoryLeaderboardSection {
+  raceId: string;
+  raceName: string;
+  distance: number | null;
+  overallMale: PublicLeaderboardEntry[];
+  overallFemale: PublicLeaderboardEntry[];
+  ageCategories: AgeCategorySection[];
+}
+
+export interface PublicLeaderboardResponse {
+  raceCategories: RaceCategoryLeaderboardSection[];
+}

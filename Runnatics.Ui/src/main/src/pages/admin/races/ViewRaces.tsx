@@ -219,6 +219,7 @@ const ViewRaces: React.FC = () => {
             raceId={selectedRaceId}
             raceName={race?.title || 'Race'}
             webhookBaseUrl={config.apiBaseUrl.replace(/\/api$/, '')}
+            eventId={eventId}
           />
         );
       case 9:

@@ -127,6 +127,7 @@ export function useBibMappingRows(
         chipId: p.chipId,
         eventId: p.eventId,
         createdAt: p.createdAt,
+        isMultipleEpc: p.isMultipleEpc ?? false,
       };
     });
   }, [participantsQuery.data, rowOverrides]);

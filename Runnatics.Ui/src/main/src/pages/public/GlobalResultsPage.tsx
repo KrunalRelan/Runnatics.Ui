@@ -145,17 +145,16 @@ function CategoryTable({ categoryName, participants }: { categoryName: string; p
 
 function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string; raceId: string; bracket: string; search: string }) {
   const debouncedSearch = useDebounce(search, 350);
-  const [showAll, setShowAll] = useState(false);
 
   const { data, loading, error, refetch } = usePublicApi(
     (signal) =>
       publicApi.getGroupedLeaderboard(
         eventId,
         raceId,
-        { search: debouncedSearch || undefined, category: bracket || undefined, showAll },
+        { search: debouncedSearch || undefined, category: bracket || undefined, showAll: true },
         signal,
       ),
-    [eventId, raceId, debouncedSearch, bracket, showAll],
+    [eventId, raceId, debouncedSearch, bracket],
   );
 
   const genderCategories = data?.genderCategories ?? [];
@@ -183,12 +182,6 @@ function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string
               {data.totalFinishers.toLocaleString()} finishers
             </span>
           )}
-          <button
-            onClick={() => setShowAll((v) => !v)}
-            style={{ padding: '0.375rem 0.875rem', border: '1px solid rgba(255,255,255,0.4)', borderRadius: '6px', backgroundColor: showAll ? '#fff' : 'transparent', color: showAll ? '#1a56db' : '#fff', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
-          >
-            {showAll ? 'Top 3' : 'Show All'}
-          </button>
         </div>
       </div>
 

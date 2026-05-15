@@ -64,6 +64,12 @@ import {
 import { ParticipantService as _PS } from "@/main/src/services/ParticipantService";
 import { RaceService } from "@/main/src/services/RaceService";
 import { Race } from "@/main/src/models/races/Race";
+import { ParticipantDetectionsResponse, CheckpointDetectionGroupDto } from "@/main/src/models/participants/ParticipantDetectionsResponse";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogActions from "@mui/material/DialogActions";
 import DeleteParticipant from "./DeleteParticipant";
 import EpcMappingField from "./EpcMappingField";
 import { Participant } from "@/main/src/models/races/Participant";
@@ -362,6 +368,19 @@ const ParticipantDetail: React.FC = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [deleteParticipantObj, setDeleteParticipantObj] = useState<Participant | null>(null);
 
+  // Detections state (UI-1)
+  const [detections, setDetections] = useState<ParticipantDetectionsResponse | null>(null);
+  const [detectionsLoading, setDetectionsLoading] = useState(false);
+  const [detectionsCheckpointFilter, setDetectionsCheckpointFilter] = useState<string>('');
+
+  // Race category change confirmation dialog (UI-5a)
+  const [pendingRaceId, setPendingRaceId] = useState<string>('');
+  const [showRaceCategoryConfirm, setShowRaceCategoryConfirm] = useState(false);
+
+  // Process Result confirmation dialog (UI-5b)
+  const [showProcessResultConfirm, setShowProcessResultConfirm] = useState(false);
+  const [isProcessingResult, setIsProcessingResult] = useState(false);
+
   // Inline time editing state
   const [editingCheckpointId, setEditingCheckpointId] = useState<string | null>(null);
   const [editTimeValue, setEditTimeValue] = useState<string>("");
@@ -549,7 +568,9 @@ const ParticipantDetail: React.FC = () => {
         setParticipant(response.data.message);
         setEditingCheckpointId(null);
         setEditTimeValue("");
-        setSnackbar({ open: true, message: `Checkpoint ${checkpointName} time updated`, severity: "success" });
+        setSnackbar({ open: true, message: "Manual time saved. Result recalculated.", severity: "success" });
+        // Refresh detections
+        fetchDetections(detectionsCheckpointFilter);
       } else {
         setSnackbar({
           open: true,
@@ -567,6 +588,58 @@ const ParticipantDetail: React.FC = () => {
       });
     } finally {
       setSavingTime(false);
+    }
+  };
+
+  // Fetch detections (UI-1b)
+  const fetchDetections = async (cpId?: string) => {
+    if (!eventId || !raceId || !participantId) return;
+    try {
+      setDetectionsLoading(true);
+      const res = await _PS.getParticipantDetections(eventId, raceId, participantId, cpId || undefined);
+      if (res.message) setDetections(res.message);
+    } catch {
+      // silently fail
+    } finally {
+      setDetectionsLoading(false);
+    }
+  };
+
+  // Load detections when participant loads
+  useEffect(() => {
+    if (participant && eventId && raceId && participantId) {
+      fetchDetections('');
+    }
+  }, [participant?.id]);
+
+  // Handle race category change (UI-5a)
+  const handleRaceIdChange = (newRaceId: string) => {
+    if (newRaceId !== editRaceId) {
+      setPendingRaceId(newRaceId);
+      setShowRaceCategoryConfirm(true);
+    }
+  };
+
+  const handleRaceCategoryConfirm = async () => {
+    setShowRaceCategoryConfirm(false);
+    setEditRaceId(pendingRaceId);
+  };
+
+  // Handle process result (UI-5b)
+  const handleProcessResult = async () => {
+    if (!eventId || !raceId || !participantId) return;
+    setShowProcessResultConfirm(false);
+    try {
+      setIsProcessingResult(true);
+      await _PS.processParticipantResult(eventId, raceId, participantId);
+      setSnackbar({ open: true, message: "Result reprocessed.", severity: "success" });
+      // Refresh participant data
+      const response = await _PS.getParticipantDetails(eventId, raceId, participantId);
+      if (response.data.message) setParticipant(response.data.message);
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.response?.data?.message || "Failed to reprocess result.", severity: "error" });
+    } finally {
+      setIsProcessingResult(false);
     }
   };
 
@@ -638,6 +711,15 @@ const ParticipantDetail: React.FC = () => {
                   disabled={isSaving}
                 >
                   Cancel
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  startIcon={isProcessingResult ? <CircularProgress size={18} color="inherit" /> : undefined}
+                  onClick={() => setShowProcessResultConfirm(true)}
+                  disabled={isProcessingResult || isSaving}
+                >
+                  {isProcessingResult ? "Processing..." : "Process Result"}
                 </Button>
                 <Button
                   variant="contained"
@@ -1108,7 +1190,7 @@ const ParticipantDetail: React.FC = () => {
                 <Select
                   value={editRaceId}
                   label="Race"
-                  onChange={(e: SelectChangeEvent) => setEditRaceId(e.target.value)}
+                  onChange={(e: SelectChangeEvent) => handleRaceIdChange(e.target.value)}
                   disabled={racesLoading}
                 >
                   {racesLoading ? (
@@ -1160,7 +1242,26 @@ const ParticipantDetail: React.FC = () => {
         Performance Overview
       </Typography>
       <Grid container spacing={2.5} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 2 }}>
+          <StatCard
+            title="Gender"
+            value={participant.gender === 'M' ? 'Male' : participant.gender === 'F' ? 'Female' : participant.gender || '—'}
+            icon={participant.gender === 'M' ? <Male sx={{ fontSize: 28 }} /> : <Female sx={{ fontSize: 28 }} />}
+            color={participant.gender === 'M' ? colors.gender?.male || '#2196F3' : colors.gender?.female || '#E91E63'}
+            isDark={isDark}
+          />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 6, md: 2 }}>
+          <StatCard
+            title="Manual Distance"
+            value={participant.manualDistance != null ? participant.manualDistance.toFixed(2) : '—'}
+            subtitle="km"
+            icon={<DirectionsRun sx={{ fontSize: 28 }} />}
+            color={colors.primary.main}
+            isDark={isDark}
+          />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 6, md: 2 }}>
           <StatCard
             title="Avg Speed"
             value={`${participant.performance?.averageSpeed ?? '-'}`}
@@ -1170,7 +1271,7 @@ const ParticipantDetail: React.FC = () => {
             isDark={isDark}
           />
         </Grid>
-        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 2 }}>
           <StatCard
             title="Avg Pace"
             value={participant.performance?.averagePace || '-'}
@@ -1180,7 +1281,7 @@ const ParticipantDetail: React.FC = () => {
             isDark={isDark}
           />
         </Grid>
-        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 2 }}>
           <StatCard
             title="Max Speed"
             value={`${participant.performance?.maxSpeed ?? '-'}`}
@@ -1190,7 +1291,7 @@ const ParticipantDetail: React.FC = () => {
             isDark={isDark}
           />
         </Grid>
-        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 2 }}>
           <StatCard
             title="Best Pace"
             value={participant.performance?.bestPace || '-'}
@@ -1626,6 +1727,114 @@ const ParticipantDetail: React.FC = () => {
           </Table>
         </TableContainer>
       </Card>
+
+      {/* Detections Section (UI-1b) */}
+      <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5, color: colors.text.primary, fontSize: '1.25rem' }}>
+        <Nfc sx={{ mr: 1, verticalAlign: 'middle' }} />
+        Detections by Checkpoint
+      </Typography>
+      {/* Checkpoint filter */}
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+        <FormControl size="small" sx={{ minWidth: 220 }}>
+          <InputLabel>All Checkpoints</InputLabel>
+          <Select
+            value={detectionsCheckpointFilter}
+            label="All Checkpoints"
+            onChange={(e: SelectChangeEvent) => {
+              setDetectionsCheckpointFilter(e.target.value);
+              fetchDetections(e.target.value || undefined);
+            }}
+          >
+            <MenuItem value="">All Checkpoints</MenuItem>
+            {(detections?.checkpoints || []).map((cp: CheckpointDetectionGroupDto) => (
+              <MenuItem key={cp.checkpointId} value={cp.checkpointId}>{cp.checkpointName}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        {detectionsLoading && <CircularProgress size={20} />}
+      </Stack>
+      {detections && (
+        <Card sx={{ mb: 4, border: `1px solid ${colors.border.light}`, background: colors.background.paper, borderRadius: '12px', overflow: 'hidden' }}>
+          {detectionsLoading ? (
+            <Box sx={{ p: 3, textAlign: 'center' }}><CircularProgress /></Box>
+          ) : (
+            (detections.checkpoints || [])
+              .filter(cp => !detectionsCheckpointFilter || cp.checkpointId === detectionsCheckpointFilter)
+              .map((cp: CheckpointDetectionGroupDto) => (
+                <Box key={cp.checkpointId}>
+                  <Box sx={{ px: 2, py: 1.5, bgcolor: alpha(colors.primary.main, isDark ? 0.1 : 0.06), borderBottom: `1px solid ${colors.border.light}` }}>
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      {cp.checkpointName}
+                      {cp.isMandatory && <Chip label="Mandatory" size="small" sx={{ ml: 1, height: 18, fontSize: '0.65rem', fontWeight: 700 }} />}
+                      <Typography component="span" variant="caption" sx={{ ml: 1.5, color: colors.text.secondary }}>
+                        {cp.detections.length} detections
+                      </Typography>
+                    </Typography>
+                  </Box>
+                  <TableContainer sx={{ maxHeight: 300 }}>
+                    <Table stickyHeader size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Read Time (UTC)</TableCell>
+                          <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Reader Name</TableCell>
+                          <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Device</TableCell>
+                          <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>RSSI</TableCell>
+                          <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Process Result</TableCell>
+                          <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Manual Time</TableCell>
+                          <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Notes</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {cp.detections
+                          .slice()
+                          .sort((a, b) => a.readTimeUtc.localeCompare(b.readTimeUtc))
+                          .map(det => (
+                            <TableRow key={det.readingId} sx={{ '&:hover': { bgcolor: alpha(colors.primary.main, 0.04) } }}>
+                              <TableCell>
+                                <Typography variant="body2" fontWeight={det.isManualEntry ? 700 : 400}>
+                                  {det.readTimeUtc ? new Date(det.readTimeUtc).toLocaleString() : '-'}
+                                </Typography>
+                              </TableCell>
+                              <TableCell><Typography variant="body2">{det.readerName || '-'}</Typography></TableCell>
+                              <TableCell><Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{det.deviceId || '-'}</Typography></TableCell>
+                              <TableCell><Typography variant="body2">{det.rssiDbm != null ? `${det.rssiDbm} dBm` : '-'}</Typography></TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={det.processResult || 'Unknown'}
+                                  size="small"
+                                  color={det.processResult?.toLowerCase().includes('ok') || det.processResult?.toLowerCase().includes('success') ? 'success' : det.processResult?.toLowerCase().includes('dup') ? 'default' : 'warning'}
+                                  variant="outlined"
+                                  sx={{ fontWeight: 600, fontSize: '0.6875rem', height: 20 }}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                {det.isManualEntry ? (
+                                  <Stack direction="row" spacing={0.5} alignItems="center">
+                                    <Typography variant="body2" fontWeight={700}>{det.manualTime || '-'}</Typography>
+                                    <Chip label="Manual" size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, bgcolor: alpha('#F59E0B', 0.2), color: '#F59E0B', border: `1px solid ${alpha('#F59E0B', 0.4)}` }} />
+                                  </Stack>
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary">-</Typography>
+                                )}
+                              </TableCell>
+                              <TableCell><Typography variant="body2" color="text.secondary">{det.notes || '-'}</Typography></TableCell>
+                            </TableRow>
+                          ))}
+                        {cp.detections.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={7} align="center">
+                              <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>No detections for this checkpoint</Typography>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              ))
+          )}
+        </Card>
+      )}
 
       {/* RFID Tag Readings Section */}
       {(() => {
@@ -2387,6 +2596,34 @@ const ParticipantDetail: React.FC = () => {
         onDelete={handleDeleteComplete}
         participant={deleteParticipantObj}
       />
+
+      {/* Race Category Change Confirmation Dialog (UI-5a) */}
+      <Dialog open={showRaceCategoryConfirm} onClose={() => setShowRaceCategoryConfirm(false)}>
+        <DialogTitle>Change Race Category?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Changing the race category will transfer all checkpoint data and reprocess the result. Continue?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowRaceCategoryConfirm(false)}>Cancel</Button>
+          <Button onClick={handleRaceCategoryConfirm} variant="contained" color="primary">Confirm</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Process Result Confirmation Dialog (UI-5b) */}
+      <Dialog open={showProcessResultConfirm} onClose={() => setShowProcessResultConfirm(false)}>
+        <DialogTitle>Reprocess Result?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Reprocess the result for BIB {participant?.bibNumber}? Other participants are not affected.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowProcessResultConfirm(false)}>Cancel</Button>
+          <Button onClick={handleProcessResult} variant="contained" color="primary">Confirm</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar for edit notifications */}
       <Snackbar

@@ -19,21 +19,24 @@ import { ALL_ROLES } from "./main/src/models/Auth";
 import { CircularProgress, Box } from "@mui/material";
 
 // Public site
+import { lazy } from "react";
 import PublicLayout from "./main/src/components/public/layout/PublicLayout";
 import HomePage from "./main/src/pages/public/HomePage";
 import AboutPage from "./main/src/pages/public/AboutPage";
 import ServicesPage from "./main/src/pages/public/ServicesPage";
 import EventsPage from "./main/src/pages/public/EventsPage";
 import EventDetailPage from "./main/src/pages/public/EventDetailPage";
-import ResultsPage from "./main/src/pages/public/ResultsPage";
-import EventResultsPage from "./main/src/pages/public/EventResultsPage";
-import LeaderboardPage from "./main/src/pages/public/LeaderboardPage";
 import ParticipantDetailPage from "./main/src/pages/public/ParticipantDetailPage";
 import GalleryPage from "./main/src/pages/public/GalleryPage";
 import ContactPage from "./main/src/pages/public/ContactPage";
 import PrivacyPage from "./main/src/pages/public/PrivacyPage";
 import NotFoundPage from "./main/src/pages/public/NotFoundPage";
 import GlobalResultsPage from "./main/src/pages/public/GlobalResultsPage";
+
+// Lazy-load heavy public pages (UI-12)
+const ResultsPage = lazy(() => import("./main/src/pages/public/ResultsPage"));
+const EventResultsPage = lazy(() => import("./main/src/pages/public/EventResultsPage"));
+const LeaderboardPage = lazy(() => import("./main/src/pages/public/LeaderboardPage"));
 
 // Layout wrapper for auth pages (header only, no side nav)
 const AuthLayoutWrapper = () => {
@@ -72,10 +75,10 @@ function App() {
               <Route path="/services" element={<ServicesPage />} />
               <Route path="/events" element={<EventsPage />} />
               <Route path="/events/:slug" element={<EventDetailPage />} />
-              <Route path="/events/:slug/results" element={<ResultsPage />} />
+              <Route path="/events/:slug/results" element={<Suspense fallback={<Box display="flex" justifyContent="center" alignItems="center" minHeight="200px"><CircularProgress /></Box>}><ResultsPage /></Suspense>} />
               {/* Runizen-style public results pages */}
-              <Route path="/e/:eventSlug" element={<EventResultsPage />} />
-              <Route path="/c/:eventId/:raceId/l" element={<LeaderboardPage />} />
+              <Route path="/e/:eventSlug" element={<Suspense fallback={<Box display="flex" justifyContent="center" alignItems="center" minHeight="200px"><CircularProgress /></Box>}><EventResultsPage /></Suspense>} />
+              <Route path="/c/:eventId/:raceId/l" element={<Suspense fallback={<Box display="flex" justifyContent="center" alignItems="center" minHeight="200px"><CircularProgress /></Box>}><LeaderboardPage /></Suspense>} />
               <Route path="/p/:participantId" element={<ParticipantDetailPage />} />
               <Route path="/results" element={<GlobalResultsPage />} />
               <Route path="/gallery" element={<GalleryPage />} />

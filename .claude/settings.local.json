@@ -19,7 +19,11 @@
       "Read(//tmp/**)",
       "Bash(git stash *)",
       "Bash(Leaderboard)",
-      "Bash(Participant\")"
+      "Bash(Participant\")",
+      "PowerShell(Get-ChildItem \"C:\\\\Projects\\\\Runnatics.Ui\" -Depth 1 | Where-Object { $_.Name -ne 'node_modules' } | Select-Object FullName, PSIsContainer)",
+      "PowerShell(New-Item *)",
+      "Bash(node -e \"require\\('./node_modules/recharts/package.json'\\); console.log\\('installed'\\)\")",
+      "Bash(node -e \"require\\('./node_modules/ag-grid-react/package.json'\\); console.log\\('installed'\\)\")"
     ],
     "deny": [],
     "ask": []
