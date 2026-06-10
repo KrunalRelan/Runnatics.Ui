@@ -196,6 +196,9 @@ const SupportQueryDetailPage: React.FC = () => {
       const data = await SupportService.getQueryById(Number(id));
       setQuery(data);
       setUpdateStatusId(data.statusId);
+      // BUG-20: default the reply's ticket status to the query's current status so the
+      // mandatory-status validation never silently blocks a reply that was just typed.
+      setCommentStatusId(data.statusId);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
       setError(e.response?.data?.message || e.message || 'Failed to load query');
@@ -227,7 +230,7 @@ const SupportQueryDetailPage: React.FC = () => {
       setCommentSaving(true);
       await SupportService.addComment(query.id, data);
       setCommentText('');
-      setCommentStatusId('');
+      // BUG-20: keep the status selected (fetchQuery re-syncs it to the new current status).
       setSendNotification(false);
       setCommentErrors({});
       showSnackbar('Comment added', 'success');

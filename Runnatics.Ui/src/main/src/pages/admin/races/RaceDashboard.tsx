@@ -215,7 +215,7 @@ export const RaceDashboard: React.FC<RaceDashboardProps> = ({
                     cy="50%"
                     outerRadius={90}
                     dataKey="value"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                    label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(1)}%`}
                   >
                     {PIE_COLORS.map((color, i) => <Cell key={i} fill={color} />)}
                   </Pie>

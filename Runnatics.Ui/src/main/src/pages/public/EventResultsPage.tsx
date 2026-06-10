@@ -88,6 +88,7 @@ function GenderBadge({ gender }: { gender?: string }) {
 function OverallTable({ rows, isGunTime }: { rows: GroupedLeaderboardParticipant[]; isGunTime: boolean }) {
   const timeLabel = isGunTime ? 'Gun Time' : 'Chip Time';
   return (
+    <div style={{ overflowX: 'auto' }}>
     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
       <thead>
         <tr style={{ backgroundColor: '#1a56db' }}>
@@ -117,6 +118,7 @@ function OverallTable({ rows, isGunTime }: { rows: GroupedLeaderboardParticipant
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 
@@ -145,7 +147,10 @@ function AgeCategorySection({ categories, isGunTime }: { categories: GroupedLead
   const femaleCategories = categories.find((g) => g.gender.toLowerCase() === 'female')?.categories ?? [];
 
   function GenderColumn({ label, cats }: { label: string; cats: typeof maleCategories }) {
-    const sorted = [...cats].sort((a, b) => getCategoryStartAge(a.categoryName) - getCategoryStartAge(b.categoryName));
+    // BUG-12: never render an "Unknown"/blank category bucket.
+    const sorted = [...cats]
+      .filter((c) => c.categoryName && c.categoryName.trim().toLowerCase() !== 'unknown')
+      .sort((a, b) => getCategoryStartAge(a.categoryName) - getCategoryStartAge(b.categoryName));
     return (
       <div>
         <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.0625rem', color: '#111827', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid #1a56db' }}>
@@ -179,14 +184,14 @@ function AgeCategorySection({ categories, isGunTime }: { categories: GroupedLead
 }
 
 function CategoryCard({ categoryName, participants, timeLabel, isGunTime }: { categoryName: string; participants: GroupedLeaderboardParticipant[]; timeLabel: string; isGunTime: boolean }) {
-  const [expanded, setExpanded] = useState(false);
-  const SHOW = 5;
-  const displayed = expanded ? participants : participants.slice(0, SHOW);
+  // BUG-11: show all finishers (no "Show all" toggle, no row cap).
+  const displayed = participants;
   return (
     <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', overflow: 'hidden', marginBottom: '1rem' }}>
       <div style={{ backgroundColor: '#E8F4FD', padding: '0.625rem 1rem', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.875rem', color: '#1A5276', borderBottom: '1px solid #BEE3F8' }}>
         {categoryName} — {isGunTime ? 'Gun time' : 'Chip time'}
       </div>
+      <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ backgroundColor: '#F5F7FA', borderBottom: '1px solid #E5E7EB' }}>
@@ -212,11 +217,7 @@ function CategoryCard({ categoryName, participants, timeLabel, isGunTime }: { ca
           ))}
         </tbody>
       </table>
-      {participants.length > SHOW && (
-        <button onClick={() => setExpanded((v) => !v)} style={{ width: '100%', padding: '0.5rem', background: '#F5F7FA', border: 'none', borderTop: '1px solid #E5E7EB', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: '#1a56db', cursor: 'pointer', fontWeight: 500 }}>
-          {expanded ? 'Show less' : `Show all ${participants.length} finishers`}
-        </button>
-      )}
+      </div>
     </div>
   );
 }

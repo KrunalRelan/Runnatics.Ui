@@ -5,7 +5,7 @@ import { ErrorState } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
 import useDebounce from '../../hooks/useDebounce';
 import { publicApi } from '../../../../api/publicApi';
-import type { GroupedLeaderboardParticipant } from '../../../../api/publicApi';
+import type { GroupedLeaderboardParticipant, GroupedLeaderboardCategory } from '../../../../api/publicApi';
 
 // ── Derive podium from grouped data ───────────────────────────────
 
@@ -91,9 +91,8 @@ function PodiumSection({ participants }: { participants: GroupedLeaderboardParti
 // ── Leaderboard table (grouped gender/category) ───────────────────
 
 function CategoryTable({ categoryName, participants, rankBy = 'ChipTime' }: { categoryName: string; participants: GroupedLeaderboardParticipant[]; rankBy?: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const SHOW = 5;
-  const displayed = expanded ? participants : participants.slice(0, SHOW);
+  // BUG-11: show all finishers (no "Show all" toggle, no row cap).
+  const displayed = participants;
   const isGunTime = rankBy === 'GunTime';
   const timeLabel = isGunTime ? 'Gun Time' : 'Chip Time';
 
@@ -102,6 +101,7 @@ function CategoryTable({ categoryName, participants, rankBy = 'ChipTime' }: { ca
       <div style={{ backgroundColor: '#E8F4FD', padding: '0.625rem 1rem', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.875rem', color: '#1A5276', borderBottom: '1px solid #BEE3F8' }}>
         {categoryName} — {timeLabel}
       </div>
+      <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ backgroundColor: '#1a56db' }}>
@@ -131,14 +131,7 @@ function CategoryTable({ categoryName, participants, rankBy = 'ChipTime' }: { ca
           ))}
         </tbody>
       </table>
-      {participants.length > SHOW && (
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          style={{ width: '100%', padding: '0.5rem', background: '#F5F7FA', border: 'none', borderTop: '1px solid var(--color-border)', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: '#1a56db', cursor: 'pointer', fontWeight: 500 }}
-        >
-          {expanded ? 'Show less' : `Show all ${participants.length} finishers`}
-        </button>
-      )}
+      </div>
     </div>
   );
 }
@@ -161,8 +154,11 @@ function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string
 
   const genderCategories = data?.genderCategories ?? [];
   const rankBy = data?.rankBy ?? 'ChipTime';
-  const maleCategories = genderCategories.find((g) => g.gender.toLowerCase() === 'male')?.categories ?? [];
-  const femaleCategories = genderCategories.find((g) => g.gender.toLowerCase() === 'female')?.categories ?? [];
+  // BUG-12: never render an "Unknown"/blank category bucket.
+  const isRealCategory = (c: GroupedLeaderboardCategory) =>
+    !!c.categoryName && c.categoryName.trim().toLowerCase() !== 'unknown';
+  const maleCategories = (genderCategories.find((g) => g.gender.toLowerCase() === 'male')?.categories ?? []).filter(isRealCategory);
+  const femaleCategories = (genderCategories.find((g) => g.gender.toLowerCase() === 'female')?.categories ?? []).filter(isRealCategory);
   const podiumData = genderCategories.length > 0 ? derivePodium(genderCategories) : [];
 
   const raceTitle = data?.raceName

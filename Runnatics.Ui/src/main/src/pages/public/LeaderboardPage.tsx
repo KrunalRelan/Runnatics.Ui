@@ -161,6 +161,7 @@ function CategorySection({
         {category} — based on {isGunTime ? 'Gun time' : 'Chip time'}
       </div>
 
+      <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr
@@ -245,6 +246,7 @@ function CategorySection({
           ))}
         </tbody>
       </table>
+      </div>
 
     </div>
   );
@@ -314,7 +316,7 @@ function LeaderboardSkeleton() {
   return (
     <>
       <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '2rem' }}>
         {[0, 1].map((col) => (
           <div key={col}>
             <div style={{ ...shimmer, height: '1.5rem', width: '40%', marginBottom: '1.5rem' }} />
@@ -380,10 +382,13 @@ function LeaderboardPage() {
   const genderCategories = data?.genderCategories ?? [];
   const rankBy = data?.rankBy ?? 'ChipTime';
 
+  // BUG-12: never render an "Unknown"/blank category bucket.
+  const isRealCategory = (c: GroupedLeaderboardCategory) =>
+    !!c.categoryName && c.categoryName.trim().toLowerCase() !== 'unknown';
   const maleCategories =
-    genderCategories.find((g) => g.gender.toLowerCase() === 'male')?.categories ?? [];
+    (genderCategories.find((g) => g.gender.toLowerCase() === 'male')?.categories ?? []).filter(isRealCategory);
   const femaleCategories =
-    genderCategories.find((g) => g.gender.toLowerCase() === 'female')?.categories ?? [];
+    (genderCategories.find((g) => g.gender.toLowerCase() === 'female')?.categories ?? []).filter(isRealCategory);
 
   const raceTitle = raceName
     ? raceDistance

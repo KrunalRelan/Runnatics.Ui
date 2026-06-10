@@ -568,7 +568,7 @@ const ParticipantDetail: React.FC = () => {
         setParticipant(response.data.message);
         setEditingCheckpointId(null);
         setEditTimeValue("");
-        setSnackbar({ open: true, message: "Manual time saved. Result recalculated.", severity: "success" });
+        setSnackbar({ open: true, message: `Manual time saved for ${checkpointName}. Result recalculated.`, severity: "success" });
         // Refresh detections
         fetchDetections(detectionsCheckpointFilter);
       } else {
@@ -869,7 +869,7 @@ const ParticipantDetail: React.FC = () => {
                 <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
                   <Chip
                     icon={participant.gender === "M" || participant.gender === "Male" ? <Male /> : <Female />}
-                    label={`${participant.gender === "M" ? "Male" : participant.gender === "F" ? "Female" : participant.gender}${participant.age ? `, ${participant.age} yrs` : ''}`}
+                    label={`${(participant.gender === "M" || participant.gender === "Male") ? "M" : (participant.gender === "F" || participant.gender === "Female") ? "F" : (participant.gender ?? "")}${participant.age ? `, ${participant.age} yrs` : ''}`}
                     size="small"
                     sx={{
                       bgcolor: alpha("#fff", 0.25),
@@ -1245,7 +1245,7 @@ const ParticipantDetail: React.FC = () => {
         <Grid size={{ xs: 6, sm: 6, md: 2 }}>
           <StatCard
             title="Gender"
-            value={participant.gender === 'M' ? 'Male' : participant.gender === 'F' ? 'Female' : participant.gender || '—'}
+            value={(participant.gender === 'M' || participant.gender === 'Male') ? 'M' : (participant.gender === 'F' || participant.gender === 'Female') ? 'F' : participant.gender || '—'}
             icon={participant.gender === 'M' ? <Male sx={{ fontSize: 28 }} /> : <Female sx={{ fontSize: 28 }} />}
             color={participant.gender === 'M' ? colors.gender?.male || '#2196F3' : colors.gender?.female || '#E91E63'}
             isDark={isDark}
@@ -1351,7 +1351,7 @@ const ParticipantDetail: React.FC = () => {
               <RankDisplay
                 rank={participant.rankings?.genderRank || 0}
                 total={participant.rankings?.totalInGender || 0}
-                label={`${participant.gender === "M" ? "Male" : participant.gender === "F" ? "Female" : participant.gender || ''}`}
+                label={`${(participant.gender === "M" || participant.gender === "Male") ? "M" : (participant.gender === "F" || participant.gender === "Female") ? "F" : participant.gender || ''}`}
                 icon={
                   participant.gender === "M" || participant.gender === "Male" ? (
                     <Male sx={{ fontSize: 16, color: colors.gender.male }} />

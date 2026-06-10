@@ -26,6 +26,7 @@ import {
 import { EventService } from "../../../services/EventService";
 import { RaceService } from "../../../services/RaceService";
 import RaceList from "../races/RaceList";
+import EventStatsPanel from "./EventStatsPanel";
 import {
   SearchCriteria,
   deafaultSearchCriteria,
@@ -348,6 +349,9 @@ const ViewEvent: React.FC = () => {
           </Box>
         </CardContent>
       </Card>
+
+      {/* BUG-23: Event-level dashboard stats + pie chart */}
+      {eventId && <EventStatsPanel eventId={eventId} />}
 
       {/* Races Section */}
       <Card>

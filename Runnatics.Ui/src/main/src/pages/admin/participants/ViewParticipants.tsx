@@ -415,6 +415,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           overallRank: participant.overallRank ?? null,
           genderRank: participant.genderRank ?? null,
           categoryRank: participant.categoryRank ?? null,
+          manualDistance: participant.manualDistance ?? null, // BUG-16
         };
       }) as unknown as Participant[];
 
@@ -853,6 +854,11 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       width: 80,
       sortable: true,
       filter: true,
+      // BUG-17: display M/F (underlying value stays male/female for filtering).
+      valueFormatter: (params: any) => {
+        const g = (params.value ?? '').toString().toLowerCase();
+        return g === 'male' ? 'M' : g === 'female' ? 'F' : g === 'other' ? 'O' : (params.value ?? '');
+      },
       cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
     },
     {
@@ -861,6 +867,18 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       width: 100,
       sortable: true,
       filter: true,
+      cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+    },
+    {
+      // BUG-16: Manual Distance column, filterable (numeric).
+      field: "manualDistance",
+      headerName: "Manual Dist (km)",
+      width: 130,
+      sortable: true,
+      filter: "agNumberColumnFilter",
+      hide: isMobile,
+      valueFormatter: (params: any) =>
+        params.value === null || params.value === undefined || params.value === "" ? "—" : `${params.value}`,
       cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
     },
     {
