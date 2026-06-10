@@ -211,6 +211,7 @@ export interface GroupedLeaderboardParticipant {
   rank: number;
   name: string;
   bib: string;
+  gender?: string;
   chipTime?: string;
   gunTime?: string;
   participantDetailUrl: string;
@@ -234,8 +235,13 @@ export interface GroupedLeaderboardResponse {
   raceDistance?: number;
   rankBy?: string;
   genderCategories: GroupedLeaderboardGender[];
+  overallResults?: GroupedLeaderboardParticipant[];
   totalFinishers?: number;
   totalParticipants?: number;
+  totalOverall?: number;
+  page?: number;
+  pageSize?: number;
+  totalPages?: number;
 }
 
 export interface PublicParticipantSplit {

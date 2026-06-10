@@ -128,11 +128,15 @@ function TimeBadge({ time }: { time?: string }) {
 function CategorySection({
   category,
   participants,
+  rankBy,
 }: {
   category: string;
   participants: GroupedLeaderboardParticipant[];
+  rankBy: string;
 }) {
   const displayed = participants;
+  const isGunTime = rankBy === 'GunTime';
+  const timeLabel = isGunTime ? 'Gun Time' : 'Chip Time';
 
   return (
     <div
@@ -154,7 +158,7 @@ function CategorySection({
           borderBottom: '1px solid #BEE3F8',
         }}
       >
-        {category} — based on Chip time
+        {category} — based on {isGunTime ? 'Gun time' : 'Chip time'}
       </div>
 
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -165,7 +169,7 @@ function CategorySection({
               borderBottom: '1px solid var(--color-border)',
             }}
           >
-            {['#', 'Name', 'Bib', 'Chip Time'].map((h) => (
+            {['#', 'Name', 'Bib', timeLabel].map((h) => (
               <th
                 key={h}
                 style={{
@@ -235,7 +239,7 @@ function CategorySection({
                 {p.bib}
               </td>
               <td style={{ padding: '0.625rem 0.75rem' }}>
-                <TimeBadge time={p.chipTime} />
+                <TimeBadge time={isGunTime ? p.gunTime : p.chipTime} />
               </td>
             </tr>
           ))}
@@ -250,9 +254,11 @@ function CategorySection({
 function GenderColumn({
   label,
   categories,
+  rankBy,
 }: {
   label: string;
   categories: GroupedLeaderboardCategory[];
+  rankBy: string;
 }) {
   const sorted = [...categories].sort(
     (a, b) => getCategoryStartAge(a.categoryName) - getCategoryStartAge(b.categoryName),
@@ -289,6 +295,7 @@ function GenderColumn({
           key={categoryName}
           category={categoryName}
           participants={participants}
+          rankBy={rankBy}
         />
       ))}
     </div>
@@ -371,6 +378,7 @@ function LeaderboardPage() {
   const raceName = data?.raceName ?? '';
   const raceDistance = data?.raceDistance;
   const genderCategories = data?.genderCategories ?? [];
+  const rankBy = data?.rankBy ?? 'ChipTime';
 
   const maleCategories =
     genderCategories.find((g) => g.gender.toLowerCase() === 'male')?.categories ?? [];
@@ -547,10 +555,12 @@ function LeaderboardPage() {
                 <GenderColumn
                   label="Male"
                   categories={maleCategories}
+                  rankBy={rankBy}
                 />
                 <GenderColumn
                   label="Female"
                   categories={femaleCategories}
+                  rankBy={rankBy}
                 />
               </div>
 

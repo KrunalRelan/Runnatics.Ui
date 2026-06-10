@@ -90,20 +90,22 @@ function PodiumSection({ participants }: { participants: GroupedLeaderboardParti
 
 // ── Leaderboard table (grouped gender/category) ───────────────────
 
-function CategoryTable({ categoryName, participants }: { categoryName: string; participants: GroupedLeaderboardParticipant[] }) {
+function CategoryTable({ categoryName, participants, rankBy = 'ChipTime' }: { categoryName: string; participants: GroupedLeaderboardParticipant[]; rankBy?: string }) {
   const [expanded, setExpanded] = useState(false);
   const SHOW = 5;
   const displayed = expanded ? participants : participants.slice(0, SHOW);
+  const isGunTime = rankBy === 'GunTime';
+  const timeLabel = isGunTime ? 'Gun Time' : 'Chip Time';
 
   return (
     <div style={{ border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden', marginBottom: '1rem' }}>
       <div style={{ backgroundColor: '#E8F4FD', padding: '0.625rem 1rem', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.875rem', color: '#1A5276', borderBottom: '1px solid #BEE3F8' }}>
-        {categoryName} — Chip Time
+        {categoryName} — {timeLabel}
       </div>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ backgroundColor: '#1a56db' }}>
-            {['#', 'Name', 'BIB', 'Chip Time'].map((h) => (
+            {['#', 'Name', 'BIB', timeLabel].map((h) => (
               <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontFamily: 'var(--font-body)', fontSize: '0.75rem', fontWeight: 600, color: '#fff' }}>{h}</th>
             ))}
           </tr>
@@ -122,7 +124,7 @@ function CategoryTable({ categoryName, participants }: { categoryName: string; p
               <td style={{ padding: '0.625rem 0.75rem', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>{p.bib}</td>
               <td style={{ padding: '0.625rem 0.75rem' }}>
                 <span style={{ display: 'inline-block', backgroundColor: '#1a56db', color: '#fff', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', fontWeight: 700, padding: '0.2rem 0.75rem', borderRadius: '12px' }}>
-                  {p.chipTime ?? '—'}
+                  {(isGunTime ? p.gunTime : p.chipTime) ?? '—'}
                 </span>
               </td>
             </tr>
@@ -158,6 +160,7 @@ function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string
   );
 
   const genderCategories = data?.genderCategories ?? [];
+  const rankBy = data?.rankBy ?? 'ChipTime';
   const maleCategories = genderCategories.find((g) => g.gender.toLowerCase() === 'male')?.categories ?? [];
   const femaleCategories = genderCategories.find((g) => g.gender.toLowerCase() === 'female')?.categories ?? [];
   const podiumData = genderCategories.length > 0 ? derivePodium(genderCategories) : [];
@@ -215,7 +218,7 @@ function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string
                   const n = (s: string) => { const m = s.match(/\d+/); return m ? parseInt(m[0]) : 999; };
                   return n(a.categoryName) - n(b.categoryName);
                 }).map(({ categoryName, participants }) => (
-                  <CategoryTable key={categoryName} categoryName={categoryName} participants={participants} />
+                  <CategoryTable key={categoryName} categoryName={categoryName} participants={participants} rankBy={rankBy} />
                 ))}
               </div>
             )}
@@ -229,7 +232,7 @@ function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string
                   const n = (s: string) => { const m = s.match(/\d+/); return m ? parseInt(m[0]) : 999; };
                   return n(a.categoryName) - n(b.categoryName);
                 }).map(({ categoryName, participants }) => (
-                  <CategoryTable key={categoryName} categoryName={categoryName} participants={participants} />
+                  <CategoryTable key={categoryName} categoryName={categoryName} participants={participants} rankBy={rankBy} />
                 ))}
               </div>
             )}
