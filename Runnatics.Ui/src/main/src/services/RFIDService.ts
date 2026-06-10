@@ -184,9 +184,13 @@ export class RFIDService {
         const [h = 0, m = 0, s = 0] = time.split(':').map(Number);
         const finishTimeMs = (h * 3600 + m * 60 + s) * 1000;
 
+        // BUG-14: saving a manual finish time re-ranks the entire race server-side, which can
+        // exceed the global 30s axios timeout for large races. Allow 120s for this call only
+        // (server CommandTimeout is 60s). Other requests keep the default timeout.
         const response: AxiosResponse<ResponseBase<any>> = await apiClient.put(
             ServiceUrl.addManualTime(eventId, raceId, participantId),
-            { finishTimeMs, checkpointId }
+            { finishTimeMs, checkpointId },
+            { timeout: 120000 }
         );
 
         return response.data;
