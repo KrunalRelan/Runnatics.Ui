@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   HubConnectionBuilder,
   HubConnection,
@@ -12,6 +12,8 @@ export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 export interface UseBibMappingHubReturn {
   lastEpc: string | null;
   lastRssi: number | null;
+  multipleEpcEpcs: string[] | null;
+  clearMultipleEpc: () => void;
   connectionStatus: ConnectionStatus;
 }
 
@@ -25,9 +27,14 @@ export function useBibMappingHub(
 ): UseBibMappingHubReturn {
   const [lastEpc, setLastEpc] = useState<string | null>(null);
   const [lastRssi, setLastRssi] = useState<number | null>(null);
+  const [multipleEpcEpcs, setMultipleEpcEpcs] = useState<string[] | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
 
   const connectionRef = useRef<HubConnection | null>(null);
+
+  const clearMultipleEpc = useCallback(() => {
+    setMultipleEpcEpcs(null);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +62,12 @@ export function useBibMappingHub(
         }
       });
 
+      connection.on('MultipleEpcDetected', (epcs: string[]) => {
+        if (!cancelled) {
+          setMultipleEpcEpcs(epcs);
+        }
+      });
+
       connection.onreconnecting(() => {
         if (!cancelled) {
           setConnectionStatus('connecting');
@@ -64,6 +77,8 @@ export function useBibMappingHub(
       connection.onreconnected(() => {
         if (!cancelled) {
           setConnectionStatus('connected');
+          // Drop any stale multi-EPC event captured before the drop
+          setMultipleEpcEpcs(null);
         }
       });
 
@@ -97,5 +112,5 @@ export function useBibMappingHub(
     };
   }, [hubUrl]);
 
-  return { lastEpc, lastRssi, connectionStatus };
+  return { lastEpc, lastRssi, multipleEpcEpcs, clearMultipleEpc, connectionStatus };
 }

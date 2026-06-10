@@ -51,6 +51,7 @@ import {
   sanitizeEpc,
   useBibMappingRows,
 } from './useBibMappingRows';
+import { useBibMappingHub } from '../../../hooks/useBibMappingHub';
 import InstructionsCard from './InstructionsCard';
 import DuplicateEpcDialog from './DuplicateEpcDialog';
 import ClearMappingDialog from './ClearMappingDialog';
@@ -140,6 +141,7 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
     progress,
     stats,
     incrementDuplicateAttempts,
+    setMultipleEpcError,
   } = useBibMappingRows(eventId, raceId, {
     page,
     pageSize: PAGE_SIZE,
@@ -149,12 +151,31 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
+  // Lockout window: silently reject a submission within 500ms of the last successful map.
+  // This catches the USB-keyboard reader pattern of EPC1+Enter → EPC2+Enter in rapid succession.
+  const lastMapTimestampRef = useRef<number>(0);
+  const MAP_LOCKOUT_MS = 500;
+
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
   const searchRef = useRef<HTMLInputElement>(null);
 
   const [focusedRowId, setFocusedRowId] = useState<string | null>(null);
   const [nextFocusId, setNextFocusId] = useState<string | null>(null);
+
+  // SignalR hub: handles MultipleEpcDetected events from the TCP reader.
+  // Declared after focusedRowId so the effect's deps can reference it safely.
+  const { multipleEpcEpcs, clearMultipleEpc } = useBibMappingHub();
+
+  useEffect(() => {
+    if (multipleEpcEpcs && multipleEpcEpcs.length > 0) {
+      if (focusedRowId) {
+        setMultipleEpcError(focusedRowId);
+      }
+      // Consume the event so it can't re-fire on a later focus change
+      clearMultipleEpc();
+    }
+  }, [multipleEpcEpcs, focusedRowId, setMultipleEpcError, clearMultipleEpc]);
 
   const [duplicate, setDuplicate] = useState<DuplicateInfo | null>(null);
   const [overrideWorking, setOverrideWorking] = useState(false);
@@ -237,10 +258,17 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
 
   const handleSubmit = useCallback(
     async (participantId: string) => {
+      // Silently gate rapid follow-on submissions: USB keyboard readers emit EPC1+Enter then
+      // EPC2+Enter in quick succession when multiple chips are in the field simultaneously.
+      // This is a debounce gate, not an error — the row stays mappable once the window expires.
+      if (Date.now() - lastMapTimestampRef.current < MAP_LOCKOUT_MS) {
+        return;
+      }
       const row = rows.find((r) => r.participantId === participantId);
       if (!row) return;
       const result = await submitEpc(participantId);
       if (result.status === 'ok') {
+        lastMapTimestampRef.current = Date.now();
         toast.success(`✓ BIB #${row.bibNumber} mapped to ${sanitizeEpc(row.pendingEpc)}`);
         if (soundEnabled) beep();
         if (result.nextId) setNextFocusId(result.nextId);

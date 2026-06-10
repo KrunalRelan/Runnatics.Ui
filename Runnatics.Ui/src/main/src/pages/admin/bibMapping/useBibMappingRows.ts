@@ -63,6 +63,7 @@ interface UseBibMappingRowsReturn {
   progress: { mapped: number; total: number; percent: number };
   stats: SessionStats;
   incrementDuplicateAttempts: () => void;
+  setMultipleEpcError: (participantId: string) => void;
   refetch: () => void;
 }
 
@@ -127,7 +128,7 @@ export function useBibMappingRows(
         chipId: p.chipId,
         eventId: p.eventId,
         createdAt: p.createdAt,
-        isMultipleEpc: p.isMultipleEpc ?? false,
+        isMultipleEpc: override.isMultipleEpc ?? p.isMultipleEpc ?? false,
       };
     });
   }, [participantsQuery.data, rowOverrides]);
@@ -202,6 +203,20 @@ export function useBibMappingRows(
     }, 650);
     errorFlashTimers.current.set(participantId, t);
   }, []);
+
+  const setMultipleEpcError = useCallback((participantId: string) => {
+    setRowOverrides((prev) => ({
+      ...prev,
+      [participantId]: {
+        ...(prev[participantId] ?? {}),
+        pendingEpc: prev[participantId]?.pendingEpc ?? '',
+        status: 'error',
+        isMultipleEpc: true,
+        errorMessage: 'Multiple chips detected simultaneously. Scan one chip at a time.',
+      },
+    }));
+    flashError(participantId);
+  }, [flashError]);
 
   const setPendingEpc = useCallback((participantId: string, value: string) => {
     const sanitized = sanitizeEpc(value);
@@ -532,6 +547,7 @@ export function useBibMappingRows(
     progress,
     stats,
     incrementDuplicateAttempts,
+    setMultipleEpcError,
     refetch,
   };
 }
