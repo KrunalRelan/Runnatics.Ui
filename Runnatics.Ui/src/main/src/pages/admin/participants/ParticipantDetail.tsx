@@ -1472,31 +1472,35 @@ const ParticipantDetail: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {(participant.splitTimes || []).map((split: SplitTimeInfo, index: number) => {
-                const splits = participant.splitTimes || [];
-                const prevPace =
-                  index > 0 && splits[index - 1].pace
-                    ? convertPaceToMinutes(splits[index - 1].pace!)
-                    : null;
-                const currentPace = split.pace ? convertPaceToMinutes(split.pace) : null;
+              {(participant.checkpointTimes || []).map((checkpointTime: CheckpointTime, index: number) => {
+                const checkpoints = participant.checkpointTimes || [];
+                const allSplits = participant.splitTimes || [];
+                // Merge in the split row for this checkpoint when one exists (missed checkpoints have none)
+                const split = allSplits.find(
+                  (s: SplitTimeInfo) => s.checkpointName && s.checkpointName === checkpointTime.checkpointName
+                );
+                const prevCheckpoint = index > 0 ? checkpoints[index - 1] : null;
+                const prevSplit = prevCheckpoint
+                  ? allSplits.find((s: SplitTimeInfo) => s.checkpointName && s.checkpointName === prevCheckpoint.checkpointName)
+                  : undefined;
+                const prevPace = prevSplit?.pace ? convertPaceToMinutes(prevSplit.pace) : null;
+                const currentPace = split?.pace ? convertPaceToMinutes(split.pace) : null;
                 const paceImproved = prevPace !== null && currentPace !== null && currentPace < prevPace;
                 const paceSlowed = prevPace !== null && currentPace !== null && currentPace > prevPace;
 
-                // Look up checkpoint time and ranks from checkpointTimes array
-                const checkpointTime = (participant.checkpointTimes || []).find(
-                  (ct: CheckpointTime) => ct.checkpointName && ct.checkpointName === split.checkpointName
-                );
-                const isManual = split.isManual === true;
+                const checkpointId = checkpointTime.checkpointId;
+                const isManual = split?.isManual === true;
+                const isLast = index === checkpoints.length - 1;
 
                 return (
                   <TableRow
-                    key={split.checkpointId || index}
+                    key={checkpointId || index}
                     sx={{
                       "&:hover": {
                         bgcolor: alpha(colors.primary.main, 0.05),
                       },
-                      bgcolor: index === splits.length - 1 
-                        ? alpha(colors.success.main, isDark ? 0.1 : 0.06) 
+                      bgcolor: isLast
+                        ? alpha(colors.success.main, isDark ? 0.1 : 0.06)
                         : "inherit",
                     }}
                   >
@@ -1506,23 +1510,23 @@ const ParticipantDetail: React.FC = () => {
                           sx={{
                             fontSize: 18,
                             color:
-                              index === splits.length - 1
+                              isLast
                                 ? colors.success.main
                                 : colors.pace.main,
                           }}
                         />
                         <Typography variant="body2" fontWeight={600}>
-                          {split.checkpointName || '-'}
+                          {checkpointTime.checkpointName || '-'}
                         </Typography>
                       </Stack>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
-                        {split.distance || `${split.distanceKm ?? 0} km`}
+                        {split?.distance || `${checkpointTime.distanceKm ?? 0} km`}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      {editingCheckpointId === split.checkpointId ? (
+                      {editingCheckpointId === checkpointId ? (
                         <Stack direction="row" alignItems="center" spacing={0.5}>
                           <TextField
                             size="small"
@@ -1532,7 +1536,7 @@ const ParticipantDetail: React.FC = () => {
                             autoFocus
                             disabled={savingTime}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter' && split.checkpointId) handleSaveTime(split.checkpointId);
+                              if (e.key === 'Enter' && checkpointId) handleSaveTime(checkpointId);
                               if (e.key === 'Escape') handleCancelEdit();
                             }}
                             sx={{
@@ -1574,7 +1578,7 @@ const ParticipantDetail: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={600}>
-                        {split.splitTime || '-'}
+                        {split?.splitTime || '-'}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -1584,14 +1588,14 @@ const ParticipantDetail: React.FC = () => {
                           fontWeight={700}
                           sx={{
                             color:
-                              index === splits.length - 1
+                              isLast
                                 ? colors.success.main
                                 : colors.text.primary,
                           }}
                         >
-                          {split.cumulativeTime || '-'}
+                          {split?.cumulativeTime || '-'}
                         </Typography>
-                        {split.isManual && (
+                        {isManual && (
                           <Tooltip title="Manually entered time" arrow>
                             <Chip
                               icon={<Edit sx={{ fontSize: '0.65rem !important' }} />}
@@ -1625,7 +1629,7 @@ const ParticipantDetail: React.FC = () => {
                             fontWeight: 600,
                           }}
                         >
-                          {split.pace || '-'}
+                          {split?.pace || '-'}
                         </Typography>
                         {paceImproved && (
                           <TrendingUp sx={{ fontSize: 14, color: colors.success.main }} />
@@ -1634,7 +1638,7 @@ const ParticipantDetail: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
-                        {split.speed != null ? `${split.speed.toFixed(1)} km/h` : '-'}
+                        {split && split.speed != null ? `${split.speed.toFixed(1)} km/h` : '-'}
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
@@ -1674,13 +1678,13 @@ const ParticipantDetail: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell align="center">
-                      {editingCheckpointId === split.checkpointId ? (
+                      {editingCheckpointId === checkpointId ? (
                         <Stack direction="row" spacing={0.5} justifyContent="center">
                           <Tooltip title="Save" arrow>
                             <span>
                               <IconButton
                                 size="small"
-                                onClick={() => split.checkpointId && handleSaveTime(split.checkpointId)}
+                                onClick={() => checkpointId && handleSaveTime(checkpointId)}
                                 disabled={savingTime || !editTimeValue.trim()}
                                 sx={{ 
                                   color: colors.success.main,
@@ -1709,7 +1713,7 @@ const ParticipantDetail: React.FC = () => {
                         <Tooltip title="Edit Time" arrow>
                           <IconButton
                             size="small"
-                            onClick={() => { console.log('split object:', split); split.checkpointId && handleStartEdit(split.checkpointId, checkpointTime?.time || ''); }}
+                            onClick={() => { if (checkpointId) handleStartEdit(checkpointId, checkpointTime.time || ''); }}
                             sx={{ 
                               color: colors.primary.main,
                               '&:hover': { bgcolor: alpha(colors.primary.main, 0.1) },
