@@ -33,6 +33,18 @@ interface EditParticipantProps {
   raceId?: string;
 }
 
+// Normalize an incoming gender value to the Select's option domain ("M"/"F"/"Other").
+// The participants grid passes lowercase values ("male"/"female"/"other"), while the
+// API/EF layer canonicalizes to "M"/"F" — so match case-insensitively. Anything else
+// (e.g. legacy/blank) is passed through unchanged so it is never silently lost.
+const toGenderValue = (gender?: string): string => {
+  const v = (gender || "").trim().toLowerCase();
+  if (v === "m" || v === "male") return "M";
+  if (v === "f" || v === "female") return "F";
+  if (v === "o" || v === "other") return "Other";
+  return gender || "";
+};
+
 const EditParticipant: React.FC<EditParticipantProps> = ({
   open,
   onClose,
@@ -127,7 +139,7 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
         fullName: participant.fullName || "",
         email: participant.email || "",
         phone: participant.phone || "",
-        gender: participant.gender || "",
+        gender: toGenderValue(participant.gender),
         category: participant.category || "",
         status: participant.status || "Registered",
         checkIn: participant.checkIn || false,
@@ -378,8 +390,8 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
                   <MenuItem value="">
                     <em>None</em>
                   </MenuItem>
-                  <MenuItem value="Male">Male</MenuItem>
-                  <MenuItem value="Female">Female</MenuItem>
+                  <MenuItem value="M">Male</MenuItem>
+                  <MenuItem value="F">Female</MenuItem>
                   <MenuItem value="Other">Other</MenuItem>
                 </Select>
               </FormControl>
