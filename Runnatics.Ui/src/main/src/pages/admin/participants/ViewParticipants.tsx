@@ -1204,7 +1204,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
                 <MenuItem value="registered">Registered</MenuItem>
                 <MenuItem value="completed">Completed</MenuItem>
                 <MenuItem value="dnf">DNF</MenuItem>
-                <MenuItem value="noShow">No Show</MenuItem>
+                <MenuItem value="noShow">DNS</MenuItem>
               </Select>
             </FormControl>
             <FormControl sx={{ flex: 1, minWidth: 200 }} size="small">

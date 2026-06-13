@@ -321,6 +321,14 @@ const RankDisplay: React.FC<{
   );
 };
 
+const toGenderValue = (gender?: string): string => {
+  const v = (gender || "").trim().toLowerCase();
+  if (v === "m" || v === "male") return "M";
+  if (v === "f" || v === "female") return "F";
+  if (v === "o" || v === "other") return "Other";
+  return gender || "";
+};
+
 // Helper function to convert pace string to minutes
 const convertPaceToMinutes = (paceString: string): number => {
   // Format: "4:48/km" -> 4.8 minutes (4 + 48/60)
@@ -361,6 +369,7 @@ const ParticipantDetail: React.FC = () => {
   const [editRaceId, setEditRaceId] = useState("");
   const [races, setRaces] = useState<Race[]>([]);
   const [racesLoading, setRacesLoading] = useState(false);
+  const [editGender, setEditGender] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -402,6 +411,7 @@ const ParticipantDetail: React.FC = () => {
       setEditEmail(participant.email || "");
       setEditAgeCategory(participant.ageCategory || "");
       setEditRunStatus(participant.status || "");
+      setEditGender(toGenderValue(participant.gender || ''));
       setEditRaceId(participant.raceId || raceId || "");
     }
   }, [participant]);
@@ -431,6 +441,7 @@ const ParticipantDetail: React.FC = () => {
         lastName: editLastName || undefined,
         phone: editMobile || undefined,
         email: editEmail || undefined,
+        gender: editGender || undefined,
         category: editAgeCategory || undefined,
         status: editRunStatus || undefined,
         raceId: editRaceId || undefined,
@@ -1129,6 +1140,20 @@ const ParticipantDetail: React.FC = () => {
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
                 />
+              </Stack>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Gender</InputLabel>
+                  <Select
+                    value={editGender}
+                    label="Gender"
+                    onChange={(e: SelectChangeEvent) => setEditGender(e.target.value)}
+                  >
+                    <MenuItem value="M">Male</MenuItem>
+                    <MenuItem value="F">Female</MenuItem>
+                    <MenuItem value="Other">Other</MenuItem>
+                  </Select>
+                </FormControl>
               </Stack>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 <TextField
