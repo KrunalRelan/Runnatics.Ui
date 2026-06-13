@@ -9,15 +9,26 @@ import type { GroupedLeaderboardParticipant, GroupedLeaderboardCategory } from '
 
 // ── Derive podium from grouped data ───────────────────────────────
 
-function derivePodium(genderCategories: { gender: string; categories: { categoryName: string; participants: GroupedLeaderboardParticipant[] }[] }[]) {
-  const all = genderCategories.flatMap((gc) => gc.categories.flatMap((c) => c.participants));
+function derivePodiumForGender(
+  genderCategories: { gender: string; categories: { categoryName: string; participants: GroupedLeaderboardParticipant[] }[] }[],
+  targetGender: string,
+  overallRankBy: string,
+) {
+  const filtered = targetGender
+    ? genderCategories.filter((gc) => gc.gender.toLowerCase() === targetGender.toLowerCase())
+    : genderCategories;
+  const all = filtered.flatMap((gc) => gc.categories.flatMap((c) => c.participants));
   const seen = new Set<string>();
   const unique = all.filter((p) => {
-    if (!p.chipTime || seen.has(p.bib)) return false;
+    if (seen.has(p.bib)) return false;
     seen.add(p.bib);
     return true;
   });
-  return unique.sort((a, b) => (a.chipTime ?? '').localeCompare(b.chipTime ?? '')).slice(0, 3);
+  const isGun = overallRankBy === 'GunTime';
+  return unique
+    .filter((p) => (isGun ? !!p.gunTime : !!p.chipTime))
+    .sort((a, b) => (isGun ? (a.gunTime ?? '') : (a.chipTime ?? '')).localeCompare(isGun ? (b.gunTime ?? '') : (b.chipTime ?? '')))
+    .slice(0, 3);
 }
 
 // ── Podium display ────────────────────────────────────────────────
@@ -138,7 +149,7 @@ function CategoryTable({ categoryName, participants, rankBy = 'ChipTime' }: { ca
 
 // ── Leaderboard view (rendered once event + race selected) ─────────
 
-function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string; raceId: string; bracket: string; search: string }) {
+function LeaderboardView({ eventId, raceId, gender, search }: { eventId: string; raceId: string; gender: string; search: string }) {
   const debouncedSearch = useDebounce(search, 350);
 
   const { data, loading, error, refetch } = usePublicApi(
@@ -146,14 +157,15 @@ function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string
       publicApi.getGroupedLeaderboard(
         eventId,
         raceId,
-        { search: debouncedSearch || undefined, category: bracket || undefined, showAll: true },
+        { search: debouncedSearch || undefined, gender: gender || undefined },
         signal,
       ),
-    [eventId, raceId, debouncedSearch, bracket],
+    [eventId, raceId, debouncedSearch, gender],
   );
 
   const genderCategories = data?.genderCategories ?? [];
-  // BUG-24: category columns sort by their own setting; podium reflects the overall setting.
+  // BUG-24: overall and category sort independently; each section has its own setting.
+  const overallRankBy = data?.overallRankBy ?? data?.rankBy ?? 'ChipTime';
   const categoryRankBy = data?.categoryRankBy ?? data?.rankBy ?? 'ChipTime';
   // BUG-24: honour Show Overall / Show Category toggles (default true when absent).
   const showOverall = data?.showOverall !== false;
@@ -163,7 +175,9 @@ function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string
     !!c.categoryName && c.categoryName.trim().toLowerCase() !== 'unknown';
   const maleCategories = (genderCategories.find((g) => g.gender.toLowerCase() === 'male')?.categories ?? []).filter(isRealCategory);
   const femaleCategories = (genderCategories.find((g) => g.gender.toLowerCase() === 'female')?.categories ?? []).filter(isRealCategory);
-  const podiumData = genderCategories.length > 0 ? derivePodium(genderCategories) : [];
+  const malePodium = derivePodiumForGender(genderCategories, 'male', overallRankBy);
+  const femalePodium = derivePodiumForGender(genderCategories, 'female', overallRankBy);
+  const anyPodium = malePodium.length >= 3 || femalePodium.length >= 3;
 
   const raceTitle = data?.raceName
     ? data.raceDistance
@@ -174,23 +188,29 @@ function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string
   return (
     <div>
       {/* Leaderboard header */}
-      <div style={{ backgroundColor: '#1a56db', color: '#fff', padding: '0.875rem 1.25rem', borderRadius: podiumData.length >= 3 ? '10px 10px 0 0' : '10px 10px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ backgroundColor: '#1a56db', color: '#fff', padding: '0.875rem 1.25rem', borderRadius: '10px 10px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.125rem' }}>Leaderboard</div>
           {raceTitle && <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', opacity: 0.8, marginTop: '0.125rem' }}>{raceTitle}</div>}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {data?.totalFinishers != null && (
-            <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', opacity: 0.8 }}>
-              {data.totalFinishers.toLocaleString()} finishers
-            </span>
-          )}
-        </div>
       </div>
 
-      {/* Podium */}
-      {showOverall && !loading && !error && podiumData.length >= 3 && (
-        <PodiumSection participants={podiumData} />
+      {/* Podium — Male and Female side by side (or single when gender filter active) */}
+      {showOverall && !loading && !error && anyPodium && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', backgroundColor: 'var(--color-bg-alt)', padding: '0 1rem' }}>
+          {(gender === '' || gender.toLowerCase() === 'male') && malePodium.length >= 3 && (
+            <div>
+              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-text)', textAlign: 'center', paddingTop: '1rem' }}>Male</div>
+              <PodiumSection participants={malePodium} />
+            </div>
+          )}
+          {(gender === '' || gender.toLowerCase() === 'female') && femalePodium.length >= 3 && (
+            <div>
+              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-text)', textAlign: 'center', paddingTop: '1rem' }}>Female</div>
+              <PodiumSection participants={femalePodium} />
+            </div>
+          )}
+        </div>
       )}
 
       {error && (
@@ -206,7 +226,7 @@ function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string
       )}
 
       {showCategory && !loading && !error && (
-        <div style={{ border: '1px solid var(--color-border)', borderTop: podiumData.length >= 3 ? 'none' : '1px solid var(--color-border)', borderRadius: '0 0 10px 10px', padding: '1.5rem' }}>
+        <div style={{ border: '1px solid var(--color-border)', borderTop: anyPodium ? 'none' : '1px solid var(--color-border)', borderRadius: '0 0 10px 10px', padding: '1.5rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', alignItems: 'start' }}>
             {/* Male column */}
             {maleCategories.length > 0 && (
@@ -300,7 +320,7 @@ function GlobalResultsPage() {
   const [year, setYear] = useState(String(currentYear));
   const [eventId, setEventId] = useState('');
   const [raceId, setRaceId] = useState('');
-  const [bracket, setBracket] = useState('');
+  const [gender, setGender] = useState('');
   const [search, setSearch] = useState('');
 
   // Fetch filter metadata (years + events list)
@@ -318,15 +338,6 @@ function GlobalResultsPage() {
     [eventId],
   );
 
-  // Fetch brackets after race is selected
-  const { data: bracketData } = usePublicApi(
-    (signal) =>
-      eventId && raceId
-        ? publicApi.getResultBrackets(eventId, raceId, signal).catch(() => ({ brackets: [] }))
-        : Promise.resolve({ brackets: [] }),
-    [eventId, raceId],
-  );
-
   const yearRange = Array.from({ length: 6 }, (_, i) => currentYear - i);
   const years = (filterData?.years?.length ? filterData.years : yearRange).map((y) => ({ value: String(y), label: String(y) }));
 
@@ -340,14 +351,15 @@ function GlobalResultsPage() {
     ...(raceData?.races ?? []).map((r) => ({ value: r.encryptedRaceId, label: r.name + (r.distance ? ` (${r.distance})` : '') })),
   ];
 
-  const brackets = [
-    { value: '', label: 'All Brackets' },
-    ...(bracketData?.brackets ?? []).map((b) => ({ value: b.name, label: b.name })),
+  const genderOptions = [
+    { value: '', label: 'All Genders' },
+    { value: 'Male', label: 'Male' },
+    { value: 'Female', label: 'Female' },
   ];
 
-  const handleYearChange = (v: string) => { setYear(v); setEventId(''); setRaceId(''); setBracket(''); };
-  const handleEventChange = (v: string) => { setEventId(v); setRaceId(''); setBracket(''); };
-  const handleRaceChange = (v: string) => { setRaceId(v); setBracket(''); };
+  const handleYearChange = (v: string) => { setYear(v); setEventId(''); setRaceId(''); setGender(''); };
+  const handleEventChange = (v: string) => { setEventId(v); setRaceId(''); setGender(''); };
+  const handleRaceChange = (v: string) => { setRaceId(v); setGender(''); };
 
   const showResults = !!(eventId && raceId);
 
@@ -401,10 +413,10 @@ function GlobalResultsPage() {
               disabled={!eventId}
             />
             <FilterSelect
-              label="Bracket"
-              value={bracket}
-              onChange={setBracket}
-              options={brackets}
+              label="Gender"
+              value={gender}
+              onChange={setGender}
+              options={genderOptions}
               disabled={!raceId}
             />
 
@@ -484,7 +496,7 @@ function GlobalResultsPage() {
             <LeaderboardView
               eventId={eventId}
               raceId={raceId}
-              bracket={bracket}
+              gender={gender}
               search={search}
             />
           )}
