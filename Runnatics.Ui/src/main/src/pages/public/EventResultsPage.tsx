@@ -302,8 +302,13 @@ function EventResultsPage() {
   );
 
   // ── Derived data ───────────────────────────────────────────────
-  const isGunTime      = lb?.rankBy === 'GunTime';
-  const timeLabel      = isGunTime ? 'Gun Time' : 'Chip Time';
+  // BUG-24: Overall and Category sort independently — derive a flag per section.
+  const isGunTimeOverall  = (lb?.overallRankBy ?? lb?.rankBy) === 'GunTime';
+  const isGunTimeCategory = (lb?.categoryRankBy ?? lb?.rankBy) === 'GunTime';
+  const timeLabel      = isGunTimeOverall ? 'Gun Time' : 'Chip Time';
+  // BUG-24: honour Show Overall / Show Category toggles (default true when absent).
+  const showOverall    = lb?.showOverall !== false;
+  const showCategory   = lb?.showCategory !== false;
   const overallResults = lb?.overallResults ?? [];
 
   // Client-side search filter on overall results (search already applied server-side, but
@@ -445,6 +450,7 @@ function EventResultsPage() {
             <div style={{ flex: 1, minWidth: 0 }}>
 
               {/* ── SECTION 1: Overall Result ────────────────────── */}
+              {showOverall && (
               <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden', marginBottom: '0' }}>
                 <div style={{ textAlign: 'center', backgroundColor: '#fff', padding: '1rem 1rem 0.875rem', borderBottom: '1px solid #E5E7EB' }}>
                   <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.375rem', color: '#111827' }}>Overall Result</div>
@@ -469,7 +475,7 @@ function EventResultsPage() {
                     {showPodium && <Podium top3={podium} />}
 
                     {overallResults.length > 0 ? (
-                      <OverallTable rows={pagedRows} isGunTime={isGunTime} />
+                      <OverallTable rows={pagedRows} isGunTime={isGunTimeOverall} />
                     ) : (
                       <div style={{ padding: '3rem', textAlign: 'center', fontFamily: 'var(--font-body)', color: '#6B7280' }}>
                         {search ? 'No results match your search.' : selectedRaceId ? 'No results available yet.' : 'Select a race to view results.'}
@@ -478,12 +484,13 @@ function EventResultsPage() {
                   </>
                 )}
               </div>
+              )}
 
-              <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+              {showOverall && <Pagination page={page} totalPages={totalPages} onChange={setPage} />}
 
               {/* ── SECTION 2: Age Category Result ───────────────── */}
-              {!lbLoading && !lbError && (lb?.genderCategories ?? []).length > 0 && (
-                <AgeCategorySection categories={lb!.genderCategories} isGunTime={isGunTime} />
+              {showCategory && !lbLoading && !lbError && (lb?.genderCategories ?? []).length > 0 && (
+                <AgeCategorySection categories={lb!.genderCategories} isGunTime={isGunTimeCategory} />
               )}
             </div>
 

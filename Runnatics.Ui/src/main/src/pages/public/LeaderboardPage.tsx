@@ -380,7 +380,11 @@ function LeaderboardPage() {
   const raceName = data?.raceName ?? '';
   const raceDistance = data?.raceDistance;
   const genderCategories = data?.genderCategories ?? [];
-  const rankBy = data?.rankBy ?? 'ChipTime';
+  // BUG-24: category columns sort by their own setting; podium reflects the overall setting.
+  const categoryRankBy = data?.categoryRankBy ?? data?.rankBy ?? 'ChipTime';
+  // BUG-24: honour Show Overall / Show Category toggles (default true when absent).
+  const showOverall = data?.showOverall !== false;
+  const showCategory = data?.showCategory !== false;
 
   // BUG-12: never render an "Unknown"/blank category bucket.
   const isRealCategory = (c: GroupedLeaderboardCategory) =>
@@ -545,10 +549,11 @@ function LeaderboardPage() {
           {!loading && !error && (
             <>
               {/* Podium — top 3 overall by chip time */}
-              {genderCategories.length > 0 && (
+              {showOverall && genderCategories.length > 0 && (
                 <LeaderboardPodium genderCategories={genderCategories} />
               )}
 
+              {showCategory && (
               <div
                 style={{
                   display: 'grid',
@@ -560,14 +565,15 @@ function LeaderboardPage() {
                 <GenderColumn
                   label="Male"
                   categories={maleCategories}
-                  rankBy={rankBy}
+                  rankBy={categoryRankBy}
                 />
                 <GenderColumn
                   label="Female"
                   categories={femaleCategories}
-                  rankBy={rankBy}
+                  rankBy={categoryRankBy}
                 />
               </div>
+              )}
 
               {/* Footer */}
               <div

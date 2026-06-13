@@ -153,7 +153,11 @@ function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string
   );
 
   const genderCategories = data?.genderCategories ?? [];
-  const rankBy = data?.rankBy ?? 'ChipTime';
+  // BUG-24: category columns sort by their own setting; podium reflects the overall setting.
+  const categoryRankBy = data?.categoryRankBy ?? data?.rankBy ?? 'ChipTime';
+  // BUG-24: honour Show Overall / Show Category toggles (default true when absent).
+  const showOverall = data?.showOverall !== false;
+  const showCategory = data?.showCategory !== false;
   // BUG-12: never render an "Unknown"/blank category bucket.
   const isRealCategory = (c: GroupedLeaderboardCategory) =>
     !!c.categoryName && c.categoryName.trim().toLowerCase() !== 'unknown';
@@ -185,7 +189,7 @@ function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string
       </div>
 
       {/* Podium */}
-      {!loading && !error && podiumData.length >= 3 && (
+      {showOverall && !loading && !error && podiumData.length >= 3 && (
         <PodiumSection participants={podiumData} />
       )}
 
@@ -201,7 +205,7 @@ function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string
         </div>
       )}
 
-      {!loading && !error && (
+      {showCategory && !loading && !error && (
         <div style={{ border: '1px solid var(--color-border)', borderTop: podiumData.length >= 3 ? 'none' : '1px solid var(--color-border)', borderRadius: '0 0 10px 10px', padding: '1.5rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', alignItems: 'start' }}>
             {/* Male column */}
@@ -214,7 +218,7 @@ function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string
                   const n = (s: string) => { const m = s.match(/\d+/); return m ? parseInt(m[0]) : 999; };
                   return n(a.categoryName) - n(b.categoryName);
                 }).map(({ categoryName, participants }) => (
-                  <CategoryTable key={categoryName} categoryName={categoryName} participants={participants} rankBy={rankBy} />
+                  <CategoryTable key={categoryName} categoryName={categoryName} participants={participants} rankBy={categoryRankBy} />
                 ))}
               </div>
             )}
@@ -228,7 +232,7 @@ function LeaderboardView({ eventId, raceId, bracket, search }: { eventId: string
                   const n = (s: string) => { const m = s.match(/\d+/); return m ? parseInt(m[0]) : 999; };
                   return n(a.categoryName) - n(b.categoryName);
                 }).map(({ categoryName, participants }) => (
-                  <CategoryTable key={categoryName} categoryName={categoryName} participants={participants} rankBy={rankBy} />
+                  <CategoryTable key={categoryName} categoryName={categoryName} participants={participants} rankBy={categoryRankBy} />
                 ))}
               </div>
             )}

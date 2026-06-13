@@ -234,6 +234,13 @@ export interface GroupedLeaderboardResponse {
   raceDate?: string;
   raceDistance?: number;
   rankBy?: string;
+  // BUG-24: Overall and Category sort independently. Each section has its own
+  // self-describing sort label ("ChipTime"/"GunTime"); fall back to rankBy when absent.
+  overallRankBy?: string;
+  categoryRankBy?: string;
+  // BUG-24: Show Overall / Show Category toggles from event/race leaderboard settings.
+  showOverall?: boolean;
+  showCategory?: boolean;
   genderCategories: GroupedLeaderboardGender[];
   overallResults?: GroupedLeaderboardParticipant[];
   totalFinishers?: number;
