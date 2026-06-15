@@ -200,4 +200,18 @@ export class ParticipantService {
         return response.data;
     }
 
+    // Re-ranks the race (Overall/Gender/Category) after a same-race category change.
+    // Cheap path: backend re-ranks every category bucket (the one left and the one joined)
+    // without re-normalizing readings. Route: PUT participants/{eventId}/{raceId}/{participantId}/race-category.
+    static async changeRaceCategory(
+        eventId: string,
+        raceId: string,
+        participantId: string,
+        ageCategory: string
+    ): Promise<ResponseBase<string>> {
+        const url = ServiceUrl.changeRaceCategory(eventId, raceId, participantId);
+        const response = await apiClient.put<ResponseBase<string>>(url, { ageCategory });
+        return response.data;
+    }
+
 }

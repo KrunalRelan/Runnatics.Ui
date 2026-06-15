@@ -43,7 +43,7 @@ export const ServiceUrl = {
     exportParticipants: (eventId: string, raceId: string) => `participants/${eventId}/${raceId}/export`,
     getParticipantDetails: (eventId: string, raceId: string, participantId: string) => `Results/${eventId}/${raceId}/participant/${participantId}/details`,
     getParticipantDetections: (eventId: string, raceId: string, participantId: string) => `participants/${eventId}/${raceId}/${participantId}/detections`,
-    changeRaceCategory: (participantId: string) => `participants/${participantId}/race-category`,
+    changeRaceCategory: (eventId: string, raceId: string, participantId: string) => `participants/${eventId}/${raceId}/${participantId}/race-category`,
     processParticipantResult: (eventId: string, raceId: string, participantId: string) => `participants/${eventId}/${raceId}/${participantId}/process-result`,
     //checkpoints
     searchCheckpoints: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -86,6 +86,21 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
   const [epcRaceId, setEpcRaceId] = useState<string>("");
   const [racesLoading, setRacesLoading] = useState<boolean>(false);
 
+  // Originals captured when the form loads — used to decide which follow-up (if any)
+  // fires after Save: race change → full process; else AgeCategory change → cheap re-rank.
+  const originalRaceIdRef = useRef<string>("");
+  const originalAgeCategoryRef = useRef<string>("");
+
+  // Which step is in flight (drives the dynamic button label / combined progress).
+  type Phase = null | "saving" | "processing" | "reranking";
+  const [phase, setPhase] = useState<Phase>(null);
+
+  // Recoverable half-state: Save committed but the follow-up (process/re-rank) failed.
+  // The participant IS saved; only the recompute failed → offer a Retry, not a red error.
+  const [followUpRetry, setFollowUpRetry] = useState<
+    null | { kind: "process" | "rerank"; message: string }
+  >(null);
+
   // Fetch races when dialog opens and pre-select the race
   useEffect(() => {
     const fetchRaces = async () => {
@@ -155,6 +170,13 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
       // Lock EpcMappingField to the participant's actual current race so that
       // changing the race dropdown does not affect the chip/EPC display.
       setEpcRaceId(raceToSelect);
+
+      // Capture originals for follow-up detection. The ORIGINAL race is the
+      // participant's own race (NOT the raceId tab prop — selecting a different tab
+      // must not look like a move), and the original AgeCategory drives case 2.
+      originalRaceIdRef.current = participant.raceId || "";
+      originalAgeCategoryRef.current = (participant as any).ageCategory || "";
+      setFollowUpRetry(null);
     }
   }, [participant, open, raceId]);
 
@@ -206,28 +228,83 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
     onClose();
   };
 
+  // Extract a human error message from an axios error in the codebase's response shapes.
+  const extractErrorMessage = (err: any, fallback: string): string => {
+    if (err?.response?.data) {
+      const data = err.response.data;
+      if (data.errors && typeof data.errors === "object") {
+        return Object.entries(data.errors)
+          .map(([field, messages]: [string, any]) => {
+            const msgs = Array.isArray(messages) ? messages.join(", ") : messages;
+            return `${field}: ${msgs}`;
+          })
+          .join("; ");
+      }
+      if (data.title || data.detail) return data.detail || data.title;
+      if (typeof data === "string") return data;
+      if (data.message) return data.message;
+    }
+    return fallback;
+  };
+
+  type EditCase = "move" | "recat" | "scalar";
+
+  // Decide what happens on Save from the current form vs the loaded originals.
+  // Race change takes precedence — a full process covers a category change too.
+  const computeEditCase = (): EditCase => {
+    if (selectedRaceId && selectedRaceId !== originalRaceIdRef.current) return "move";
+    if (
+      (formData.ageCategory?.trim() || "") !==
+      (originalAgeCategoryRef.current?.trim() || "")
+    )
+      return "recat";
+    return "scalar";
+  };
+
+  const resolvedEventId = formData.eventId || eventId || "";
+
+  // Fire the post-save recompute. Sequential — only ever called AFTER Save commits.
+  // move  → full ProcessCompleteWorkflowAsync rebuild on the TARGET race.
+  // recat → cheap whole-race re-rank (no re-normalize), same race.
+  const runFollowUp = async (kind: "process" | "rerank") => {
+    const pid = formData.id as string;
+    if (kind === "process") {
+      setPhase("processing");
+      await ParticipantService.processParticipantResult(resolvedEventId, selectedRaceId, pid);
+    } else {
+      setPhase("reranking");
+      await ParticipantService.changeRaceCategory(
+        resolvedEventId,
+        selectedRaceId,
+        pid,
+        formData.ageCategory?.trim() || ""
+      );
+    }
+  };
+
   const handleSubmit = async () => {
     // Validate required fields
     if (!formData.bib || formData.bib.trim() === "") {
       setError("Please enter a Bib Number");
       return;
     }
-
     if (!formData.id) {
       setError("Participant ID is missing");
       return;
     }
-
     if (!selectedRaceId) {
       setError("Race ID is missing");
       return;
     }
 
+    const editCase = computeEditCase();
     setLoading(true);
+    setPhase("saving");
     setError(null);
+    setFollowUpRetry(null);
 
+    // 1. SAVE (always). If this fails, do NOT fire any follow-up — show the save error.
     try {
-      // Call API to edit participant - only send non-empty values
       await ParticipantService.editParticipant(formData.id, {
         bibNumber: formData.bib,
         firstName: formData.firstName?.trim() || undefined,
@@ -242,69 +319,85 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
         ageCategory: formData.ageCategory?.trim() || undefined,
         raceId: selectedRaceId,
       } as any);
-
-      // Auto-generate fullName from firstName and lastName for local state
-      const fullName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim();
-
-      // Create participant object for parent component callback
-      const updatedParticipant: Participant = {
-        ...formData,
-        fullName: fullName || undefined,
-        name: fullName || undefined,
-        raceId: selectedRaceId,
-      };
-
-      // Show success message
-      setSnackbar({
-        open: true,
-        message: "Participant updated successfully!",
-        severity: "success",
-      });
-
-      // Call parent callback to refresh the list
-      onUpdate(updatedParticipant);
-
-      // Close dialog after a short delay to allow user to see the success message
-      setTimeout(() => {
-        handleClose();
-      }, 1500);
     } catch (err: any) {
       console.error("Error editing participant:", err);
-
-      // Extract error message from various possible response formats
-      let errorMessage = "Failed to update participant. Please try again.";
-
-      if (err.response?.data) {
-        const data = err.response.data;
-
-        // Check for validation errors from ASP.NET
-        if (data.errors && typeof data.errors === 'object') {
-          // Format validation errors
-          const validationErrors = Object.entries(data.errors)
-            .map(([field, messages]: [string, any]) => {
-              const msgs = Array.isArray(messages) ? messages.join(', ') : messages;
-              return `${field}: ${msgs}`;
-            })
-            .join('; ');
-          errorMessage = validationErrors;
-        }
-        // Check for title/detail error format
-        else if (data.title || data.detail) {
-          errorMessage = data.detail || data.title;
-        }
-        // Check for simple message string
-        else if (typeof data === 'string') {
-          errorMessage = data;
-        }
-        // Check for message property
-        else if (data.message) {
-          errorMessage = data.message;
-        }
-      }
-
-      setError(errorMessage);
-    } finally {
+      setError(extractErrorMessage(err, "Failed to update participant. Please try again."));
       setLoading(false);
+      setPhase(null);
+      return;
+    }
+
+    // Save committed — refresh the parent list with the new race.
+    const fullName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim();
+    onUpdate({
+      ...formData,
+      fullName: fullName || undefined,
+      name: fullName || undefined,
+      raceId: selectedRaceId,
+    } as Participant);
+
+    // 3. Scalar-only edit → done, no recompute.
+    if (editCase === "scalar") {
+      setSnackbar({ open: true, message: "Participant updated successfully!", severity: "success" });
+      setLoading(false);
+      setPhase(null);
+      setTimeout(() => handleClose(), 1200);
+      return;
+    }
+
+    // 2. Sequential follow-up (move → process, recat → re-rank).
+    const kind = editCase === "move" ? "process" : "rerank";
+    try {
+      await runFollowUp(kind);
+      setSnackbar({
+        open: true,
+        message:
+          editCase === "move"
+            ? "Participant moved and result processed!"
+            : "Participant updated and re-ranked!",
+        severity: "success",
+      });
+      setLoading(false);
+      setPhase(null);
+      setTimeout(() => handleClose(), 1200);
+    } catch (err: any) {
+      // Save SUCCEEDED; only the recompute failed → recoverable. The runner is saved
+      // (moved-but-unprocessed / saved-but-unranked) and re-processable. Offer Retry.
+      console.error("Post-save follow-up failed:", err);
+      setLoading(false);
+      setPhase(null);
+      setFollowUpRetry({
+        kind,
+        message:
+          editCase === "move"
+            ? "Saved — moved to the new race, but processing failed. Retry to rebuild the result."
+            : "Saved — but re-ranking failed. Retry to update the category ranks.",
+      });
+    }
+  };
+
+  // Retry just the failed follow-up (the Save already committed; don't re-save).
+  const handleRetryFollowUp = async () => {
+    if (!followUpRetry) return;
+    const kind = followUpRetry.kind;
+    setLoading(true);
+    setError(null);
+    try {
+      await runFollowUp(kind);
+      setFollowUpRetry(null);
+      setSnackbar({
+        open: true,
+        message: kind === "process" ? "Result processed!" : "Re-ranked!",
+        severity: "success",
+      });
+      setLoading(false);
+      setPhase(null);
+      setTimeout(() => handleClose(), 1200);
+    } catch (err: any) {
+      console.error("Retry of follow-up failed:", err);
+      setLoading(false);
+      setPhase(null);
+      // Keep followUpRetry so the admin can retry again.
     }
   };
 
@@ -328,7 +421,20 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
               <strong>Error:</strong> {error}
             </Alert>
           )}
-          <Stack spacing={2} sx={{ mt: error ? 1 : 2 }}>
+          {followUpRetry && (
+            <Alert
+              severity="warning"
+              sx={{ mb: 2, mt: 2 }}
+              action={
+                <Button color="inherit" size="small" onClick={handleRetryFollowUp} disabled={loading}>
+                  Retry
+                </Button>
+              }
+            >
+              {followUpRetry.message}
+            </Alert>
+          )}
+          <Stack spacing={2} sx={{ mt: error || followUpRetry ? 1 : 2 }}>
             {/* Bib Number - REQUIRED */}
             <TextField
               label="Bib Number"
@@ -505,14 +611,33 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
           <Button onClick={handleClose} variant="outlined" disabled={loading}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={loading || !formData.bib}
-            startIcon={loading ? <CircularProgress size={20} /> : null}
-          >
-            {loading ? "Updating..." : "Update Participant"}
-          </Button>
+          {(() => {
+            const editCase = computeEditCase();
+            const idleLabel =
+              editCase === "move"
+                ? "Save & Process Result"
+                : editCase === "recat"
+                ? "Save & Re-rank"
+                : "Update Participant";
+            const busyLabel =
+              phase === "saving"
+                ? "Saving…"
+                : phase === "processing"
+                ? "Processing…"
+                : phase === "reranking"
+                ? "Re-ranking…"
+                : "Working…";
+            return (
+              <Button
+                onClick={handleSubmit}
+                variant="contained"
+                disabled={loading || !formData.bib}
+                startIcon={loading ? <CircularProgress size={20} /> : null}
+              >
+                {loading ? busyLabel : idleLabel}
+              </Button>
+            );
+          })()}
         </DialogActions>
       </Dialog>
 
