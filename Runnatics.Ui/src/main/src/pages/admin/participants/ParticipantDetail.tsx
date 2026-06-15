@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
@@ -373,6 +373,18 @@ const ParticipantDetail: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Originals captured when the participant loads — decide the post-save follow-up:
+  // race change → full process on target; else AgeCategory change → cheap re-rank.
+  const originalRaceIdRef = useRef<string>("");
+  const originalAgeCategoryRef = useRef<string>("");
+  // Which step is in flight (dynamic button label / combined progress).
+  type SavePhase = null | "saving" | "processing" | "reranking";
+  const [phase, setPhase] = useState<SavePhase>(null);
+  // Recoverable half-state: Save committed but the follow-up failed (runner IS saved).
+  const [followUpRetry, setFollowUpRetry] = useState<
+    null | { kind: "process" | "rerank"; message: string }
+  >(null);
+
   // Delete dialog state
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [deleteParticipantObj, setDeleteParticipantObj] = useState<Participant | null>(null);
@@ -413,6 +425,10 @@ const ParticipantDetail: React.FC = () => {
       setEditRunStatus(participant.status || "");
       setEditGender(toGenderValue(participant.gender || ''));
       setEditRaceId(participant.raceId || raceId || "");
+      // Match editRaceId's initial value so an unchanged race never looks like a move.
+      originalRaceIdRef.current = participant.raceId || raceId || "";
+      originalAgeCategoryRef.current = participant.ageCategory || "";
+      setFollowUpRetry(null);
     }
   }, [participant]);
 
@@ -430,10 +446,60 @@ const ParticipantDetail: React.FC = () => {
     }
   }, [editMode, eventId]);
 
+  // NOTE (tech debt): this save flow is DUPLICATED in the EditParticipant dialog
+  // (EditParticipant.tsx handleSubmit). Two edit surfaces, two separate save handlers —
+  // any change here must be mirrored there. Future pass: extract a shared
+  // save-with-followup helper so they can't drift. Not refactoring now.
+
+  type EditCase = "move" | "recat" | "scalar";
+
+  // Decide the post-save action. Race change takes precedence (full process covers a
+  // category change too).
+  const computeEditCase = (): EditCase => {
+    if (editRaceId && editRaceId !== originalRaceIdRef.current) return "move";
+    if (
+      (editAgeCategory?.trim() || "") !== (originalAgeCategoryRef.current?.trim() || "")
+    )
+      return "recat";
+    return "scalar";
+  };
+
+  // Refresh against the NEW race (editRaceId) — after a move the route raceId is the
+  // STALE source race, which is the current 404.
+  const refreshParticipant = async () => {
+    if (!eventId || !participantId) return;
+    try {
+      const response = await _PS.getParticipantDetails(eventId, editRaceId || raceId || "", participantId);
+      if (response.data.message) setParticipant(response.data.message);
+    } catch {
+      // best-effort refresh; ignore
+    }
+  };
+
+  // Fire the post-save recompute. Only ever called AFTER the edit PUT commits.
+  // move  → full ProcessCompleteWorkflowAsync rebuild on the TARGET race (editRaceId).
+  // recat → cheap whole-race re-rank (no re-normalize), same race.
+  const runFollowUp = async (kind: "process" | "rerank") => {
+    if (!eventId || !participantId) return;
+    if (kind === "process") {
+      setPhase("processing");
+      await _PS.processParticipantResult(eventId, editRaceId, participantId);
+    } else {
+      setPhase("reranking");
+      await _PS.changeRaceCategory(eventId, editRaceId, participantId, editAgeCategory?.trim() || "");
+    }
+  };
+
   const handleSaveEdit = async () => {
     if (!participantId) return;
+
+    const editCase = computeEditCase();
     setIsSaving(true);
     setSaveError(null);
+    setFollowUpRetry(null);
+    setPhase("saving");
+
+    // 1. SAVE (always). If this fails, do NOT fire any follow-up.
     try {
       await _PS.editParticipant(participantId, {
         bibNumber: participant?.bibNumber || "",
@@ -449,17 +515,71 @@ const ParticipantDetail: React.FC = () => {
         loopCount: editLoopCount ? parseInt(editLoopCount, 10) : undefined,
         manualTime: editManualTime || undefined,
       });
-      setSnackbar({ open: true, message: "Participant updated successfully!", severity: "success" });
-      setEditMode(false);
-      // Refresh participant data
-      if (eventId && raceId && participantId) {
-        const response = await _PS.getParticipantDetails(eventId, raceId, participantId);
-        if (response.data.message) setParticipant(response.data.message);
-      }
     } catch (err: any) {
       setSaveError(err.response?.data?.message || err.message || "Failed to save changes.");
-    } finally {
       setIsSaving(false);
+      setPhase(null);
+      return;
+    }
+
+    // 2. Sequential follow-up (move → process, recat → re-rank). Save SUCCEEDED;
+    //    a follow-up failure is recoverable (runner is saved + re-processable).
+    if (editCase !== "scalar") {
+      const kind = editCase === "move" ? "process" : "rerank";
+      try {
+        await runFollowUp(kind);
+      } catch (err: any) {
+        setIsSaving(false);
+        setPhase(null);
+        setEditMode(false);
+        setFollowUpRetry({
+          kind,
+          message:
+            editCase === "move"
+              ? "Saved — moved to the new race, but processing failed. Retry to rebuild the result."
+              : "Saved — but re-ranking failed. Retry to update the category ranks.",
+        });
+        await refreshParticipant();
+        return;
+      }
+    }
+
+    setSnackbar({
+      open: true,
+      message:
+        editCase === "move"
+          ? "Participant moved and result processed!"
+          : editCase === "recat"
+          ? "Participant updated and re-ranked!"
+          : "Participant updated successfully!",
+      severity: "success",
+    });
+    setEditMode(false);
+    setIsSaving(false);
+    setPhase(null);
+    await refreshParticipant();
+  };
+
+  // Retry just the failed follow-up (the Save already committed; don't re-save).
+  const handleRetryFollowUp = async () => {
+    if (!followUpRetry) return;
+    const kind = followUpRetry.kind;
+    setIsSaving(true);
+    try {
+      await runFollowUp(kind);
+      setFollowUpRetry(null);
+      setSnackbar({
+        open: true,
+        message: kind === "process" ? "Result processed!" : "Re-ranked!",
+        severity: "success",
+      });
+      setIsSaving(false);
+      setPhase(null);
+      await refreshParticipant();
+    } catch {
+      setIsSaving(false);
+      setPhase(null);
+      // keep followUpRetry so the admin can retry again
     }
   };
 
@@ -732,15 +852,34 @@ const ParticipantDetail: React.FC = () => {
                 >
                   {isProcessingResult ? "Processing..." : "Process Result"}
                 </Button>
-                <Button
-                  variant="contained"
-                  startIcon={isSaving ? <CircularProgress size={18} color="inherit" /> : <Save />}
-                  onClick={handleSaveEdit}
-                  disabled={isSaving}
-                  color="primary"
-                >
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
+                {(() => {
+                  const editCase = computeEditCase();
+                  const idleLabel =
+                    editCase === "move"
+                      ? "Save & Process Result"
+                      : editCase === "recat"
+                      ? "Save & Re-rank"
+                      : "Save";
+                  const busyLabel =
+                    phase === "saving"
+                      ? "Saving…"
+                      : phase === "processing"
+                      ? "Processing…"
+                      : phase === "reranking"
+                      ? "Re-ranking…"
+                      : "Working…";
+                  return (
+                    <Button
+                      variant="contained"
+                      startIcon={isSaving ? <CircularProgress size={18} color="inherit" /> : <Save />}
+                      onClick={handleSaveEdit}
+                      disabled={isSaving}
+                      color="primary"
+                    >
+                      {isSaving ? busyLabel : idleLabel}
+                    </Button>
+                  );
+                })()}
               </>
             )}
             <Button
@@ -1105,6 +1244,19 @@ const ParticipantDetail: React.FC = () => {
             {saveError && (
               <Alert severity="error" sx={{ mb: 2 }} onClose={() => setSaveError(null)}>
                 {saveError}
+              </Alert>
+            )}
+            {followUpRetry && (
+              <Alert
+                severity="warning"
+                sx={{ mb: 2 }}
+                action={
+                  <Button color="inherit" size="small" onClick={handleRetryFollowUp} disabled={isSaving}>
+                    Retry
+                  </Button>
+                }
+              >
+                {followUpRetry.message}
               </Alert>
             )}
             <Stack spacing={2}>
