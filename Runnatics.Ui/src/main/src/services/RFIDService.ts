@@ -170,7 +170,9 @@ export class RFIDService {
      * @param raceId - The ID of the race  
      * @param participantId - The ID of the participant
      * @param checkpointId - The checkpoint ID
-     * @param time - The manual time string (HH:MM:SS format)
+     * @param crossingLocalDateTime - The crossing date+time in the event's LOCAL timezone,
+     *        no offset (e.g. "2026-05-10T08:39:15"). The server converts it to UTC via
+     *        Event.TimeZone (the same path automatic reads use) and derives elapsed-from-gun.
      * @returns Promise with the response
      */
     static async addManualTime(
@@ -178,18 +180,17 @@ export class RFIDService {
         raceId: string,
         participantId: string,
         checkpointId: string,
-        time: string
+        crossingLocalDateTime: string
     ): Promise<ResponseBase<any>> {
-        // Backend expects elapsed time as milliseconds (FinishTimeMs), not a string
-        const [h = 0, m = 0, s = 0] = time.split(':').map(Number);
-        const finishTimeMs = (h * 3600 + m * 60 + s) * 1000;
+        // Send the full wall-clock crossing date+time (local, no offset). The calendar date is
+        // required because reads can span past midnight; the server owns the IST<->UTC conversion.
 
         // BUG-14: saving a manual finish time re-ranks the entire race server-side, which can
         // exceed the global 30s axios timeout for large races. Allow 120s for this call only
         // (server CommandTimeout is 60s). Other requests keep the default timeout.
         const response: AxiosResponse<ResponseBase<any>> = await apiClient.put(
             ServiceUrl.addManualTime(eventId, raceId, participantId),
-            { finishTimeMs, checkpointId },
+            { crossingLocalDateTime, checkpointId },
             { timeout: 120000 }
         );
 

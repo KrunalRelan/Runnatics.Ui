@@ -674,10 +674,20 @@ const ParticipantDetail: React.FC = () => {
     }
   };
 
+  // Build a "YYYY-MM-DDTHH:mm:ss" value for the datetime-local editor. Reads can cross midnight,
+  // so the editor carries a DATE: default it to the race start's local date and the existing
+  // crossing time-of-day (event-local wall clock, as the API returns it). The admin can adjust both.
+  const toLocalDateTimeInput = (raceStart?: string | null, timeOfDay?: string): string => {
+    const base = raceStart ? new Date(raceStart) : new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const datePart = `${base.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(base.getDate())}`;
+    const [h = "0", m = "0", s = "0"] = (timeOfDay && /^\d{1,2}:\d{2}/.test(timeOfDay) ? timeOfDay : "00:00:00").split(":");
+    return `${datePart}T${pad(Number(h))}:${pad(Number(m))}:${pad(Number(s))}`;
+  };
+
   const handleStartEdit = (checkpointId: string, currentTime: string) => {
-    console.log('handleStartEdit checkpointId:', checkpointId);
     setEditingCheckpointId(checkpointId);
-    setEditTimeValue(currentTime || "");
+    setEditTimeValue(toLocalDateTimeInput(participant?.startTime, currentTime));
   };
 
   const handleCancelEdit = () => {
@@ -1707,17 +1717,18 @@ const ParticipantDetail: React.FC = () => {
                         <Stack direction="row" alignItems="center" spacing={0.5}>
                           <TextField
                             size="small"
+                            type="datetime-local"
                             value={editTimeValue}
                             onChange={(e) => setEditTimeValue(e.target.value)}
-                            placeholder="HH:MM:SS"
                             autoFocus
                             disabled={savingTime}
+                            inputProps={{ step: 1 }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' && checkpointId) handleSaveTime(checkpointId);
                               if (e.key === 'Escape') handleCancelEdit();
                             }}
                             sx={{
-                              width: 130,
+                              width: 210,
                               '& .MuiOutlinedInput-root': {
                                 fontSize: '0.875rem',
                                 fontWeight: 600,
