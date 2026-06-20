@@ -197,6 +197,28 @@ export class RFIDService {
         return response.data;
     }
 
+    /**
+     * Remove a manual-time override for a participant at a checkpoint. Soft-deletes the durable
+     * override and its manual derived rows, recomputes status, and re-ranks the race. The checkpoint
+     * reverts to its automatic chip read on the next reprocess (or goes empty — possibly Finished→DNF —
+     * if it had no underlying raw read).
+     * @param checkpointId - The checkpoint whose manual override is removed.
+     */
+    static async removeManualTime(
+        eventId: string,
+        raceId: string,
+        participantId: string,
+        checkpointId: string
+    ): Promise<ResponseBase<any>> {
+        // Like addManualTime, this re-ranks the whole race server-side — allow 120s for this call only.
+        const response: AxiosResponse<ResponseBase<any>> = await apiClient.delete(
+            ServiceUrl.removeManualTime(eventId, raceId, participantId),
+            { params: { checkpointId }, timeout: 120000 }
+        );
+
+        return response.data;
+    }
+
     static async uploadEPCMapping(
         eventId: string,
         file: File,

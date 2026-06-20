@@ -52,6 +52,7 @@ import {
   Edit,
   Save,
   Close,
+  Restore,
   Delete as DeleteIcon,
 } from "@mui/icons-material";
 import {
@@ -404,6 +405,8 @@ const ParticipantDetail: React.FC = () => {
   const [editingCheckpointId, setEditingCheckpointId] = useState<string | null>(null);
   const [editTimeValue, setEditTimeValue] = useState<string>("");
   const [savingTime, setSavingTime] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<{ checkpointId: string; checkpointName: string; hasRawRead: boolean } | null>(null);
+  const [removingTime, setRemovingTime] = useState(false);
   const [downloadingCertificate, setDownloadingCertificate] = useState(false);
   const [showRfidDuplicates, setShowRfidDuplicates] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
@@ -742,6 +745,49 @@ const ParticipantDetail: React.FC = () => {
       });
     } finally {
       setSavingTime(false);
+    }
+  };
+
+  // A checkpoint has an underlying RAW (hardware) read iff it appears in the detections groups
+  // with at least one detection — detections are raw-only (manual entries never appear there).
+  // If false, removing the manual time leaves the checkpoint empty (runner may become DNF).
+  const checkpointHasRawRead = (checkpointId: string): boolean =>
+    (detections?.checkpoints || []).some(
+      (cp: CheckpointDetectionGroupDto) => cp.checkpointId === checkpointId && (cp.detections?.length ?? 0) > 0
+    );
+
+  const handleRequestRemoveManualTime = (checkpointId: string, checkpointName: string) => {
+    setRemoveTarget({ checkpointId, checkpointName, hasRawRead: checkpointHasRawRead(checkpointId) });
+  };
+
+  const confirmRemoveManualTime = async () => {
+    if (!removeTarget || !eventId || !raceId || !participantId) return;
+    try {
+      setRemovingTime(true);
+      await RFIDService.removeManualTime(eventId, raceId, participantId, removeTarget.checkpointId);
+
+      const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
+      if (response.data.message) {
+        setParticipant(response.data.message);
+        fetchDetections(detectionsCheckpointFilter);
+        setSnackbar({
+          open: true,
+          message: `Manual time removed for ${removeTarget.checkpointName}. Result recalculated and race re-ranked.`,
+          severity: "success",
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: "Removed but could not refresh the display. Please reload the page.",
+          severity: "error",
+        });
+      }
+      setRemoveTarget(null);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || err.message || "Failed to remove manual time. Please try again.";
+      setSnackbar({ open: true, message: errorMessage, severity: "error" });
+    } finally {
+      setRemovingTime(false);
     }
   };
 
@@ -1877,18 +1923,34 @@ const ParticipantDetail: React.FC = () => {
                           </Tooltip>
                         </Stack>
                       ) : (
-                        <Tooltip title="Edit Time" arrow>
-                          <IconButton
-                            size="small"
-                            onClick={() => { if (checkpointId) handleStartEdit(checkpointId, checkpointTime); }}
-                            sx={{ 
-                              color: colors.primary.main,
-                              '&:hover': { bgcolor: alpha(colors.primary.main, 0.1) },
-                            }}
-                          >
-                            <Edit sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                          <Tooltip title="Edit Time" arrow>
+                            <IconButton
+                              size="small"
+                              onClick={() => { if (checkpointId) handleStartEdit(checkpointId, checkpointTime); }}
+                              sx={{
+                                color: colors.primary.main,
+                                '&:hover': { bgcolor: alpha(colors.primary.main, 0.1) },
+                              }}
+                            >
+                              <Edit sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                          {isManual && checkpointId && (
+                            <Tooltip title="Remove manual time (revert to automatic)" arrow>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleRequestRemoveManualTime(checkpointId, checkpointTime.checkpointName || 'this checkpoint')}
+                                sx={{
+                                  color: '#F59E0B',
+                                  '&:hover': { bgcolor: alpha('#F59E0B', 0.1) },
+                                }}
+                              >
+                                <Restore sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Stack>
                       )}
                     </TableCell>
                   </TableRow>
@@ -2779,6 +2841,39 @@ const ParticipantDetail: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setShowRaceCategoryConfirm(false)}>Cancel</Button>
           <Button onClick={handleRaceCategoryConfirm} variant="contained" color="primary">Confirm</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Remove manual time confirmation (warns when the checkpoint has no underlying raw read) */}
+      <Dialog open={!!removeTarget} onClose={() => { if (!removingTime) setRemoveTarget(null); }}>
+        <DialogTitle>Remove manual time?</DialogTitle>
+        <DialogContent>
+          <DialogContentText component="div">
+            {removeTarget?.hasRawRead ? (
+              <span>
+                Remove the manual time for <b>{removeTarget?.checkpointName}</b>? The checkpoint reverts
+                to its automatic chip read on the next reprocess.
+              </span>
+            ) : (
+              <span>
+                <Warning sx={{ fontSize: 18, color: '#F59E0B', verticalAlign: 'middle', mr: 0.5 }} />
+                This removes the <b>only</b> time at <b>{removeTarget?.checkpointName}</b> — there is no
+                underlying chip read, so the runner may become <b>DNF</b>. Continue?
+              </span>
+            )}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRemoveTarget(null)} disabled={removingTime}>Cancel</Button>
+          <Button
+            onClick={confirmRemoveManualTime}
+            color="error"
+            variant="contained"
+            disabled={removingTime}
+            startIcon={removingTime ? <CircularProgress size={16} color="inherit" /> : undefined}
+          >
+            {removingTime ? 'Removing…' : 'Remove'}
+          </Button>
         </DialogActions>
       </Dialog>
 
