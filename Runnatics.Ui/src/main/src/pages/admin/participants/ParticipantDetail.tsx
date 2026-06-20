@@ -399,8 +399,6 @@ const ParticipantDetail: React.FC = () => {
   const [showRaceCategoryConfirm, setShowRaceCategoryConfirm] = useState(false);
 
   // Process Result confirmation dialog (UI-5b)
-  const [showProcessResultConfirm, setShowProcessResultConfirm] = useState(false);
-  const [isProcessingResult, setIsProcessingResult] = useState(false);
 
   // Inline time editing state
   const [editingCheckpointId, setEditingCheckpointId] = useState<string | null>(null);
@@ -781,24 +779,6 @@ const ParticipantDetail: React.FC = () => {
     setEditRaceId(pendingRaceId);
   };
 
-  // Handle process result (UI-5b)
-  const handleProcessResult = async () => {
-    if (!eventId || !raceId || !participantId) return;
-    setShowProcessResultConfirm(false);
-    try {
-      setIsProcessingResult(true);
-      await _PS.processParticipantResult(eventId, raceId, participantId);
-      setSnackbar({ open: true, message: "Result reprocessed.", severity: "success" });
-      // Refresh participant data
-      const response = await _PS.getParticipantDetails(eventId, raceId, participantId);
-      if (response.data.message) setParticipant(response.data.message);
-    } catch (err: any) {
-      setSnackbar({ open: true, message: err.response?.data?.message || "Failed to reprocess result.", severity: "error" });
-    } finally {
-      setIsProcessingResult(false);
-    }
-  };
-
   if (loading) {
     return (
       <PageContainer>
@@ -868,23 +848,7 @@ const ParticipantDetail: React.FC = () => {
                 >
                   Cancel
                 </Button>
-                <Button
-                  variant="outlined"
-                  color="secondary"
-                  startIcon={isProcessingResult ? <CircularProgress size={18} color="inherit" /> : undefined}
-                  onClick={() => setShowProcessResultConfirm(true)}
-                  disabled={isProcessingResult || isSaving}
-                >
-                  {isProcessingResult ? "Processing..." : "Process Result"}
-                </Button>
                 {(() => {
-                  const editCase = computeEditCase();
-                  const idleLabel =
-                    editCase === "move"
-                      ? "Save & Process Result"
-                      : editCase === "recat"
-                      ? "Save & Re-rank"
-                      : "Save";
                   const busyLabel =
                     phase === "saving"
                       ? "Saving…"
@@ -901,7 +865,7 @@ const ParticipantDetail: React.FC = () => {
                       disabled={isSaving}
                       color="primary"
                     >
-                      {isSaving ? busyLabel : idleLabel}
+                      {isSaving ? busyLabel : "Save & Process Result"}
                     </Button>
                   );
                 })()}
@@ -2815,20 +2779,6 @@ const ParticipantDetail: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setShowRaceCategoryConfirm(false)}>Cancel</Button>
           <Button onClick={handleRaceCategoryConfirm} variant="contained" color="primary">Confirm</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Process Result Confirmation Dialog (UI-5b) */}
-      <Dialog open={showProcessResultConfirm} onClose={() => setShowProcessResultConfirm(false)}>
-        <DialogTitle>Reprocess Result?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Reprocess the result for BIB {participant?.bibNumber}? Other participants are not affected.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowProcessResultConfirm(false)}>Cancel</Button>
-          <Button onClick={handleProcessResult} variant="contained" color="primary">Confirm</Button>
         </DialogActions>
       </Dialog>
 
