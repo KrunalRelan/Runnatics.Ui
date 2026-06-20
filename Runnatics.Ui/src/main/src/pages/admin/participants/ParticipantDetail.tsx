@@ -724,7 +724,7 @@ const ParticipantDetail: React.FC = () => {
         setParticipant(response.data.message);
         setEditingCheckpointId(null);
         setEditTimeValue("");
-        setSnackbar({ open: true, message: `Manual time saved for ${checkpointName}. Result recalculated.`, severity: "success" });
+        setSnackbar({ open: true, message: `Manual time saved for ${checkpointName}. Result recalculated and race re-ranked.`, severity: "success" });
         // Refresh detections
         fetchDetections(detectionsCheckpointFilter);
       } else {
@@ -1883,7 +1883,7 @@ const ParticipantDetail: React.FC = () => {
                     <TableCell align="center">
                       {editingCheckpointId === checkpointId ? (
                         <Stack direction="row" spacing={0.5} justifyContent="center">
-                          <Tooltip title="Save" arrow>
+                          <Tooltip title="Save & Process Result" arrow>
                             <span>
                               <IconButton
                                 size="small"
