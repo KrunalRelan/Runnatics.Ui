@@ -26,6 +26,7 @@ import {
   IconButton,
   Snackbar,
   Alert,
+  Switch,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -2267,46 +2268,42 @@ const ParticipantDetail: React.FC = () => {
                           <TableCell align="center">
                             {r.checkpointId && (() => {
                               const candidateCount = candidateCountByCheckpoint.get(r.checkpointId!) ?? 0;
+                              // A toggle only makes sense where there's a genuine choice (≥2 reads at the
+                              // checkpoint). The CURRENT crossing read always shows its switch (so you can
+                              // see/flip it) even if it's the lone normalized one.
+                              if (candidateCount < 2 && !isNorm) return null;
+
                               const busy = crossingActionId === r.id;
-                              // Current crossing: offer "revert to auto" only when it's an override
-                              // (not the dedup default — that's already automatic).
-                              if (isNorm) {
-                                return r.hasActiveOverride ? (
-                                  <Tooltip title="Revert this checkpoint to its automatic crossing">
-                                    <span>
-                                      <Button
-                                        size="small" variant="text" color="warning" disabled={busy}
-                                        onClick={() => handleRevertCrossing(r)}
-                                        startIcon={<Restore sx={{ fontSize: 15 }} />}
-                                        sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 0, py: 0.25 }}
-                                      >
-                                        {busy ? '…' : 'Revert'}
-                                      </Button>
-                                    </span>
-                                  </Tooltip>
-                                ) : (
-                                  <Tooltip title="Automatic crossing (dedup pick)">
-                                    <CheckCircle sx={{ fontSize: 16, color: colors.success.main, verticalAlign: 'middle' }} />
-                                  </Tooltip>
-                                );
-                              }
-                              // Other reads at a checkpoint that has a genuine choice: offer "set as crossing".
-                              if (candidateCount >= 2) {
-                                return (
-                                  <Tooltip title="Use this read as the crossing for its checkpoint">
-                                    <span>
-                                      <Button
-                                        size="small" variant="outlined" disabled={busy}
-                                        onClick={() => handleSetCrossing(r)}
-                                        sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 0, py: 0.25, whiteSpace: 'nowrap' }}
-                                      >
-                                        {busy ? '…' : 'Set as crossing'}
-                                      </Button>
-                                    </span>
-                                  </Tooltip>
-                                );
-                              }
-                              return null;
+                              // ON = this read is the crossing. Turning an OFF read ON makes it the crossing.
+                              // Turning the current override OFF reverts to the automatic dedup pick. The
+                              // dedup default (normalized but not an override) is ON + locked — you switch
+                              // the crossing by turning ANOTHER read on, not by turning the auto pick off.
+                              const lockedAuto = isNorm && !r.hasActiveOverride;
+                              const tip = isNorm
+                                ? (r.hasActiveOverride
+                                    ? 'Selected crossing (override) — turn off to revert to the automatic pick'
+                                    : 'Automatic crossing (dedup pick) — turn another read on to override it')
+                                : 'Make this read the crossing for its checkpoint';
+
+                              const onToggle = () => {
+                                if (busy) return;
+                                if (!isNorm) { handleSetCrossing(r); return; }      // OFF → ON: set as crossing
+                                if (r.hasActiveOverride) { handleRevertCrossing(r); } // ON(override) → OFF: revert
+                              };
+
+                              return (
+                                <Tooltip title={tip}>
+                                  <span>
+                                    <Switch
+                                      size="small"
+                                      checked={isNorm}
+                                      disabled={busy || lockedAuto}
+                                      onChange={onToggle}
+                                      color="success"
+                                    />
+                                  </span>
+                                </Tooltip>
+                              );
                             })()}
                           </TableCell>
                         </TableRow>
