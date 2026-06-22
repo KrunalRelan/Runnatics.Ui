@@ -407,6 +407,8 @@ const ParticipantDetail: React.FC = () => {
   const [savingTime, setSavingTime] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<{ checkpointId: string; checkpointName: string; hasRawRead: boolean } | null>(null);
   const [removingTime, setRemovingTime] = useState(false);
+  // Raw-read id whose "set as crossing" / "revert to auto" action is in flight (disables that row's control).
+  const [crossingActionId, setCrossingActionId] = useState<string | null>(null);
   const [downloadingCertificate, setDownloadingCertificate] = useState(false);
   const [showRfidDuplicates, setShowRfidDuplicates] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
@@ -788,6 +790,54 @@ const ParticipantDetail: React.FC = () => {
       setSnackbar({ open: true, message: errorMessage, severity: "error" });
     } finally {
       setRemovingTime(false);
+    }
+  };
+
+  // "Choose which raw read is the crossing" — promote this read to the crossing for its OWN checkpoint.
+  // Writes a chosen-read override (durable, revertable). The server validates the read is assigned to
+  // that checkpoint and belongs to this participant. crossingLocalDateTime is unused for chosen reads.
+  const handleSetCrossing = async (read: RfidRawReadingDto) => {
+    if (!eventId || !raceId || !participantId || !read.checkpointId) return;
+    try {
+      setCrossingActionId(read.id);
+      await RFIDService.addManualTime(eventId, raceId, participantId, read.checkpointId, '', read.id);
+      const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
+      if (response.data.message) {
+        setParticipant(response.data.message);
+        fetchDetections(detectionsCheckpointFilter);
+        setSnackbar({ open: true, message: `Crossing set to the ${read.localTime} read for ${read.checkpoint ?? 'this checkpoint'}. Result recalculated and race re-ranked.`, severity: "success" });
+      } else {
+        setSnackbar({ open: true, message: "Crossing set but could not refresh the display. Please reload the page.", severity: "error" });
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || err.message || "Failed to set crossing. Please try again.";
+      setSnackbar({ open: true, message: errorMessage, severity: "error" });
+    } finally {
+      setCrossingActionId(null);
+    }
+  };
+
+  // Revert a chosen-read (or typed) crossing back to the automatic dedup pick: soft-deletes the
+  // override and lets the pipeline re-pick. Honors "cycle back to auto = revert, not a redundant
+  // override". A chosen read always has an underlying raw read, so reverting simply returns the auto pick.
+  const handleRevertCrossing = async (read: RfidRawReadingDto) => {
+    if (!eventId || !raceId || !participantId || !read.checkpointId) return;
+    try {
+      setCrossingActionId(read.id);
+      await RFIDService.removeManualTime(eventId, raceId, participantId, read.checkpointId);
+      const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
+      if (response.data.message) {
+        setParticipant(response.data.message);
+        fetchDetections(detectionsCheckpointFilter);
+        setSnackbar({ open: true, message: `Reverted to the automatic crossing for ${read.checkpoint ?? 'this checkpoint'}. Result recalculated and race re-ranked.`, severity: "success" });
+      } else {
+        setSnackbar({ open: true, message: "Reverted but could not refresh the display. Please reload the page.", severity: "error" });
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || err.message || "Failed to revert crossing. Please try again.";
+      setSnackbar({ open: true, message: errorMessage, severity: "error" });
+    } finally {
+      setCrossingActionId(null);
     }
   };
 
@@ -2084,6 +2134,12 @@ const ParticipantDetail: React.FC = () => {
           ? (showRfidDuplicates ? rawReadings : rawReadings.filter(r => !r.isDuplicate || r.isNormalized))
           : [];
 
+        // Candidate reads per checkpoint — a checkpoint with >1 assigned read offers a choice of crossing.
+        const candidateCountByCheckpoint = new Map<string, number>();
+        for (const r of rawReadings) {
+          if (r.checkpointId) candidateCountByCheckpoint.set(r.checkpointId, (candidateCountByCheckpoint.get(r.checkpointId) ?? 0) + 1);
+        }
+
         const thCell = { fontWeight: 700, color: colors.text.primary, py: 1, fontSize: '0.8125rem' };
 
         return (
@@ -2135,6 +2191,7 @@ const ParticipantDetail: React.FC = () => {
                       <TableCell sx={thCell}>Gun Time</TableCell>
                       <TableCell sx={thCell}>Net Time</TableCell>
                       <TableCell sx={thCell}>Chip ID</TableCell>
+                      <TableCell sx={thCell} align="center">Crossing</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -2207,6 +2264,51 @@ const ParticipantDetail: React.FC = () => {
                               {r.chipId || 'N/A'}
                             </Typography>
                           </TableCell>
+                          <TableCell align="center">
+                            {r.checkpointId && (() => {
+                              const candidateCount = candidateCountByCheckpoint.get(r.checkpointId!) ?? 0;
+                              const busy = crossingActionId === r.id;
+                              // Current crossing: offer "revert to auto" only when it's an override
+                              // (not the dedup default — that's already automatic).
+                              if (isNorm) {
+                                return r.hasActiveOverride ? (
+                                  <Tooltip title="Revert this checkpoint to its automatic crossing">
+                                    <span>
+                                      <Button
+                                        size="small" variant="text" color="warning" disabled={busy}
+                                        onClick={() => handleRevertCrossing(r)}
+                                        startIcon={<Restore sx={{ fontSize: 15 }} />}
+                                        sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 0, py: 0.25 }}
+                                      >
+                                        {busy ? '…' : 'Revert'}
+                                      </Button>
+                                    </span>
+                                  </Tooltip>
+                                ) : (
+                                  <Tooltip title="Automatic crossing (dedup pick)">
+                                    <CheckCircle sx={{ fontSize: 16, color: colors.success.main, verticalAlign: 'middle' }} />
+                                  </Tooltip>
+                                );
+                              }
+                              // Other reads at a checkpoint that has a genuine choice: offer "set as crossing".
+                              if (candidateCount >= 2) {
+                                return (
+                                  <Tooltip title="Use this read as the crossing for its checkpoint">
+                                    <span>
+                                      <Button
+                                        size="small" variant="outlined" disabled={busy}
+                                        onClick={() => handleSetCrossing(r)}
+                                        sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 0, py: 0.25, whiteSpace: 'nowrap' }}
+                                      >
+                                        {busy ? '…' : 'Set as crossing'}
+                                      </Button>
+                                    </span>
+                                  </Tooltip>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </TableCell>
                         </TableRow>
                       );
                     }) : (participant.rfidReadings || []).map((reading: RfidReadingDetail) => {
@@ -2241,6 +2343,7 @@ const ParticipantDetail: React.FC = () => {
                               {reading.chipId || 'N/A'}
                             </Typography>
                           </TableCell>
+                          <TableCell align="center" />
                         </TableRow>
                       );
                     })}

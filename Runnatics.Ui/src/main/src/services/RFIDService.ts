@@ -180,17 +180,22 @@ export class RFIDService {
         raceId: string,
         participantId: string,
         checkpointId: string,
-        crossingLocalDateTime: string
+        crossingLocalDateTime: string,
+        chosenRawReadId?: string
     ): Promise<ResponseBase<any>> {
         // Send the full wall-clock crossing date+time (local, no offset). The calendar date is
         // required because reads can span past midnight; the server owns the IST<->UTC conversion.
+        //
+        // "Choose which raw read is the crossing": when chosenRawReadId is supplied the server uses
+        // that existing hardware read's time as the crossing (crossingLocalDateTime is ignored) and
+        // records it as a chosen-read override — durable, revertable, one row per (participant, checkpoint).
 
         // BUG-14: saving a manual finish time re-ranks the entire race server-side, which can
         // exceed the global 30s axios timeout for large races. Allow 120s for this call only
         // (server CommandTimeout is 60s). Other requests keep the default timeout.
         const response: AxiosResponse<ResponseBase<any>> = await apiClient.put(
             ServiceUrl.addManualTime(eventId, raceId, participantId),
-            { crossingLocalDateTime, checkpointId },
+            { crossingLocalDateTime, checkpointId, chosenRawReadId },
             { timeout: 120000 }
         );
 
