@@ -412,7 +412,7 @@ const ParticipantDetail: React.FC = () => {
   const [crossingActionId, setCrossingActionId] = useState<string | null>(null);
   const [downloadingCertificate, setDownloadingCertificate] = useState(false);
   const [showRfidDuplicates, setShowRfidDuplicates] = useState(false);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "info" }>({
     open: false,
     message: "",
     severity: "success",
@@ -2135,12 +2135,6 @@ const ParticipantDetail: React.FC = () => {
           ? (showRfidDuplicates ? rawReadings : rawReadings.filter(r => !r.isDuplicate || r.isNormalized))
           : [];
 
-        // Candidate reads per checkpoint — a checkpoint with >1 assigned read offers a choice of crossing.
-        const candidateCountByCheckpoint = new Map<string, number>();
-        for (const r of rawReadings) {
-          if (r.checkpointId) candidateCountByCheckpoint.set(r.checkpointId, (candidateCountByCheckpoint.get(r.checkpointId) ?? 0) + 1);
-        }
-
         const thCell = { fontWeight: 700, color: colors.text.primary, py: 1, fontSize: '0.8125rem' };
 
         return (
@@ -2266,29 +2260,37 @@ const ParticipantDetail: React.FC = () => {
                             </Typography>
                           </TableCell>
                           <TableCell align="center">
-                            {r.checkpointId && (() => {
-                              const candidateCount = candidateCountByCheckpoint.get(r.checkpointId!) ?? 0;
-                              // A toggle only makes sense where there's a genuine choice (≥2 reads at the
-                              // checkpoint). The CURRENT crossing read always shows its switch (so you can
-                              // see/flip it) even if it's the lone normalized one.
-                              if (candidateCount < 2 && !isNorm) return null;
-
+                            {(() => {
                               const busy = crossingActionId === r.id;
-                              // ON = this read is the crossing. Turning an OFF read ON makes it the crossing.
-                              // Turning the current override OFF reverts to the automatic dedup pick. The
-                              // dedup default (normalized but not an override) is ON + locked — you switch
-                              // the crossing by turning ANOTHER read on, not by turning the auto pick off.
-                              const lockedAuto = isNorm && !r.hasActiveOverride;
+                              // Unassigned read (no checkpoint) can't be a crossing — show it OFF + locked.
+                              if (!r.checkpointId) {
+                                return (
+                                  <Tooltip title="Unassigned read — assign it to a checkpoint before it can be the crossing">
+                                    <span><Switch size="small" checked={false} disabled color="success" /></span>
+                                  </Tooltip>
+                                );
+                              }
+
+                              // ON = this read is the crossing for its checkpoint. Only one read per
+                              // checkpoint can be ON; turning one ON turns the others OFF (server-enforced).
                               const tip = isNorm
                                 ? (r.hasActiveOverride
-                                    ? 'Selected crossing (override) — turn off to revert to the automatic pick'
-                                    : 'Automatic crossing (dedup pick) — turn another read on to override it')
+                                    ? 'Selected crossing — turn off to revert to the automatic pick'
+                                    : 'Automatic crossing (dedup pick) — turn another read on to change it')
                                 : 'Make this read the crossing for its checkpoint';
 
                               const onToggle = () => {
                                 if (busy) return;
-                                if (!isNorm) { handleSetCrossing(r); return; }      // OFF → ON: set as crossing
-                                if (r.hasActiveOverride) { handleRevertCrossing(r); } // ON(override) → OFF: revert
+                                if (!isNorm) {
+                                  // OFF → ON: make this read the crossing.
+                                  handleSetCrossing(r);
+                                } else if (r.hasActiveOverride) {
+                                  // ON (override) → OFF: revert to the automatic pick.
+                                  handleRevertCrossing(r);
+                                } else {
+                                  // ON (automatic pick) → can't be unset directly; pick another read instead.
+                                  setSnackbar({ open: true, message: 'This is the automatic crossing. Turn another read on to change it.', severity: 'info' });
+                                }
                               };
 
                               return (
@@ -2297,7 +2299,7 @@ const ParticipantDetail: React.FC = () => {
                                     <Switch
                                       size="small"
                                       checked={isNorm}
-                                      disabled={busy || lockedAuto}
+                                      disabled={busy}
                                       onChange={onToggle}
                                       color="success"
                                     />
