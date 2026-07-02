@@ -736,6 +736,11 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
 
   const [clearingResults, setClearingResults] = useState<boolean>(false);
 
+  // Page-level busy lock: while Process Result OR Clear Processed Result is running, EVERY
+  // action on this page is disabled (the two heavy operations mutate the same pipeline data —
+  // clicking one while the other runs, or editing participants mid-run, races the server job).
+  const resultsBusy = processingResults || clearingResults;
+
   // Column visibility state — keys match staticColumns field/headerName
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [colVisAnchor, setColVisAnchor] = useState<null | HTMLElement>(null);
@@ -816,6 +821,8 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
             }}
             onClick={(e) => {
               e.stopPropagation();
+              // Inert while Process/Clear runs — same page-level busy lock as the buttons
+              if (resultsBusy) return;
               if (participant?.id) {
                 navigate(
                   `/events/event-details/${eventId}/race/${raceId}/participant/${participant.id}?mode=edit`
@@ -954,6 +961,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               handleViewParticipant(params.data);
             }}
             title="View Details"
+            disabled={resultsBusy}
           >
             <Visibility fontSize="small" />
           </IconButton>
@@ -965,6 +973,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               handleEditParticipant(params.data);
             }}
             title="Edit"
+            disabled={resultsBusy}
           >
             <Edit fontSize="small" />
           </IconButton>
@@ -976,6 +985,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               handleDeleteParticipant(params.data);
             }}
             title="Delete"
+            disabled={resultsBusy}
           >
             <Delete fontSize="small" />
           </IconButton>
@@ -1094,6 +1104,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               startIcon={<Add />}
               sx={{ textTransform: "none", fontWeight: 500 }}
               onClick={handleOpenAddDialog}
+              disabled={resultsBusy}
             >
               Add Participant
             </Button>
@@ -1102,6 +1113,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               startIcon= {<ViewWeek/>}
               sx={{ textTransform: "none", fontWeight: 500 }}
               onClick={handleOpenAddRangeDialog}
+              disabled={resultsBusy}
             >
               Add Participant Range
             </Button>
@@ -1110,6 +1122,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               startIcon={<FileUpload />}
               sx={{ textTransform: "none", fontWeight: 500 }}
               onClick={handleOpenBulkUploadDialog}
+              disabled={resultsBusy}
             >
               Bulk Upload
             </Button>
@@ -1118,6 +1131,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               startIcon={<FileUpload />}
               sx={{ textTransform: "none", fontWeight: 500 }}
               onClick={handleOpenUpdateByBibDialog}
+              disabled={resultsBusy}
             >
               Update by Bib
             </Button>
@@ -1126,6 +1140,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               startIcon={<FileDownload />}
               sx={{ textTransform: "none", fontWeight: 500 }}
               onClick={handleExportCsv}
+              disabled={resultsBusy}
             >
               Export
             </Button>
@@ -1134,6 +1149,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               startIcon={<ViewColumn />}
               sx={{ textTransform: "none", fontWeight: 500 }}
               onClick={(e) => setColVisAnchor(e.currentTarget)}
+              disabled={resultsBusy}
             >
               Columns
             </Button>
@@ -1142,8 +1158,9 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               color="success"
               sx={{ textTransform: "none", fontWeight: 500 }}
               onClick={handleProcessResults}
-              disabled={processingResults || !hasEpcMapped}
-              title={!hasEpcMapped ? "No EPC data mapped yet" : undefined}
+              disabled={resultsBusy || !hasEpcMapped}
+              title={!hasEpcMapped ? "No EPC data mapped yet"
+                : clearingResults ? "Wait for Clear Processed Result to finish" : undefined}
             >
               {processingResults ? "Processing..." : "Process Result"}
             </Button>
@@ -1153,7 +1170,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               startIcon={<TableChart />}
               sx={{ textTransform: "none", fontWeight: 500 }}
               onClick={handleExportResultsExcel}
-              disabled={exportingResults || !hasProcessedResults}
+              disabled={resultsBusy || exportingResults || !hasProcessedResults}
               title={!hasProcessedResults ? "No processed results available" : "Export leaderboard results as Excel"}
             >
               {exportingResults ? "Exporting..." : "Export Results (Excel)"}
@@ -1163,8 +1180,9 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               color="error"
               sx={{ textTransform: "none", fontWeight: 500 }}
               onClick={handleClearProcessedResults}
-              disabled={clearingResults || !hasEpcMapped}
-              title={!hasEpcMapped ? "No EPC data mapped yet" : undefined}
+              disabled={resultsBusy || !hasEpcMapped}
+              title={!hasEpcMapped ? "No EPC data mapped yet"
+                : processingResults ? "Wait for Process Result to finish" : undefined}
             >
               {clearingResults ? "Clearing..." : "Clear Processed Result"}
             </Button>
@@ -1250,6 +1268,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
             <Button
               variant="outlined"
               onClick={handleResetFilters}
+              disabled={resultsBusy}
               sx={{
                 minWidth: 90,
                 textTransform: "none",
