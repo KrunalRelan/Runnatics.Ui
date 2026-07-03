@@ -68,7 +68,6 @@ import {
 import { ParticipantService as _PS } from "@/main/src/services/ParticipantService";
 import { RaceService } from "@/main/src/services/RaceService";
 import { Race } from "@/main/src/models/races/Race";
-import { ParticipantDetectionsResponse, CheckpointDetectionGroupDto } from "@/main/src/models/participants/ParticipantDetectionsResponse";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -405,10 +404,6 @@ const ParticipantDetail: React.FC = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [deleteParticipantObj, setDeleteParticipantObj] = useState<Participant | null>(null);
 
-  // Detections state (UI-1)
-  const [detections, setDetections] = useState<ParticipantDetectionsResponse | null>(null);
-  const [detectionsLoading, setDetectionsLoading] = useState(false);
-  const [detectionsCheckpointFilter, setDetectionsCheckpointFilter] = useState<string>('');
 
   // Race category change confirmation dialog (UI-5a)
   const [pendingRaceId, setPendingRaceId] = useState<string>('');
@@ -436,7 +431,7 @@ const ParticipantDetail: React.FC = () => {
   const [savingCrossings, setSavingCrossings] = useState(false);
   const [downloadingCertificate, setDownloadingCertificate] = useState(false);
   const [showRfidDuplicates, setShowRfidDuplicates] = useState(false);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "info" }>({
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "info" | "warning" }>({
     open: false,
     message: "",
     severity: "success",
@@ -787,8 +782,6 @@ const ParticipantDetail: React.FC = () => {
             : `Manual time saved for ${checkpointName}. Result recalculated and race re-ranked.`,
           severity: warning ? "warning" : "success",
         });
-        // Refresh detections
-        fetchDetections(detectionsCheckpointFilter);
       } else {
         setSnackbar({
           open: true,
@@ -809,12 +802,13 @@ const ParticipantDetail: React.FC = () => {
     }
   };
 
-  // A checkpoint has an underlying RAW (hardware) read iff it appears in the detections groups
-  // with at least one detection — detections are raw-only (manual entries never appear there).
-  // If false, removing the manual time leaves the checkpoint empty (runner may become DNF).
+  // A checkpoint has an underlying RAW (hardware) read iff a non-manual raw reading is
+  // assigned to it — derived from the readings already on the page (the detections endpoint
+  // this used to query returned the same raw-only data). If false, removing the manual time
+  // leaves the checkpoint empty (runner may become DNF).
   const checkpointHasRawRead = (checkpointId: string): boolean =>
-    (detections?.checkpoints || []).some(
-      (cp: CheckpointDetectionGroupDto) => cp.checkpointId === checkpointId && (cp.detections?.length ?? 0) > 0
+    (participant?.rawRfidTagReadings ?? []).some(
+      (r: RfidRawReadingDto) => r.checkpointId === checkpointId && !r.isManual
     );
 
   const handleRequestRemoveManualTime = (checkpointId: string, checkpointName: string) => {
@@ -830,7 +824,6 @@ const ParticipantDetail: React.FC = () => {
       const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
       if (response.data.message) {
         setParticipant(response.data.message);
-        fetchDetections(detectionsCheckpointFilter);
         setSnackbar({
           open: true,
           message: `Manual time removed for ${removeTarget.checkpointName}. Result recalculated and race re-ranked.`,
@@ -969,7 +962,6 @@ const ParticipantDetail: React.FC = () => {
       setPendingTargets({});
       const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
       if (response.data.message) setParticipant(response.data.message);
-      fetchDetections(detectionsCheckpointFilter);
       const noteSuffix = notes.length ? ` ${notes.join(' ')}` : '';
       setSnackbar({
         open: true,
@@ -987,7 +979,6 @@ const ParticipantDetail: React.FC = () => {
       try {
         const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
         if (response.data.message) setParticipant(response.data.message);
-        fetchDetections(detectionsCheckpointFilter);
       } catch {
         // best-effort refresh; the error snackbar above already tells the admin to review
       }
@@ -995,27 +986,6 @@ const ParticipantDetail: React.FC = () => {
       setSavingCrossings(false);   // never leave the panel disabled
     }
   };
-
-  // Fetch detections (UI-1b)
-  const fetchDetections = async (cpId?: string) => {
-    if (!eventId || !raceId || !participantId) return;
-    try {
-      setDetectionsLoading(true);
-      const res = await _PS.getParticipantDetections(eventId, raceId, participantId, cpId || undefined);
-      if (res.message) setDetections(res.message);
-    } catch {
-      // silently fail
-    } finally {
-      setDetectionsLoading(false);
-    }
-  };
-
-  // Load detections when participant loads
-  useEffect(() => {
-    if (participant && eventId && raceId && participantId) {
-      fetchDetections('');
-    }
-  }, [participant?.id]);
 
   // Handle race category change (UI-5a)
   const handleRaceIdChange = (newRaceId: string) => {
@@ -2172,114 +2142,6 @@ const ParticipantDetail: React.FC = () => {
         </TableContainer>
       </Card>
 
-      {/* Detections Section (UI-1b) */}
-      <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5, color: colors.text.primary, fontSize: '1.25rem' }}>
-        <Nfc sx={{ mr: 1, verticalAlign: 'middle' }} />
-        Detections by Checkpoint
-      </Typography>
-      {/* Checkpoint filter */}
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-        <FormControl size="small" sx={{ minWidth: 220 }}>
-          <InputLabel>All Checkpoints</InputLabel>
-          <Select
-            value={detectionsCheckpointFilter}
-            label="All Checkpoints"
-            onChange={(e: SelectChangeEvent) => {
-              setDetectionsCheckpointFilter(e.target.value);
-              fetchDetections(e.target.value || undefined);
-            }}
-          >
-            <MenuItem value="">All Checkpoints</MenuItem>
-            {(detections?.checkpoints || []).map((cp: CheckpointDetectionGroupDto) => (
-              <MenuItem key={cp.checkpointId} value={cp.checkpointId}>{cp.checkpointName}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        {detectionsLoading && <CircularProgress size={20} />}
-      </Stack>
-      {detections && (
-        <Card sx={{ mb: 4, border: `1px solid ${colors.border.light}`, background: colors.background.paper, borderRadius: '12px', overflow: 'hidden' }}>
-          {detectionsLoading ? (
-            <Box sx={{ p: 3, textAlign: 'center' }}><CircularProgress /></Box>
-          ) : (
-            (detections.checkpoints || [])
-              .filter(cp => !detectionsCheckpointFilter || cp.checkpointId === detectionsCheckpointFilter)
-              .map((cp: CheckpointDetectionGroupDto) => (
-                <Box key={cp.checkpointId}>
-                  <Box sx={{ px: 2, py: 1.5, bgcolor: alpha(colors.primary.main, isDark ? 0.1 : 0.06), borderBottom: `1px solid ${colors.border.light}` }}>
-                    <Typography variant="subtitle2" fontWeight={700}>
-                      {cp.checkpointName}
-                      {cp.isMandatory && <Chip label="Mandatory" size="small" sx={{ ml: 1, height: 18, fontSize: '0.65rem', fontWeight: 700 }} />}
-                      <Typography component="span" variant="caption" sx={{ ml: 1.5, color: colors.text.secondary }}>
-                        {cp.detections.length} detections
-                      </Typography>
-                    </Typography>
-                  </Box>
-                  <TableContainer sx={{ maxHeight: 300 }}>
-                    <Table stickyHeader size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Read Time (UTC)</TableCell>
-                          <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Reader Name</TableCell>
-                          <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Device</TableCell>
-                          <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>RSSI</TableCell>
-                          <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Process Result</TableCell>
-                          <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Manual Time</TableCell>
-                          <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Notes</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {cp.detections
-                          .slice()
-                          .sort((a, b) => a.readTimeUtc.localeCompare(b.readTimeUtc))
-                          .map(det => (
-                            <TableRow key={det.readingId} sx={{ '&:hover': { bgcolor: alpha(colors.primary.main, 0.04) } }}>
-                              <TableCell>
-                                <Typography variant="body2" fontWeight={det.isManualEntry ? 700 : 400}>
-                                  {det.readTimeUtc ? new Date(det.readTimeUtc).toLocaleString() : '-'}
-                                </Typography>
-                              </TableCell>
-                              <TableCell><Typography variant="body2">{det.readerName || '-'}</Typography></TableCell>
-                              <TableCell><Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{det.deviceId || '-'}</Typography></TableCell>
-                              <TableCell><Typography variant="body2">{det.rssiDbm != null ? `${det.rssiDbm} dBm` : '-'}</Typography></TableCell>
-                              <TableCell>
-                                <Chip
-                                  label={det.processResult || 'Unknown'}
-                                  size="small"
-                                  color={det.processResult?.toLowerCase().includes('ok') || det.processResult?.toLowerCase().includes('success') ? 'success' : det.processResult?.toLowerCase().includes('dup') ? 'default' : 'warning'}
-                                  variant="outlined"
-                                  sx={{ fontWeight: 600, fontSize: '0.6875rem', height: 20 }}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                {det.isManualEntry ? (
-                                  <Stack direction="row" spacing={0.5} alignItems="center">
-                                    <Typography variant="body2" fontWeight={700}>{det.manualTime || '-'}</Typography>
-                                    <Chip label="Manual" size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, bgcolor: alpha('#F59E0B', 0.2), color: '#F59E0B', border: `1px solid ${alpha('#F59E0B', 0.4)}` }} />
-                                  </Stack>
-                                ) : (
-                                  <Typography variant="body2" color="text.secondary">-</Typography>
-                                )}
-                              </TableCell>
-                              <TableCell><Typography variant="body2" color="text.secondary">{det.notes || '-'}</Typography></TableCell>
-                            </TableRow>
-                          ))}
-                        {cp.detections.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={7} align="center">
-                              <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>No detections for this checkpoint</Typography>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Box>
-              ))
-          )}
-        </Card>
-      )}
-
       {/* RFID Tag Readings Section */}
       {(() => {
         const rawReadings: RfidRawReadingDto[] = participant.rawRfidTagReadings ?? [];
@@ -2377,9 +2239,6 @@ const ParticipantDetail: React.FC = () => {
                       <TableCell sx={thCell}>Date</TableCell>
                       <TableCell sx={thCell}>Checkpoint</TableCell>
                       <TableCell sx={thCell}>Device</TableCell>
-                      <TableCell sx={thCell}>Gun Time</TableCell>
-                      <TableCell sx={thCell}>Net Time</TableCell>
-                      <TableCell sx={thCell}>Chip ID</TableCell>
                       <TableCell sx={thCell} align="center">Crossing</TableCell>
                     </TableRow>
                   </TableHead>
@@ -2436,26 +2295,13 @@ const ParticipantDetail: React.FC = () => {
                             </Typography>
                           </TableCell>
                           <TableCell>
+                            {/* Friendly device name; falls back to the raw serial when the
+                                device is unmapped. The serial stays visible in the tooltip. */}
                             <Tooltip title={r.deviceId || ''}>
                               <Typography variant="body2" sx={{ ...textSx, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {r.device || r.deviceId || 'N/A'}
+                                {r.deviceName || r.deviceId || 'N/A'}
                               </Typography>
                             </Tooltip>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight={isNorm ? 600 : 400} sx={textSx}>
-                              {r.gunTime || '-'}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight={isNorm ? 600 : 400} sx={textSx}>
-                              {r.netTime || '-'}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.7rem', ...textSx }}>
-                              {r.chipId || 'N/A'}
-                            </Typography>
                           </TableCell>
                           <TableCell align="center">
                             {(() => {
@@ -2564,13 +2410,6 @@ const ParticipantDetail: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2" sx={{ color: colors.text.secondary }}>{reading.deviceName || 'N/A'}</Typography>
-                          </TableCell>
-                          <TableCell><Typography variant="body2" fontWeight={600}>{reading.gunTimeFormatted || '-'}</Typography></TableCell>
-                          <TableCell><Typography variant="body2" fontWeight={600}>{reading.netTimeFormatted || '-'}</Typography></TableCell>
-                          <TableCell>
-                            <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.7rem', color: colors.text.secondary }}>
-                              {reading.chipId || 'N/A'}
-                            </Typography>
                           </TableCell>
                           <TableCell align="center" />
                         </TableRow>

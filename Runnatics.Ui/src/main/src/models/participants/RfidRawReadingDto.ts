@@ -23,6 +23,9 @@ export interface RfidRawReadingDto {
   checkpointDistance?: number | null;
   device: string;
   deviceId: string;
+  /** Friendly device name ("box2", "Box 01") resolved server-side from the read's serial.
+   *  Null when the serial is unmapped — render deviceId as the fallback. */
+  deviceName?: string | null;
   gunTime?: string | null;
   netTime?: string | null;
   chipId: string;
