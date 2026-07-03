@@ -802,6 +802,29 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       },
     },
     {
+      // EPC sits BEFORE Bib; pinned left like #/Bib/Name — a non-pinned column
+      // would render after the pinned group regardless of array order.
+      headerName: "EPC",
+      field: "chipId",
+      width: 50,
+      hide: isMobile,
+      pinned: "left" as const,
+      headerClass: "ag-center-aligned-header",
+      sortable: false,
+      filter: false,
+      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
+      cellRenderer: (params: any) => {
+        const mapped = !!(params.value?.trim());
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <span style={{ color: mapped ? '#2e7d32' : '#d32f2f', fontWeight: 700, fontSize: '1rem' }}>
+              {mapped ? '✔' : '✖'}
+            </span>
+          </Box>
+        );
+      },
+    },
+    {
       field: "bib",
       headerName: "Bib",
       width: 70,
@@ -841,6 +864,9 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       headerName: "Name",
       flex: 1,
       minWidth: 160,
+      // Explicit per-column resize (the wrapper's defaultColDef also enables it table-wide) —
+      // Name is the column that truncates; dragging the header handle overrides the flex width.
+      resizable: true,
       sortable: true,
       filter: true,
       pinned: "left" as const,
@@ -876,38 +902,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       sortable: true,
       filter: true,
       cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-    },
-    {
-      // BUG-16: Manual Distance column, filterable (numeric).
-      field: "manualDistance",
-      headerName: "Manual Dist (km)",
-      width: 130,
-      sortable: true,
-      filter: "agNumberColumnFilter",
-      hide: isMobile,
-      valueFormatter: (params: any) =>
-        params.value === null || params.value === undefined || params.value === "" ? "—" : `${params.value}`,
-      cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-    },
-    {
-      headerName: "EPC",
-      field: "chipId",
-      width: 50,
-      hide: isMobile,
-      headerClass: "ag-center-aligned-header",
-      sortable: false,
-      filter: false,
-      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
-      cellRenderer: (params: any) => {
-        const mapped = !!(params.value?.trim());
-        return (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <span style={{ color: mapped ? '#2e7d32' : '#d32f2f', fontWeight: 700, fontSize: '1rem' }}>
-              {mapped ? '✔' : '✖'}
-            </span>
-          </Box>
-        );
-      },
     },
     {
       field: "status",
