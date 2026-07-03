@@ -60,7 +60,9 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Menu,
   MenuItem,
+  ListSubheader,
   SelectChangeEvent,
 } from "@mui/material";
 import { ParticipantService as _PS } from "@/main/src/services/ParticipantService";
@@ -425,6 +427,12 @@ const ParticipantDetail: React.FC = () => {
   // until "Save & Process Result". No auto-replace: two reads ON at one checkpoint is a
   // conflict the admin resolves manually before saving.
   const [pendingCrossings, setPendingCrossings] = useState<Record<string, boolean>>({});
+  // ASSIGN-THEN-CHOOSE: for a previously-UNASSIGNED read toggled ON, the gate it will be
+  // chosen for (single-candidate device → auto-set; shared mat → picked inline). Keyed by
+  // read id; always paired with a pendingCrossings[id] = true entry.
+  const [pendingTargets, setPendingTargets] = useState<Record<string, { id: string; name: string }>>({});
+  // Inline gate picker for a shared-mat unassigned read (several candidate gates).
+  const [gatePicker, setGatePicker] = useState<{ anchorEl: HTMLElement; read: RfidRawReadingDto } | null>(null);
   const [savingCrossings, setSavingCrossings] = useState(false);
   const [downloadingCertificate, setDownloadingCertificate] = useState(false);
   const [showRfidDuplicates, setShowRfidDuplicates] = useState(false);
@@ -857,6 +865,11 @@ const ParticipantDetail: React.FC = () => {
   const isEffectivelyOn = (read: RfidRawReadingDto): boolean =>
     pendingCrossings[read.id] ?? !!read.isNormalized;
 
+  // ASSIGN-THEN-CHOOSE: the gate a read effectively belongs to — its assignment, or (for a
+  // previously-unassigned read toggled ON) its pending target. Null = not attributable yet.
+  const effectiveGateOf = (read: RfidRawReadingDto): string | null =>
+    read.checkpointId ?? pendingTargets[read.id]?.id ?? null;
+
   const toggleCrossingLocal = (read: RfidRawReadingDto) => {
     const next = !isEffectivelyOn(read);
     setPendingCrossings(prev => {
@@ -865,37 +878,65 @@ const ParticipantDetail: React.FC = () => {
       else copy[read.id] = next;
       return copy;
     });
+    if (next === !!read.isNormalized) {
+      // Back to server state — an unassigned read's pending gate target goes with it.
+      setPendingTargets(prev => {
+        if (!(read.id in prev)) return prev;
+        const copy = { ...prev };
+        delete copy[read.id];
+        return copy;
+      });
+    }
+  };
+
+  // ASSIGN-THEN-CHOOSE: turn an UNASSIGNED read ON for a specific candidate gate (auto-set for
+  // single-candidate devices, picked inline for shared mats). Local only — applies on save.
+  const chooseUnassignedTarget = (read: RfidRawReadingDto, target: { id: string; name: string }) => {
+    setPendingTargets(prev => ({ ...prev, [read.id]: target }));
+    setPendingCrossings(prev => ({ ...prev, [read.id]: true }));
   };
 
   // Checkpoints with MORE than one read effectively ON — save is blocked until resolved.
+  // Unassigned reads count toward their PENDING TARGET gate, so choosing one at an occupied
+  // gate surfaces the same conflict as any other double-ON (no auto-replace).
   const crossingConflicts = (): string[] => {
     const reads: RfidRawReadingDto[] = participant?.rawRfidTagReadings ?? [];
     const onCount = new Map<string, number>();
     const nameOf = new Map<string, string>();
     for (const r of reads) {
-      if (!r.checkpointId) continue;
-      nameOf.set(r.checkpointId, r.checkpoint || r.checkpointId);
-      if (isEffectivelyOn(r)) onCount.set(r.checkpointId, (onCount.get(r.checkpointId) || 0) + 1);
+      const gateId = effectiveGateOf(r);
+      if (!gateId) continue;
+      if (r.checkpoint || !nameOf.has(gateId))
+        nameOf.set(gateId, r.checkpoint || pendingTargets[r.id]?.name || gateId);
+      if (isEffectivelyOn(r)) onCount.set(gateId, (onCount.get(gateId) || 0) + 1);
     }
     return [...onCount.entries()].filter(([, n]) => n > 1).map(([id]) => nameOf.get(id) || id);
   };
 
-  const discardCrossingChanges = () => setPendingCrossings({});
+  const discardCrossingChanges = () => {
+    setPendingCrossings({});
+    setPendingTargets({});
+  };
 
   // Apply the final toggle state: per changed checkpoint, either a chosen-read override
   // (exactly one read ON) or a revert-to-auto (an override turned OFF). One refresh at the end.
   const handleSaveCrossings = async () => {
     if (!eventId || !raceId || !participantId) return;
     const reads: RfidRawReadingDto[] = participant?.rawRfidTagReadings ?? [];
+    // Group by EFFECTIVE gate: assignment, or the pending target of a previously-unassigned
+    // read (assign-then-choose) — so an unassigned read chosen for Start saves against Start
+    // and conflicts with Start's other reads, exactly like an assigned one.
     const byCheckpoint = new Map<string, RfidRawReadingDto[]>();
     for (const r of reads) {
-      if (!r.checkpointId) continue;
-      if (!byCheckpoint.has(r.checkpointId)) byCheckpoint.set(r.checkpointId, []);
-      byCheckpoint.get(r.checkpointId)!.push(r);
+      const gateId = effectiveGateOf(r);
+      if (!gateId) continue;
+      if (!byCheckpoint.has(gateId)) byCheckpoint.set(gateId, []);
+      byCheckpoint.get(gateId)!.push(r);
     }
 
     setSavingCrossings(true);
     const warnings: string[] = [];
+    const notes: string[] = [];
     try {
       for (const [checkpointId, cpReads] of byCheckpoint) {
         if (!cpReads.some(r => pendingCrossings[r.id] !== undefined)) continue; // untouched gate
@@ -906,27 +947,36 @@ const ParticipantDetail: React.FC = () => {
         if (onReads.length === 1) {
           const chosen = onReads[0];
           if (!chosen.isNormalized) {
-            // New chosen-read override for this checkpoint.
+            // New chosen-read override for this checkpoint. For a previously-unassigned read
+            // the map key IS its pending target — the server validates it against the read's
+            // device and creates the assignment (assign-then-choose).
             const result = await RFIDService.addManualTime(eventId, raceId, participantId, checkpointId, '', chosen.id);
             if (result.message?.warning) warnings.push(result.message.warning);
           }
           // chosen already the server crossing → the pending flags only re-confirmed it.
-        } else {
-          // All reads OFF → an override was turned off → revert to the automatic pick.
+        } else if (cpReads.some(r => r.hasActiveOverride)) {
+          // All reads OFF and an override existed → revert to the automatic pick.
           await RFIDService.removeManualTime(eventId, raceId, participantId, checkpointId);
+        } else {
+          // All reads OFF but no override existed — the OFF was on the automatic (dedup) pick
+          // with no replacement chosen. There is nothing to revert; the automatic pick stays.
+          const gateName = cpReads.find(r => r.checkpoint)?.checkpoint || 'this checkpoint';
+          notes.push(`${gateName}: the automatic crossing stays — turning it off without choosing a replacement read has no effect.`);
         }
       }
 
       setPendingCrossings({});
+      setPendingTargets({});
       const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
       if (response.data.message) setParticipant(response.data.message);
       fetchDetections(detectionsCheckpointFilter);
+      const noteSuffix = notes.length ? ` ${notes.join(' ')}` : '';
       setSnackbar({
         open: true,
         message: warnings.length
-          ? `Crossings saved and result recalculated — ${warnings.join(' ')}`
-          : 'Crossings saved. Result recalculated and race re-ranked.',
-        severity: warnings.length ? 'warning' : 'success',
+          ? `Crossings saved and result recalculated — ${warnings.join(' ')}${noteSuffix}`
+          : `Crossings saved. Result recalculated and race re-ranked.${noteSuffix}`,
+        severity: warnings.length ? 'warning' : notes.length ? 'info' : 'success',
       });
     } catch (err: any) {
       const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to save crossings.';
@@ -2378,7 +2428,11 @@ const ParticipantDetail: React.FC = () => {
                             <Typography variant="body2" fontWeight={isNorm ? 600 : 400} sx={textSx}>
                               {r.checkpoint
                                 ? (r.checkpointDistance != null ? `${r.checkpoint} (${r.checkpointDistance} km)` : r.checkpoint)
-                                : <Box component="span" sx={{ color: colors.warning.main, fontStyle: 'italic' }}>Unassigned</Box>}
+                                : pendingTargets[r.id]
+                                  ? <Box component="span" sx={{ color: colors.warning.main, fontStyle: 'italic', fontWeight: 600 }}>
+                                      Unassigned → {pendingTargets[r.id].name}
+                                    </Box>
+                                  : <Box component="span" sx={{ color: colors.warning.main, fontStyle: 'italic' }}>Unassigned</Box>}
                             </Typography>
                           </TableCell>
                           <TableCell>
@@ -2405,11 +2459,48 @@ const ParticipantDetail: React.FC = () => {
                           </TableCell>
                           <TableCell align="center">
                             {(() => {
-                              // Unassigned read (no checkpoint) can't be a crossing — show it OFF + locked.
+                              // ASSIGN-THEN-CHOOSE: an unassigned read (typically pre-gun noise the
+                              // pipeline rejected) IS choosable when its device maps to gates in this
+                              // race — one candidate auto-targets, a shared mat opens the gate picker.
+                              // Locked only when the device is unmapped (zero candidates).
                               if (!r.checkpointId) {
+                                const candidates = r.choosableCheckpoints ?? [];
+                                if (candidates.length === 0) {
+                                  return (
+                                    <Tooltip title="Unassigned read — its device is not mapped to any checkpoint in this race, so it can't be chosen as the crossing">
+                                      <span><Switch size="small" checked={false} disabled color="success" /></span>
+                                    </Tooltip>
+                                  );
+                                }
+
+                                const effectiveOn = pendingCrossings[r.id] ?? false;
+                                const isPending = pendingCrossings[r.id] !== undefined;
+                                const target = pendingTargets[r.id];
+
+                                const tip = isPending
+                                  ? `Pending — becomes the crossing for ${target?.name ?? 'the selected gate'} when you press "Save & Process Result"`
+                                  : candidates.length === 1
+                                    ? `Unassigned read — turn on to make it the crossing for ${candidates[0].name} (applies on save)`
+                                    : 'Unassigned read from a shared mat — turn on and pick which gate it crosses (applies on save)';
+
+                                const onToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+                                  if (savingCrossings) return;
+                                  if (effectiveOn) { toggleCrossingLocal(r); return; } // un-pend (target goes too)
+                                  if (candidates.length === 1) { chooseUnassignedTarget(r, candidates[0]); return; }
+                                  setGatePicker({ anchorEl: e.currentTarget, read: r });
+                                };
+
                                 return (
-                                  <Tooltip title="Unassigned read — assign it to a checkpoint before it can be the crossing">
-                                    <span><Switch size="small" checked={false} disabled color="success" /></span>
+                                  <Tooltip title={tip}>
+                                    <span>
+                                      <Switch
+                                        size="small"
+                                        checked={effectiveOn}
+                                        disabled={savingCrossings}
+                                        onChange={onToggle}
+                                        color={isPending ? 'warning' : 'success'}
+                                      />
+                                    </span>
                                   </Tooltip>
                                 );
                               }
@@ -2424,16 +2515,11 @@ const ParticipantDetail: React.FC = () => {
                                 : isNorm
                                   ? (r.hasActiveOverride
                                       ? 'Selected crossing — turn off (and save) to revert to the automatic pick'
-                                      : 'Automatic crossing (dedup pick) — turn another read on to change it')
+                                      : 'Automatic crossing (dedup pick) — turn it off while choosing a replacement read (saving it off alone has no effect)')
                                   : 'Make this read the crossing for its checkpoint (applies on save)';
 
                               const onToggle = () => {
                                 if (savingCrossings) return;
-                                if (isNorm && !r.hasActiveOverride && effectiveOn) {
-                                  // The automatic pick can't be unset directly; pick another read instead.
-                                  setSnackbar({ open: true, message: 'This is the automatic crossing. Turn another read on to change it.', severity: 'info' });
-                                  return;
-                                }
                                 toggleCrossingLocal(r);
                               };
 
@@ -2517,6 +2603,31 @@ const ParticipantDetail: React.FC = () => {
                 </Box>
               )}
             </Card>
+
+            {/* ASSIGN-THEN-CHOOSE: inline gate picker for a shared-mat unassigned read — the
+                device serves several gates, so the admin says WHICH one this read crosses.
+                Selecting sets the pending target + amber toggle; nothing fires until save. */}
+            <Menu
+              anchorEl={gatePicker?.anchorEl ?? null}
+              open={!!gatePicker}
+              onClose={() => setGatePicker(null)}
+            >
+              <ListSubheader sx={{ lineHeight: '32px', fontSize: '0.75rem' }}>
+                Crossing at which gate?
+              </ListSubheader>
+              {(gatePicker?.read.choosableCheckpoints ?? []).map(c => (
+                <MenuItem
+                  key={c.id}
+                  dense
+                  onClick={() => {
+                    if (gatePicker) chooseUnassignedTarget(gatePicker.read, c);
+                    setGatePicker(null);
+                  }}
+                >
+                  {c.name}
+                </MenuItem>
+              ))}
+            </Menu>
           </>
         );
       })()}
