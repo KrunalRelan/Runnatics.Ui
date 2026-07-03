@@ -99,13 +99,25 @@ const StatusBadge: React.FC<{ status: string }> = ({
       icon: <DirectionsRun fontSize="small" />,
       bgColor: alpha(colors.primary.main, 0.15)
     },
-    Finished: { 
-      color: colors.success.main, 
+    Finished: {
+      color: colors.success.main,
       icon: <CheckCircle fontSize="small" />,
       bgColor: alpha(colors.success.main, 0.15)
     },
-    DNF: { 
-      color: colors.error.main, 
+    // #7: the API now sends the DISPLAY status — "OK" for a stored "Finished".
+    OK: {
+      color: colors.success.main,
+      icon: <CheckCircle fontSize="small" />,
+      bgColor: alpha(colors.success.main, 0.15)
+    },
+    // #5: disqualified — visible with its own label, ranks null, sorted last.
+    DSQ: {
+      color: colors.error.main,
+      icon: <Flag fontSize="small" />,
+      bgColor: alpha(colors.error.main, 0.25)
+    },
+    DNF: {
+      color: colors.error.main,
       icon: <Flag fontSize="small" />,
       bgColor: alpha(colors.error.main, 0.15)
     },
@@ -409,7 +421,11 @@ const ParticipantDetail: React.FC = () => {
   const [removeTarget, setRemoveTarget] = useState<{ checkpointId: string; checkpointName: string; hasRawRead: boolean } | null>(null);
   const [removingTime, setRemovingTime] = useState(false);
   // Raw-read id whose "set as crossing" / "revert to auto" action is in flight (disables that row's control).
-  const [crossingActionId, setCrossingActionId] = useState<string | null>(null);
+  // #1 (client rule, 2026-07-03): crossing toggles are LOCAL UI state — NOTHING recalculates
+  // until "Save & Process Result". No auto-replace: two reads ON at one checkpoint is a
+  // conflict the admin resolves manually before saving.
+  const [pendingCrossings, setPendingCrossings] = useState<Record<string, boolean>>({});
+  const [savingCrossings, setSavingCrossings] = useState(false);
   const [downloadingCertificate, setDownloadingCertificate] = useState(false);
   const [showRfidDuplicates, setShowRfidDuplicates] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "info" }>({
@@ -498,6 +514,16 @@ const ParticipantDetail: React.FC = () => {
     if (!participantId) return;
 
     const editCase = computeEditCase();
+
+    // #4/#5 (2026-07-03): run status is COMPUTED-ONLY — the only manual change is DSQ, with a
+    // MANDATORY reason, applied via the dedicated status endpoint (validates, normalizes to the
+    // stored "DQ", nulls ranks and re-ranks the race). The plain edit no longer sends status.
+    const wantsDsq = editRunStatus === "DSQ" && participant?.status !== "DSQ";
+    if (wantsDsq && !editDisqualificationReason.trim()) {
+      setSaveError("A disqualification reason is required to set DSQ.");
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
     setFollowUpRetry(null);
@@ -513,9 +539,7 @@ const ParticipantDetail: React.FC = () => {
         email: editEmail || undefined,
         gender: editGender || undefined,
         category: editAgeCategory || undefined,
-        status: editRunStatus || undefined,
         raceId: editRaceId || undefined,
-        disqualificationReason: editRunStatus === "Disqualified" ? editDisqualificationReason || undefined : undefined,
         loopCount: editLoopCount ? parseInt(editLoopCount, 10) : undefined,
         manualTime: editManualTime || undefined,
       });
@@ -524,6 +548,23 @@ const ParticipantDetail: React.FC = () => {
       setIsSaving(false);
       setPhase(null);
       return;
+    }
+
+    // 1b. DSQ (when requested) — its own endpoint; the server re-ranks the whole race.
+    if (wantsDsq) {
+      try {
+        setPhase("saving");
+        await _PS.disqualifyParticipant(editRaceId || raceId || "", participantId, editDisqualificationReason.trim());
+      } catch (err: any) {
+        setSaveError(
+          err.response?.data?.error?.message || err.response?.data?.message || err.message ||
+          "Saved the details, but the disqualification failed. Please retry."
+        );
+        setIsSaving(false);
+        setPhase(null);
+        await refreshParticipant();
+        return;
+      }
     }
 
     // 2. Sequential follow-up (move → process, recat → re-rank). Save SUCCEEDED;
@@ -722,13 +763,22 @@ const ParticipantDetail: React.FC = () => {
       setSavingTime(true);
       const result = await RFIDService.addManualTime(eventId, raceId, participantId, checkpointId, editTimeValue.trim());
       const checkpointName = result.message?.checkpointName || checkpointId;
+      // #1/#3: an accepted-but-invalid crossing (e.g. out-of-window start) succeeds WITH a
+      // warning naming the consequence — surface it, never drop it.
+      const warning: string | undefined = result.message?.warning;
 
       const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
       if (response.data.message) {
         setParticipant(response.data.message);
         setEditingCheckpointId(null);
         setEditTimeValue("");
-        setSnackbar({ open: true, message: `Manual time saved for ${checkpointName}. Result recalculated and race re-ranked.`, severity: "success" });
+        setSnackbar({
+          open: true,
+          message: warning
+            ? `Manual time saved for ${checkpointName} — ${warning}`
+            : `Manual time saved for ${checkpointName}. Result recalculated and race re-ranked.`,
+          severity: warning ? "warning" : "success",
+        });
         // Refresh detections
         fetchDetections(detectionsCheckpointFilter);
       } else {
@@ -794,51 +844,95 @@ const ParticipantDetail: React.FC = () => {
     }
   };
 
-  // "Choose which raw read is the crossing" — promote this read to the crossing for its OWN checkpoint.
-  // Writes a chosen-read override (durable, revertable). The server validates the read is assigned to
-  // that checkpoint and belongs to this participant. crossingLocalDateTime is unused for chosen reads.
-  const handleSetCrossing = async (read: RfidRawReadingDto) => {
-    if (!eventId || !raceId || !participantId || !read.checkpointId) return;
-    try {
-      setCrossingActionId(read.id);
-      await RFIDService.addManualTime(eventId, raceId, participantId, read.checkpointId, '', read.id);
-      const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
-      if (response.data.message) {
-        setParticipant(response.data.message);
-        fetchDetections(detectionsCheckpointFilter);
-        setSnackbar({ open: true, message: `Crossing set to the ${read.localTime} read for ${read.checkpoint ?? 'this checkpoint'}. Result recalculated and race re-ranked.`, severity: "success" });
-      } else {
-        setSnackbar({ open: true, message: "Crossing set but could not refresh the display. Please reload the page.", severity: "error" });
-      }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || err.message || "Failed to set crossing. Please try again.";
-      setSnackbar({ open: true, message: errorMessage, severity: "error" });
-    } finally {
-      setCrossingActionId(null);
-    }
+  // ============================================================
+  // #1 (client rule, 2026-07-03) — BATCHED crossing toggles.
+  // Toggling a Switch changes LOCAL state only; the server processes the FINAL
+  // toggle state when "Save & Process Result" is pressed. No auto-replace: two
+  // reads ON at one checkpoint is a CONFLICT the admin resolves before saving.
+  // The server ACCEPTS an out-of-window / out-of-sequence choice and classifies
+  // the runner (#7 — e.g. DNF); its warning is surfaced, never dropped.
+  // ============================================================
+
+  // Effective ON state of a read = pending change if any, else the server state.
+  const isEffectivelyOn = (read: RfidRawReadingDto): boolean =>
+    pendingCrossings[read.id] ?? !!read.isNormalized;
+
+  const toggleCrossingLocal = (read: RfidRawReadingDto) => {
+    const next = !isEffectivelyOn(read);
+    setPendingCrossings(prev => {
+      const copy = { ...prev };
+      if (next === !!read.isNormalized) delete copy[read.id]; // back to server state → no change
+      else copy[read.id] = next;
+      return copy;
+    });
   };
 
-  // Revert a chosen-read (or typed) crossing back to the automatic dedup pick: soft-deletes the
-  // override and lets the pipeline re-pick. Honors "cycle back to auto = revert, not a redundant
-  // override". A chosen read always has an underlying raw read, so reverting simply returns the auto pick.
-  const handleRevertCrossing = async (read: RfidRawReadingDto) => {
-    if (!eventId || !raceId || !participantId || !read.checkpointId) return;
+  // Checkpoints with MORE than one read effectively ON — save is blocked until resolved.
+  const crossingConflicts = (): string[] => {
+    const reads: RfidRawReadingDto[] = participant?.rawRfidTagReadings ?? [];
+    const onCount = new Map<string, number>();
+    const nameOf = new Map<string, string>();
+    for (const r of reads) {
+      if (!r.checkpointId) continue;
+      nameOf.set(r.checkpointId, r.checkpoint || r.checkpointId);
+      if (isEffectivelyOn(r)) onCount.set(r.checkpointId, (onCount.get(r.checkpointId) || 0) + 1);
+    }
+    return [...onCount.entries()].filter(([, n]) => n > 1).map(([id]) => nameOf.get(id) || id);
+  };
+
+  const discardCrossingChanges = () => setPendingCrossings({});
+
+  // Apply the final toggle state: per changed checkpoint, either a chosen-read override
+  // (exactly one read ON) or a revert-to-auto (an override turned OFF). One refresh at the end.
+  const handleSaveCrossings = async () => {
+    if (!eventId || !raceId || !participantId) return;
+    const reads: RfidRawReadingDto[] = participant?.rawRfidTagReadings ?? [];
+    const byCheckpoint = new Map<string, RfidRawReadingDto[]>();
+    for (const r of reads) {
+      if (!r.checkpointId) continue;
+      if (!byCheckpoint.has(r.checkpointId)) byCheckpoint.set(r.checkpointId, []);
+      byCheckpoint.get(r.checkpointId)!.push(r);
+    }
+
+    setSavingCrossings(true);
+    const warnings: string[] = [];
     try {
-      setCrossingActionId(read.id);
-      await RFIDService.removeManualTime(eventId, raceId, participantId, read.checkpointId);
-      const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
-      if (response.data.message) {
-        setParticipant(response.data.message);
-        fetchDetections(detectionsCheckpointFilter);
-        setSnackbar({ open: true, message: `Reverted to the automatic crossing for ${read.checkpoint ?? 'this checkpoint'}. Result recalculated and race re-ranked.`, severity: "success" });
-      } else {
-        setSnackbar({ open: true, message: "Reverted but could not refresh the display. Please reload the page.", severity: "error" });
+      for (const [checkpointId, cpReads] of byCheckpoint) {
+        if (!cpReads.some(r => pendingCrossings[r.id] !== undefined)) continue; // untouched gate
+
+        const onReads = cpReads.filter(r => isEffectivelyOn(r));
+        if (onReads.length > 1) continue; // conflict — save button is disabled; belt-and-braces
+
+        if (onReads.length === 1) {
+          const chosen = onReads[0];
+          if (!chosen.isNormalized) {
+            // New chosen-read override for this checkpoint.
+            const result = await RFIDService.addManualTime(eventId, raceId, participantId, checkpointId, '', chosen.id);
+            if (result.message?.warning) warnings.push(result.message.warning);
+          }
+          // chosen already the server crossing → the pending flags only re-confirmed it.
+        } else {
+          // All reads OFF → an override was turned off → revert to the automatic pick.
+          await RFIDService.removeManualTime(eventId, raceId, participantId, checkpointId);
+        }
       }
+
+      setPendingCrossings({});
+      const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
+      if (response.data.message) setParticipant(response.data.message);
+      fetchDetections(detectionsCheckpointFilter);
+      setSnackbar({
+        open: true,
+        message: warnings.length
+          ? `Crossings saved and result recalculated — ${warnings.join(' ')}`
+          : 'Crossings saved. Result recalculated and race re-ranked.',
+        severity: warnings.length ? 'warning' : 'success',
+      });
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || err.message || "Failed to revert crossing. Please try again.";
-      setSnackbar({ open: true, message: errorMessage, severity: "error" });
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to save crossings. Please try again.';
+      setSnackbar({ open: true, message: errorMessage, severity: 'error' });
     } finally {
-      setCrossingActionId(null);
+      setSavingCrossings(false);
     }
   };
 
@@ -1409,22 +1503,28 @@ const ParticipantDetail: React.FC = () => {
                     label="Run Status"
                     onChange={(e: SelectChangeEvent) => setEditRunStatus(e.target.value)}
                   >
-                    <MenuItem value="Registered">Registered</MenuItem>
-                    <MenuItem value="Finished">Finished</MenuItem>
-                    <MenuItem value="DNF">DNF</MenuItem>
-                    <MenuItem value="DNS">DNS</MenuItem>
-                    <MenuItem value="Disqualified">Disqualified</MenuItem>
+                    {/* #4 (2026-07-03): run status is COMPUTED from timing data (OK/DNF/DNS) —
+                        the DDL shows the computed value; DSQ is the ONLY manual change. */}
+                    <MenuItem value={participant?.status || "Registered"}>
+                      {(participant?.status || "Registered") +
+                        (participant?.status === "DSQ" ? "" : " (computed)")}
+                    </MenuItem>
+                    {participant?.status !== "DSQ" && (
+                      <MenuItem value="DSQ">DSQ (Disqualify)</MenuItem>
+                    )}
                   </Select>
                 </FormControl>
               </Stack>
-              {editRunStatus === "Disqualified" && (
+              {editRunStatus === "DSQ" && participant?.status !== "DSQ" && (
                 <TextField
                   fullWidth
                   size="small"
-                  label="Disqualification Reason"
+                  label="Disqualification Reason (required)"
                   value={editDisqualificationReason}
                   onChange={(e) => setEditDisqualificationReason(e.target.value)}
                   required
+                  error={!editDisqualificationReason.trim()}
+                  helperText={!editDisqualificationReason.trim() ? "A reason is mandatory for a disqualification" : undefined}
                   placeholder="Enter reason for disqualification"
                 />
               )}
@@ -2154,16 +2254,50 @@ const ParticipantDetail: React.FC = () => {
                   </Typography>
                 )}
               </Typography>
-              {hasRaw && duplicateCount > 0 && (
-                <Button
-                  size="small"
-                  variant={showRfidDuplicates ? 'contained' : 'outlined'}
-                  onClick={() => setShowRfidDuplicates(v => !v)}
-                  sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
-                >
-                  {showRfidDuplicates ? 'Hide Duplicates' : `Show All (${rawReadings.length})`}
-                </Button>
-              )}
+              <Stack direction="row" spacing={1} alignItems="center">
+                {/* #1: batched toggles — nothing recalculates until Save & Process Result */}
+                {Object.keys(pendingCrossings).length > 0 && (() => {
+                  const conflicts = crossingConflicts();
+                  return (
+                    <>
+                      {conflicts.length > 0 && (
+                        <Typography variant="caption" sx={{ color: colors.error.main, fontWeight: 600 }}>
+                          Only one read can be ON per checkpoint — resolve: {conflicts.join(', ')}
+                        </Typography>
+                      )}
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={discardCrossingChanges}
+                        disabled={savingCrossings}
+                        sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                      >
+                        Discard changes
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="success"
+                        onClick={handleSaveCrossings}
+                        disabled={savingCrossings || conflicts.length > 0}
+                        sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap', fontWeight: 600 }}
+                      >
+                        {savingCrossings ? 'Processing…' : `Save & Process Result (${Object.keys(pendingCrossings).length})`}
+                      </Button>
+                    </>
+                  );
+                })()}
+                {hasRaw && duplicateCount > 0 && (
+                  <Button
+                    size="small"
+                    variant={showRfidDuplicates ? 'contained' : 'outlined'}
+                    onClick={() => setShowRfidDuplicates(v => !v)}
+                    sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                  >
+                    {showRfidDuplicates ? 'Hide Duplicates' : `Show All (${rawReadings.length})`}
+                  </Button>
+                )}
+              </Stack>
             </Stack>
 
             <Card sx={{
@@ -2261,7 +2395,6 @@ const ParticipantDetail: React.FC = () => {
                           </TableCell>
                           <TableCell align="center">
                             {(() => {
-                              const busy = crossingActionId === r.id;
                               // Unassigned read (no checkpoint) can't be a crossing — show it OFF + locked.
                               if (!r.checkpointId) {
                                 return (
@@ -2271,26 +2404,27 @@ const ParticipantDetail: React.FC = () => {
                                 );
                               }
 
-                              // ON = this read is the crossing for its checkpoint. Only one read per
-                              // checkpoint can be ON; turning one ON turns the others OFF (server-enforced).
-                              const tip = isNorm
-                                ? (r.hasActiveOverride
-                                    ? 'Selected crossing — turn off to revert to the automatic pick'
-                                    : 'Automatic crossing (dedup pick) — turn another read on to change it')
-                                : 'Make this read the crossing for its checkpoint';
+                              // #1: toggles are LOCAL until "Save & Process Result". Two reads ON at
+                              // one checkpoint is a visible CONFLICT the admin resolves before save.
+                              const effectiveOn = pendingCrossings[r.id] ?? isNorm;
+                              const isPending = pendingCrossings[r.id] !== undefined;
+
+                              const tip = isPending
+                                ? 'Pending change — applies when you press "Save & Process Result"'
+                                : isNorm
+                                  ? (r.hasActiveOverride
+                                      ? 'Selected crossing — turn off (and save) to revert to the automatic pick'
+                                      : 'Automatic crossing (dedup pick) — turn another read on to change it')
+                                  : 'Make this read the crossing for its checkpoint (applies on save)';
 
                               const onToggle = () => {
-                                if (busy) return;
-                                if (!isNorm) {
-                                  // OFF → ON: make this read the crossing.
-                                  handleSetCrossing(r);
-                                } else if (r.hasActiveOverride) {
-                                  // ON (override) → OFF: revert to the automatic pick.
-                                  handleRevertCrossing(r);
-                                } else {
-                                  // ON (automatic pick) → can't be unset directly; pick another read instead.
+                                if (savingCrossings) return;
+                                if (isNorm && !r.hasActiveOverride && effectiveOn) {
+                                  // The automatic pick can't be unset directly; pick another read instead.
                                   setSnackbar({ open: true, message: 'This is the automatic crossing. Turn another read on to change it.', severity: 'info' });
+                                  return;
                                 }
+                                toggleCrossingLocal(r);
                               };
 
                               return (
@@ -2298,10 +2432,10 @@ const ParticipantDetail: React.FC = () => {
                                   <span>
                                     <Switch
                                       size="small"
-                                      checked={isNorm}
-                                      disabled={busy}
+                                      checked={effectiveOn}
+                                      disabled={savingCrossings}
                                       onChange={onToggle}
-                                      color="success"
+                                      color={isPending ? 'warning' : 'success'}
                                     />
                                   </span>
                                 </Tooltip>

@@ -9,7 +9,9 @@ export interface Participant {
   phone?: string;
   gender: string;
   category?: string;
-  status?: 'Registered' | 'Pending' | 'Cancelled' | 'Started' | 'Finished' | 'DNF' | 'DNS' | 'DQ';
+  // #7/#5 (2026-07-03): 'OK' and 'DSQ' are the DISPLAY statuses the API sends for the stored
+  // 'Finished'/'DQ' — run status is computed; only DSQ is manually settable.
+  status?: 'Registered' | 'Pending' | 'Cancelled' | 'Started' | 'Finished' | 'DNF' | 'DNS' | 'DQ' | 'OK' | 'DSQ';
   dateOfBirth?: string;
   ageCategory?: string;
   checkIn?: boolean;

@@ -258,7 +258,8 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   // Helper function to normalize status value
   const normalizeStatus = (statusValue: unknown): string => {
     // These must match exactly the union in Participant.status
-    const VALID_STATUSES = ['Registered', 'Pending', 'Cancelled', 'Started', 'Finished', 'DNF', 'DNS', 'DQ'];
+    // #7/#5: "OK" and "DSQ" are the DISPLAY statuses the API now sends for stored Finished/DQ.
+    const VALID_STATUSES = ['Registered', 'Pending', 'Cancelled', 'Started', 'Finished', 'DNF', 'DNS', 'DQ', 'OK', 'DSQ'];
 
     if (!statusValue) return "Registered";
 
@@ -917,6 +918,9 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       cellRenderer: (params: any) => {
         if (!params.value) return null;
         const statusConfig: Record<string, { color: string; bgColor: string }> = {
+          // #7: the API sends DISPLAY statuses — "OK" (stored "Finished") and "DSQ" (stored "DQ").
+          OK: { color: "#1b5e20", bgColor: "#c8e6c9" },
+          DSQ: { color: "#ffffff", bgColor: "#b71c1c" },
           Finished: { color: "#1b5e20", bgColor: "#c8e6c9" },
           DNF: { color: "#b71c1c", bgColor: "#ffcdd2" },
           DNS: { color: "#e65100", bgColor: "#ffe0b2" },

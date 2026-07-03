@@ -103,6 +103,23 @@ export class ParticipantService {
     }
 
     /**
+     * #4/#5 (2026-07-03): disqualify a participant. Run status is COMPUTED from timing data —
+     * DSQ is the ONLY manually settable status, and the reason is MANDATORY (server 400s
+     * otherwise). The server normalizes the stored value to "DQ", nulls the runner's ranks and
+     * re-ranks the whole race in memory (everyone below steps up).
+     */
+    static async disqualifyParticipant(
+        raceId: string,
+        participantId: string,
+        disqualificationReason: string
+    ): Promise<void> {
+        await apiClient.put(
+            ServiceUrl.updateParticipantStatus(raceId, participantId),
+            { runStatus: "DSQ", disqualificationReason }
+        );
+    }
+
+    /**
      * Delete a participant
      * Note: JWT token is automatically included via interceptor
      */

@@ -72,6 +72,8 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [hasRfidReadings, setHasRfidReadings] = useState<boolean>(false);
+  // #5: mandatory when disqualifying
+  const [dsqReason, setDsqReason] = useState<string>("");
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -303,6 +305,16 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
     setError(null);
     setFollowUpRetry(null);
 
+    // #4/#5 (2026-07-03): run status is COMPUTED-ONLY — the plain edit never sends it; the only
+    // manual change is DSQ via the dedicated status endpoint, with a MANDATORY reason.
+    const wantsDsq = formData.status === "DSQ" && participant?.status !== "DSQ";
+    if (wantsDsq && !dsqReason.trim()) {
+      setError("A disqualification reason is required to set DSQ.");
+      setLoading(false);
+      setPhase(null);
+      return;
+    }
+
     // 1. SAVE (always). If this fails, do NOT fire any follow-up — show the save error.
     try {
       await ParticipantService.editParticipant(formData.id, {
@@ -314,7 +326,6 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
         gender: formData.gender?.trim() || undefined,
         category: formData.category?.trim() || undefined,
         checkIn: formData.checkIn || false,
-        status: formData.status || undefined,
         dateOfBirth: formData.dateOfBirth?.trim() || undefined,
         ageCategory: formData.ageCategory?.trim() || undefined,
         raceId: selectedRaceId,
@@ -325,6 +336,20 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
       setLoading(false);
       setPhase(null);
       return;
+    }
+
+    // 1b. DSQ (when requested) — its own endpoint; the server normalizes to the stored "DQ",
+    //     nulls the runner's ranks and re-ranks the whole race.
+    if (wantsDsq) {
+      try {
+        await ParticipantService.disqualifyParticipant(selectedRaceId, formData.id, dsqReason.trim());
+      } catch (err: any) {
+        console.error("Error disqualifying participant:", err);
+        setError(extractErrorMessage(err, "Saved the details, but the disqualification failed. Please retry."));
+        setLoading(false);
+        setPhase(null);
+        return;
+      }
     }
 
     // Save committed — refresh the parent list with the new race.
@@ -511,7 +536,8 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
               />
             </Stack>
 
-            {/* Run Status */}
+            {/* Run Status — #4 (2026-07-03): COMPUTED from timing data (OK/DNF/DNS); the ONLY
+                manual change is DSQ, with a mandatory reason. */}
             <FormControl fullWidth size="small">
               <InputLabel>Run Status</InputLabel>
               <Select
@@ -521,16 +547,28 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
                   handleFormChange("status", e.target.value as any)
                 }
               >
-                <MenuItem value="Registered">Registered</MenuItem>
-                <MenuItem value="Started">Started</MenuItem>
-                <MenuItem value="Finished">Finished</MenuItem>
-                <MenuItem value="DNF">DNF (Did Not Finish)</MenuItem>
-                <MenuItem value="DNS">DNS (Did Not Start)</MenuItem>
-                <MenuItem value="DQ">DQ (Disqualified)</MenuItem>
-                <MenuItem value="Pending">Pending</MenuItem>
-                <MenuItem value="Cancelled">Cancelled</MenuItem>
+                <MenuItem value={participant?.status || "Registered"}>
+                  {(participant?.status || "Registered") +
+                    (participant?.status === "DSQ" ? "" : " (computed)")}
+                </MenuItem>
+                {participant?.status !== "DSQ" && (
+                  <MenuItem value="DSQ">DSQ (Disqualify)</MenuItem>
+                )}
               </Select>
             </FormControl>
+            {formData.status === "DSQ" && participant?.status !== "DSQ" && (
+              <TextField
+                fullWidth
+                size="small"
+                label="Disqualification Reason (required)"
+                value={dsqReason}
+                onChange={(e) => setDsqReason(e.target.value)}
+                required
+                error={!dsqReason.trim()}
+                helperText={!dsqReason.trim() ? "A reason is mandatory for a disqualification" : undefined}
+                placeholder="Enter reason for disqualification"
+              />
+            )}
 
             {/* EPC / Chip Mapping */}
             {formData.id && (

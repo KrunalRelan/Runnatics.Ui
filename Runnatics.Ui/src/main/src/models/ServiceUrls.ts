@@ -45,6 +45,9 @@ export const ServiceUrl = {
     getParticipantDetections: (eventId: string, raceId: string, participantId: string) => `participants/${eventId}/${raceId}/${participantId}/detections`,
     changeRaceCategory: (eventId: string, raceId: string, participantId: string) => `participants/${eventId}/${raceId}/${participantId}/race-category`,
     processParticipantResult: (eventId: string, raceId: string, participantId: string) => `participants/${eventId}/${raceId}/${participantId}/process-result`,
+    // #4/#5: the ONLY endpoint that may set a run status — DSQ with mandatory reason
+    // (validates, normalizes to the stored "DQ", nulls ranks and re-ranks the race).
+    updateParticipantStatus: (raceId: string, participantId: string) => `races/${raceId}/participants/${participantId}`,
     //checkpoints
     searchCheckpoints: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,
     addCheckpoint: (eventId: string, raceId: string) => `checkpoints/${eventId}/${raceId}`,
