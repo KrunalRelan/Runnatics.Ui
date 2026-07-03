@@ -929,10 +929,20 @@ const ParticipantDetail: React.FC = () => {
         severity: warnings.length ? 'warning' : 'success',
       });
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to save crossings. Please try again.';
-      setSnackbar({ open: true, message: errorMessage, severity: 'error' });
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to save crossings.';
+      setSnackbar({ open: true, message: `${errorMessage} Pending changes kept — review and retry.`, severity: 'error' });
+      // PARTIAL-SAVE safety: earlier checkpoints in this batch may have committed before the
+      // failure — re-fetch so the table shows what actually applied (the kept pending flags
+      // recompute on top; retrying an already-applied override is a harmless upsert).
+      try {
+        const response = await ParticipantService.getParticipantDetails(eventId, raceId, participantId);
+        if (response.data.message) setParticipant(response.data.message);
+        fetchDetections(detectionsCheckpointFilter);
+      } catch {
+        // best-effort refresh; the error snackbar above already tells the admin to review
+      }
     } finally {
-      setSavingCrossings(false);
+      setSavingCrossings(false);   // never leave the panel disabled
     }
   };
 
