@@ -422,9 +422,13 @@ const ParticipantDetail: React.FC = () => {
   const [removingTime, setRemovingTime] = useState(false);
   // Raw-read id whose "set as crossing" / "revert to auto" action is in flight (disables that row's control).
   // #1 (client rule, 2026-07-03): crossing toggles are LOCAL UI state — NOTHING recalculates
-  // until "Save & Process Result". No auto-replace: two reads ON at one checkpoint is a
+  // until "Save Crossings & Reprocess". No auto-replace: two reads ON at one checkpoint is a
   // conflict the admin resolves manually before saving.
   const [pendingCrossings, setPendingCrossings] = useState<Record<string, boolean>>({});
+  // Guard: the header participant-save and Back navigation do NOT save crossing toggles —
+  // clicking either with amber toggles pending asks for an explicit discard first (Punit
+  // point 2: the identical-label header save silently threw the selections away).
+  const [pendingDiscardGuard, setPendingDiscardGuard] = useState<null | "save" | "back">(null);
   // ASSIGN-THEN-CHOOSE: for a previously-UNASSIGNED read toggled ON, the gate it will be
   // chosen for (single-candidate device → auto-set; shared mat → picked inline). Keyed by
   // read id; always paired with a pendingCrossings[id] = true entry.
@@ -903,7 +907,7 @@ const ParticipantDetail: React.FC = () => {
   // ============================================================
   // #1 (client rule, 2026-07-03) — BATCHED crossing toggles.
   // Toggling a Switch changes LOCAL state only; the server processes the FINAL
-  // toggle state when "Save & Process Result" is pressed. No auto-replace: two
+  // toggle state when "Save Crossings & Reprocess" is pressed. No auto-replace: two
   // reads ON at one checkpoint is a CONFLICT the admin resolves before saving.
   // The server ACCEPTS an out-of-window / out-of-sequence choice and classifies
   // the runner (#7 — e.g. DNF); its warning is surfaced, never dropped.
@@ -964,6 +968,29 @@ const ParticipantDetail: React.FC = () => {
   const discardCrossingChanges = () => {
     setPendingCrossings({});
     setPendingTargets({});
+  };
+
+  const hasPendingCrossings = Object.keys(pendingCrossings).length > 0;
+
+  // Hard navigation (refresh / close tab) with pending toggles → native browser prompt.
+  // In-app exits (header save, Back) get the explicit discard dialog below instead.
+  useEffect(() => {
+    if (!hasPendingCrossings) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [hasPendingCrossings]);
+
+  // Discard confirmed → run the action the guard intercepted.
+  const confirmDiscardAndContinue = () => {
+    const action = pendingDiscardGuard;
+    discardCrossingChanges();
+    setPendingDiscardGuard(null);
+    if (action === "save") handleSaveEdit();
+    else if (action === "back") handleBack();
   };
 
   // Apply the final toggle state: per changed checkpoint, either a chosen-read override
@@ -1093,7 +1120,7 @@ const ParticipantDetail: React.FC = () => {
           <Button
             variant="outlined"
             startIcon={<ArrowBack />}
-            onClick={handleBack}
+            onClick={() => (hasPendingCrossings ? setPendingDiscardGuard("back") : handleBack())}
             sx={{
               borderColor: colors.border.main,
               color: colors.text.primary,
@@ -1137,7 +1164,7 @@ const ParticipantDetail: React.FC = () => {
                     <Button
                       variant="contained"
                       startIcon={isSaving ? <CircularProgress size={18} color="inherit" /> : <Save />}
-                      onClick={handleSaveEdit}
+                      onClick={() => (hasPendingCrossings ? setPendingDiscardGuard("save") : handleSaveEdit())}
                       disabled={isSaving}
                       color="primary"
                     >
@@ -2244,7 +2271,7 @@ const ParticipantDetail: React.FC = () => {
                 )}
               </Typography>
               <Stack direction="row" spacing={1} alignItems="center">
-                {/* #1: batched toggles — nothing recalculates until Save & Process Result */}
+                {/* #1: batched toggles — nothing recalculates until Save Crossings & Reprocess */}
                 {Object.keys(pendingCrossings).length > 0 && (() => {
                   const conflicts = crossingConflicts();
                   return (
@@ -2271,7 +2298,7 @@ const ParticipantDetail: React.FC = () => {
                         disabled={savingCrossings || conflicts.length > 0}
                         sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap', fontWeight: 600 }}
                       >
-                        {savingCrossings ? 'Processing…' : `Save & Process Result (${Object.keys(pendingCrossings).length})`}
+                        {savingCrossings ? 'Processing…' : `Save Crossings & Reprocess (${Object.keys(pendingCrossings).length})`}
                       </Button>
                     </>
                   );
@@ -2391,7 +2418,7 @@ const ParticipantDetail: React.FC = () => {
                                 const target = pendingTargets[r.id];
 
                                 const tip = isPending
-                                  ? `Pending — becomes the crossing for ${target?.name ?? 'the selected gate'} when you press "Save & Process Result"`
+                                  ? `Pending — becomes the crossing for ${target?.name ?? 'the selected gate'} when you press "Save Crossings & Reprocess"`
                                   : candidates.length === 1
                                     ? `Unassigned read — turn on to make it the crossing for ${candidates[0].name} (applies on save)`
                                     : 'Unassigned read from a shared mat — turn on and pick which gate it crosses (applies on save)';
@@ -2418,13 +2445,13 @@ const ParticipantDetail: React.FC = () => {
                                 );
                               }
 
-                              // #1: toggles are LOCAL until "Save & Process Result". Two reads ON at
+                              // #1: toggles are LOCAL until "Save Crossings & Reprocess". Two reads ON at
                               // one checkpoint is a visible CONFLICT the admin resolves before save.
                               const effectiveOn = pendingCrossings[r.id] ?? isNorm;
                               const isPending = pendingCrossings[r.id] !== undefined;
 
                               const tip = isPending
-                                ? 'Pending change — applies when you press "Save & Process Result"'
+                                ? 'Pending change — applies when you press "Save Crossings & Reprocess"'
                                 : isNorm
                                   ? (r.hasActiveOverride
                                       ? 'Selected crossing — turn off (and save) to revert to the automatic pick'
@@ -3126,6 +3153,27 @@ const ParticipantDetail: React.FC = () => {
             startIcon={removingDsq ? <CircularProgress size={16} color="inherit" /> : undefined}
           >
             {removingDsq ? "Removing…" : "Remove disqualification"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Unsaved crossing selections guard — the header save / Back do NOT save toggles;
+          only "Save Crossings & Reprocess" in the RFID Tag Readings section does. */}
+      <Dialog open={!!pendingDiscardGuard} onClose={() => setPendingDiscardGuard(null)}>
+        <DialogTitle>Unsaved crossing selections</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            You have unsaved crossing selections — discard? They are only applied by
+            “Save Crossings & Reprocess” in the RFID Tag Readings section;
+            {pendingDiscardGuard === "save"
+              ? " saving the participant does not include them."
+              : " leaving this page loses them."}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingDiscardGuard(null)}>Keep selections</Button>
+          <Button onClick={confirmDiscardAndContinue} color="error" variant="contained">
+            {pendingDiscardGuard === "save" ? "Discard & save participant" : "Discard & leave"}
           </Button>
         </DialogActions>
       </Dialog>
