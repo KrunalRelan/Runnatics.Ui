@@ -74,6 +74,9 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
   const [hasRfidReadings, setHasRfidReadings] = useState<boolean>(false);
   // #5: mandatory when disqualifying
   const [dsqReason, setDsqReason] = useState<string>("");
+  // UN-DSQ: confirm-gated "Remove disqualification" action (symmetric friction with DSQ).
+  const [confirmUnDsq, setConfirmUnDsq] = useState<boolean>(false);
+  const [removingDsq, setRemovingDsq] = useState<boolean>(false);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -244,6 +247,9 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
       }
       if (data.title || data.detail) return data.detail || data.title;
       if (typeof data === "string") return data;
+      // The races/{raceId}/participants/{participantId} endpoint returns { error: "…" }.
+      if (typeof data.error === "string") return data.error;
+      if (data.error?.message) return data.error.message;
       if (data.message) return data.message;
     }
     return fallback;
@@ -281,6 +287,34 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
         pid,
         formData.ageCategory?.trim() || ""
       );
+    }
+  };
+
+  // UN-DSQ: fires on CONFIRM (the DDL selection only opens the dialog). The server 400s
+  // unless the runner is currently DSQ; the CLASSIFIER decides the recomputed status
+  // (OK/DNF/DNS) — render what it said, never assume OK. On success the modal closes and
+  // the grid re-fetches (onUpdate), picking up the race-wide rank shifts.
+  const handleRemoveDisqualification = async () => {
+    if (!formData.id || !selectedRaceId) return;
+    setRemovingDsq(true);
+    try {
+      const snapshot = await ParticipantService.removeDisqualification(selectedRaceId, formData.id);
+      setConfirmUnDsq(false);
+      setSnackbar({
+        open: true,
+        message: `Disqualification removed — recomputed status: ${snapshot?.status || "updated"}. Race standings updated.`,
+        severity: "success",
+      });
+      onUpdate({ ...formData, status: (snapshot?.status as any) ?? formData.status });
+      setTimeout(() => handleClose(), 1200);
+    } catch (err: any) {
+      console.error("Error removing disqualification:", err);
+      setConfirmUnDsq(false);
+      setError(extractErrorMessage(err, "Failed to remove the disqualification."));
+      // 400 = stale UI (runner is no longer DSQ) — re-sync the grid with the server truth.
+      onUpdate(formData);
+    } finally {
+      setRemovingDsq(false);
     }
   };
 
@@ -536,16 +570,23 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
               />
             </Stack>
 
-            {/* Run Status — #4 (2026-07-03): COMPUTED from timing data (OK/DNF/DNS); the ONLY
-                manual change is DSQ, with a mandatory reason. */}
+            {/* Run Status — #4 (2026-07-03): COMPUTED from timing data (OK/DNF/DNS); the manual
+                actions are DSQ (mandatory reason) and, on a DSQ'd runner, "Remove
+                disqualification" (confirm-gated recompute). */}
             <FormControl fullWidth size="small">
               <InputLabel>Run Status</InputLabel>
               <Select
                 value={formData.status}
                 label="Run Status"
-                onChange={(e: SelectChangeEvent) =>
-                  handleFormChange("status", e.target.value as any)
-                }
+                onChange={(e: SelectChangeEvent) => {
+                  // UN-DSQ: selecting the remove action opens the confirm dialog — the DDL
+                  // value stays on the current status until the server confirms.
+                  if (e.target.value === "__REMOVE_DSQ__") {
+                    setConfirmUnDsq(true);
+                    return;
+                  }
+                  handleFormChange("status", e.target.value as any);
+                }}
               >
                 <MenuItem value={participant?.status || "Registered"}>
                   {(participant?.status || "Registered") +
@@ -553,6 +594,9 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
                 </MenuItem>
                 {participant?.status !== "DSQ" && (
                   <MenuItem value="DSQ">DSQ (Disqualify)</MenuItem>
+                )}
+                {participant?.status === "DSQ" && (
+                  <MenuItem value="__REMOVE_DSQ__">Remove disqualification</MenuItem>
                 )}
               </Select>
             </FormControl>
@@ -676,6 +720,27 @@ const EditParticipant: React.FC<EditParticipantProps> = ({
               </Button>
             );
           })()}
+        </DialogActions>
+      </Dialog>
+
+      {/* UN-DSQ confirmation — symmetric friction with the DSQ action itself */}
+      <Dialog open={confirmUnDsq} onClose={() => { if (!removingDsq) setConfirmUnDsq(false); }}>
+        <DialogTitle>Remove disqualification?</DialogTitle>
+        <DialogContent>
+          This will remove the disqualification and recompute this runner's status and the race
+          standings. Continue?
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmUnDsq(false)} disabled={removingDsq}>Cancel</Button>
+          <Button
+            onClick={handleRemoveDisqualification}
+            color="error"
+            variant="contained"
+            disabled={removingDsq}
+            startIcon={removingDsq ? <CircularProgress size={16} color="inherit" /> : undefined}
+          >
+            {removingDsq ? "Removing…" : "Remove disqualification"}
+          </Button>
         </DialogActions>
       </Dialog>
 

@@ -378,6 +378,9 @@ const ParticipantDetail: React.FC = () => {
   const [editEmail, setEditEmail] = useState("");
   const [editAgeCategory, setEditAgeCategory] = useState("");
   const [editRunStatus, setEditRunStatus] = useState("");
+  // UN-DSQ: confirm-gated "Remove disqualification" action (symmetric friction with DSQ).
+  const [confirmUnDsq, setConfirmUnDsq] = useState(false);
+  const [removingDsq, setRemovingDsq] = useState(false);
   const [editDisqualificationReason, setEditDisqualificationReason] = useState("");
   const [editLoopCount, setEditLoopCount] = useState<string>("");
   const [editManualTime, setEditManualTime] = useState("");
@@ -510,6 +513,58 @@ const ParticipantDetail: React.FC = () => {
     } else {
       setPhase("reranking");
       await _PS.changeRaceCategory(eventId, editRaceId, participantId, editAgeCategory?.trim() || "");
+    }
+  };
+
+  // UN-DSQ: fires on CONFIRM (the DDL selection only opens the dialog). The server 400s
+  // unless the runner is currently DSQ; on success we render from the commit-f snapshot —
+  // the CLASSIFIER decides the status (OK/DNF/DNS), never the client.
+  const handleRemoveDisqualification = async () => {
+    if (!participantId) return;
+    setRemovingDsq(true);
+    try {
+      const snapshot = await _PS.removeDisqualification(editRaceId || raceId || "", participantId);
+      setConfirmUnDsq(false);
+      // Snapshot-first render: status chip + header times/ranks update immediately; the
+      // re-fetch below then replaces everything with the fetched truth (ranks shifted
+      // race-wide, so a full refresh remains correct practice per the refresh contract).
+      if (participant) {
+        setParticipant({
+          ...participant,
+          status: snapshot?.status ?? participant.status,
+          gunTime: snapshot?.gunTime ?? null,
+          chipTime: snapshot?.netTime ?? null,
+          rankings: {
+            ...(participant.rankings ?? {
+              totalParticipants: null, overallPercentage: null, totalInGender: null,
+              genderPercentage: null, totalInCategory: null, categoryPercentage: null,
+              allCategoriesRank: null, totalAllCategories: null, allCategoriesPercentage: null,
+              overallRank: null, genderRank: null, categoryRank: null,
+            }),
+            overallRank: snapshot?.overallRank ?? null,
+            genderRank: snapshot?.genderRank ?? null,
+            categoryRank: snapshot?.categoryRank ?? null,
+          },
+        });
+      }
+      if (snapshot?.status) setEditRunStatus(snapshot.status);
+      setSnackbar({
+        open: true,
+        message: `Disqualification removed — recomputed status: ${snapshot?.status || "updated"}. Race standings updated.`,
+        severity: "success",
+      });
+      await refreshParticipant();
+    } catch (err: any) {
+      setConfirmUnDsq(false);
+      const data = err.response?.data;
+      const message =
+        (typeof data?.error === "string" ? data.error : data?.error?.message) ||
+        data?.message || err.message || "Failed to remove the disqualification.";
+      setSnackbar({ open: true, message, severity: "error" });
+      // 400 = stale UI (runner is no longer DSQ) — re-sync with the server truth.
+      await refreshParticipant();
+    } finally {
+      setRemovingDsq(false);
     }
   };
 
@@ -1531,16 +1586,28 @@ const ParticipantDetail: React.FC = () => {
                   <Select
                     value={editRunStatus}
                     label="Run Status"
-                    onChange={(e: SelectChangeEvent) => setEditRunStatus(e.target.value)}
+                    onChange={(e: SelectChangeEvent) => {
+                      // UN-DSQ: selecting the remove action opens the confirm dialog — the
+                      // DDL value stays on the current status until the server confirms.
+                      if (e.target.value === "__REMOVE_DSQ__") {
+                        setConfirmUnDsq(true);
+                        return;
+                      }
+                      setEditRunStatus(e.target.value);
+                    }}
                   >
                     {/* #4 (2026-07-03): run status is COMPUTED from timing data (OK/DNF/DNS) —
-                        the DDL shows the computed value; DSQ is the ONLY manual change. */}
+                        the DDL shows the computed value; the manual actions are DSQ and, on a
+                        DSQ'd runner, "Remove disqualification" (confirm-gated recompute). */}
                     <MenuItem value={participant?.status || "Registered"}>
                       {(participant?.status || "Registered") +
                         (participant?.status === "DSQ" ? "" : " (computed)")}
                     </MenuItem>
                     {participant?.status !== "DSQ" && (
                       <MenuItem value="DSQ">DSQ (Disqualify)</MenuItem>
+                    )}
+                    {participant?.status === "DSQ" && (
+                      <MenuItem value="__REMOVE_DSQ__">Remove disqualification</MenuItem>
                     )}
                   </Select>
                 </FormControl>
@@ -3037,6 +3104,29 @@ const ParticipantDetail: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setShowRaceCategoryConfirm(false)}>Cancel</Button>
           <Button onClick={handleRaceCategoryConfirm} variant="contained" color="primary">Confirm</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* UN-DSQ confirmation — symmetric friction with the DSQ action itself */}
+      <Dialog open={confirmUnDsq} onClose={() => { if (!removingDsq) setConfirmUnDsq(false); }}>
+        <DialogTitle>Remove disqualification?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This will remove the disqualification and recompute this runner's status and the race
+            standings. Continue?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmUnDsq(false)} disabled={removingDsq}>Cancel</Button>
+          <Button
+            onClick={handleRemoveDisqualification}
+            color="error"
+            variant="contained"
+            disabled={removingDsq}
+            startIcon={removingDsq ? <CircularProgress size={16} color="inherit" /> : undefined}
+          >
+            {removingDsq ? "Removing…" : "Remove disqualification"}
+          </Button>
         </DialogActions>
       </Dialog>
 

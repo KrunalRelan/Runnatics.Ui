@@ -2,6 +2,7 @@ import { ServiceUrl } from '../models';
 import { apiClient } from '../utils/axios.config';
 import { AxiosResponse } from 'axios';
 import { UploadResponse, ProcessResponse, ProcessImportRequest, ParticipantSearchRequest, ParticipantSearchResponse, ParticipantRequest, AddParticipantRangeRequest, AddParticipantRangeResponse, UpdateParticipantsByBibResponse, ParticipantDetailsResponse } from '../models/participants';
+import { ParticipantStatusSnapshot } from '../models/participants/ParticipantStatusSnapshot';
 import { ProcessParticipantResultResponse } from '../models/results/ProcessParticipantResultResponse';
 import { ResponseBase } from '../models/ResponseBase';
 import { Category } from '../models/participants/Category';
@@ -116,6 +117,24 @@ export class ParticipantService {
             ServiceUrl.updateParticipantStatus(raceId, participantId),
             { runStatus: "DSQ", disqualificationReason }
         );
+    }
+
+    /**
+     * UN-DSQ: remove a disqualification. RunStatus="Recompute" is the one clear action —
+     * the server 400s unless the current stored status is DQ, NULLS the reason itself,
+     * reclassifies from gate coverage (#7 — never operator choice) and re-ranks the race
+     * in memory. Returns the commit-f snapshot (display status, times, post-re-rank ranks)
+     * — render from it; the classifier decides the status, not the client.
+     */
+    static async removeDisqualification(
+        raceId: string,
+        participantId: string
+    ): Promise<ParticipantStatusSnapshot | undefined> {
+        const response = await apiClient.put<ResponseBase<ParticipantStatusSnapshot>>(
+            ServiceUrl.updateParticipantStatus(raceId, participantId),
+            { runStatus: "Recompute" }
+        );
+        return response.data?.message;
     }
 
     /**

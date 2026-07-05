@@ -25,4 +25,4 @@ export * from './CheckpointTime';
 export * from './AddParticipantRangeRequest';
 export * from './AddParticipantRangeResponse';
 export * from './UpdateParticipantsByBibRequest';
-export * from './UpdateParticipantsByBibResponse';
+export * from './UpdateParticipantsByBibResponse';export * from './ParticipantStatusSnapshot';
