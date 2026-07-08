@@ -20,7 +20,10 @@ export interface ParticipantDetailData {
   raceName: string;
   raceDistance: number;
   eventName: string;
-  status: "Running" | "Finished" | "DNF" | "DNS" | "Registered";
+  // #4/#5 display statuses: the details endpoint sends the COMPUTED result status in
+  // display form when a Results row exists ("OK"/"DNF"/"DNS"/"DSQ"); raw participant
+  // statuses ("Registered", legacy "Running"/"Finished") appear only pre-processing.
+  status: "OK" | "DSQ" | "Running" | "Finished" | "DNF" | "DNS" | "Registered";
   startTime: string;
   finishTime?: string;
   chipTime?: string;
