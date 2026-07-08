@@ -200,14 +200,9 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   //   all: 0,
   // };
 
-  const statusMap: Record<string, number> = {
-    registered: 1,
-    completed: 2,
-    dnf: 3,
-    noShow: 4,
-    all: 0,
-  };
-
+  // statusMap (numeric filter codes) REMOVED 2026-07-07: the search filter now sends the
+  // computed display status string verbatim ("OK"/"DNF"/"DNS"/"DSQ"); reverseStatusMap stays
+  // for legacy numeric ROW statuses in normalizeStatus.
   const reverseStatusMap: Record<number, string> = {
     1: "registered",
     2: "completed",
@@ -344,7 +339,11 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       setParticipantsLoading(true);
 
       const genderValue = currentFilters.gender && currentFilters.gender !== "all" ? genderMap[currentFilters.gender] || null : null;
-      const statusValue = currentFilters.status && currentFilters.status !== "all" ? statusMap[currentFilters.status] || null : null;
+      // Status filter contract (2026-07-07): send the DISPLAY string ("OK"/"DNF"/"DNS"/"DSQ")
+      // verbatim — the API matches it against the computed Results.Status (the Status column's
+      // value). The old numeric statusMap fed a legacy enum that filtered the stale raw
+      // participant status.
+      const statusValue = currentFilters.status && currentFilters.status !== "all" ? currentFilters.status : null;
       
       const searchResponse = await ParticipantService.searchParticipants(
         eventId,
@@ -1216,11 +1215,15 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
                   handleFilterChange("status", e.target.value)
                 }
               >
+                {/* COMPUTED result statuses only (contract 2026-07-07) — exactly what the
+                    Status column displays. "OK" maps to stored "Finished" and "DSQ" to
+                    stored "DQ" at the API boundary; the legacy Registered/Completed options
+                    filtered the stale raw participant status and returned wrong rows. */}
                 <MenuItem value="all">All Status</MenuItem>
-                <MenuItem value="registered">Registered</MenuItem>
-                <MenuItem value="completed">Completed</MenuItem>
-                <MenuItem value="dnf">DNF</MenuItem>
-                <MenuItem value="noShow">DNS</MenuItem>
+                <MenuItem value="OK">OK</MenuItem>
+                <MenuItem value="DNF">DNF</MenuItem>
+                <MenuItem value="DNS">DNS</MenuItem>
+                <MenuItem value="DSQ">DSQ</MenuItem>
               </Select>
             </FormControl>
             <FormControl sx={{ flex: 1, minWidth: 200 }} size="small">
