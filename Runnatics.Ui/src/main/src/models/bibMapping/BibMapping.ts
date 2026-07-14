@@ -35,11 +35,10 @@ export interface GetEpcMappingRequest {
 export interface BibMappingParticipantResponse {
   participantId: string;
   bibNumber: string;
-  participantName: string;
+  name: string;
   epc?: string;
   isEpcMapped: boolean;
-  isMultipleEpc?: boolean;
   chipId?: string;
   eventId?: string;
-  createdAt?: string;
+  mappedAt?: string;
 }

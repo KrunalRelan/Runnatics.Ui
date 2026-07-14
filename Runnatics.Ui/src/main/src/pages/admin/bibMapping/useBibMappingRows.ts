@@ -120,15 +120,15 @@ export function useBibMappingRows(
       return {
         participantId: p.participantId,
         bibNumber: p.bibNumber,
-        name: p.participantName,
+        name: p.name,
         epc: mappedEpc,
         pendingEpc: override.pendingEpc ?? '',
         status,
         errorMessage: override.errorMessage,
         chipId: p.chipId,
         eventId: p.eventId,
-        createdAt: p.createdAt,
-        isMultipleEpc: override.isMultipleEpc ?? p.isMultipleEpc ?? false,
+        createdAt: p.mappedAt,
+        isMultipleEpc: override.isMultipleEpc ?? false,
       };
     });
   }, [participantsQuery.data, rowOverrides]);
