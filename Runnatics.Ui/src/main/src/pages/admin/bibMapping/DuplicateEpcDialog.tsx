@@ -40,11 +40,11 @@ const DuplicateEpcDialog: React.FC<Props> = ({
         {info && (
           <>
             <Typography variant="body2" sx={{ mb: 1.5 }}>
-              This chip (EPC:{' '}
+              EPC{' '}
               <Box component="span" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
                 {info.epc}
               </Box>
-              ) is already mapped to{' '}
+              {' '}is already mapped to{' '}
               <strong>BIB #{info.existingBib}</strong>
               {info.existingName ? ` (${info.existingName})` : ''}.
             </Typography>

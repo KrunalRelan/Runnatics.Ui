@@ -52,6 +52,7 @@ import {
   useBibMappingRows,
 } from './useBibMappingRows';
 import { useBibMappingHub } from '../../../hooks/useBibMappingHub';
+import config from '../../../config/environment';
 import InstructionsCard from './InstructionsCard';
 import DuplicateEpcDialog from './DuplicateEpcDialog';
 import ClearMappingDialog from './ClearMappingDialog';
@@ -151,10 +152,11 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  // Lockout window: silently reject a submission within 500ms of the last successful map.
-  // This catches the USB-keyboard reader pattern of EPC1+Enter → EPC2+Enter in rapid succession.
+  // Lockout window: silently reject a submission within the configured window after the
+  // last successful map (VITE_BIB_MAP_LOCKOUT_MS, default 2000ms). This catches the
+  // USB-keyboard reader pattern of EPC1+Enter → EPC2+Enter in rapid succession.
   const lastMapTimestampRef = useRef<number>(0);
-  const MAP_LOCKOUT_MS = 500;
+  const MAP_LOCKOUT_MS = config.bibMapLockoutMs;
 
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
