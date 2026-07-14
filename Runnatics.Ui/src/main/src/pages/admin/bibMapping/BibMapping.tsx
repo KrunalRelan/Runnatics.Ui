@@ -364,6 +364,20 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
       {/* Instructions (collapsible, localStorage-persisted) */}
       <InstructionsCard />
 
+      {/* Frozen header: progress + search/status stay pinned below the app bar while
+          the table scrolls. Opaque background so table rows don't show through. */}
+      <Box
+        sx={{
+          position: 'sticky',
+          top: { xs: 56, sm: 64 },
+          zIndex: 20,
+          backgroundColor: 'background.default',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 3,
+          pb: 1,
+        }}
+      >
       {/* Scan mode + Start/Resume + progress */}
       <Paper sx={{ p: 2.5 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
@@ -454,6 +468,7 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
             <MenuItem value="Unmapped">Unmapped</MenuItem>
           </Select>
         </FormControl>
+      </Box>
       </Box>
 
       {/* Table */}
