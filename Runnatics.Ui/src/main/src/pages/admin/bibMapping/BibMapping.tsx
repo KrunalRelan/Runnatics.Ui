@@ -35,6 +35,7 @@ import {
   SkipForward,
   Search,
   Play,
+  Pause,
   X as XIcon,
   Trash2,
   Volume2,
@@ -108,6 +109,9 @@ function beep() {
 
 const PAGE_SIZE = 50;
 
+const SAME_CHIP_HINT =
+  'Same chip still on the reader — remove it before the next scan (or press Resume to scan it again).';
+
 const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
   // Server-side pagination/filter/search state owned by the component
   const [search, setSearch] = useState('');
@@ -158,6 +162,11 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
   const lastMapTimestampRef = useRef<number>(0);
   const MAP_LOCKOUT_MS = config.bibMapLockoutMs;
 
+  // Same-EPC guard: remember the EPC we last mapped. Any read of the SAME chip (exact
+  // match or a re-read fragment that starts with it) is ignored until a DIFFERENT chip
+  // is mapped or the operator resumes — this is what stops "chip left on the pad".
+  const lastMappedEpcRef = useRef<string>('');
+
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
   const searchRef = useRef<HTMLInputElement>(null);
@@ -165,19 +174,62 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
   const [focusedRowId, setFocusedRowId] = useState<string | null>(null);
   const [nextFocusId, setNextFocusId] = useState<string | null>(null);
 
+  // Pause state: when paused, ALL reader input is ignored (no typing, no mapping) until
+  // the operator resumes — a safe window to physically handle chips.
+  const [paused, setPaused] = useState(false);
+
+  // Non-blocking hint shown when a same-chip re-read is ignored.
+  const [sameChipHint, setSameChipHint] = useState<string | null>(null);
+  const hintTimerRef = useRef<number | null>(null);
+
+  const showSameChipHint = useCallback(() => {
+    setSameChipHint(SAME_CHIP_HINT);
+    if (hintTimerRef.current) window.clearTimeout(hintTimerRef.current);
+    hintTimerRef.current = window.setTimeout(() => setSameChipHint(null), 4000);
+  }, []);
+
+  // Reset per-session guards when the race/participant list changes, so the first scan
+  // of a new session can never be silently swallowed by a stale last-mapped EPC.
+  useEffect(() => {
+    lastMappedEpcRef.current = '';
+    lastMapTimestampRef.current = 0;
+    setPaused(false);
+    setSameChipHint(null);
+  }, [eventId, raceId]);
+
+  // Clean up the hint timer on unmount.
+  useEffect(() => () => {
+    if (hintTimerRef.current) window.clearTimeout(hintTimerRef.current);
+  }, []);
+
+  const handleTogglePause = useCallback(() => {
+    setPaused((prev) => {
+      const next = !prev;
+      if (!next) {
+        // Resuming — clear the same-chip guard so the operator can deliberately
+        // re-scan the chip that was just mapped (e.g. remap it to a different BIB).
+        lastMappedEpcRef.current = '';
+        lastMapTimestampRef.current = 0;
+        setSameChipHint(null);
+      }
+      return next;
+    });
+  }, []);
+
   // SignalR hub: handles MultipleEpcDetected events from the TCP reader.
   // Declared after focusedRowId so the effect's deps can reference it safely.
   const { multipleEpcEpcs, clearMultipleEpc } = useBibMappingHub();
 
   useEffect(() => {
     if (multipleEpcEpcs && multipleEpcEpcs.length > 0) {
-      if (focusedRowId) {
+      // While paused, ignore the read but still consume the event.
+      if (!paused && focusedRowId) {
         setMultipleEpcError(focusedRowId);
       }
       // Consume the event so it can't re-fire on a later focus change
       clearMultipleEpc();
     }
-  }, [multipleEpcEpcs, focusedRowId, setMultipleEpcError, clearMultipleEpc]);
+  }, [paused, multipleEpcEpcs, focusedRowId, setMultipleEpcError, clearMultipleEpc]);
 
   const [duplicate, setDuplicate] = useState<DuplicateInfo | null>(null);
   const [overrideWorking, setOverrideWorking] = useState(false);
@@ -260,18 +312,52 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
 
   const handleSubmit = useCallback(
     async (participantId: string) => {
-      // Silently gate rapid follow-on submissions: USB keyboard readers emit EPC1+Enter then
-      // EPC2+Enter in quick succession when multiple chips are in the field simultaneously.
-      // This is a debounce gate, not an error — the row stays mappable once the window expires.
-      if (Date.now() - lastMapTimestampRef.current < MAP_LOCKOUT_MS) {
+      // Paused: ignore the read entirely and clear anything that landed in the field.
+      if (paused) {
+        clearPendingEpc(participantId);
         return;
       }
+
       const row = rows.find((r) => r.participantId === participantId);
       if (!row) return;
+
+      const epc = sanitizeEpc(row.pendingEpc);
+
+      // Concatenation guard: a doubled read (first half === second half) is the same chip
+      // read twice into one field. It passes the 12–32 hex length check at 24 chars, so
+      // reject it explicitly. Clearing the field also stops further accumulation.
+      if (
+        epc.length >= EPC_MIN_LEN * 2 &&
+        epc.length % 2 === 0 &&
+        epc.slice(0, epc.length / 2) === epc.slice(epc.length / 2)
+      ) {
+        clearPendingEpc(participantId);
+        showSameChipHint();
+        return;
+      }
+
+      // Same-EPC guard: ignore any read of the chip we just mapped — exact match, or a
+      // re-read fragment that starts with it. Stays armed until a different chip is mapped
+      // or the operator resumes. Clear the field so nothing concatenates.
+      const lastEpc = lastMappedEpcRef.current;
+      if (lastEpc && (epc === lastEpc || epc.startsWith(lastEpc))) {
+        clearPendingEpc(participantId);
+        showSameChipHint();
+        return;
+      }
+
+      // Coarse lockout window: silently gate rapid follow-on submissions after a successful
+      // map. Clear the field so a re-read within the window can't accumulate/concatenate.
+      if (Date.now() - lastMapTimestampRef.current < MAP_LOCKOUT_MS) {
+        clearPendingEpc(participantId);
+        return;
+      }
+
       const result = await submitEpc(participantId);
       if (result.status === 'ok') {
         lastMapTimestampRef.current = Date.now();
-        toast.success(`✓ BIB #${row.bibNumber} mapped to ${sanitizeEpc(row.pendingEpc)}`);
+        lastMappedEpcRef.current = epc;
+        toast.success(`✓ BIB #${row.bibNumber} mapped to ${epc}`);
         if (soundEnabled) beep();
         if (result.nextId) setNextFocusId(result.nextId);
       } else if (result.status === 'duplicate') {
@@ -279,7 +365,7 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
         setDuplicate(result.duplicate);
       }
     },
-    [rows, submitEpc, soundEnabled, incrementDuplicateAttempts],
+    [paused, rows, submitEpc, soundEnabled, incrementDuplicateAttempts, clearPendingEpc, showSameChipHint, MAP_LOCKOUT_MS],
   );
 
   const handleKeyDown = async (e: KeyboardEvent<HTMLInputElement>, participantId: string) => {
@@ -303,10 +389,13 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
   const handleOverride = async () => {
     if (!duplicate) return;
     setOverrideWorking(true);
+    const epc = sanitizeEpc(duplicate.epc);
     const result = await overrideMapping(duplicate);
     setOverrideWorking(false);
     setDuplicate(null);
     if (result.ok) {
+      lastMapTimestampRef.current = Date.now();
+      lastMappedEpcRef.current = epc;
       if (soundEnabled) beep();
       if (result.nextId) setNextFocusId(result.nextId);
     }
@@ -337,7 +426,7 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
     if (ok) setClearTarget(null);
   };
 
-  const scanReady = focusedRowId !== null;
+  const scanReady = focusedRowId !== null && !paused;
   const allMapped = progress.total > 0 && progress.mapped === progress.total;
 
   const focusedRow = useMemo(
@@ -345,13 +434,15 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
     [focusedRowId, rows],
   );
 
-  const statusLabel = allMapped
-    ? 'All mapped'
-    : scanReady && focusedRow
-      ? `Scanning BIB #${focusedRow.bibNumber}`
-      : progress.mapped > 0
-        ? 'Ready to resume'
-        : 'Ready';
+  const statusLabel = paused
+    ? 'Paused — reader input ignored'
+    : allMapped
+      ? 'All mapped'
+      : scanReady && focusedRow
+        ? `Scanning BIB #${focusedRow.bibNumber}`
+        : progress.mapped > 0
+          ? 'Ready to resume'
+          : 'Ready';
 
   const startButtonLabel = allMapped
     ? 'All BIBs mapped ✓'
@@ -378,6 +469,27 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
           pb: 1,
         }}
       >
+      {paused && (
+        <Alert
+          severity="warning"
+          variant="filled"
+          icon={<Pause size={18} />}
+          action={
+            <Button color="inherit" size="small" onClick={handleTogglePause}>
+              Resume
+            </Button>
+          }
+        >
+          Reader paused — all scans are ignored until you press Resume.
+        </Alert>
+      )}
+
+      {sameChipHint && !paused && (
+        <Alert severity="warning" onClose={() => setSameChipHint(null)}>
+          {sameChipHint}
+        </Alert>
+      )}
+
       {/* Scan mode + Start/Resume + progress */}
       <Paper sx={{ p: 2.5 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
@@ -387,9 +499,20 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
             color="primary"
             size="large"
             startIcon={<Play size={18} />}
-            disabled={allMapped || progress.total === 0}
+            disabled={allMapped || progress.total === 0 || paused}
           >
             {startButtonLabel}
+          </Button>
+
+          <Button
+            onClick={handleTogglePause}
+            variant={paused ? 'contained' : 'outlined'}
+            color={paused ? 'warning' : 'inherit'}
+            size="large"
+            startIcon={paused ? <Play size={18} /> : <Pause size={18} />}
+            disabled={progress.total === 0}
+          >
+            {paused ? 'Resume' : 'Pause'}
           </Button>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
@@ -398,7 +521,7 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
                 width: 12,
                 height: 12,
                 borderRadius: '50%',
-                backgroundColor: scanReady ? '#3b82f6' : '#9ca3af',
+                backgroundColor: paused ? '#f59e0b' : scanReady ? '#3b82f6' : '#9ca3af',
                 animation: scanReady ? `${pulseBlue} 1.4s ease-out infinite` : 'none',
               }}
             />
@@ -510,7 +633,7 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
                   errorFlash={errorFlashIds.has(row.participantId)}
                   onFocus={() => setFocusedRowId(row.participantId)}
                   onBlur={() => setFocusedRowId((prev) => (prev === row.participantId ? null : prev))}
-                  onChangeEpc={(val) => setPendingEpc(row.participantId, val)}
+                  onChangeEpc={(val) => { if (!paused) setPendingEpc(row.participantId, val); }}
                   onKeyDown={(e) => handleKeyDown(e, row.participantId)}
                   onSkip={() => handleSkip(row.participantId)}
                   onUnskip={() => unskipRow(row.participantId)}
