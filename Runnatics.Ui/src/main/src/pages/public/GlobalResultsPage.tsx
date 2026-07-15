@@ -1,34 +1,28 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Search, Trophy } from 'lucide-react';
 import { Container } from '../../components/public/ui';
 import { ErrorState } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
 import useDebounce from '../../hooks/useDebounce';
 import { publicApi } from '../../../../api/publicApi';
-import type { GroupedLeaderboardParticipant, GroupedLeaderboardCategory } from '../../../../api/publicApi';
+import type { GroupedLeaderboardParticipant } from '../../../../api/publicApi';
 
-// ── Derive podium from grouped data ───────────────────────────────
+// ── Small helpers ─────────────────────────────────────────────────
 
-function derivePodiumForGender(
-  genderCategories: { gender: string; categories: { categoryName: string; participants: GroupedLeaderboardParticipant[] }[] }[],
-  targetGender: string,
-  overallRankBy: string,
-) {
-  const filtered = targetGender
-    ? genderCategories.filter((gc) => gc.gender.toLowerCase() === targetGender.toLowerCase())
-    : genderCategories;
-  const all = filtered.flatMap((gc) => gc.categories.flatMap((c) => c.participants));
-  const seen = new Set<string>();
-  const unique = all.filter((p) => {
-    if (seen.has(p.bib)) return false;
-    seen.add(p.bib);
-    return true;
-  });
-  const isGun = overallRankBy === 'GunTime';
-  return unique
-    .filter((p) => (isGun ? !!p.gunTime : !!p.chipTime))
-    .sort((a, b) => (isGun ? (a.gunTime ?? '') : (a.chipTime ?? '')).localeCompare(isGun ? (b.gunTime ?? '') : (b.chipTime ?? '')))
-    .slice(0, 3);
+// Age categories sort by their leading number ("18-29" → 18); non-numeric last.
+function getCategoryStartAge(name: string): number {
+  const m = name.match(/\d+/);
+  return m ? parseInt(m[0], 10) : 999;
+}
+
+function timeOf(p: GroupedLeaderboardParticipant, rankBy: string): string {
+  return (rankBy === 'GunTime' ? p.gunTime : p.chipTime) ?? '—';
+}
+
+// Cap a per-gender / per-category list to N and RENUMBER 1..N (per-gender position,
+// not the overall/category-wide stored rank) so the podium reads 1/2/3.
+function takeRanked(list: GroupedLeaderboardParticipant[], n: number): GroupedLeaderboardParticipant[] {
+  return list.slice(0, Math.max(0, n)).map((p, i) => ({ ...p, rank: i + 1 }));
 }
 
 // ── Podium display ────────────────────────────────────────────────
@@ -45,7 +39,7 @@ const COL_GRADIENTS  = [
   'linear-gradient(to bottom, #CD7F32, #8B4513)',
 ] as const;
 
-function PodiumSection({ participants }: { participants: GroupedLeaderboardParticipant[] }) {
+function PodiumSection({ participants, rankBy }: { participants: GroupedLeaderboardParticipant[]; rankBy: string }) {
   if (participants.length < 1) return null;
   const ordered = PODIUM_ORDER.map((i) => participants[i]).filter(Boolean);
 
@@ -75,7 +69,7 @@ function PodiumSection({ participants }: { participants: GroupedLeaderboardParti
             BIB {p?.bib ?? '—'}
           </div>
           <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-            {p?.chipTime ?? '—'}
+            {p ? timeOf(p, rankBy) : '—'}
           </div>
           <div
             style={{
@@ -99,85 +93,144 @@ function PodiumSection({ participants }: { participants: GroupedLeaderboardParti
   );
 }
 
-// ── Leaderboard table (grouped gender/category) ───────────────────
+// ── Results table (the "rest" below the podium) ───────────────────
 
-function CategoryTable({ categoryName, participants, rankBy = 'ChipTime' }: { categoryName: string; participants: GroupedLeaderboardParticipant[]; rankBy?: string }) {
-  // BUG-11: show all finishers (no "Show all" toggle, no row cap).
-  const displayed = participants;
+function ResultTable({ participants, rankBy }: { participants: GroupedLeaderboardParticipant[]; rankBy: string }) {
+  if (participants.length === 0) return null;
   const isGunTime = rankBy === 'GunTime';
   const timeLabel = isGunTime ? 'Gun Time' : 'Chip Time';
 
   return (
-    <div style={{ border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden', marginBottom: '1rem' }}>
-      <div style={{ backgroundColor: '#E8F4FD', padding: '0.625rem 1rem', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.875rem', color: '#1A5276', borderBottom: '1px solid #BEE3F8' }}>
-        {categoryName} — {timeLabel}
-      </div>
+    <div style={{ border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden', marginTop: '0.5rem' }}>
       <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ backgroundColor: '#1a56db' }}>
-            {['#', 'Name', 'BIB', timeLabel].map((h) => (
-              <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontFamily: 'var(--font-body)', fontSize: '0.75rem', fontWeight: 600, color: '#fff' }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {displayed.map((p, i) => (
-            <tr key={p.participantDetailUrl || i} style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: i % 2 === 0 ? '#fff' : '#FAFAFA' }}>
-              <td style={{ padding: '0.625rem 0.75rem', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.875rem', color: p.rank <= 3 ? ['#B7791F', '#718096', '#9C4221'][p.rank - 1] : 'var(--color-text-muted)', width: '2.5rem' }}>
-                {p.rank}
-              </td>
-              <td style={{ padding: '0.625rem 0.75rem' }}>
-                <a href={p.participantDetailUrl} style={{ fontFamily: 'var(--font-body)', fontWeight: 500, fontSize: '0.9rem', color: '#1a56db', textDecoration: 'none' }}>
-                  {p.name}
-                </a>
-              </td>
-              <td style={{ padding: '0.625rem 0.75rem', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>{p.bib}</td>
-              <td style={{ padding: '0.625rem 0.75rem' }}>
-                <span style={{ display: 'inline-block', backgroundColor: '#1a56db', color: '#fff', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', fontWeight: 700, padding: '0.2rem 0.75rem', borderRadius: '12px' }}>
-                  {(isGunTime ? p.gunTime : p.chipTime) ?? '—'}
-                </span>
-              </td>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#1a56db' }}>
+              {['#', 'Name', 'BIB', timeLabel].map((h) => (
+                <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontFamily: 'var(--font-body)', fontSize: '0.75rem', fontWeight: 600, color: '#fff' }}>{h}</th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {participants.map((p, i) => (
+              <tr key={p.participantDetailUrl || i} style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: i % 2 === 0 ? '#fff' : '#FAFAFA' }}>
+                <td style={{ padding: '0.625rem 0.75rem', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.875rem', color: 'var(--color-text-muted)', width: '2.5rem' }}>
+                  {p.rank}
+                </td>
+                <td style={{ padding: '0.625rem 0.75rem' }}>
+                  <a href={p.participantDetailUrl} style={{ fontFamily: 'var(--font-body)', fontWeight: 500, fontSize: '0.9rem', color: '#1a56db', textDecoration: 'none' }}>
+                    {p.name}
+                  </a>
+                </td>
+                <td style={{ padding: '0.625rem 0.75rem', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>{p.bib}</td>
+                <td style={{ padding: '0.625rem 0.75rem' }}>
+                  <span style={{ display: 'inline-block', backgroundColor: '#1a56db', color: '#fff', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', fontWeight: 700, padding: '0.2rem 0.75rem', borderRadius: '12px' }}>
+                    {timeOf(p, rankBy)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
+    </div>
+  );
+}
+
+// ── One gender column: podium (top 3) + table for the rest ────────
+
+function GenderBlock({ label, participants, rankBy }: { label: string; participants: GroupedLeaderboardParticipant[]; rankBy: string }) {
+  const podium = participants.slice(0, 3);
+  const rest = participants.slice(3);
+
+  return (
+    <div>
+      <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.0625rem', color: 'var(--color-text)', textAlign: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '2px solid #1a56db' }}>
+        {label}
+      </div>
+      {participants.length === 0 ? (
+        <div style={{ padding: '1.5rem', textAlign: 'center', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
+          No results.
+        </div>
+      ) : (
+        <>
+          <PodiumSection participants={podium} rankBy={rankBy} />
+          <ResultTable participants={rest} rankBy={rankBy} />
+        </>
+      )}
     </div>
   );
 }
 
 // ── Leaderboard view (rendered once event + race selected) ─────────
 
-function LeaderboardView({ eventId, raceId, gender, search }: { eventId: string; raceId: string; gender: string; search: string }) {
+function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId: string; search: string }) {
   const debouncedSearch = useDebounce(search, 350);
+  const [selectedCategory, setSelectedCategory] = useState('');
 
   const { data, loading, error, refetch } = usePublicApi(
     (signal) =>
       publicApi.getGroupedLeaderboard(
         eventId,
         raceId,
-        { search: debouncedSearch || undefined, gender: gender || undefined },
+        // showAll:true → full lists so we can cap PER GENDER client-side.
+        { search: debouncedSearch || undefined, showAll: true },
         signal,
       ),
-    [eventId, raceId, debouncedSearch, gender],
+    [eventId, raceId, debouncedSearch],
   );
 
   const genderCategories = data?.genderCategories ?? [];
+  const overallResults = data?.overallResults ?? [];
   // BUG-24: overall and category sort independently; each section has its own setting.
   const overallRankBy = data?.overallRankBy ?? data?.rankBy ?? 'ChipTime';
   const categoryRankBy = data?.categoryRankBy ?? data?.rankBy ?? 'ChipTime';
   // BUG-24: honour Show Overall / Show Category toggles (default true when absent).
   const showOverall = data?.showOverall !== false;
   const showCategory = data?.showCategory !== false;
-  // BUG-12: never render an "Unknown"/blank category bucket.
-  const isRealCategory = (c: GroupedLeaderboardCategory) =>
-    !!c.categoryName && c.categoryName.trim().toLowerCase() !== 'unknown';
-  const maleCategories = (genderCategories.find((g) => g.gender.toLowerCase() === 'male')?.categories ?? []).filter(isRealCategory);
-  const femaleCategories = (genderCategories.find((g) => g.gender.toLowerCase() === 'female')?.categories ?? []).filter(isRealCategory);
-  const malePodium = derivePodiumForGender(genderCategories, 'male', overallRankBy);
-  const femalePodium = derivePodiumForGender(genderCategories, 'female', overallRankBy);
-  const anyPodium = malePodium.length >= 3 || femalePodium.length >= 3;
+
+  // Per-gender caps from LeaderboardSettings (podium counts toward N); default 5 when unset.
+  const overallN = data?.numberOfResultsToShowOverall && data.numberOfResultsToShowOverall > 0
+    ? data.numberOfResultsToShowOverall : 5;
+  const categoryN = data?.numberOfResultsToShowCategory && data.numberOfResultsToShowCategory > 0
+    ? data.numberOfResultsToShowCategory : 5;
+
+  // Category dropdown options — distinct real categories across both genders, sorted by age.
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    genderCategories.forEach((g) =>
+      g.categories.forEach((c) => {
+        if (c.categoryName && c.categoryName.trim().toLowerCase() !== 'unknown') set.add(c.categoryName);
+      }),
+    );
+    return Array.from(set).sort((a, b) => getCategoryStartAge(a) - getCategoryStartAge(b));
+  }, [genderCategories]);
+
+  // If the selected category isn't present for this race (e.g. after a race switch), fall back to Overall.
+  useEffect(() => {
+    if (selectedCategory && !categoryOptions.includes(selectedCategory)) setSelectedCategory('');
+  }, [categoryOptions, selectedCategory]);
+
+  const inCategoryView = selectedCategory !== '';
+
+  // Overall: split the flat overall list by gender, cap per gender, renumber.
+  const maleOverall = takeRanked(overallResults.filter((p) => (p.gender ?? '').toUpperCase().startsWith('M')), overallN);
+  const femaleOverall = takeRanked(overallResults.filter((p) => (p.gender ?? '').toUpperCase().startsWith('F')), overallN);
+
+  // Category: the selected category's participants per gender, capped + renumbered.
+  const catFor = (genderLabel: string) => {
+    const g = genderCategories.find((x) => x.gender.toLowerCase() === genderLabel);
+    const c = g?.categories.find((cc) => cc.categoryName === selectedCategory);
+    return takeRanked(c?.participants ?? [], categoryN);
+  };
+  const maleCat = inCategoryView ? catFor('male') : [];
+  const femaleCat = inCategoryView ? catFor('female') : [];
+
+  const maleList = inCategoryView ? maleCat : maleOverall;
+  const femaleList = inCategoryView ? femaleCat : femaleOverall;
+  const activeRankBy = inCategoryView ? categoryRankBy : overallRankBy;
+  const sectionVisible = inCategoryView ? showCategory : showOverall;
+  const headingText = inCategoryView ? selectedCategory : 'Overall';
 
   const raceTitle = data?.raceName
     ? data.raceDistance
@@ -187,29 +240,24 @@ function LeaderboardView({ eventId, raceId, gender, search }: { eventId: string;
 
   return (
     <div>
-      {/* Leaderboard header */}
-      <div style={{ backgroundColor: '#1a56db', color: '#fff', padding: '0.875rem 1.25rem', borderRadius: '10px 10px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.125rem' }}>Leaderboard</div>
-          {raceTitle && <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', opacity: 0.8, marginTop: '0.125rem' }}>{raceTitle}</div>}
-        </div>
+      {/* Heading band — CENTERED; "Overall" by default, category name when one is selected */}
+      <div style={{ backgroundColor: '#1a56db', color: '#fff', padding: '0.875rem 1.25rem', borderRadius: '10px 10px 0 0', textAlign: 'center' }}>
+        <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.125rem' }}>{headingText}</div>
+        {raceTitle && <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', opacity: 0.8, marginTop: '0.125rem' }}>{raceTitle}</div>}
       </div>
 
-      {/* Podium — Male and Female side by side (or single when gender filter active) */}
-      {showOverall && !loading && !error && anyPodium && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', backgroundColor: 'var(--color-bg-alt)', padding: '0 1rem' }}>
-          {(gender === '' || gender.toLowerCase() === 'male') && malePodium.length >= 3 && (
-            <div>
-              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-text)', textAlign: 'center', paddingTop: '1rem' }}>Male</div>
-              <PodiumSection participants={malePodium} />
-            </div>
-          )}
-          {(gender === '' || gender.toLowerCase() === 'female') && femalePodium.length >= 3 && (
-            <div>
-              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-text)', textAlign: 'center', paddingTop: '1rem' }}>Female</div>
-              <PodiumSection participants={femalePodium} />
-            </div>
-          )}
+      {/* Category selector — dynamic from the race's actual categories */}
+      {showCategory && categoryOptions.length > 0 && !loading && !error && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.625rem', padding: '1rem', backgroundColor: 'var(--color-bg-alt)', borderLeft: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)' }}>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>View</span>
+          <div style={{ minWidth: '220px' }}>
+            <FilterSelect
+              label="Category"
+              value={selectedCategory}
+              onChange={setSelectedCategory}
+              options={[{ value: '', label: 'Overall' }, ...categoryOptions.map((c) => ({ value: c, label: c }))]}
+            />
+          </div>
         </div>
       )}
 
@@ -225,43 +273,24 @@ function LeaderboardView({ eventId, raceId, gender, search }: { eventId: string;
         </div>
       )}
 
-      {showCategory && !loading && !error && (
-        <div style={{ border: '1px solid var(--color-border)', borderTop: anyPodium ? 'none' : '1px solid var(--color-border)', borderRadius: '0 0 10px 10px', padding: '1.5rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', alignItems: 'start' }}>
-            {/* Male column */}
-            {maleCategories.length > 0 && (
-              <div>
-                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.0625rem', color: 'var(--color-text)', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid #1a56db' }}>
-                  Male
-                </div>
-                {maleCategories.sort((a, b) => {
-                  const n = (s: string) => { const m = s.match(/\d+/); return m ? parseInt(m[0]) : 999; };
-                  return n(a.categoryName) - n(b.categoryName);
-                }).map(({ categoryName, participants }) => (
-                  <CategoryTable key={categoryName} categoryName={categoryName} participants={participants} rankBy={categoryRankBy} />
-                ))}
-              </div>
-            )}
-            {/* Female column */}
-            {femaleCategories.length > 0 && (
-              <div>
-                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.0625rem', color: 'var(--color-text)', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid #1a56db' }}>
-                  Female
-                </div>
-                {femaleCategories.sort((a, b) => {
-                  const n = (s: string) => { const m = s.match(/\d+/); return m ? parseInt(m[0]) : 999; };
-                  return n(a.categoryName) - n(b.categoryName);
-                }).map(({ categoryName, participants }) => (
-                  <CategoryTable key={categoryName} categoryName={categoryName} participants={participants} rankBy={categoryRankBy} />
-                ))}
-              </div>
-            )}
-            {maleCategories.length === 0 && femaleCategories.length === 0 && (
-              <div style={{ padding: '2rem', textAlign: 'center', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)' }}>
-                No results found.
-              </div>
-            )}
-          </div>
+      {!loading && !error && (
+        <div style={{ border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 10px 10px', padding: '1.5rem' }}>
+          {!sectionVisible ? (
+            <div style={{ padding: '2rem', textAlign: 'center', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)' }}>
+              {inCategoryView ? 'Category results are not available for this race.' : 'Overall results are not available for this race.'}
+            </div>
+          ) : maleList.length === 0 && femaleList.length === 0 ? (
+            <div style={{ padding: '2rem', textAlign: 'center', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)' }}>
+              No results found.
+            </div>
+          ) : (
+            /* Male + Female ALWAYS both shown, side by side */
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', alignItems: 'start' }}>
+              <GenderBlock label="Male" participants={maleList} rankBy={activeRankBy} />
+              <GenderBlock label="Female" participants={femaleList} rankBy={activeRankBy} />
+            </div>
+          )}
+
           <div style={{ marginTop: '1.5rem', padding: '0.875rem 1rem', backgroundColor: '#F5F7FA', borderRadius: '8px', border: '1px solid var(--color-border)', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
             <strong>*Chip Time:</strong> Your finish time relative to your individual start crossing.{' '}
             <strong>*Gun Time:</strong> Your finish time relative to the official race start.
@@ -320,7 +349,6 @@ function GlobalResultsPage() {
   const [year, setYear] = useState(String(currentYear));
   const [eventId, setEventId] = useState('');
   const [raceId, setRaceId] = useState('');
-  const [gender, setGender] = useState('');
   const [search, setSearch] = useState('');
 
   // Fetch filter metadata (years + events list)
@@ -351,15 +379,9 @@ function GlobalResultsPage() {
     ...(raceData?.races ?? []).map((r) => ({ value: r.encryptedRaceId, label: r.name + (r.distance ? ` (${r.distance})` : '') })),
   ];
 
-  const genderOptions = [
-    { value: '', label: 'All Genders' },
-    { value: 'Male', label: 'Male' },
-    { value: 'Female', label: 'Female' },
-  ];
-
-  const handleYearChange = (v: string) => { setYear(v); setEventId(''); setRaceId(''); setGender(''); };
-  const handleEventChange = (v: string) => { setEventId(v); setRaceId(''); setGender(''); };
-  const handleRaceChange = (v: string) => { setRaceId(v); setGender(''); };
+  const handleYearChange = (v: string) => { setYear(v); setEventId(''); setRaceId(''); };
+  const handleEventChange = (v: string) => { setEventId(v); setRaceId(''); };
+  const handleRaceChange = (v: string) => { setRaceId(v); };
 
   const showResults = !!(eventId && raceId);
 
@@ -411,13 +433,6 @@ function GlobalResultsPage() {
               onChange={handleRaceChange}
               options={races}
               disabled={!eventId}
-            />
-            <FilterSelect
-              label="Gender"
-              value={gender}
-              onChange={setGender}
-              options={genderOptions}
-              disabled={!raceId}
             />
 
             {/* Search input */}
@@ -496,7 +511,6 @@ function GlobalResultsPage() {
             <LeaderboardView
               eventId={eventId}
               raceId={raceId}
-              gender={gender}
               search={search}
             />
           )}
