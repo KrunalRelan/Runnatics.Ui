@@ -195,20 +195,37 @@ function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId:
   const categoryN = data?.numberOfResultsToShowCategory && data.numberOfResultsToShowCategory > 0
     ? data.numberOfResultsToShowCategory : 5;
 
-  // Category dropdown options — distinct real categories across both genders, sorted by age.
+  // Category dropdown options — case-INSENSITIVE distinct across both genders. The raw
+  // AgeCategory can carry inconsistent casing ("... yrs" vs "... Yrs"); collapse to one entry
+  // per logical category. key = lowercased (used for filtering); label = most common casing.
   const categoryOptions = useMemo(() => {
-    const set = new Set<string>();
+    const variants = new Map<string, Map<string, number>>();
     genderCategories.forEach((g) =>
       g.categories.forEach((c) => {
-        if (c.categoryName && c.categoryName.trim().toLowerCase() !== 'unknown') set.add(c.categoryName);
+        const raw = (c.categoryName ?? '').trim();
+        if (!raw || raw.toLowerCase() === 'unknown') return;
+        const key = raw.toLowerCase();
+        const inner = variants.get(key) ?? new Map<string, number>();
+        // Weight by runners so the dominant casing wins; +1 so a zero-runner variant still counts.
+        inner.set(raw, (inner.get(raw) ?? 0) + (c.participants?.length ?? 0) + 1);
+        variants.set(key, inner);
       }),
     );
-    return Array.from(set).sort((a, b) => getCategoryStartAge(a) - getCategoryStartAge(b));
+    return Array.from(variants.entries())
+      .map(([key, inner]) => {
+        let label = key;
+        let best = -1;
+        inner.forEach((cnt, raw) => { if (cnt > best) { best = cnt; label = raw; } });
+        return { key, label };
+      })
+      .sort((a, b) => getCategoryStartAge(a.label) - getCategoryStartAge(b.label));
   }, [genderCategories]);
+
+  const selectedLabel = categoryOptions.find((o) => o.key === selectedCategory)?.label ?? selectedCategory;
 
   // If the selected category isn't present for this race (e.g. after a race switch), fall back to Overall.
   useEffect(() => {
-    if (selectedCategory && !categoryOptions.includes(selectedCategory)) setSelectedCategory('');
+    if (selectedCategory && !categoryOptions.some((o) => o.key === selectedCategory)) setSelectedCategory('');
   }, [categoryOptions, selectedCategory]);
 
   const inCategoryView = selectedCategory !== '';
@@ -217,11 +234,16 @@ function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId:
   const maleOverall = takeRanked(overallResults.filter((p) => (p.gender ?? '').toUpperCase().startsWith('M')), overallN);
   const femaleOverall = takeRanked(overallResults.filter((p) => (p.gender ?? '').toUpperCase().startsWith('F')), overallN);
 
-  // Category: the selected category's participants per gender, capped + renumbered.
+  // Category: MERGE every casing variant of the selected category (case-insensitive) per gender,
+  // so a category split across spellings shows all its runners; then cap + renumber.
   const catFor = (genderLabel: string) => {
     const g = genderCategories.find((x) => x.gender.toLowerCase() === genderLabel);
-    const c = g?.categories.find((cc) => cc.categoryName === selectedCategory);
-    return takeRanked(c?.participants ?? [], categoryN);
+    if (!g) return [];
+    const merged = g.categories
+      .filter((c) => (c.categoryName ?? '').trim().toLowerCase() === selectedCategory)
+      .flatMap((c) => c.participants ?? [])
+      .sort((a, b) => (a.rank ?? 999999) - (b.rank ?? 999999));
+    return takeRanked(merged, categoryN);
   };
   const maleCat = inCategoryView ? catFor('male') : [];
   const femaleCat = inCategoryView ? catFor('female') : [];
@@ -230,7 +252,7 @@ function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId:
   const femaleList = inCategoryView ? femaleCat : femaleOverall;
   const activeRankBy = inCategoryView ? categoryRankBy : overallRankBy;
   const sectionVisible = inCategoryView ? showCategory : showOverall;
-  const headingText = inCategoryView ? selectedCategory : 'Overall';
+  const headingText = inCategoryView ? selectedLabel : 'Overall';
 
   const raceTitle = data?.raceName
     ? data.raceDistance
@@ -255,7 +277,7 @@ function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId:
               label="Category"
               value={selectedCategory}
               onChange={setSelectedCategory}
-              options={[{ value: '', label: 'Overall' }, ...categoryOptions.map((c) => ({ value: c, label: c }))]}
+              options={[{ value: '', label: 'Overall' }, ...categoryOptions.map((o) => ({ value: o.key, label: o.label }))]}
             />
           </div>
         </div>
