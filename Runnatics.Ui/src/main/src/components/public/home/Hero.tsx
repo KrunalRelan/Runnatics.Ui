@@ -1,10 +1,67 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '../ui';
+import RacetikLogo from '../../RacetikLogo';
 import usePublicApi from '../../../hooks/usePublicApi';
 import { getUpcomingEvents, type PublicEvent } from '../../../services/publicApi';
 import { base64ToDataUrl } from '../../../utility';
 
 const AUTO_ADVANCE_MS = 5000;
+
+// Shared hero-slot sizing so the carousel and the branded fallback occupy the same space.
+const HERO_FRAME: React.CSSProperties = {
+  position: 'relative',
+  width: '100%',
+  aspectRatio: '16 / 9',
+  maxHeight: 'min(680px, 82vh)',
+  minHeight: 'clamp(360px, 52vw, 680px)',
+  overflow: 'hidden',
+};
+
+// Branded hero shown when there are no upcoming-event banners — the landing page
+// always has a hero (never a bare gap).
+function BrandedHero() {
+  return (
+    <section
+      aria-label="Racetik"
+      style={{
+        ...HERO_FRAME,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, var(--color-bg-dark) 0%, #0F2744 55%, #1A3D6A 100%)',
+      }}
+    >
+      <style>{`.branded-hero-logo { width: min(340px, 72vw) !important; }`}</style>
+      <div
+        style={{
+          textAlign: 'center',
+          padding: 'clamp(1.5rem, 5vh, 3rem) 1.5rem',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1.25rem',
+        }}
+      >
+        <RacetikLogo variant="png-white" width={340} className="branded-hero-logo" />
+        <p
+          style={{
+            fontFamily: 'var(--font-body)',
+            color: 'rgba(255,255,255,0.75)',
+            fontSize: 'clamp(0.95rem, 2vw, 1.15rem)',
+            letterSpacing: '0.02em',
+            margin: 0,
+          }}
+        >
+          Race Timing &amp; Event Management
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <Button variant="primary" size="lg" href="/events">Explore Events</Button>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function HeroSlide({ event, isActive }: { event: PublicEvent; isActive: boolean }) {
   return (
@@ -59,9 +116,9 @@ function Hero() {
     else if (e.key === 'ArrowRight') { e.preventDefault(); go(index + 1); }
   };
 
-  // No upcoming-event banners → render nothing; the section collapses so the
-  // page starts at the tiles below (no marketing-text fallback, no blank gap).
-  if (!hasSlides) return null;
+  // No upcoming-event banners → show the branded hero so the landing page always
+  // has a hero (never a bare gap, never the old marketing-text block).
+  if (!hasSlides) return <BrandedHero />;
 
   return (
     <section
@@ -73,15 +130,7 @@ function Hero() {
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
-      style={{
-        position: 'relative',
-        width: '100%',
-        aspectRatio: '16 / 9',
-        maxHeight: 'min(680px, 82vh)',
-        minHeight: 'clamp(360px, 52vw, 680px)',
-        overflow: 'hidden',
-        backgroundColor: 'var(--color-bg-dark)',
-      }}
+      style={{ ...HERO_FRAME, backgroundColor: 'var(--color-bg-dark)' }}
     >
       {/* Slides */}
       {slides.map((ev, i) => (
