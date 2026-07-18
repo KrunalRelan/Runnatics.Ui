@@ -33,13 +33,14 @@ function EventCard({ event, portrait }: EventCardProps) {
           (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
         }}
       >
-        {/* Banner image — constrained to 3:4 inside card */}
+        {/* Tile image — SQUARE (1:1). Uses the thumbnail (falls back to banner);
+            object-fit: cover fills the square without distortion. */}
         <div
           style={{
             width: '100%',
-            aspectRatio: '3/4',
+            aspectRatio: '1/1',
             overflow: 'hidden',
-            backgroundColor: '#E5E7EB',
+            backgroundColor: 'var(--color-primary)',
             flexShrink: 0,
           }}
         >
@@ -49,20 +50,38 @@ function EventCard({ event, portrait }: EventCardProps) {
               alt={event.name}
               loading="lazy"
               decoding="async"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
             />
           ) : (
+            /* Branded placeholder — event name on the brand background */
             <div
               style={{
                 width: '100%',
                 height: '100%',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
+                gap: '0.5rem',
                 padding: '1rem',
+                background: 'linear-gradient(135deg, var(--color-primary) 0%, #0F2744 100%)',
               }}
             >
-              <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: '#9CA3AF', textAlign: 'center' }}>
+              <Activity size={22} color="rgba(255,255,255,0.55)" />
+              <span
+                style={{
+                  fontFamily: 'var(--font-heading)',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  color: '#fff',
+                  textAlign: 'center',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: 'vertical',
+                } as React.CSSProperties}
+              >
                 {event.name}
               </span>
             </div>
@@ -198,17 +217,17 @@ function EventCard({ event, portrait }: EventCardProps) {
 
   return (
     <Card>
-      <div style={{ aspectRatio: '16/9', backgroundColor: '#E5E7EB', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ aspectRatio: '16/9', background: 'linear-gradient(135deg, var(--color-primary) 0%, #0F2744 100%)', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {tileImage ? (
           <img
             src={base64ToDataUrl(tileImage)}
             alt={event.name}
             loading="lazy"
             decoding="async"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', position: 'absolute', inset: 0 }}
           />
         ) : (
-          <Activity size={36} color="#9CA3AF" />
+          <Activity size={36} color="rgba(255,255,255,0.55)" />
         )}
       </div>
       <div style={{ padding: '1.25rem' }}>
