@@ -40,7 +40,7 @@ function HeroFallback() {
         background: 'linear-gradient(135deg, var(--color-bg-dark) 0%, #0F2744 60%, #1A3D6A 100%)',
       }}
     >
-      <Container style={{ textAlign: 'center', color: '#fff', padding: '4rem 1.5rem' }}>
+      <Container style={{ textAlign: 'center', color: '#fff', padding: 'clamp(2rem, 6vh, 4rem) 1.5rem' }}>
         <div
           style={{
             display: 'inline-block',
@@ -98,20 +98,21 @@ function Hero() {
   const { data: events, loading } = usePublicApi((signal) => getUpcomingEvents(signal), []);
   const slides = (events ?? []).filter((ev) => !!ev.bannerBase64);
   const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
 
   // Clamp index if list shrinks
   useEffect(() => {
     if (index >= slides.length && slides.length > 0) setIndex(0);
   }, [slides.length, index]);
 
-  // Auto-advance
+  // Auto-advance (paused on hover/focus)
   useEffect(() => {
-    if (slides.length <= 1) return;
+    if (slides.length <= 1 || paused) return;
     const id = window.setInterval(() => {
       setIndex((i) => (i + 1) % slides.length);
     }, AUTO_ADVANCE_MS);
     return () => window.clearInterval(id);
-  }, [slides.length]);
+  }, [slides.length, paused]);
 
   const hasSlides = slides.length > 0;
   const go = (next: number) => {
@@ -119,12 +120,28 @@ function Hero() {
     setIndex((next + slides.length) % slides.length);
   };
 
+  const onKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (slides.length <= 1) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(index - 1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); go(index + 1); }
+  };
+
   return (
     <section
       aria-roledescription={hasSlides ? 'carousel' : undefined}
+      aria-label={hasSlides ? 'Upcoming events' : undefined}
+      tabIndex={hasSlides && slides.length > 1 ? 0 : undefined}
+      onKeyDown={hasSlides ? onKeyDown : undefined}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
       style={{
         position: 'relative',
-        minHeight: 'clamp(420px, 78vh, 680px)',
+        width: '100%',
+        aspectRatio: '16 / 9',
+        maxHeight: 'min(680px, 82vh)',
+        minHeight: 'clamp(360px, 52vw, 680px)',
         overflow: 'hidden',
         backgroundColor: 'var(--color-bg-dark)',
       }}
