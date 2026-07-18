@@ -20,7 +20,7 @@ function PastEventResults() {
       <Container>
         <div ref={ref} style={{ textAlign: "center", marginBottom: "3rem" }}>
           <Heading level={2} style={{ display: "inline-block" }}>
-            Past Event Results
+            Recent Event Results
           </Heading>
           <p
             style={{

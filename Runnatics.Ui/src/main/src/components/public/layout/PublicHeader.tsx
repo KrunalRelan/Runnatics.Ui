@@ -125,28 +125,6 @@ function PublicHeader() {
               Results
             </Link>
 
-            {/* Log In — outline */}
-            <Link
-              to="/login"
-              style={{
-                marginLeft: '0.375rem',
-                fontFamily: 'var(--font-body)',
-                fontWeight: 600,
-                fontSize: '0.9375rem',
-                color: 'var(--color-text)',
-                backgroundColor: 'transparent',
-                textDecoration: 'none',
-                padding: '0.4375rem 1rem',
-                borderRadius: '8px',
-                border: '1.5px solid var(--color-border)',
-                transition: 'border-color 0.2s, color 0.2s',
-              }}
-              onMouseEnter={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.borderColor = 'var(--color-primary)'; el.style.color = 'var(--color-primary)'; }}
-              onMouseLeave={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.borderColor = 'var(--color-border)'; el.style.color = 'var(--color-text)'; }}
-            >
-              Log In
-            </Link>
-
             {/* Get Started — orange */}
             <Link
               to="/contact"
@@ -238,33 +216,12 @@ function PublicHeader() {
               Results
             </Link>
 
-            {/* Log In */}
-            <Link
-              to="/login"
-              style={{
-                display: 'block',
-                marginTop: '0.75rem',
-                fontFamily: 'var(--font-body)',
-                fontWeight: 600,
-                fontSize: '1rem',
-                color: 'var(--color-text)',
-                border: '1.5px solid var(--color-border)',
-                textDecoration: 'none',
-                padding: '0.75rem 1.25rem',
-                borderRadius: '8px',
-                textAlign: 'center',
-                marginBottom: '0.5rem',
-              }}
-            >
-              Log In
-            </Link>
-
             {/* Get Started */}
             <Link
               to="/contact"
               style={{
                 display: 'block',
-                marginTop: '0.5rem',
+                marginTop: '0.75rem',
                 fontFamily: 'var(--font-body)',
                 fontWeight: 600,
                 fontSize: '1rem',
