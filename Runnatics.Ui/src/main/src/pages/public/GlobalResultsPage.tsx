@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { ChevronDown, Search, Trophy } from 'lucide-react';
+import { ChevronDown, ChevronRight, Search, Trophy } from 'lucide-react';
 import { Container } from '../../components/public/ui';
 import { ErrorState } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
 import useDebounce from '../../hooks/useDebounce';
 import { publicApi } from '../../../../api/publicApi';
 import type { GroupedLeaderboardParticipant } from '../../../../api/publicApi';
+
+// ── Brand palette (podium uses gold/silver/bronze; everything else navy + maroon) ─
+const NAVY = 'var(--color-primary)';
+const MAROON = '#8E244D';
 
 // ── Small helpers ─────────────────────────────────────────────────
 
@@ -26,114 +30,258 @@ function takeRanked(list: GroupedLeaderboardParticipant[], n: number): GroupedLe
   return list.slice(0, Math.max(0, n)).map((p, i) => ({ ...p, rank: i + 1 }));
 }
 
-// ── Podium display (card style) ───────────────────────────────────
+// ── Motion helpers ────────────────────────────────────────────────
+
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReduced(mq.matches);
+    const onChange = () => setReduced(mq.matches);
+    mq.addEventListener?.('change', onChange);
+    return () => mq.removeEventListener?.('change', onChange);
+  }, []);
+  return reduced;
+}
+
+function parseTimeToSeconds(t: string): number | null {
+  if (!t || t === '—') return null;
+  const parts = t.split(':').map((x) => x.trim());
+  if (parts.some((x) => x === '' || Number.isNaN(Number(x)))) return null;
+  return parts.reduce((acc, p) => acc * 60 + Number(p), 0);
+}
+
+function formatSeconds(total: number, hasHours: boolean): string {
+  total = Math.max(0, Math.round(total));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return hasHours || h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
+// Count-up on a finish time; snaps to the exact source string when done so the
+// final displayed value always matches the data.
+function useCountUpSeconds(target: number, enabled: boolean, durationMs = 900) {
+  const [state, setState] = useState<{ v: number; done: boolean }>(() => ({ v: enabled ? 0 : target, done: !enabled }));
+  useEffect(() => {
+    if (!enabled) { setState({ v: target, done: true }); return; }
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      if (t < 1) { setState({ v: target * eased, done: false }); raf = requestAnimationFrame(tick); }
+      else setState({ v: target, done: true });
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, enabled, durationMs]);
+  return state;
+}
+
+function CountUpTime({ time, animate, style }: { time: string; animate: boolean; style?: React.CSSProperties }) {
+  const reduced = usePrefersReducedMotion();
+  const target = parseTimeToSeconds(time);
+  const enabled = animate && !reduced && target != null;
+  const hasHours = (time.match(/:/g)?.length ?? 0) >= 2;
+  const { v, done } = useCountUpSeconds(target ?? 0, enabled);
+  const text = !enabled || done || target == null ? time : formatSeconds(v, hasHours);
+  return <span style={{ fontVariantNumeric: 'tabular-nums', ...style }}>{text}</span>;
+}
+
+// ── Confetti (published results only; subtle, brand colours) ───────
+
+const CONFETTI = [
+  { l: '6%', t: '18%', w: 7, h: 3, c: NAVY, r: 20, d: '0s' },
+  { l: '14%', t: '52%', w: 6, h: 6, c: '#F5C542', r: 0, d: '0.4s' },
+  { l: '22%', t: '10%', w: 8, h: 3, c: MAROON, r: -25, d: '0.9s' },
+  { l: '31%', t: '40%', w: 5, h: 5, c: '#9CB4D8', r: 0, d: '0.2s' },
+  { l: '40%', t: '14%', w: 7, h: 3, c: '#F5C542', r: 35, d: '1.1s' },
+  { l: '49%', t: '55%', w: 6, h: 3, c: NAVY, r: -15, d: '0.6s' },
+  { l: '58%', t: '12%', w: 5, h: 5, c: MAROON, r: 0, d: '0.3s' },
+  { l: '66%', t: '44%', w: 7, h: 3, c: '#9CB4D8', r: 25, d: '1.3s' },
+  { l: '74%', t: '20%', w: 6, h: 6, c: '#F5C542', r: 0, d: '0.75s' },
+  { l: '82%', t: '50%', w: 8, h: 3, c: NAVY, r: -30, d: '0.5s' },
+  { l: '90%', t: '16%', w: 6, h: 3, c: MAROON, r: 15, d: '1.0s' },
+  { l: '95%', t: '46%', w: 5, h: 5, c: '#F5C542', r: 0, d: '0.15s' },
+] as const;
+
+function Confetti() {
+  return (
+    <div aria-hidden className="podium-confetti">
+      {CONFETTI.map((c, i) => (
+        <span
+          key={i}
+          className="confetti-pc"
+          style={{ left: c.l, top: c.t, width: c.w, height: c.h, background: c.c, transform: `rotate(${c.r}deg)`, animationDelay: c.d }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── Laurel (SVG so it renders consistently and takes the gold colour) ──
+
+const LAUREL_LEAVES = [
+  { x: 9, y: 25, rx: 3.2, ry: 1.7, rot: 38 },
+  { x: 7.5, y: 20, rx: 3.2, ry: 1.7, rot: 22 },
+  { x: 7.5, y: 15, rx: 3.1, ry: 1.6, rot: 6 },
+  { x: 9, y: 10.5, rx: 2.8, ry: 1.5, rot: -12 },
+  { x: 11.5, y: 6.5, rx: 2.4, ry: 1.4, rot: -28 },
+  { x: 14.5, y: 3.5, rx: 2, ry: 1.2, rot: -42 },
+] as const;
+
+function Laurel({ flip }: { flip?: boolean }) {
+  return (
+    <svg width="22" height="30" viewBox="0 0 24 30" aria-hidden style={{ transform: flip ? 'scaleX(-1)' : undefined }}>
+      <path d="M11 28 C 6 22, 6 12, 15 3" fill="none" stroke="#C9A227" strokeWidth="1.1" strokeLinecap="round" opacity="0.7" />
+      {LAUREL_LEAVES.map((l, i) => (
+        <ellipse key={i} cx={l.x} cy={l.y} rx={l.rx} ry={l.ry} transform={`rotate(${l.rot} ${l.x} ${l.y})`} fill="#C9A227" opacity="0.9" />
+      ))}
+    </svg>
+  );
+}
+
+// ── Podium ─────────────────────────────────────────────────────────
 
 // Column layout, left → right: 2nd, 1st (center, elevated), 3rd.
 const PODIUM_COLS = [
-  { place: 2, medal: '🥈', band: 'RUNNER UP',   base: '#9AA3AD', bg: 'linear-gradient(160deg,#F6F8FA,#E3E7EC)', ring: '#C4CBD3', baseH: '40px' },
-  { place: 1, medal: '🥇', band: 'CHAMPION',    base: '#D4A017', bg: 'linear-gradient(160deg,#FFF6D8,#FFE59E)', ring: '#EFC64B', baseH: '56px' },
-  { place: 3, medal: '🥉', band: 'THIRD PLACE', base: '#B87333', bg: 'linear-gradient(160deg,#FBEADF,#F1CDB2)', ring: '#D89B6C', baseH: '30px' },
+  {
+    place: 2, medal: '🥈', band: 'RUNNER UP', delay: '0.05s',
+    bg: 'linear-gradient(165deg,#FCFDFE 0%,#EDF1F4 100%)', ring: '#D8DEE4',
+    bandBg: 'linear-gradient(180deg,#C7CDD4,#9AA3AD)', baseH: '42px',
+    badgeBg: 'radial-gradient(circle at 35% 28%, #FFFFFF 0%, #D2D8DE 55%, #A9B1BA 100%)',
+  },
+  {
+    place: 1, medal: '🥇', band: 'CHAMPION', delay: '0.18s',
+    bg: 'linear-gradient(165deg,#FFFDF4 0%,#FFF2C9 100%)', ring: '#F0D07A',
+    bandBg: 'linear-gradient(180deg,#F5C542,#D4A017)', baseH: '58px',
+    badgeBg: 'radial-gradient(circle at 35% 28%, #FFFBE6 0%, #F5CE55 55%, #D9A521 100%)',
+  },
+  {
+    place: 3, medal: '🥉', band: 'THIRD PLACE', delay: '0.11s',
+    bg: 'linear-gradient(165deg,#FFFAF6 0%,#F6E2D3 100%)', ring: '#E1B08C',
+    bandBg: 'linear-gradient(180deg,#CE8E5C,#B87333)', baseH: '32px',
+    badgeBg: 'radial-gradient(circle at 35% 28%, #FCE4D2 0%, #D69A6C 55%, #A9662F 100%)',
+  },
 ] as const;
 
 type PodiumCol = (typeof PODIUM_COLS)[number];
 
 function PodiumCard({ p, col, rankBy }: { p: GroupedLeaderboardParticipant; col: PodiumCol; rankBy: string }) {
   const isChampion = col.place === 1;
+  const badge = isChampion ? 60 : 46;
   return (
-    <div style={{ flex: 1, maxWidth: '210px', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'stretch', alignSelf: 'flex-end' }}>
+    <div
+      className="podium-col podium-rise"
+      style={{
+        flex: 1,
+        maxWidth: isChampion ? '240px' : '200px',
+        minWidth: 0,
+        alignSelf: 'flex-end',
+        animationDelay: col.delay,
+      }}
+    >
       <div
-        className="podium-card"
+        className={`podium-card${isChampion ? ' podium-card--champion' : ''}`}
         style={{
+          position: 'relative',
+          overflow: 'hidden',
           background: col.bg,
           border: `1px solid ${col.ring}`,
-          borderRadius: '14px',
-          padding: isChampion ? '1.15rem 0.85rem 0.95rem' : '0.95rem 0.75rem 0.8rem',
-          boxShadow: isChampion ? '0 14px 30px rgba(11,28,50,0.18)' : '0 6px 16px rgba(11,28,50,0.10)',
-          transform: isChampion ? 'translateY(-12px)' : 'none',
+          borderRadius: '16px',
+          padding: isChampion ? '1.35rem 0.95rem 1.05rem' : '1rem 0.8rem 0.85rem',
+          boxShadow: isChampion
+            ? '0 20px 44px rgba(212,160,23,0.30), 0 8px 18px rgba(11,28,50,0.16)'
+            : '0 8px 18px rgba(11,28,50,0.10)',
+          transform: isChampion ? 'translateY(-14px) scale(1.03)' : 'none',
+          transformOrigin: 'bottom center',
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: isChampion ? '2.4rem' : '2rem', lineHeight: 1, marginBottom: '0.3rem' }}>{col.medal}</div>
+        {isChampion && <span aria-hidden className="champion-sheen" />}
+        <div
+          className="medal-badge"
+          style={{ width: badge, height: badge, background: col.badgeBg, fontSize: badge * 0.56 }}
+        >
+          {col.medal}
+        </div>
         <div
           title={p.name}
-          style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: isChampion ? '1.05rem' : '0.9375rem', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: isChampion ? '1.1rem' : '0.9375rem', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
         >
           {p.name}
         </div>
-        <div style={{ margin: '0.4rem 0' }}>
-          <span style={{ display: 'inline-block', backgroundColor: '#D42A2A', color: '#fff', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.03em', padding: '0.16rem 0.7rem', borderRadius: '9999px' }}>
+        <div style={{ margin: '0.45rem 0' }}>
+          <span style={{ display: 'inline-block', backgroundColor: MAROON, color: '#fff', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.04em', padding: '0.18rem 0.72rem', borderRadius: '9999px', boxShadow: '0 2px 6px rgba(142,36,77,0.28)' }}>
             BIB {p.bib}
           </span>
         </div>
-        <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontWeight: 700, fontSize: isChampion ? '1.15rem' : '1rem', color: 'var(--color-primary)', letterSpacing: '0.02em' }}>
-          {timeOf(p, rankBy)}
-        </div>
+        <CountUpTime
+          time={timeOf(p, rankBy)}
+          animate
+          style={{ display: 'inline-block', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontWeight: 700, fontSize: isChampion ? '1.22rem' : '1rem', color: NAVY, letterSpacing: '0.02em' }}
+        />
       </div>
-      <div style={{ height: col.baseH, background: col.base, borderRadius: '4px 4px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: isChampion ? '-2px' : '0.5rem' }}>
-        <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '0.68rem', letterSpacing: '0.06em', color: '#fff', whiteSpace: 'nowrap' }}>{col.band}</span>
+      <div style={{ height: col.baseH, background: col.bandBg, borderRadius: '4px 4px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: isChampion ? '-2px' : '0.5rem', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)' }}>
+        <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '0.68rem', letterSpacing: '0.06em', color: '#fff', textShadow: '0 1px 1px rgba(0,0,0,0.18)', whiteSpace: 'nowrap' }}>{col.band}</span>
       </div>
     </div>
   );
 }
 
 // Card podium; renders 1–3 finishers gracefully (empty slots become spacers).
-function CardPodium({ participants, rankBy }: { participants: GroupedLeaderboardParticipant[]; rankBy: string }) {
+function CardPodium({ participants, rankBy, published }: { participants: GroupedLeaderboardParticipant[]; rankBy: string; published: boolean }) {
   if (participants.length < 1) return null;
   const byPlace = (place: number) => participants[place - 1];
   return (
-    <div
-      style={{
-        display: 'flex',
-        gap: '0.6rem',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
-        padding: '1.5rem 0.5rem 0',
-        borderRadius: '12px 12px 0 0',
-        // subtle confetti backdrop
-        backgroundColor: 'var(--color-bg-alt)',
-        backgroundImage:
-          'radial-gradient(#1a56db22 1.5px, transparent 1.5px), radial-gradient(#EA580C22 1.5px, transparent 1.5px)',
-        backgroundSize: '22px 22px, 22px 22px',
-        backgroundPosition: '0 0, 11px 11px',
-      }}
-    >
-      {PODIUM_COLS.map((col) => {
-        const p = byPlace(col.place);
-        return p
-          ? <PodiumCard key={col.place} p={p} col={col} rankBy={rankBy} />
-          : <div key={col.place} style={{ flex: 1, maxWidth: '210px' }} aria-hidden />;
-      })}
-    </div>
-  );
-}
-
-// "TOP 3 WINNERS" banner with laurels + a subtitle reflecting the active view.
-function PodiumHeader({ subtitle }: { subtitle: string }) {
-  return (
-    <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-      <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.25rem', letterSpacing: '0.05em', color: 'var(--color-text)' }}>
-        <span style={{ opacity: 0.7, margin: '0 0.4rem' }}>🌿</span>
-        TOP 3 WINNERS
-        <span style={{ opacity: 0.7, margin: '0 0.4rem', display: 'inline-block', transform: 'scaleX(-1)' }}>🌿</span>
-      </div>
-      <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.8125rem', letterSpacing: '0.14em', color: '#EA580C', marginTop: '0.25rem' }}>
-        {subtitle.toUpperCase()} <span style={{ color: 'var(--color-text-muted)' }}>★</span> RESULTS
+    <div className="podium-stage">
+      {published && <Confetti />}
+      <div className="podium-row">
+        {PODIUM_COLS.map((col) => {
+          const p = byPlace(col.place);
+          return p
+            ? <PodiumCard key={col.place} p={p} col={col} rankBy={rankBy} />
+            : <div key={col.place} className="podium-col" style={{ flex: 1, maxWidth: col.place === 1 ? '240px' : '200px' }} aria-hidden />;
+        })}
       </div>
     </div>
   );
 }
 
-function OfficialResultsBadge() {
+// "TOP 3 WINNERS" header with laurels + a subtitle reflecting the active view.
+function PodiumHeader({ subtitle, published }: { subtitle: string; published: boolean }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem' }}>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', backgroundColor: 'var(--color-primary)', color: '#fff', fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.1em', padding: '0.45rem 1.1rem', borderRadius: '9999px', boxShadow: '0 4px 14px rgba(11,28,50,0.2)' }}>
-        <Trophy size={14} /> OFFICIAL RESULTS
-      </span>
+    <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+        <Laurel />
+        <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '0.05em', color: 'var(--color-text)' }}>TOP 3 WINNERS</span>
+        <Laurel flip />
+      </div>
+      <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.8125rem', letterSpacing: '0.14em', color: MAROON, marginTop: '0.35rem' }}>
+        {subtitle.toUpperCase()} <span style={{ color: '#D4A017' }}>★</span> RESULTS
+      </div>
+      {published && (
+        <div style={{ marginTop: '0.75rem' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', backgroundColor: NAVY, color: '#fff', fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '0.72rem', letterSpacing: '0.1em', padding: '0.42rem 1.05rem', borderRadius: '9999px', boxShadow: '0 6px 16px rgba(11,28,50,0.22)' }}>
+            <Trophy size={13} /> OFFICIAL RESULTS
+          </span>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Results table (the "rest" below the podium) ───────────────────
+
+// Subtle medal tint keyed by rank (1/2/3). Ranks 1-3 normally live in the podium,
+// so this future-proofs / covers the N≤3 edge without changing any logic.
+const ROW_TINT: Record<number, string> = {
+  1: 'rgba(212,160,23,0.10)',
+  2: 'rgba(154,163,173,0.12)',
+  3: 'rgba(184,115,51,0.10)',
+};
 
 function ResultTable({ participants, rankBy }: { participants: GroupedLeaderboardParticipant[]; rankBy: string }) {
   if (participants.length === 0) return null;
@@ -141,66 +289,180 @@ function ResultTable({ participants, rankBy }: { participants: GroupedLeaderboar
   const timeLabel = isGunTime ? 'Gun Time' : 'Chip Time';
 
   return (
-    <div style={{ border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden', marginTop: '0.5rem' }}>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#1a56db' }}>
-              {['#', 'Name', 'BIB', timeLabel].map((h) => (
-                <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontFamily: 'var(--font-body)', fontSize: '0.75rem', fontWeight: 600, color: '#fff' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {participants.map((p, i) => (
-              <tr key={p.participantDetailUrl || i} style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: i % 2 === 0 ? '#fff' : '#FAFAFA' }}>
-                <td style={{ padding: '0.625rem 0.75rem', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.875rem', color: 'var(--color-text-muted)', width: '2.5rem' }}>
-                  {p.rank}
+    <div className="rt-wrap">
+      <table className="rt-table">
+        <thead>
+          <tr>
+            {['#', 'Name', 'BIB', timeLabel].map((h) => (
+              <th key={h} style={{ padding: '0.6rem 0.85rem', textAlign: 'left', fontFamily: 'var(--font-body)', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em', color: '#fff', textTransform: 'uppercase' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {participants.map((p, i) => {
+            const hasLink = !!p.participantDetailUrl;
+            return (
+              <tr
+                key={p.participantDetailUrl || i}
+                className="rt-row"
+                style={ROW_TINT[p.rank] ? { background: ROW_TINT[p.rank] } : undefined}
+              >
+                <td data-label="#" className="rt-rank">{p.rank}</td>
+                <td data-label="Name" className="rt-name">
+                  {hasLink ? (
+                    <a href={p.participantDetailUrl} className="rt-namelink">
+                      {p.name}
+                      <ChevronRight size={13} className="rt-chevron" />
+                    </a>
+                  ) : (
+                    <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.9rem', color: 'var(--color-text)' }}>{p.name}</span>
+                  )}
                 </td>
-                <td style={{ padding: '0.625rem 0.75rem' }}>
-                  <a href={p.participantDetailUrl} style={{ fontFamily: 'var(--font-body)', fontWeight: 500, fontSize: '0.9rem', color: '#1a56db', textDecoration: 'none' }}>
-                    {p.name}
-                  </a>
-                </td>
-                <td style={{ padding: '0.625rem 0.75rem', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>{p.bib}</td>
-                <td style={{ padding: '0.625rem 0.75rem' }}>
-                  <span style={{ display: 'inline-block', backgroundColor: '#1a56db', color: '#fff', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', fontWeight: 700, padding: '0.2rem 0.75rem', borderRadius: '12px' }}>
-                    {timeOf(p, rankBy)}
-                  </span>
+                <td data-label="BIB" className="rt-bib">{p.bib}</td>
+                <td data-label={timeLabel}>
+                  <span className="rt-pill">{timeOf(p, rankBy)}</span>
                 </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
 
 // ── One gender column: podium (top 3) + table for the rest ────────
 
-function GenderBlock({ label, participants, rankBy }: { label: string; participants: GroupedLeaderboardParticipant[]; rankBy: string }) {
+function GenderBlock({ label, participants, rankBy, published }: { label: string; participants: GroupedLeaderboardParticipant[]; rankBy: string; published: boolean }) {
   const podium = participants.slice(0, 3);
   const rest = participants.slice(3);
 
   return (
     <div>
-      <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.0625rem', color: 'var(--color-text)', textAlign: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '2px solid #1a56db' }}>
-        {label}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: `2px solid ${NAVY}` }}>
+        <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.0625rem', color: 'var(--color-text)' }}>{label}</span>
+        {participants.length > 0 && (
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.72rem', fontWeight: 700, color: NAVY, background: 'rgba(27,45,90,0.08)', padding: '0.1rem 0.5rem', borderRadius: '9999px' }}>{participants.length}</span>
+        )}
       </div>
       {participants.length === 0 ? (
-        <div style={{ padding: '1.5rem', textAlign: 'center', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
-          No results.
+        <div className="empty-gender">
+          <Trophy size={26} style={{ opacity: 0.35 }} />
+          <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text)' }}>No results yet</div>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>No {label.toLowerCase()} finishers in this view.</div>
         </div>
       ) : (
         <>
-          <CardPodium participants={podium} rankBy={rankBy} />
+          <CardPodium participants={podium} rankBy={rankBy} published={published} />
           <ResultTable participants={rest} rankBy={rankBy} />
         </>
       )}
     </div>
   );
 }
+
+// ── Shimmer skeleton (shown while loading) ────────────────────────
+
+function ResultsSkeleton() {
+  return (
+    <div className="lb-body" aria-hidden>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+        {[0, 1].map((g) => (
+          <div key={g}>
+            <div className="sk sk-shimmer" style={{ height: 20, width: '40%', margin: '0 auto 1.25rem', borderRadius: 6 }} />
+            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-end', justifyContent: 'center', marginBottom: '1rem' }}>
+              {[64, 96, 48].map((h, i) => (
+                <div key={i} style={{ flex: 1, maxWidth: 200 }}>
+                  <div className="sk sk-shimmer" style={{ height: 150, borderRadius: 16 }} />
+                  <div className="sk sk-shimmer" style={{ height: h, borderRadius: '4px 4px 0 0', marginTop: 8 }} />
+                </div>
+              ))}
+            </div>
+            {[0, 1, 2].map((r) => (
+              <div key={r} className="sk sk-shimmer" style={{ height: 40, borderRadius: 8, marginBottom: 8 }} />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Global styles for this page ───────────────────────────────────
+
+const STYLES = `
+  .lb-sticky { position: sticky; top: 64px; z-index: 6; }
+  .lb-headband { background: ${'var(--color-primary)'}; color: #fff; padding: 0.9rem 1.25rem; border-radius: 10px 10px 0 0; text-align: center; }
+  .lb-eventname { font-family: var(--font-body); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.7; }
+  .lb-viewname { font-family: var(--font-heading); font-weight: 800; font-size: 1.2rem; }
+  .lb-racetitle { font-family: var(--font-body); font-size: 0.85rem; opacity: 0.8; margin-top: 0.1rem; }
+  .lb-selectbar { display: flex; justify-content: center; align-items: center; gap: 0.625rem; padding: 0.85rem 1rem; background: var(--color-bg-alt); border-left: 1px solid var(--color-border); border-right: 1px solid var(--color-border); box-shadow: 0 6px 12px -8px rgba(11,28,50,0.25); }
+  .lb-body { border: 1px solid var(--color-border); border-top: none; border-radius: 0 0 12px 12px; padding: 1.75rem 1.5rem; background: #fff; }
+  .lb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2.5rem; align-items: start; }
+
+  @keyframes lb-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .lb-view { animation: lb-fade-in 300ms ease both; }
+
+  .podium-stage { position: relative; overflow: hidden; border-radius: 14px 14px 0 0; padding: 1.75rem 0.5rem 0; background-color: var(--color-bg-alt); background-image: radial-gradient(rgba(27,45,90,0.10) 1.5px, transparent 1.5px), radial-gradient(rgba(142,36,77,0.10) 1.5px, transparent 1.5px); background-size: 22px 22px, 22px 22px; background-position: 0 0, 11px 11px; }
+  .podium-row { position: relative; z-index: 1; display: flex; gap: 0.7rem; align-items: flex-end; justify-content: center; }
+
+  @keyframes podium-rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+  .podium-rise { animation: podium-rise 520ms cubic-bezier(.2,.7,.3,1) both; }
+  .podium-card { transition: box-shadow 220ms ease, transform 220ms ease; }
+  .podium-card:hover { box-shadow: 0 14px 30px rgba(11,28,50,0.20); }
+  .podium-card--champion:hover { box-shadow: 0 24px 50px rgba(212,160,23,0.36), 0 10px 20px rgba(11,28,50,0.18); }
+
+  .medal-badge { border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.45rem; box-shadow: 0 6px 14px rgba(11,28,50,0.22), inset 0 1px 2px rgba(255,255,255,0.75), inset 0 -3px 6px rgba(0,0,0,0.12); }
+
+  @keyframes champion-shine { 0% { transform: translateX(-120%) rotate(8deg); } 60%, 100% { transform: translateX(220%) rotate(8deg); } }
+  .champion-sheen { position: absolute; top: 0; left: 0; width: 45%; height: 100%; background: linear-gradient(100deg, transparent, rgba(255,255,255,0.55), transparent); animation: champion-shine 3.2s ease-in-out 0.6s infinite; pointer-events: none; }
+
+  @keyframes confetti-float { 0% { transform: translateY(0) rotate(0deg); opacity: 0.55; } 50% { transform: translateY(-8px) rotate(18deg); opacity: 0.8; } 100% { transform: translateY(0) rotate(0deg); opacity: 0.55; } }
+  .podium-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+  .confetti-pc { position: absolute; border-radius: 1px; opacity: 0.6; animation: confetti-float 4s ease-in-out infinite; }
+
+  .rt-wrap { border: 1px solid var(--color-border); border-radius: 10px; overflow: hidden; margin-top: 0.75rem; }
+  .rt-table { width: 100%; border-collapse: collapse; }
+  .rt-table thead tr { background: ${'var(--color-primary)'}; }
+  .rt-row { border-bottom: 1px solid var(--color-border); transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+  .rt-row:nth-child(even) { background: rgba(27,45,90,0.02); }
+  .rt-row:hover { background: rgba(27,45,90,0.06); box-shadow: 0 2px 10px rgba(11,28,50,0.08); transform: translateY(-1px); }
+  .rt-rank { padding: 0.7rem 0.85rem; font-family: var(--font-body); font-weight: 800; font-size: 0.875rem; color: var(--color-text-muted); width: 2.5rem; }
+  .rt-name { padding: 0.7rem 0.85rem; }
+  .rt-namelink { display: inline-flex; align-items: center; gap: 0.15rem; font-family: var(--font-body); font-weight: 600; font-size: 0.9rem; color: ${'var(--color-primary)'}; text-decoration: none; }
+  .rt-namelink:hover { text-decoration: underline; }
+  .rt-chevron { opacity: 0; transform: translateX(-3px); transition: opacity 150ms ease, transform 150ms ease; }
+  .rt-namelink:hover .rt-chevron { opacity: 1; transform: translateX(0); }
+  .rt-bib { padding: 0.7rem 0.85rem; font-family: var(--font-body); font-size: 0.8125rem; color: var(--color-text-muted); }
+  .rt-pill { display: inline-block; min-width: 84px; text-align: center; background: ${'var(--color-primary)'}; color: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; padding: 0.22rem 0.7rem; border-radius: 9999px; box-shadow: 0 2px 6px rgba(11,28,50,0.18); }
+
+  .empty-gender { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; text-align: center; padding: 2rem 1rem; border: 1px dashed var(--color-border); border-radius: 12px; background: var(--color-bg-alt); }
+
+  .sk { background: #E9EDF2; }
+  @keyframes sk-shimmer { 0% { background-position: -420px 0; } 100% { background-position: 420px 0; } }
+  .sk-shimmer { background-image: linear-gradient(90deg, #E9EDF2 0px, #F4F7FA 200px, #E9EDF2 420px); background-size: 840px 100%; animation: sk-shimmer 1.3s linear infinite; }
+
+  @media (max-width: 760px) {
+    .lb-grid { grid-template-columns: 1fr; gap: 2rem; }
+  }
+  @media (max-width: 640px) {
+    .rt-table thead { display: none; }
+    .rt-table, .rt-table tbody, .rt-table tr, .rt-table td { display: block; width: 100%; }
+    .rt-wrap { border: none; }
+    .rt-row { border: 1px solid var(--color-border); border-radius: 10px; margin-bottom: 0.6rem; padding: 0.35rem 0.75rem; }
+    .rt-row:hover { transform: none; }
+    .rt-table td { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.35rem 0; border: none; }
+    .rt-table td::before { content: attr(data-label); font-family: var(--font-body); font-weight: 700; font-size: 0.72rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--color-text-muted); }
+    .rt-name { order: -1; }
+    .rt-name::before { display: none; }
+    .rt-namelink, .rt-name span { font-size: 1rem !important; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lb-view, .podium-rise, .champion-sheen, .confetti-pc, .sk-shimmer { animation: none !important; }
+    .podium-card, .rt-row, .rt-chevron { transition: none !important; }
+  }
+`;
 
 // ── Leaderboard view (rendered once event + race selected) ─────────
 
@@ -303,72 +565,60 @@ function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId:
 
   return (
     <div>
-      <style>{`
-        .podium-card { transition: box-shadow 220ms ease; }
-        .podium-card:hover { box-shadow: 0 12px 28px rgba(11,28,50,0.24) !important; }
-        @keyframes lb-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-        .lb-view { animation: lb-fade-in 260ms ease both; }
-        @media (prefers-reduced-motion: reduce) {
-          .podium-card { transition: none; }
-          .lb-view { animation: none; }
-        }
-      `}</style>
-      {/* Heading band — CENTERED; "Overall" by default, category name when one is selected */}
-      <div style={{ backgroundColor: '#1a56db', color: '#fff', padding: '0.875rem 1.25rem', borderRadius: '10px 10px 0 0', textAlign: 'center' }}>
-        <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.125rem' }}>{headingText}</div>
-        {raceTitle && <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', opacity: 0.8, marginTop: '0.125rem' }}>{raceTitle}</div>}
+      <style>{STYLES}</style>
+
+      {/* Sticky context bar — event name + view + category selector stay visible */}
+      <div className="lb-sticky">
+        <div className="lb-headband">
+          {data?.eventName && <div className="lb-eventname">{data.eventName}</div>}
+          <div className="lb-viewname">{headingText}</div>
+          {raceTitle && <div className="lb-racetitle">{raceTitle}</div>}
+        </div>
+        {showCategory && categoryOptions.length > 0 && !loading && !error && (
+          <div className="lb-selectbar">
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>View</span>
+            <div style={{ minWidth: '220px' }}>
+              <FilterSelect
+                label="Category"
+                value={selectedCategory}
+                onChange={setSelectedCategory}
+                options={[{ value: '', label: 'Overall' }, ...categoryOptions.map((o) => ({ value: o.key, label: o.label }))]}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Category selector — dynamic from the race's actual categories */}
-      {showCategory && categoryOptions.length > 0 && !loading && !error && (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.625rem', padding: '1rem', backgroundColor: 'var(--color-bg-alt)', borderLeft: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)' }}>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>View</span>
-          <div style={{ minWidth: '220px' }}>
-            <FilterSelect
-              label="Category"
-              value={selectedCategory}
-              onChange={setSelectedCategory}
-              options={[{ value: '', label: 'Overall' }, ...categoryOptions.map((o) => ({ value: o.key, label: o.label }))]}
-            />
-          </div>
-        </div>
-      )}
-
       {error && (
-        <div style={{ padding: '2rem' }}>
+        <div style={{ padding: '2rem', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 12px 12px', background: '#fff' }}>
           <ErrorState message={error} onRetry={refetch} />
         </div>
       )}
 
-      {loading && (
-        <div style={{ padding: '3rem', textAlign: 'center', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)' }}>
-          Loading results…
-        </div>
-      )}
+      {loading && !error && <ResultsSkeleton />}
 
       {!loading && !error && (
-        <div style={{ border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 10px 10px', padding: '1.5rem' }}>
+        <div className="lb-body">
           {!sectionVisible ? (
-            <div style={{ padding: '2rem', textAlign: 'center', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)' }}>
+            <div style={{ padding: '2.5rem', textAlign: 'center', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)' }}>
               {inCategoryView ? 'Category results are not available for this race.' : 'Overall results are not available for this race.'}
             </div>
           ) : maleList.length === 0 && femaleList.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)' }}>
+            <div style={{ padding: '2.5rem', textAlign: 'center', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)' }}>
               No results found.
             </div>
           ) : (
-            /* Male + Female ALWAYS both shown, side by side */
+            /* Male + Female ALWAYS both shown, side by side (stacks on mobile) */
             <div className="lb-view" key={selectedCategory || 'overall'}>
-              <PodiumHeader subtitle={headingText} />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', alignItems: 'start' }}>
-                <GenderBlock label="Male" participants={maleList} rankBy={activeRankBy} />
-                <GenderBlock label="Female" participants={femaleList} rankBy={activeRankBy} />
+              <PodiumHeader subtitle={headingText} published={published} />
+              <div className="lb-grid">
+                <GenderBlock label="Male" participants={maleList} rankBy={activeRankBy} published={published} />
+                <GenderBlock label="Female" participants={femaleList} rankBy={activeRankBy} published={published} />
               </div>
-              {published && <OfficialResultsBadge />}
             </div>
           )}
 
-          <div style={{ marginTop: '1.5rem', padding: '0.875rem 1rem', backgroundColor: '#F5F7FA', borderRadius: '8px', border: '1px solid var(--color-border)', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
+          <div style={{ marginTop: '1.75rem', padding: '0.9rem 1rem', backgroundColor: '#F5F7FA', borderRadius: '10px', border: '1px solid var(--color-border)', fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
             <strong>*Chip Time:</strong> Your finish time relative to your individual start crossing.{' '}
             <strong>*Gun Time:</strong> Your finish time relative to the official race start.
           </div>
@@ -581,13 +831,13 @@ function GlobalResultsPage() {
                   width: '96px',
                   height: '96px',
                   borderRadius: '50%',
-                  backgroundColor: '#EFF6FF',
+                  backgroundColor: '#EFF2F8',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Trophy size={44} color="#1a56db" />
+                <Trophy size={44} color="var(--color-primary)" />
               </div>
               <div>
                 <div
