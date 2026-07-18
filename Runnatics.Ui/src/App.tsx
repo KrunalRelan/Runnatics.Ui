@@ -32,6 +32,7 @@ import ContactPage from "./main/src/pages/public/ContactPage";
 import PrivacyPage from "./main/src/pages/public/PrivacyPage";
 import NotFoundPage from "./main/src/pages/public/NotFoundPage";
 import GlobalResultsPage from "./main/src/pages/public/GlobalResultsPage";
+import ResultsLandingPage from "./main/src/pages/public/ResultsLandingPage";
 
 // Lazy-load heavy public pages (UI-12)
 const ResultsPage = lazy(() => import("./main/src/pages/public/ResultsPage"));
@@ -80,7 +81,8 @@ function App() {
               <Route path="/e/:eventSlug" element={<Suspense fallback={<Box display="flex" justifyContent="center" alignItems="center" minHeight="200px"><CircularProgress /></Box>}><EventResultsPage /></Suspense>} />
               <Route path="/c/:eventId/:raceId/l" element={<Suspense fallback={<Box display="flex" justifyContent="center" alignItems="center" minHeight="200px"><CircularProgress /></Box>}><LeaderboardPage /></Suspense>} />
               <Route path="/p/:participantId" element={<ParticipantDetailPage />} />
-              <Route path="/results" element={<GlobalResultsPage />} />
+              <Route path="/results" element={<ResultsLandingPage />} />
+              <Route path="/results/:eventId" element={<GlobalResultsPage />} />
               <Route path="/gallery" element={<GalleryPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />

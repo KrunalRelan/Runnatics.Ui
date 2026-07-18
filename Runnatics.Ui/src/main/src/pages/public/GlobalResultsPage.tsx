@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { ChevronDown, Search, Trophy } from 'lucide-react';
 import { Container } from '../../components/public/ui';
 import { ErrorState } from '../../components/public/shared/ApiStates';
@@ -367,11 +368,24 @@ function FilterSelect({ label, value, onChange, options, disabled }: {
 // ── Main page ─────────────────────────────────────────────────────
 
 function GlobalResultsPage() {
+  // When reached at /results/:eventId the event is fixed by the URL (a tile click);
+  // Year/Event pickers are hidden and only the race selector remains.
+  const { eventId: eventIdParam } = useParams<{ eventId?: string }>();
+  const isEventScoped = !!eventIdParam;
+
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(String(currentYear));
-  const [eventId, setEventId] = useState('');
+  const [eventId, setEventId] = useState(eventIdParam ?? '');
   const [raceId, setRaceId] = useState('');
   const [search, setSearch] = useState('');
+
+  // Keep the scoped event id in sync with the route param.
+  useEffect(() => {
+    if (eventIdParam) {
+      setEventId(eventIdParam);
+      setRaceId('');
+    }
+  }, [eventIdParam]);
 
   // Fetch filter metadata (years + events list)
   const { data: filterData } = usePublicApi(
@@ -405,6 +419,13 @@ function GlobalResultsPage() {
   const handleEventChange = (v: string) => { setEventId(v); setRaceId(''); };
   const handleRaceChange = (v: string) => { setRaceId(v); };
 
+  // On an event-scoped page, auto-select the race when there's exactly one.
+  useEffect(() => {
+    if (isEventScoped && !raceId && raceData?.races?.length === 1) {
+      setRaceId(raceData.races[0].encryptedRaceId);
+    }
+  }, [isEventScoped, raceId, raceData]);
+
   const showResults = !!(eventId && raceId);
 
   return (
@@ -437,18 +458,22 @@ function GlobalResultsPage() {
               boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
             }}
           >
-            <FilterSelect
-              label="Year"
-              value={year}
-              onChange={handleYearChange}
-              options={years}
-            />
-            <FilterSelect
-              label="Event"
-              value={eventId}
-              onChange={handleEventChange}
-              options={events}
-            />
+            {!isEventScoped && (
+              <>
+                <FilterSelect
+                  label="Year"
+                  value={year}
+                  onChange={handleYearChange}
+                  options={years}
+                />
+                <FilterSelect
+                  label="Event"
+                  value={eventId}
+                  onChange={handleEventChange}
+                  options={events}
+                />
+              </>
+            )}
             <FilterSelect
               label="Race"
               value={raceId}
@@ -525,7 +550,9 @@ function GlobalResultsPage() {
                   Result Search
                 </div>
                 <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)', fontSize: '1rem', maxWidth: '400px', margin: '0 auto' }}>
-                  Select an event and race above to view the leaderboard and search for your results.
+                  {isEventScoped
+                    ? 'Select a race above to view the leaderboard and search for your results.'
+                    : 'Select an event and race above to view the leaderboard and search for your results.'}
                 </p>
               </div>
             </div>
