@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Activity } from 'lucide-react';
-import { Button, Container } from '../ui';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import usePublicApi from '../../../hooks/usePublicApi';
 import { getUpcomingEvents, type PublicEvent } from '../../../services/publicApi';
 import { base64ToDataUrl } from '../../../utility';
@@ -28,74 +27,8 @@ function HeroSlide({ event, isActive }: { event: PublicEvent; isActive: boolean 
   );
 }
 
-function HeroFallback() {
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, var(--color-bg-dark) 0%, #0F2744 60%, #1A3D6A 100%)',
-      }}
-    >
-      <Container style={{ textAlign: 'center', color: '#fff', padding: 'clamp(2rem, 6vh, 4rem) 1.5rem' }}>
-        <div
-          style={{
-            display: 'inline-block',
-            backgroundColor: 'rgba(232,93,42,0.15)',
-            color: 'var(--color-accent)',
-            fontFamily: 'var(--font-body)',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            padding: '0.375rem 1rem',
-            borderRadius: '9999px',
-            marginBottom: '1.25rem',
-            border: '1px solid rgba(232,93,42,0.3)',
-          }}
-        >
-          India's #1 Race Timing Platform
-        </div>
-        <h1
-          style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: 'clamp(2.25rem, 5.5vw, 4rem)',
-            fontWeight: 700,
-            lineHeight: 1.1,
-            margin: '0 auto 1.25rem',
-            maxWidth: '800px',
-          }}
-        >
-          Run India, <span style={{ color: 'var(--color-accent)' }}>Manage Every Mile.</span>
-        </h1>
-        <p
-          style={{
-            fontFamily: 'var(--font-body)',
-            fontSize: 'clamp(1rem, 2vw, 1.15rem)',
-            color: 'rgba(255,255,255,0.75)',
-            maxWidth: '620px',
-            margin: '0 auto 2rem',
-            lineHeight: 1.6,
-          }}
-        >
-          India's most trusted race timing and event management platform.
-        </p>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <Button variant="primary" size="lg" href="/events">Explore Events</Button>
-          <Button variant="outline" size="lg" href="/contact" style={{ borderColor: 'rgba(255,255,255,0.55)', color: '#fff' }}>
-            Organize With Us
-          </Button>
-        </div>
-      </Container>
-    </div>
-  );
-}
-
 function Hero() {
-  const { data: events, loading } = usePublicApi((signal) => getUpcomingEvents(signal), []);
+  const { data: events } = usePublicApi((signal) => getUpcomingEvents(signal), []);
   const slides = (events ?? []).filter((ev) => !!ev.bannerBase64);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -126,6 +59,10 @@ function Hero() {
     else if (e.key === 'ArrowRight') { e.preventDefault(); go(index + 1); }
   };
 
+  // No upcoming-event banners → render nothing; the section collapses so the
+  // page starts at the tiles below (no marketing-text fallback, no blank gap).
+  if (!hasSlides) return null;
+
   return (
     <section
       aria-roledescription={hasSlides ? 'carousel' : undefined}
@@ -147,23 +84,7 @@ function Hero() {
       }}
     >
       {/* Slides */}
-      {!hasSlides && !loading && <HeroFallback />}
-      {loading && !hasSlides && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(135deg, var(--color-bg-dark) 0%, #0F2744 60%, #1A3D6A 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'rgba(255,255,255,0.55)',
-          }}
-        >
-          <Activity size={32} style={{ opacity: 0.6 }} />
-        </div>
-      )}
-      {hasSlides && slides.map((ev, i) => (
+      {slides.map((ev, i) => (
         <HeroSlide key={ev.slug || i} event={ev} isActive={i === index} />
       ))}
 
