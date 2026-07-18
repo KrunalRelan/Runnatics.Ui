@@ -26,70 +26,109 @@ function takeRanked(list: GroupedLeaderboardParticipant[], n: number): GroupedLe
   return list.slice(0, Math.max(0, n)).map((p, i) => ({ ...p, rank: i + 1 }));
 }
 
-// ── Podium display ────────────────────────────────────────────────
+// ── Podium display (card style) ───────────────────────────────────
 
-// All arrays indexed by COLUMN position: [left=2nd, center=1st, right=3rd]
-const PODIUM_ORDER   = [1, 0, 2] as const;
-const COL_ICONS      = ['🥈', '🥇', '🥉'] as const;
-const COL_LABELS     = ['2nd', '1st', '3rd'] as const;
-const COL_HEIGHTS    = ['90px', '120px', '70px'] as const;
-const COL_TEXT       = ['#4A4A4A', '#7C5A00', '#5C3000'] as const;
-const COL_GRADIENTS  = [
-  'linear-gradient(to bottom, #C0C0C0, #A8A8A8)',
-  'linear-gradient(to bottom, #FFD700, #FFA500)',
-  'linear-gradient(to bottom, #CD7F32, #8B4513)',
+// Column layout, left → right: 2nd, 1st (center, elevated), 3rd.
+const PODIUM_COLS = [
+  { place: 2, medal: '🥈', band: 'RUNNER UP',   base: '#9AA3AD', bg: 'linear-gradient(160deg,#F6F8FA,#E3E7EC)', ring: '#C4CBD3', baseH: '40px' },
+  { place: 1, medal: '🥇', band: 'CHAMPION',    base: '#D4A017', bg: 'linear-gradient(160deg,#FFF6D8,#FFE59E)', ring: '#EFC64B', baseH: '56px' },
+  { place: 3, medal: '🥉', band: 'THIRD PLACE', base: '#B87333', bg: 'linear-gradient(160deg,#FBEADF,#F1CDB2)', ring: '#D89B6C', baseH: '30px' },
 ] as const;
 
-function PodiumSection({ participants, rankBy }: { participants: GroupedLeaderboardParticipant[]; rankBy: string }) {
-  if (participants.length < 1) return null;
-  const ordered = PODIUM_ORDER.map((i) => participants[i]).filter(Boolean);
+type PodiumCol = (typeof PODIUM_COLS)[number];
 
+function PodiumCard({ p, col, rankBy }: { p: GroupedLeaderboardParticipant; col: PodiumCol; rankBy: string }) {
+  const isChampion = col.place === 1;
+  return (
+    <div style={{ flex: 1, maxWidth: '210px', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'stretch', alignSelf: 'flex-end' }}>
+      <div
+        className="podium-card"
+        style={{
+          background: col.bg,
+          border: `1px solid ${col.ring}`,
+          borderRadius: '14px',
+          padding: isChampion ? '1.15rem 0.85rem 0.95rem' : '0.95rem 0.75rem 0.8rem',
+          boxShadow: isChampion ? '0 14px 30px rgba(11,28,50,0.18)' : '0 6px 16px rgba(11,28,50,0.10)',
+          transform: isChampion ? 'translateY(-12px)' : 'none',
+          textAlign: 'center',
+        }}
+      >
+        <div style={{ fontSize: isChampion ? '2.4rem' : '2rem', lineHeight: 1, marginBottom: '0.3rem' }}>{col.medal}</div>
+        <div
+          title={p.name}
+          style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: isChampion ? '1.05rem' : '0.9375rem', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+        >
+          {p.name}
+        </div>
+        <div style={{ margin: '0.4rem 0' }}>
+          <span style={{ display: 'inline-block', backgroundColor: '#D42A2A', color: '#fff', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.03em', padding: '0.16rem 0.7rem', borderRadius: '9999px' }}>
+            BIB {p.bib}
+          </span>
+        </div>
+        <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontWeight: 700, fontSize: isChampion ? '1.15rem' : '1rem', color: 'var(--color-primary)', letterSpacing: '0.02em' }}>
+          {timeOf(p, rankBy)}
+        </div>
+      </div>
+      <div style={{ height: col.baseH, background: col.base, borderRadius: '4px 4px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: isChampion ? '-2px' : '0.5rem' }}>
+        <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '0.68rem', letterSpacing: '0.06em', color: '#fff', whiteSpace: 'nowrap' }}>{col.band}</span>
+      </div>
+    </div>
+  );
+}
+
+// Card podium; renders 1–3 finishers gracefully (empty slots become spacers).
+function CardPodium({ participants, rankBy }: { participants: GroupedLeaderboardParticipant[]; rankBy: string }) {
+  if (participants.length < 1) return null;
+  const byPlace = (place: number) => participants[place - 1];
   return (
     <div
       style={{
         display: 'flex',
-        gap: '0.75rem',
+        gap: '0.6rem',
         alignItems: 'flex-end',
         justifyContent: 'center',
-        padding: '2rem 1rem 0',
+        padding: '1.5rem 0.5rem 0',
+        borderRadius: '12px 12px 0 0',
+        // subtle confetti backdrop
         backgroundColor: 'var(--color-bg-alt)',
-        borderRadius: '10px 10px 0 0',
-        marginBottom: 0,
+        backgroundImage:
+          'radial-gradient(#1a56db22 1.5px, transparent 1.5px), radial-gradient(#EA580C22 1.5px, transparent 1.5px)',
+        backgroundSize: '22px 22px, 22px 22px',
+        backgroundPosition: '0 0, 11px 11px',
       }}
     >
-      {ordered.map((p, col) => (
-        <div
-          key={p?.bib ?? col}
-          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.375rem', maxWidth: '220px' }}
-        >
-          <span style={{ fontSize: '2rem', lineHeight: 1 }}>{COL_ICONS[col]}</span>
-          <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-text)', textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {p?.name ?? '—'}
-          </div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: '#1a56db', fontWeight: 600 }}>
-            BIB {p?.bib ?? '—'}
-          </div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-            {p ? timeOf(p, rankBy) : '—'}
-          </div>
-          <div
-            style={{
-              width: '100%',
-              background: COL_GRADIENTS[col],
-              borderRadius: '6px 6px 0 0',
-              height: COL_HEIGHTS[col],
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'center',
-              paddingTop: '0.625rem',
-            }}
-          >
-            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.375rem', color: COL_TEXT[col] }}>
-              {COL_LABELS[col]}
-            </span>
-          </div>
-        </div>
-      ))}
+      {PODIUM_COLS.map((col) => {
+        const p = byPlace(col.place);
+        return p
+          ? <PodiumCard key={col.place} p={p} col={col} rankBy={rankBy} />
+          : <div key={col.place} style={{ flex: 1, maxWidth: '210px' }} aria-hidden />;
+      })}
+    </div>
+  );
+}
+
+// "TOP 3 WINNERS" banner with laurels + a subtitle reflecting the active view.
+function PodiumHeader({ subtitle }: { subtitle: string }) {
+  return (
+    <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+      <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.25rem', letterSpacing: '0.05em', color: 'var(--color-text)' }}>
+        <span style={{ opacity: 0.7, margin: '0 0.4rem' }}>🌿</span>
+        TOP 3 WINNERS
+        <span style={{ opacity: 0.7, margin: '0 0.4rem', display: 'inline-block', transform: 'scaleX(-1)' }}>🌿</span>
+      </div>
+      <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.8125rem', letterSpacing: '0.14em', color: '#EA580C', marginTop: '0.25rem' }}>
+        {subtitle.toUpperCase()} <span style={{ color: 'var(--color-text-muted)' }}>★</span> RESULTS
+      </div>
+    </div>
+  );
+}
+
+function OfficialResultsBadge() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', backgroundColor: 'var(--color-primary)', color: '#fff', fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.1em', padding: '0.45rem 1.1rem', borderRadius: '9999px', boxShadow: '0 4px 14px rgba(11,28,50,0.2)' }}>
+        <Trophy size={14} /> OFFICIAL RESULTS
+      </span>
     </div>
   );
 }
@@ -155,7 +194,7 @@ function GenderBlock({ label, participants, rankBy }: { label: string; participa
         </div>
       ) : (
         <>
-          <PodiumSection participants={podium} rankBy={rankBy} />
+          <CardPodium participants={podium} rankBy={rankBy} />
           <ResultTable participants={rest} rankBy={rankBy} />
         </>
       )}
@@ -254,6 +293,7 @@ function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId:
   const activeRankBy = inCategoryView ? categoryRankBy : overallRankBy;
   const sectionVisible = inCategoryView ? showCategory : showOverall;
   const headingText = inCategoryView ? selectedLabel : 'Overall';
+  const published = data?.resultsPublished === true;
 
   const raceTitle = data?.raceName
     ? data.raceDistance
@@ -263,6 +303,16 @@ function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId:
 
   return (
     <div>
+      <style>{`
+        .podium-card { transition: box-shadow 220ms ease; }
+        .podium-card:hover { box-shadow: 0 12px 28px rgba(11,28,50,0.24) !important; }
+        @keyframes lb-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        .lb-view { animation: lb-fade-in 260ms ease both; }
+        @media (prefers-reduced-motion: reduce) {
+          .podium-card { transition: none; }
+          .lb-view { animation: none; }
+        }
+      `}</style>
       {/* Heading band — CENTERED; "Overall" by default, category name when one is selected */}
       <div style={{ backgroundColor: '#1a56db', color: '#fff', padding: '0.875rem 1.25rem', borderRadius: '10px 10px 0 0', textAlign: 'center' }}>
         <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.125rem' }}>{headingText}</div>
@@ -308,9 +358,13 @@ function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId:
             </div>
           ) : (
             /* Male + Female ALWAYS both shown, side by side */
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', alignItems: 'start' }}>
-              <GenderBlock label="Male" participants={maleList} rankBy={activeRankBy} />
-              <GenderBlock label="Female" participants={femaleList} rankBy={activeRankBy} />
+            <div className="lb-view" key={selectedCategory || 'overall'}>
+              <PodiumHeader subtitle={headingText} />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', alignItems: 'start' }}>
+                <GenderBlock label="Male" participants={maleList} rankBy={activeRankBy} />
+                <GenderBlock label="Female" participants={femaleList} rankBy={activeRankBy} />
+              </div>
+              {published && <OfficialResultsBadge />}
             </div>
           )}
 

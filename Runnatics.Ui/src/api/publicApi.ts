@@ -241,6 +241,8 @@ export interface GroupedLeaderboardResponse {
   // BUG-24: Show Overall / Show Category toggles from event/race leaderboard settings.
   showOverall?: boolean;
   showCategory?: boolean;
+  // True when the event's results are published — gates the "OFFICIAL RESULTS" badge.
+  resultsPublished?: boolean;
   // Configured per-section "results to show" counts; the page caps PER GENDER client-side.
   numberOfResultsToShowOverall?: number;
   numberOfResultsToShowCategory?: number;
