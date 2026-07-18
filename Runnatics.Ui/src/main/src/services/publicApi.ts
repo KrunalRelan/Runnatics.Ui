@@ -72,6 +72,7 @@ interface ApiEvent {
   registrationOpen: boolean;
   venue?: string;
   bannerBase64?: string | null;
+  thumbnailBase64?: string | null;
   hasPublishedResults?: boolean;
 }
 
@@ -87,6 +88,8 @@ export interface PublicEvent {
   registrationOpen: boolean;
   isPast: boolean;
   bannerBase64?: string | null;
+  /** Tile image; falls back to banner when absent. */
+  thumbnailBase64?: string | null;
   /** True when at least one published race has ShowResultTable enabled. */
   hasPublishedResults: boolean;
 }
@@ -142,6 +145,7 @@ function normaliseEvent(e: ApiEvent): PublicEvent {
     registrationOpen: e.registrationOpen,
     isPast: new Date(e.eventDate) < new Date(),
     bannerBase64: e.bannerBase64 ?? null,
+    thumbnailBase64: e.thumbnailBase64 ?? null,
     hasPublishedResults: e.hasPublishedResults ?? false,
   };
 }

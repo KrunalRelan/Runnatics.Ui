@@ -9,6 +9,8 @@ interface EventCardProps {
 }
 
 function EventCard({ event, portrait }: EventCardProps) {
+  // Tiles use the thumbnail; fall back to the banner when no thumbnail exists.
+  const tileImage = event.thumbnailBase64 || event.bannerBase64;
   if (portrait) {
     return (
       <div
@@ -41,9 +43,9 @@ function EventCard({ event, portrait }: EventCardProps) {
             flexShrink: 0,
           }}
         >
-          {event.bannerBase64 ? (
+          {tileImage ? (
             <img
-              src={base64ToDataUrl(event.bannerBase64)}
+              src={base64ToDataUrl(tileImage)}
               alt={event.name}
               loading="lazy"
               decoding="async"
@@ -197,9 +199,9 @@ function EventCard({ event, portrait }: EventCardProps) {
   return (
     <Card>
       <div style={{ aspectRatio: '16/9', backgroundColor: '#E5E7EB', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {event.bannerBase64 ? (
+        {tileImage ? (
           <img
-            src={base64ToDataUrl(event.bannerBase64)}
+            src={base64ToDataUrl(tileImage)}
             alt={event.name}
             loading="lazy"
             decoding="async"

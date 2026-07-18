@@ -55,6 +55,9 @@ export const EditEvent: React.FC = () => {
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerBase64, setBannerBase64] = useState<string | null>(null);
   const [existingBannerBase64, setExistingBannerBase64] = useState<string | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailBase64, setThumbnailBase64] = useState<string | null>(null);
+  const [existingThumbnailBase64, setExistingThumbnailBase64] = useState<string | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState<string>("");
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
@@ -284,6 +287,11 @@ export const EditEvent: React.FC = () => {
       setExistingBannerBase64((event as any).bannerBase64);
     }
 
+    // Set existing thumbnail base64 if present
+    if ((event as any).thumbnailBase64) {
+      setExistingThumbnailBase64((event as any).thumbnailBase64);
+    }
+
     // ✅ Set event settings - use value if exists, otherwise default
     if (event.eventSettings) {
       const mappedEventSettings: EventSettings = {
@@ -406,6 +414,21 @@ export const EditEvent: React.FC = () => {
     }
   };
 
+  // Handle thumbnail upload — convert to base64 (optional, replaceable)
+  const handleThumbnailChange = (file: File | null) => {
+    setThumbnailFile(file);
+    if (!file) {
+      setThumbnailBase64(null);
+    } else {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setThumbnailBase64(result.split(',')[1] ?? null);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Validate form
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -488,6 +511,7 @@ export const EditEvent: React.FC = () => {
         country: apiData.country || "",
         zipCode: apiData.zipCode || "",
         ...(!existingBannerBase64 && bannerBase64 ? { bannerBase64 } : {}),
+        ...(thumbnailBase64 ? { thumbnailBase64 } : {}),
       };
 
       await EventService.updateEvent(id!, requestPayload);
@@ -743,6 +767,41 @@ export const EditEvent: React.FC = () => {
                     )}
                   </Box>
                 )}
+
+                {/* Thumbnail — optional, replaceable; used on event tiles */}
+                <Box>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    fullWidth
+                    sx={{ height: 56 }}
+                  >
+                    {thumbnailFile
+                      ? thumbnailFile.name
+                      : existingThumbnailBase64
+                        ? "Replace Event Thumbnail (optional)"
+                        : "Upload Event Thumbnail (optional)"}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        handleThumbnailChange(file);
+                      }}
+                    />
+                  </Button>
+                  <FormHelperText>Shown on event tiles. If omitted, the banner is used.</FormHelperText>
+                  {(thumbnailBase64 || existingThumbnailBase64) && (
+                    <Box sx={{ mt: 1, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+                      <img
+                        src={base64ToDataUrl(thumbnailBase64 || existingThumbnailBase64!)}
+                        alt="Thumbnail Preview"
+                        style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }}
+                      />
+                    </Box>
+                  )}
+                </Box>
               </Stack>
             </Stack>
           </Box>

@@ -51,6 +51,8 @@ export const CreateEvent: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerBase64, setBannerBase64] = useState<string | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailBase64, setThumbnailBase64] = useState<string | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState<string>("");
   const [organizations, setOrganizations] = useState<EventOrganizer[]>([]);
@@ -376,6 +378,21 @@ export const CreateEvent: React.FC = () => {
     }
   };
 
+  // Handle thumbnail upload — convert to base64 (optional; falls back to banner)
+  const handleThumbnailChange = (file: File | null) => {
+    setThumbnailFile(file);
+    if (!file) {
+      setThumbnailBase64(null);
+    } else {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setThumbnailBase64(result.split(',')[1] ?? null);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Validate form
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -452,6 +469,7 @@ export const CreateEvent: React.FC = () => {
         venueLatitude: null,
         venueLongitude: null,
         bannerBase64: bannerBase64 ?? undefined,
+        thumbnailBase64: thumbnailBase64 ?? undefined,
         eventType: EventType.Marathon,
         eventSettings: eventSettings
           ? {
@@ -882,6 +900,34 @@ export const CreateEvent: React.FC = () => {
                 )}
                 {errors.bannerImage && (
                   <FormHelperText error>{errors.bannerImage}</FormHelperText>
+                )}
+
+                <Button
+                  variant="outlined"
+                  component="label"
+                  fullWidth
+                  sx={{ height: 56 }}
+                >
+                  {thumbnailFile ? thumbnailFile.name : "Upload Event Thumbnail (optional)"}
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      handleThumbnailChange(file);
+                    }}
+                  />
+                </Button>
+                <FormHelperText>Shown on event tiles. If omitted, the banner is used.</FormHelperText>
+                {thumbnailBase64 && (
+                  <Box sx={{ mt: 1, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+                    <img
+                      src={base64ToDataUrl(thumbnailBase64)}
+                      alt="Thumbnail Preview"
+                      style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }}
+                    />
+                  </Box>
                 )}
               </Stack>
             </Stack>
