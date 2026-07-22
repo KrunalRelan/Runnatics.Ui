@@ -9,5 +9,7 @@ export interface EventSettings {
   confirmedEvent: boolean;
   allowNameCheck: boolean;
   allowParticipantEdit: boolean;
+  /** When true, a completion SMS auto-sends as each runner finishes. Default false. */
+  autoSendCompletionSms?: boolean;
   createdAt?: string;
 }

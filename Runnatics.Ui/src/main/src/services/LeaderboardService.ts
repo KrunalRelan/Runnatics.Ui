@@ -44,4 +44,18 @@ export class LeaderboardService {
     );
     return response.data;
   }
+
+  /**
+   * Manual "Send Results SMS": queue a completion SMS to every finished participant in the race.
+   * Returns immediately; the server drains the queue in the background (dedupe prevents double-sends).
+   */
+  static async sendResultsSms(
+    eventId: string,
+    raceId: string,
+  ): Promise<ResponseBase<{ finishedCount: number; queuedCount: number; skippedCount: number }>> {
+    const response: AxiosResponse<
+      ResponseBase<{ finishedCount: number; queuedCount: number; skippedCount: number }>
+    > = await apiClient.post(ServiceUrl.sendResultsSms(eventId, raceId), null);
+    return response.data;
+  }
 }

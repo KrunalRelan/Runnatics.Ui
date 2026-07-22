@@ -685,6 +685,29 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   };
 
   const [exportingResults, setExportingResults] = useState<boolean>(false);
+  const [sendingResultsSms, setSendingResultsSms] = useState<boolean>(false);
+
+  const handleSendResultsSms = async () => {
+    if (
+      !window.confirm(
+        "Send a completion SMS to all finished participants in this race? Participants who already received one will be skipped."
+      )
+    ) {
+      return;
+    }
+    try {
+      setSendingResultsSms(true);
+      const response = await LeaderboardService.sendResultsSms(eventId, raceId);
+      const r = response.message;
+      alert(
+        `Queued ${r?.queuedCount ?? 0} of ${r?.finishedCount ?? 0} finishers. Messages send in the background.`
+      );
+    } catch (error: any) {
+      alert(`Failed to send results SMS: ${error.message || "Unknown error"}`);
+    } finally {
+      setSendingResultsSms(false);
+    }
+  };
 
   const handleExportResultsExcel = async () => {
     try {
@@ -1171,6 +1194,16 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
               title={!hasProcessedResults ? "No processed results available" : "Export leaderboard results as Excel"}
             >
               {exportingResults ? "Exporting..." : "Export Results (Excel)"}
+            </Button>
+            <Button
+              variant="outlined"
+              color="primary"
+              sx={{ textTransform: "none", fontWeight: 500 }}
+              onClick={handleSendResultsSms}
+              disabled={resultsBusy || sendingResultsSms || !hasProcessedResults}
+              title={!hasProcessedResults ? "No processed results available" : "Send completion SMS to all finished participants"}
+            >
+              {sendingResultsSms ? "Sending..." : "Send Results SMS"}
             </Button>
             <Button
               variant="outlined"

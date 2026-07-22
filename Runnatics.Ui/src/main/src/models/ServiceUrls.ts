@@ -81,6 +81,7 @@ export const ServiceUrl = {
     //leaderboard
     getLeaderboard: () => `Results/leaderboard`,
     exportLeaderboard: (eventId: string, raceId: string) => `Results/${eventId}/${raceId}/export-excel`,
+    sendResultsSms: (eventId: string, raceId: string) => `Results/${eventId}/${raceId}/send-results-sms`,
 
     //bib-mappings
     createBibMapping: () => 'bib-mappings',

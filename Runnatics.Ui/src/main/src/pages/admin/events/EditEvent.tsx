@@ -90,6 +90,7 @@ export const EditEvent: React.FC = () => {
     confirmedEvent: false,
     allowNameCheck: false,
     allowParticipantEdit: false,
+    autoSendCompletionSms: false,
     createdAt: undefined,
   });
 
@@ -306,6 +307,7 @@ export const EditEvent: React.FC = () => {
         confirmedEvent: event.eventSettings.confirmedEvent ?? false,
         allowNameCheck: event.eventSettings.allowNameCheck ?? false,
         allowParticipantEdit: event.eventSettings.allowParticipantEdit ?? false,
+        autoSendCompletionSms: event.eventSettings.autoSendCompletionSms ?? false,
         createdAt: event.eventSettings.createdAt ?? undefined,
       };
       setEventSettings(mappedEventSettings);
@@ -1070,6 +1072,27 @@ export const EditEvent: React.FC = () => {
                         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                           Allow Name Check
                           <Tooltip title="Enables name verification against the registration database during check-in." placement="right">
+                            <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
+                          </Tooltip>
+                        </Box>
+                      }
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={eventSettings.autoSendCompletionSms ?? false}
+                          onChange={(e) =>
+                            setEventSettings((prev) => ({
+                              ...prev,
+                              autoSendCompletionSms: e.target.checked,
+                            }))
+                          }
+                        />
+                      }
+                      label={
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          Auto-send completion SMS
+                          <Tooltip title="When on, a completion SMS is sent automatically as each runner finishes. Default off." placement="right">
                             <InfoOutlinedIcon sx={{ fontSize: 16, color: "text.secondary", cursor: "pointer" }} />
                           </Tooltip>
                         </Box>
