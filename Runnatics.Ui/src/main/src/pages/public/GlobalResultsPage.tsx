@@ -259,9 +259,9 @@ function Medal({ place, size }: { place: number; size: number }) {
 // ── Podium platform (SVG 3D block) ────────────────────────────────
 
 const PLAT: Record<number, { h: number; top: string; front: string; frontDark: string; side: string; delay: string }> = {
-  2: { h: 96, top: '#E7ECF0', front: '#C2C9D1', frontDark: '#98A1AB', side: '#8A929C', delay: '0.05s' },
-  1: { h: 122, top: '#FFECB0', front: '#F0C33C', frontDark: '#C99A16', side: '#B58611', delay: '0.18s' },
-  3: { h: 78, top: '#EBC7AC', front: '#CE8E5C', frontDark: '#A5652F', side: '#95591F', delay: '0.11s' },
+  2: { h: 108, top: '#E7ECF0', front: '#C2C9D1', frontDark: '#98A1AB', side: '#8A929C', delay: '0.05s' },
+  1: { h: 138, top: '#FFECB0', front: '#F0C33C', frontDark: '#C99A16', side: '#B58611', delay: '0.18s' },
+  3: { h: 88, top: '#EBC7AC', front: '#CE8E5C', frontDark: '#A5652F', side: '#95591F', delay: '0.11s' },
 };
 
 function PodiumPlatform({ place }: { place: number }) {
@@ -308,7 +308,7 @@ function PodiumColumn({ p, place, rankBy, total, rankLabel, event }:
   const card = CARD_BG[place];
   const time = timeOf(p, rankBy);
   return (
-    <div className="podium-col podium-rise" style={{ flex: 1, maxWidth: isChampion ? '240px' : '200px', minWidth: 0, alignSelf: 'flex-end', animationDelay: PLAT[place].delay }}>
+    <div className="podium-col podium-rise" style={{ flex: 1, maxWidth: isChampion ? '270px' : '224px', minWidth: 0, alignSelf: 'flex-end', animationDelay: PLAT[place].delay }}>
       <div
         className={`podium-card${isChampion ? ' podium-card--champion' : ''}`}
         style={{
@@ -317,7 +317,7 @@ function PodiumColumn({ p, place, rankBy, total, rankLabel, event }:
           background: card.bg,
           border: `1px solid ${card.ring}`,
           borderRadius: '16px',
-          padding: isChampion ? '1.9rem 0.95rem 1rem' : '1.6rem 0.8rem 0.85rem',
+          padding: isChampion ? '2.1rem 1.1rem 1.15rem' : '1.8rem 0.95rem 1rem',
           marginBottom: '-4px',
           boxShadow: isChampion ? '0 20px 44px rgba(212,160,23,0.28), 0 8px 18px rgba(11,28,50,0.16)' : '0 8px 18px rgba(11,28,50,0.10)',
           transform: isChampion ? 'translateY(-14px) scale(1.03)' : 'none',
@@ -332,9 +332,22 @@ function PodiumColumn({ p, place, rankBy, total, rankLabel, event }:
         <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem' }}>
           <ShareMenu name={p.name} rank={p.rank} total={total} rankLabel={rankLabel} time={time} event={event} detailUrl={p.participantDetailUrl} tone={isChampion ? 'gold' : 'light'} />
         </div>
-        <div title={p.name} style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: isChampion ? '1.1rem' : '0.9375rem', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {p.name}
-        </div>
+        {p.participantDetailUrl ? (
+          <a
+            href={p.participantDetailUrl}
+            title={p.name}
+            style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: isChampion ? '1.1rem' : '0.9375rem', lineHeight: 1.2, color: 'var(--color-text)', textDecoration: 'none', cursor: 'pointer' }}
+          >
+            {p.name}
+          </a>
+        ) : (
+          <div
+            title={p.name}
+            style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: isChampion ? '1.1rem' : '0.9375rem', lineHeight: 1.2, color: 'var(--color-text)' }}
+          >
+            {p.name}
+          </div>
+        )}
         <div style={{ margin: '0.4rem 0 0.35rem' }}>
           <span style={{ display: 'inline-block', backgroundColor: MAROON, color: '#fff', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.04em', padding: '0.18rem 0.72rem', borderRadius: '9999px', boxShadow: '0 2px 6px rgba(142,36,77,0.28)' }}>
             BIB {p.bib}
@@ -366,7 +379,7 @@ function CardPodium({ participants, rankBy, published, total, rankLabel, event }
           const p = byPlace(place);
           return p
             ? <PodiumColumn key={place} p={p} place={place} rankBy={rankBy} total={total} rankLabel={rankLabel} event={event} />
-            : <div key={place} className="podium-col" style={{ flex: 1, maxWidth: place === 1 ? '240px' : '200px' }} aria-hidden />;
+            : <div key={place} className="podium-col" style={{ flex: 1, maxWidth: place === 1 ? '270px' : '224px' }} aria-hidden />;
         })}
       </div>
     </div>
@@ -489,9 +502,6 @@ function GenderBlock({ label, participants, rankBy, published, total, rankLabel,
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1.75rem', paddingBottom: '0.5rem', borderBottom: `2px solid ${NAVY}` }}>
         <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.0625rem', color: 'var(--color-text)' }}>{label}</span>
-        {total > 0 && (
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.72rem', fontWeight: 700, color: NAVY, background: 'rgba(27,45,90,0.08)', padding: '0.1rem 0.5rem', borderRadius: '9999px' }}>{total}</span>
-        )}
       </div>
       {participants.length === 0 ? (
         <div className="empty-gender">
@@ -520,7 +530,7 @@ function ResultsSkeleton() {
             <div className="sk sk-shimmer" style={{ height: 20, width: '40%', margin: '0 auto 1.75rem', borderRadius: 6 }} />
             <div style={{ display: 'flex', gap: '0.7rem', alignItems: 'flex-end', justifyContent: 'center', marginBottom: '1rem' }}>
               {[70, 100, 54].map((h, i) => (
-                <div key={i} style={{ flex: 1, maxWidth: 200 }}>
+                <div key={i} style={{ flex: 1, maxWidth: 224 }}>
                   <div className="sk sk-shimmer" style={{ height: 150, borderRadius: 16 }} />
                   <div className="sk sk-shimmer" style={{ height: h, borderRadius: '4px 4px 0 0', marginTop: 8 }} />
                 </div>
@@ -748,7 +758,7 @@ function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId:
         </div>
         {showCategory && categoryOptions.length > 0 && !loading && !error && (
           <div className="lb-selectbar">
-            <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>View</span>
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>View Leaderboard</span>
             <div style={{ minWidth: '220px' }}>
               <FilterSelect
                 label="Category"
