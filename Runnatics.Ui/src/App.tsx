@@ -12,7 +12,6 @@ import { eventsRoutes } from "./main/src/pages/admin/events/Routes";
 import { rfidRoutes } from "./main/src/pages/admin/rfid/Routes";
 import { deviceRoutes } from "./main/src/pages/admin/devices/Routes";
 import { supportRoutes } from "./main/src/pages/admin/support/Routes";
-import ContactUsPage from "./main/src/pages/ContactUs/ContactUsPage";
 import { ProtectedRoute } from "./main/src/components/auth/ProtectedRoute";
 import ForbiddenPage from "./main/src/pages/ForbiddenPage";
 import { ALL_ROLES } from "./main/src/models/Auth";
@@ -93,7 +92,6 @@ function App() {
             <Route element={<AuthLayoutWrapper />}>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
-              <Route path="/contact-us" element={<ContactUsPage />} />
               <Route path="/forbidden" element={<ForbiddenPage />} />
             </Route>
 
