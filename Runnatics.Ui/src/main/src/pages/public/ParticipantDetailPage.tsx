@@ -80,6 +80,16 @@ function TimingSection({ label, detail }: { label: string; detail?: ParticipantT
 }
 
 // ── Splits table ────────────────────────────────────────────────────
+// Per-interval pace (min/km) derived from this segment's speed (km/h).
+function paceFromSpeed(speedKmh?: number): string {
+  if (speedKmh == null || speedKmh <= 0) return '—';
+  const minPerKm = 60 / speedKmh;
+  let m = Math.floor(minPerKm);
+  let s = Math.round((minPerKm - m) * 60);
+  if (s === 60) { m += 1; s = 0; }
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 function SplitsTable({ splits }: { splits?: ParticipantSplit[] }) {
   if (!splits || splits.length === 0) {
     return (
@@ -97,7 +107,7 @@ function SplitsTable({ splits }: { splits?: ParticipantSplit[] }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
           <thead>
             <tr style={{ backgroundColor: '#1a56db' }}>
-              {['Interval', 'Split Time', 'Race Time', 'Distance', 'Speed (km/h)'].map((h) => (
+              {['Interval', 'Split Time', 'Race Time', 'Distance', 'Pace (min/km)', 'Speed (km/h)'].map((h) => (
                 <th key={h} style={{ padding: '0.625rem 0.875rem', textAlign: 'left', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.8125rem', color: '#fff', whiteSpace: 'nowrap' }}>{h}</th>
               ))}
             </tr>
@@ -112,6 +122,9 @@ function SplitsTable({ splits }: { splits?: ParticipantSplit[] }) {
                 <td style={{ padding: '0.625rem 0.875rem', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--color-text)' }}>{split.raceTime}</td>
                 <td style={{ padding: '0.625rem 0.875rem', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                   {split.splitDist > 0 ? `${split.splitDist.toFixed(1)} km` : '—'}
+                </td>
+                <td style={{ padding: '0.625rem 0.875rem', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
+                  {paceFromSpeed(split.speed)}
                 </td>
                 <td style={{ padding: '0.625rem 0.875rem', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                   {split.speed != null && split.speed > 0 ? split.speed.toFixed(2) : '—'}
