@@ -42,12 +42,14 @@ export class ParticipantService {
     static async processParticipantImport(
         eventId: string,
         importBatchId: string,
-        raceId?: string
+        raceId?: string,
+        sendBibSms?: boolean
     ): Promise<ResponseBase<ProcessResponse>> {
         const requestBody: ProcessImportRequest = {
             importBatchId: importBatchId,
             eventId: eventId,
             raceId: raceId ?? undefined, // 👈 important if backend allows undefined
+            sendBibSms: sendBibSms ?? false,
         };
 
         const response: AxiosResponse<ResponseBase<ProcessResponse>> =

@@ -18,6 +18,8 @@ import {
   TableRow,
   Paper,
   Chip,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material";
 import {
   CloudUpload,
@@ -51,6 +53,7 @@ const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
   const [processResult, setProcessResult] = useState<ProcessResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sendBibSms, setSendBibSms] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,7 +116,8 @@ const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
       const response = await ParticipantService.processParticipantImport(
         eventId,
         importBatchId,
-        raceId
+        raceId,
+        sendBibSms
       );
 
       setProcessResult(response.message);
@@ -331,6 +335,17 @@ const BulkUploadParticipants: React.FC<BulkUploadParticipantsProps> = ({
                 Column names are case-insensitive and flexible (e.g., "bib", "Bib Number", or "number" all work)
               </Typography>
             </Box>
+
+            <FormControlLabel
+              sx={{ mt: 2 }}
+              control={
+                <Checkbox
+                  checked={sendBibSms}
+                  onChange={(e) => setSendBibSms(e.target.checked)}
+                />
+              }
+              label="Send BIB SMS to imported participants (with a phone number)"
+            />
           </Box>
         )}
 
