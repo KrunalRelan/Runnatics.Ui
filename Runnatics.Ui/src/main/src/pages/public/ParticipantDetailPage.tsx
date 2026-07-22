@@ -3,17 +3,15 @@ import { useParams } from 'react-router-dom';
 import { Container } from '../../components/public/ui';
 import { ErrorState } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
-import useDebounce from '../../hooks/useDebounce';
 import { publicApi } from '../../../../api/publicApi';
-import type { ParticipantTimeDetail, ParticipantSplit, ParticipantSearchItem } from '../../../../api/publicApi';
+import type { ParticipantTimeDetail, ParticipantSplit } from '../../../../api/publicApi';
 
 // ── Tab definitions ────────────────────────────────────────────────
-type Tab = 'details' | 'splits' | 'comparison' | 'certificate' | 'share';
+type Tab = 'details' | 'splits' | 'certificate' | 'share';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'details', label: 'Details' },
   { key: 'splits', label: 'Split Details' },
-  { key: 'comparison', label: 'Comparison' },
   { key: 'certificate', label: 'Certificate' },
   { key: 'share', label: 'Share' },
 ];
@@ -33,7 +31,7 @@ function InfoCard({ label, value }: { label: string; value?: string | number | n
 }
 
 // ── Rank badge ─────────────────────────────────────────────────────
-function RankBadge({ label, rank, total, percentage, color }: { label: string; rank?: number | null; total?: number | null; percentage?: number | null; color: string }) {
+function RankBadge({ label, rank, total, color }: { label: string; rank?: number | null; total?: number | null; color: string }) {
   return (
     <div style={{ backgroundColor: color, borderRadius: '10px', padding: '1rem 1.25rem', textAlign: 'center', color: '#fff', flex: '1 1 130px', minWidth: '110px' }}>
       <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.6875rem', color: 'rgba(255,255,255,0.75)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -47,11 +45,6 @@ function RankBadge({ label, rank, total, percentage, color }: { label: string; r
           of {total.toLocaleString()}
         </div>
       )}
-      {percentage != null && (
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.2rem' }}>
-          top {percentage.toFixed(1)}%
-        </div>
-      )}
     </div>
   );
 }
@@ -59,9 +52,6 @@ function RankBadge({ label, rank, total, percentage, color }: { label: string; r
 // ── Timing section ─────────────────────────────────────────────────
 function TimingSection({ label, detail }: { label: string; detail?: ParticipantTimeDetail }) {
   if (!detail?.time) return null;
-  const overallPct = detail.overallRank && detail.totalOverall ? (detail.overallRank / detail.totalOverall) * 100 : null;
-  const genderPct = detail.genderRank && detail.totalGender ? (detail.genderRank / detail.totalGender) * 100 : null;
-  const categoryPct = detail.categoryRank && detail.totalCategory ? (detail.categoryRank / detail.totalCategory) * 100 : null;
 
   return (
     <div style={{ backgroundColor: '#fff', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden', marginBottom: '1.25rem' }}>
@@ -80,9 +70,9 @@ function TimingSection({ label, detail }: { label: string; detail?: ParticipantT
           )}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <RankBadge label="Overall" rank={detail.overallRank} total={detail.totalOverall} percentage={overallPct} color="#1a56db" />
-          <RankBadge label="Gender" rank={detail.genderRank} total={detail.totalGender} percentage={genderPct} color="#C0392B" />
-          <RankBadge label="Category" rank={detail.categoryRank} total={detail.totalCategory} percentage={categoryPct} color="#148F77" />
+          <RankBadge label="Overall" rank={detail.overallRank} total={detail.totalOverall} color="#1a56db" />
+          <RankBadge label="Gender" rank={detail.genderRank} total={detail.totalGender} color="#C0392B" />
+          <RankBadge label="Category" rank={detail.categoryRank} total={detail.totalCategory} color="#148F77" />
         </div>
       </div>
     </div>
@@ -296,127 +286,6 @@ function ShareDropdown({ participantId, name, eventName, chipTime, overallRank, 
             )
           )}
         </div>
-      )}
-    </div>
-  );
-}
-
-// ── Comparison tab ─────────────────────────────────────────────────
-function ComparisonTab({ participantId, eventId }: { participantId: string; eventId?: string }) {
-  const [query, setQuery] = useState('');
-  const [selectedId, setSelectedId] = useState('');
-  const [comparing, setComparing] = useState(false);
-  const debouncedQuery = useDebounce(query, 400);
-
-  const { data: searchResults, loading: searching } = usePublicApi(
-    (signal) =>
-      debouncedQuery.length >= 2 && eventId
-        ? publicApi.searchParticipants(eventId, debouncedQuery, signal).catch(() => ({ participants: [] as ParticipantSearchItem[] }))
-        : Promise.resolve({ participants: [] as ParticipantSearchItem[] }),
-    [debouncedQuery, eventId],
-  );
-
-  const { data: comparison, loading: compLoading, error: compError } = usePublicApi(
-    (signal) =>
-      comparing && selectedId
-        ? publicApi.compareParticipants({ participantId1: participantId, participantId2: selectedId }, signal).catch(() => null as any)
-        : Promise.resolve(null as any),
-    [comparing, selectedId],
-  );
-
-  return (
-    <div>
-      <div style={{ backgroundColor: '#EFF6FF', borderRadius: '10px', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', borderLeft: '4px solid #1a56db' }}>
-        <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.0625rem', color: 'var(--color-text)', marginBottom: '0.375rem' }}>
-          Compare Timings With Another Runner
-        </div>
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.9375rem', color: 'var(--color-text-muted)', margin: 0 }}>
-          Search for another participant in the same event to compare your splits and finish times side-by-side.
-        </p>
-      </div>
-
-      {!eventId ? (
-        <div style={{ padding: '2rem', textAlign: 'center', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)' }}>
-          Comparison requires event context. This feature will be available soon.
-        </div>
-      ) : (
-        <>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            <div style={{ position: 'relative', flex: '1 1 260px' }}>
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => { setQuery(e.target.value); setSelectedId(''); setComparing(false); }}
-                placeholder="Enter BIB Number / Name…"
-                style={{ width: '100%', fontFamily: 'var(--font-body)', fontSize: '0.9375rem', padding: '0.625rem 1rem', border: '1px solid var(--color-border)', borderRadius: '8px', outline: 'none', boxSizing: 'border-box' }}
-              />
-            </div>
-            <button
-              onClick={() => { if (selectedId) setComparing(true); }}
-              disabled={!selectedId}
-              style={{ padding: '0.625rem 1.5rem', backgroundColor: selectedId ? '#1a56db' : 'var(--color-border)', color: selectedId ? '#fff' : 'var(--color-text-muted)', border: 'none', borderRadius: '8px', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.9375rem', cursor: selectedId ? 'pointer' : 'not-allowed' }}
-            >
-              Compare
-            </button>
-          </div>
-
-          {/* Search results dropdown */}
-          {searching && (
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>Searching…</div>
-          )}
-          {!searching && searchResults && searchResults.participants.length > 0 && !selectedId && (
-            <div style={{ border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden', marginBottom: '1rem' }}>
-              {searchResults.participants.map((p) => (
-                <button
-                  key={p.encryptedId}
-                  onClick={() => { setSelectedId(p.encryptedId); setQuery(p.name + ' — BIB ' + p.bib); }}
-                  style={{ display: 'flex', justifyContent: 'space-between', width: '100%', padding: '0.75rem 1rem', backgroundColor: '#fff', border: 'none', borderBottom: '1px solid var(--color-border)', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '0.9375rem', textAlign: 'left' }}
-                >
-                  <span style={{ fontWeight: 500 }}>{p.name} <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>(BIB {p.bib})</span></span>
-                  <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{p.chipTime ?? '—'}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Comparison results */}
-          {compLoading && <div style={{ padding: '2rem', textAlign: 'center', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)' }}>Loading comparison…</div>}
-          {compError && (
-            <div style={{ padding: '1.5rem', backgroundColor: '#FEF2F2', borderRadius: '8px', border: '1px solid #FECACA', fontFamily: 'var(--font-body)', fontSize: '0.9375rem', color: '#991B1B' }}>
-              Comparison feature is not yet available. Please check back soon.
-            </div>
-          )}
-          {comparison && (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#1a56db', color: '#fff' }}>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600 }}>Checkpoint</th>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600 }}>{comparison.participant1.name}</th>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600 }}>{comparison.participant2.name}</th>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600 }}>Diff</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparison.differences.map((d: { checkpoint: string; timeDiff: string; faster: 1 | 2 }, i: number) => (
-                    <tr key={i} style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: i % 2 === 0 ? '#fff' : '#FAFAFA' }}>
-                      <td style={{ padding: '0.625rem 1rem', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600 }}>{d.checkpoint}</td>
-                      <td style={{ padding: '0.625rem 1rem', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: d.faster === 1 ? '#148F77' : 'var(--color-text)' }}>
-                        {comparison.participant1.splits[i]?.time ?? '—'}
-                      </td>
-                      <td style={{ padding: '0.625rem 1rem', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: d.faster === 2 ? '#148F77' : 'var(--color-text)' }}>
-                        {comparison.participant2.splits[i]?.time ?? '—'}
-                      </td>
-                      <td style={{ padding: '0.625rem 1rem', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: d.faster === 1 ? '#148F77' : '#C0392B', fontWeight: 600 }}>
-                        {d.timeDiff}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
       )}
     </div>
   );
@@ -638,11 +507,6 @@ function ParticipantDetailPage() {
               {/* ── Split Details tab ───────────────────────────── */}
               {activeTab === 'splits' && (
                 <SplitsTable splits={data.splits} />
-              )}
-
-              {/* ── Comparison tab ──────────────────────────────── */}
-              {activeTab === 'comparison' && (
-                <ComparisonTab participantId={participantId!} eventId={data.eventName} />
               )}
 
               {/* ── Certificate tab ─────────────────────────────── */}
