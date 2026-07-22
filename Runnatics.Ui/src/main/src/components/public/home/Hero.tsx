@@ -12,9 +12,11 @@ const AUTO_ADVANCE_MS = 5000;
 const HERO_FRAME: React.CSSProperties = {
   position: 'relative',
   width: '100%',
-  aspectRatio: '16 / 9',
-  maxHeight: 'min(680px, 82vh)',
-  minHeight: 'clamp(360px, 52vw, 680px)',
+  // Banner ratio 3:1 (recommended upload 1200x400). Caps keep it sane on very wide / very
+  // narrow viewports; at ~1200px wide it renders the exact 3:1 (400px tall).
+  aspectRatio: '3 / 1',
+  maxHeight: '460px',
+  minHeight: '140px',
   overflow: 'hidden',
 };
 

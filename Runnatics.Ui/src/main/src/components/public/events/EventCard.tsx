@@ -217,7 +217,7 @@ function EventCard({ event, portrait }: EventCardProps) {
 
   return (
     <Card>
-      <div style={{ aspectRatio: '16/9', background: 'linear-gradient(135deg, var(--color-primary) 0%, #0F2744 100%)', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ aspectRatio: '1/1', background: 'linear-gradient(135deg, var(--color-primary) 0%, #0F2744 100%)', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {tileImage ? (
           <img
             src={base64ToDataUrl(tileImage)}
