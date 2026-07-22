@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, MapPin, Clock } from 'lucide-react';
+import { Mail, MapPin } from 'lucide-react';
 import { Section, Container, Heading } from '../../components/public/ui';
 import CTABanner from '../../components/public/shared/CTABanner';
 import { publicApi } from '../../../../api/publicApi';
@@ -128,10 +128,10 @@ function ContactPage() {
           <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.65)', fontSize: '1.125rem', marginTop: '0.75rem' }}>
             For event enquiry, click below or email us at{' '}
             <a
-              href="mailto:support@racetik.com"
+              href="mailto:care@racetik.com"
               style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 600 }}
             >
-              support@racetik.com
+              care@racetik.com
             </a>
           </p>
         </Container>
@@ -233,19 +233,14 @@ function ContactPage() {
                 {
                   icon: <Mail size={20} color="var(--color-accent)" />,
                   label: 'Email',
-                  value: 'support@racetik.com',
-                  href: 'mailto:support@racetik.com',
+                  value: 'care@racetik.com',
+                  href: 'mailto:care@racetik.com',
                 },
                 // TODO: Address pending from client — update when provided.
                 {
                   icon: <MapPin size={20} color="var(--color-accent)" />,
                   label: 'Address',
                   value: 'Address coming soon',
-                },
-                {
-                  icon: <Clock size={20} color="var(--color-accent)" />,
-                  label: 'Hours',
-                  value: 'Mon–Fri, 9 AM – 6 PM IST',
                 },
               ].map(({ icon, label, value, href }) => (
                 <div key={label} style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>

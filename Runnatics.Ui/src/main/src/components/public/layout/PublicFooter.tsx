@@ -139,7 +139,7 @@ function PublicFooter() {
               Contact
             </h4>
             {[
-              { icon: <Mail size={15} />, text: 'support@racetik.com' },
+              { icon: <Mail size={15} />, text: 'care@racetik.com' },
               { icon: <MapPin size={15} />, text: 'India' },
             ].map(({ icon, text }) => (
               <div
