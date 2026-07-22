@@ -1033,11 +1033,38 @@ function GlobalResultsPage() {
               </div>
             </div>
           ) : (
-            <LeaderboardView
-              eventId={eventId}
-              raceId={raceId}
-              search={search}
-            />
+            <>
+              <LeaderboardView
+                eventId={eventId}
+                raceId={raceId}
+                search={search}
+              />
+              {/* Results disclaimer — placeholder copy, replace with exact client wording */}
+              <div
+                style={{
+                  marginTop: '2rem',
+                  padding: '1rem 1.25rem',
+                  borderLeft: '3px solid var(--color-border)',
+                  backgroundColor: '#F7F8FA',
+                  borderRadius: '6px',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.8125rem',
+                  lineHeight: 1.6,
+                  color: 'var(--color-text-muted)',
+                }}
+              >
+                <strong style={{ color: 'var(--color-text)' }}>Results Disclaimer:</strong>{' '}
+                These results are provisional and subject to verification. The organizer may modify
+                results without prior notice. For any discrepancies, please contact us at{' '}
+                <a
+                  href="mailto:care@racetik.com"
+                  style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 600 }}
+                >
+                  care@racetik.com
+                </a>
+                .
+              </div>
+            </>
           )}
         </div>
       </Container>

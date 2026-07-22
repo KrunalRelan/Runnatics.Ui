@@ -180,7 +180,7 @@ function EventCard({ event, portrait }: EventCardProps) {
               onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#C2410C'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#EA580C'; }}
             >
-              View Results →
+              View Leaderboard →
             </a>
           ) : (
             /* Fallback — navigate to event detail page */
@@ -252,7 +252,7 @@ function EventCard({ event, portrait }: EventCardProps) {
           </Button>
           {event.isPast && event.hasPublishedResults && event.encryptedId && (
             <Button variant="primary" size="sm" href={`/results/${event.encryptedId}`}>
-              View Results →
+              View Leaderboard →
             </Button>
           )}
         </div>
