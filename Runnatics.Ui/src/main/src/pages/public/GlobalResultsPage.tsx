@@ -354,11 +354,6 @@ function PodiumColumn({ p, place, rankBy, total, rankLabel, event }:
           </span>
         </div>
         <CountUpTime time={time} animate style={{ display: 'block', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontWeight: 700, fontSize: isChampion ? '1.22rem' : '1rem', color: NAVY, letterSpacing: '0.02em' }} />
-        {total > 0 && (
-          <div style={{ marginTop: '0.3rem', fontFamily: 'var(--font-body)', fontSize: '0.68rem', letterSpacing: '0.02em', color: 'var(--color-text-muted)' }}>
-            {rankLabel} <strong style={{ color: 'var(--color-text)' }}>{p.rank}</strong> of {total}
-          </div>
-        )}
       </div>
       <PodiumPlatform place={place} />
     </div>
