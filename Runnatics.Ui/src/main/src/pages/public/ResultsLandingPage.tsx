@@ -4,6 +4,7 @@ import usePublicApi from '../../hooks/usePublicApi';
 import { getPastEvents } from '../../services/publicApi';
 import EventCard from '../../components/public/events/EventCard';
 import { CardGridSkeleton, ErrorState, EmptyState } from '../../components/public/shared/ApiStates';
+import ResultsDisclaimer from '../../components/public/shared/ResultsDisclaimer';
 
 // Results landing — tiles of the 5 most recent past events. "View Result" on each
 // tile (shown only when that event's results are published) opens the event leaderboard
@@ -59,6 +60,7 @@ function ResultsLandingPage() {
               ))}
             </div>
           )}
+          {!loading && !error && <ResultsDisclaimer />}
         </div>
       </Container>
     </div>

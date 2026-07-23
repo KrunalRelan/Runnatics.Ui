@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { ChevronDown, ChevronRight, Search, Trophy, Share2, Link2, Check } from 'lucide-react';
 import { Container } from '../../components/public/ui';
 import { ErrorState } from '../../components/public/shared/ApiStates';
+import ResultsDisclaimer from '../../components/public/shared/ResultsDisclaimer';
 import usePublicApi from '../../hooks/usePublicApi';
 import useDebounce from '../../hooks/useDebounce';
 import { publicApi } from '../../../../api/publicApi';
@@ -1044,31 +1045,7 @@ function GlobalResultsPage() {
                 raceId={raceId}
                 search={search}
               />
-              {/* Results disclaimer — placeholder copy, replace with exact client wording */}
-              <div
-                style={{
-                  marginTop: '2rem',
-                  padding: '1rem 1.25rem',
-                  borderLeft: '3px solid var(--color-border)',
-                  backgroundColor: '#F7F8FA',
-                  borderRadius: '6px',
-                  fontFamily: 'var(--font-body)',
-                  fontSize: '0.8125rem',
-                  lineHeight: 1.6,
-                  color: 'var(--color-text-muted)',
-                }}
-              >
-                <strong style={{ color: 'var(--color-text)' }}>Results Disclaimer:</strong>{' '}
-                These results are provisional and subject to verification. The organizer may modify
-                results without prior notice. For any discrepancies, please contact us at{' '}
-                <a
-                  href="mailto:care@racetik.com"
-                  style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 600 }}
-                >
-                  care@racetik.com
-                </a>
-                .
-              </div>
+              <ResultsDisclaimer />
             </>
           )}
         </div>
