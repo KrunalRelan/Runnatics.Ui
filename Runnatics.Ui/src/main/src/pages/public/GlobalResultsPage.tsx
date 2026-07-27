@@ -399,10 +399,10 @@ function PodiumColumn({ p, place, rankBy, total, rankLabel, event }:
 }
 
 // ── 3D podium base ────────────────────────────────────────────────
-// Elliptical top face over a thicker body, with a thin red accent line. The
-// OFFICIAL RESULTS pill sits centred on it (published events only).
+// Elliptical top face over a thicker body, with a thin red accent line.
+// Carries no badge — the OFFICIAL RESULTS pill was dropped from the podium.
 
-function PodiumBase({ published }: { published: boolean }) {
+function PodiumBase() {
   return (
     <div className="podium-base">
       <svg viewBox="0 0 800 130" preserveAspectRatio="none" aria-hidden className="podium-base-svg">
@@ -416,12 +416,6 @@ function PodiumBase({ published }: { published: boolean }) {
         {/* thin RED accent line across the base */}
         <rect x="20" y="62" width="760" height="5" fill={RED} />
       </svg>
-      {published && (
-        <span className="podium-official">
-          <span className="podium-official-dot" aria-hidden />
-          OFFICIAL RESULTS
-        </span>
-      )}
     </div>
   );
 }
@@ -442,7 +436,7 @@ function CardPodium({ participants, rankBy, published, total, rankLabel, event }
             : <div key={place} className={`podium-col${place === 1 ? ' podium-col--champion' : ''}`} aria-hidden />;
         })}
       </div>
-      <PodiumBase published={published} />
+      <PodiumBase />
     </div>
   );
 }
@@ -736,16 +730,6 @@ const STYLES = `
   /* ── 3D navy base ─────────────────────────────────────────────── */
   .podium-base { position: relative; margin-top: -6px; z-index: 1; }
   .podium-base-svg { display: block; width: 100%; height: 118px; }
-  .podium-official {
-    position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%);
-    display: inline-flex; align-items: center; gap: 0.45rem; white-space: nowrap;
-    background: #FFFFFF; color: #1B2D5A;
-    font-family: var(--font-heading); font-weight: 800;
-    font-size: 0.72rem; letter-spacing: 0.1em;
-    padding: 0.42rem 1.1rem; border-radius: 9999px;
-    box-shadow: 0 6px 16px rgba(11,28,50,0.32);
-  }
-  .podium-official-dot { width: 8px; height: 8px; border-radius: 50%; background: #C8102E; }
 
   @keyframes podium-rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
   .podium-rise { animation: podium-rise 560ms cubic-bezier(.2,.7,.3,1) both; }
@@ -800,7 +784,6 @@ const STYLES = `
     .podium-panel { padding: 2rem 0.5rem 0; }
     .podium-band { width: calc(100% + 1rem); margin-left: -0.5rem; margin-right: -0.5rem; font-size: 0.56rem; letter-spacing: 0.07em; }
     .podium-base-svg { height: 84px; }
-    .podium-official { bottom: 18px; font-size: 0.62rem; padding: 0.34rem 0.8rem; }
   }
   @media (max-width: 400px) {
     .podium-stage { --avatar: 64px; --card-min: 300px; --name: 0.8125rem; --time: 1.1rem; }
