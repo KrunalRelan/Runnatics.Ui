@@ -166,19 +166,29 @@ function ShareMenu({ name, rank, total, rankLabel, time, event, detailUrl, tone 
 
 // ── Confetti (published results only; settles once, then rests) ────
 
+// Denser toward the TOP of the stage, thinning out lower down, so it reads as
+// falling celebration rather than an even wallpaper.
 const CONFETTI = [
-  { l: '6%', t: '20%', w: 7, h: 3, c: NAVY, r: 20, d: '0.05s' },
-  { l: '14%', t: '54%', w: 6, h: 6, c: '#F5C542', r: 0, d: '0.35s' },
-  { l: '22%', t: '12%', w: 8, h: 3, c: MAROON, r: -25, d: '0.5s' },
-  { l: '31%', t: '42%', w: 5, h: 5, c: '#9CB4D8', r: 0, d: '0.2s' },
-  { l: '40%', t: '16%', w: 7, h: 3, c: '#F5C542', r: 35, d: '0.6s' },
-  { l: '49%', t: '56%', w: 6, h: 3, c: NAVY, r: -15, d: '0.3s' },
-  { l: '58%', t: '13%', w: 5, h: 5, c: MAROON, r: 0, d: '0.55s' },
-  { l: '66%', t: '46%', w: 7, h: 3, c: '#9CB4D8', r: 25, d: '0.15s' },
-  { l: '74%', t: '22%', w: 6, h: 6, c: '#F5C542', r: 0, d: '0.45s' },
-  { l: '82%', t: '52%', w: 8, h: 3, c: NAVY, r: -30, d: '0.25s' },
-  { l: '90%', t: '18%', w: 6, h: 3, c: MAROON, r: 15, d: '0.4s' },
-  { l: '95%', t: '48%', w: 5, h: 5, c: '#F5C542', r: 0, d: '0.1s' },
+  { l: '4%',  t: '6%',  w: 7, h: 3, c: NAVY,      r: 20,  d: '0.05s' },
+  { l: '11%', t: '14%', w: 6, h: 6, c: '#F5C542', r: 0,   d: '0.35s' },
+  { l: '18%', t: '4%',  w: 8, h: 3, c: MAROON,    r: -25, d: '0.50s' },
+  { l: '24%', t: '19%', w: 5, h: 5, c: '#9CB4D8', r: 0,   d: '0.20s' },
+  { l: '31%', t: '8%',  w: 7, h: 3, c: '#F5C542', r: 35,  d: '0.60s' },
+  { l: '38%', t: '16%', w: 6, h: 3, c: NAVY,      r: -15, d: '0.30s' },
+  { l: '45%', t: '5%',  w: 5, h: 5, c: MAROON,    r: 0,   d: '0.55s' },
+  { l: '52%', t: '13%', w: 7, h: 3, c: '#9CB4D8', r: 25,  d: '0.15s' },
+  { l: '59%', t: '7%',  w: 6, h: 6, c: '#F5C542', r: 0,   d: '0.45s' },
+  { l: '66%', t: '17%', w: 8, h: 3, c: NAVY,      r: -30, d: '0.25s' },
+  { l: '73%', t: '5%',  w: 6, h: 3, c: MAROON,    r: 15,  d: '0.40s' },
+  { l: '80%', t: '15%', w: 5, h: 5, c: '#F5C542', r: 0,   d: '0.10s' },
+  { l: '87%', t: '9%',  w: 7, h: 3, c: '#9CB4D8', r: -20, d: '0.32s' },
+  { l: '94%', t: '18%', w: 6, h: 3, c: NAVY,      r: 28,  d: '0.48s' },
+  // sparser lower band
+  { l: '8%',  t: '38%', w: 5, h: 5, c: '#F5C542', r: 0,   d: '0.22s' },
+  { l: '29%', t: '44%', w: 6, h: 3, c: '#9CB4D8', r: 18,  d: '0.52s' },
+  { l: '55%', t: '41%', w: 5, h: 5, c: MAROON,    r: 0,   d: '0.18s' },
+  { l: '78%', t: '46%', w: 6, h: 3, c: NAVY,      r: -22, d: '0.38s' },
+  { l: '92%', t: '39%', w: 5, h: 5, c: '#F5C542', r: 0,   d: '0.28s' },
 ] as const;
 
 function Confetti() {
@@ -195,99 +205,111 @@ function Confetti() {
   );
 }
 
-// ── Decorative depth layer behind the podium ──────────────────────
+// ── Rank metals ───────────────────────────────────────────────────
+// One source for every metallic surface: the card frame, the medal disc, the
+// footer band and the avatar fill all key off the same entry, so a rank can
+// never render gold in one place and bronze in another.
 
-function PodiumBackdrop() {
-  return (
-    <div aria-hidden className="podium-backdrop">
-      <span className="blob blob-a" />
-      <span className="blob blob-b" />
-      <span className="blob blob-c" />
-      <svg className="track-motif" viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice">
-        <g fill="none" stroke="var(--color-primary)" strokeWidth="1.2" opacity="0.5">
-          <ellipse cx="200" cy="150" rx="150" ry="52" />
-          <ellipse cx="200" cy="150" rx="120" ry="42" />
-          <ellipse cx="200" cy="150" rx="90" ry="32" />
-        </g>
-      </svg>
-    </div>
-  );
+interface Metal {
+  /** Card frame / footer band gradient — must read as metal, not flat colour. */
+  frame: string;
+  light: string;
+  mid: string;
+  dark: string;
+  /** Avatar fill (light metal) — initials sit on this in dark navy. */
+  avatarFill: string;
+  ring: string;
+  /** Text colour that clears AA on the footer band. */
+  bandText: string;
+  bandLabel: string;
+  bandIcon: string;
 }
 
-// ── Medal (SVG: ribbon + glossy disc + star) ──────────────────────
-
-const MEDAL_COLORS: Record<number, { light: string; mid: string; dark: string }> = {
-  1: { light: '#FFF3C4', mid: '#F5C542', dark: '#C99A16' },
-  2: { light: '#FFFFFF', mid: '#D2D8DE', dark: '#9AA3AD' },
-  3: { light: '#F3D3BC', mid: '#CE8E5C', dark: '#9E5F2C' },
+const METAL: Record<number, Metal> = {
+  1: {
+    frame: 'linear-gradient(135deg,#D4A017 0%,#F0C24B 38%,#D4A017 62%,#B8860B 100%)',
+    light: '#FFF3C4', mid: '#F0C24B', dark: '#B8860B',
+    avatarFill: 'linear-gradient(160deg,#FFF3C4 0%,#F0C24B 100%)',
+    ring: '#B8860B',
+    bandText: '#3B2A00', bandLabel: 'CHAMPION', bandIcon: '🏆',
+  },
+  2: {
+    frame: 'linear-gradient(135deg,#A8A8A8 0%,#D8D8D8 38%,#A8A8A8 62%,#8C8C8C 100%)',
+    light: '#FFFFFF', mid: '#D8D8D8', dark: '#8C8C8C',
+    avatarFill: 'linear-gradient(160deg,#FFFFFF 0%,#D8D8D8 100%)',
+    ring: '#8C8C8C',
+    bandText: '#2B2B2B', bandLabel: 'RUNNER UP', bandIcon: '🎖',
+  },
+  3: {
+    frame: 'linear-gradient(135deg,#A0672F 0%,#C88A4A 38%,#A0672F 62%,#8A5526 100%)',
+    light: '#F3D3BC', mid: '#C88A4A', dark: '#8A5526',
+    avatarFill: 'linear-gradient(160deg,#F3D3BC 0%,#C88A4A 100%)',
+    ring: '#8A5526',
+    bandText: '#FFFFFF', bandLabel: 'THIRD PLACE', bandIcon: '⭐',
+  },
 };
 
-function starPoints(cx: number, cy: number, outer: number, inner: number): string {
-  const pts: string[] = [];
-  for (let i = 0; i < 10; i++) {
-    const r = i % 2 === 0 ? outer : inner;
-    const a = (Math.PI / 5) * i - Math.PI / 2;
-    pts.push(`${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}`);
-  }
-  return pts.join(' ');
+const RED = '#C8102E';
+const BASE_NAVY = '#1B2D5A';
+
+// ── Ornate medal: laurel disc + red ribbon tail ───────────────────
+// Rendered so the DISC sits half above the card's top edge and the ribbon tail
+// hangs down over the frame.
+
+function laurelLeaf(cx: number, cy: number, rot: number, key: string) {
+  return <ellipse key={key} cx={cx} cy={cy} rx={5.2} ry={2.6} transform={`rotate(${rot} ${cx} ${cy})`} fill="rgba(255,255,255,0.55)" />;
 }
 
-function Medal({ place, size }: { place: number; size: number }) {
-  const c = MEDAL_COLORS[place];
-  const gid = `medal-grad-${place}`;
+function OrnateMedal({ place, size }: { place: number; size: number }) {
+  const m = METAL[place];
+  const gid = `medal-${place}`;
+  const rid = `medalring-${place}`;
+  // viewBox 100x150: disc centred at (50,48) r=46, ribbon tails below.
   return (
-    <svg width={size} height={size * 1.32} viewBox="0 0 40 53" aria-hidden style={{ display: 'block', filter: 'drop-shadow(0 4px 5px rgba(11,28,50,0.28))' }}>
+    <svg
+      width={size}
+      height={size * 1.5}
+      viewBox="0 0 100 150"
+      aria-hidden
+      style={{ display: 'block', filter: 'drop-shadow(0 6px 10px rgba(11,28,50,0.32))' }}
+    >
       <defs>
-        <radialGradient id={gid} cx="38%" cy="30%" r="72%">
-          <stop offset="0%" stopColor={c.light} />
-          <stop offset="55%" stopColor={c.mid} />
-          <stop offset="100%" stopColor={c.dark} />
+        <radialGradient id={gid} cx="36%" cy="28%" r="78%">
+          <stop offset="0%" stopColor={m.light} />
+          <stop offset="55%" stopColor={m.mid} />
+          <stop offset="100%" stopColor={m.dark} />
         </radialGradient>
-      </defs>
-      {/* ribbons */}
-      <path d="M11 1 L20 21 L14.5 23 L7 3 Z" fill={NAVY} />
-      <path d="M29 1 L20 21 L25.5 23 L33 3 Z" fill={MAROON} />
-      {/* disc */}
-      <circle cx="20" cy="37" r="13.5" fill={`url(#${gid})`} stroke={c.dark} strokeWidth="1" />
-      <circle cx="20" cy="37" r="10" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1" />
-      <polygon points={starPoints(20, 37.5, 6, 2.6)} fill="rgba(255,255,255,0.9)" />
-      {/* gloss */}
-      <ellipse cx="15.5" cy="31.5" rx="4.5" ry="2.6" fill="rgba(255,255,255,0.5)" />
-    </svg>
-  );
-}
-
-// ── Podium platform (SVG 3D block) ────────────────────────────────
-
-const PLAT: Record<number, { h: number; top: string; front: string; frontDark: string; side: string; delay: string }> = {
-  2: { h: 108, top: '#E7ECF0', front: '#C2C9D1', frontDark: '#98A1AB', side: '#8A929C', delay: '0.05s' },
-  1: { h: 138, top: '#FFECB0', front: '#F0C33C', frontDark: '#C99A16', side: '#B58611', delay: '0.18s' },
-  3: { h: 88, top: '#EBC7AC', front: '#CE8E5C', frontDark: '#A5652F', side: '#95591F', delay: '0.11s' },
-};
-
-function PodiumPlatform({ place }: { place: number }) {
-  const s = PLAT[place];
-  const gid = `plat-${place}`;
-  const H = s.h;
-  return (
-    <svg width="100%" height={H} viewBox={`0 0 128 ${H}`} preserveAspectRatio="xMidYMax meet" style={{ display: 'block' }} aria-hidden>
-      <defs>
-        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={s.front} />
-          <stop offset="100%" stopColor={s.frontDark} />
+        <linearGradient id={rid} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#E0142F" />
+          <stop offset="100%" stopColor="#960B22" />
         </linearGradient>
       </defs>
-      <ellipse cx="64" cy={H - 3} rx="58" ry="6" fill="rgba(11,28,50,0.16)" />
-      {/* top + right faces for depth */}
-      <polygon points={`12,14 27,3 124,3 108,14`} fill={s.top} />
-      <polygon points={`108,14 124,3 124,${H - 15} 108,${H - 4}`} fill={s.side} />
-      {/* front face */}
-      <rect x="12" y="14" width="96" height={H - 18} rx="2" fill={`url(#${gid})`} />
-      {/* sheen */}
-      <rect x="19" y="19" width="7" height={H - 27} rx="3" fill="rgba(255,255,255,0.16)" />
-      {/* place number, embossed */}
-      <text x="60" y={14 + (H - 14) / 2 + 11} textAnchor="middle" fontFamily="var(--font-heading)" fontWeight="800" fontSize="34" fill="rgba(0,0,0,0.12)">{place}</text>
-      <text x="60" y={14 + (H - 14) / 2 + 9} textAnchor="middle" fontFamily="var(--font-heading)" fontWeight="800" fontSize="34" fill="rgba(255,255,255,0.92)">{place}</text>
+
+      {/* RED ribbon tails, drawn first so the disc overlaps them */}
+      <path d="M34 70 L26 142 L42 132 L50 96 Z" fill={`url(#${rid})`} />
+      <path d="M66 70 L74 142 L58 132 L50 96 Z" fill={`url(#${rid})`} />
+      <path d="M34 70 L50 96 L42 132 L38 96 Z" fill="rgba(0,0,0,0.14)" />
+
+      {/* disc */}
+      <circle cx="50" cy="48" r="46" fill={`url(#${gid})`} stroke={m.dark} strokeWidth="2.5" />
+      <circle cx="50" cy="48" r="37" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="2" />
+
+      {/* laurel-wreath detail flanking the numeral */}
+      <path d="M28 66 C 18 54, 20 36, 32 26" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2" strokeLinecap="round" />
+      <path d="M72 66 C 82 54, 80 36, 68 26" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2" strokeLinecap="round" />
+      {[
+        [24, 58, 40], [22, 48, 18], [24, 38, 0], [29, 29, -22],
+      ].map(([x, y, r], i) => laurelLeaf(x, y, r, `l${i}`))}
+      {[
+        [76, 58, -40], [78, 48, -18], [76, 38, 0], [71, 29, 22],
+      ].map(([x, y, r], i) => laurelLeaf(x, y, r, `r${i}`))}
+
+      {/* rank numeral, embossed */}
+      <text x="50" y="64" textAnchor="middle" fontFamily="var(--font-heading)" fontWeight="800" fontSize="42" fill="rgba(0,0,0,0.22)">{place}</text>
+      <text x="50" y="62" textAnchor="middle" fontFamily="var(--font-heading)" fontWeight="800" fontSize="42" fill="#FFFFFF">{place}</text>
+
+      {/* gloss */}
+      <ellipse cx="36" cy="30" rx="14" ry="8" fill="rgba(255,255,255,0.42)" transform="rotate(-24 36 30)" />
     </svg>
   );
 }
@@ -309,149 +331,97 @@ function initialsOf(name: string): string {
   return letters.toLocaleUpperCase();
 }
 
-// Rank-tinted fills, deepened so WHITE initials clear WCAG AA (≥4.5:1) on every one —
-// the raw gold/silver from MEDAL_COLORS is far too light to carry white text.
-const AVATAR_TINT: Record<number, { fill: string; ring: string }> = {
-  1: { fill: '#8A6A0B', ring: '#F0D07A' },
-  2: { fill: '#5C6673', ring: '#D8DEE4' },
-  3: { fill: '#7A4420', ring: '#E1B08C' },
-};
-
-function InitialsAvatar({ name, place, size }: { name: string; place: number; size: number }) {
-  const tint = AVATAR_TINT[place];
+// Light rank-tinted fill with DARK navy initials — the reverse of white-on-metal,
+// which can't clear contrast on a light gold at any weight.
+function InitialsAvatar({ name, place }: { name: string; place: number }) {
+  const m = METAL[place];
   const initials = initialsOf(name);
   return (
-    <div
-      aria-hidden
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        margin: '0 auto 0.55rem',
-        background: tint.fill,
-        border: `2px solid ${tint.ring}`,
-        boxShadow: '0 4px 10px rgba(11,28,50,0.22), inset 0 1px 0 rgba(255,255,255,0.28)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#fff',
-        fontFamily: 'var(--font-heading)',
-        fontWeight: 800,
-        // Scale with the circle so 1–2 glyphs read clearly at card size and on mobile.
-        fontSize: `${Math.round(size * 0.4)}px`,
-        letterSpacing: '0.02em',
-        lineHeight: 1,
-        userSelect: 'none',
-      }}
-    >
-      {initials || <User size={Math.round(size * 0.46)} strokeWidth={2.2} />}
+    <div aria-hidden className="podium-avatar" style={{ background: m.avatarFill, borderColor: m.ring }}>
+      {initials || <User size={34} strokeWidth={2.2} color={BASE_NAVY} />}
     </div>
   );
 }
 
 // ── Podium ─────────────────────────────────────────────────────────
 
-// Column order, left → right: 2nd, 1st (center, elevated), 3rd.
+// Column order, left → right: 2nd, 1st (centre, elevated), 3rd.
 const PODIUM_ORDER = [2, 1, 3] as const;
-
-// Footer band under each card — the rank stated in words.
-const PLACE_BAND: Record<number, { label: string; bg: string }> = {
-  1: { label: 'CHAMPION', bg: 'linear-gradient(90deg,#B8860B,#F0C33C,#B8860B)' },
-  2: { label: 'RUNNER UP', bg: 'linear-gradient(90deg,#78828E,#C2C9D1,#78828E)' },
-  3: { label: 'THIRD PLACE', bg: 'linear-gradient(90deg,#8A4E22,#CE8E5C,#8A4E22)' },
-};
-
-const CARD_BG: Record<number, { bg: string; ring: string }> = {
-  1: { bg: 'linear-gradient(165deg,#FFFDF4 0%,#FFF2C9 100%)', ring: '#F0D07A' },
-  2: { bg: 'linear-gradient(165deg,#FCFDFE 0%,#EDF1F4 100%)', ring: '#D8DEE4' },
-  3: { bg: 'linear-gradient(165deg,#FFFAF6 0%,#F6E2D3 100%)', ring: '#E1B08C' },
-};
-
-// Long names WRAP, never truncate (prior mobile bug). The old -webkit-line-clamp:2 +
-// overflow:hidden silently cut names off on narrow cards; overflowWrap:'anywhere' also
-// breaks a single over-long token instead of letting it overflow the card.
-const nameStyle = (isChampion: boolean): React.CSSProperties => ({
-  display: 'block',
-  fontFamily: 'var(--font-heading)',
-  fontWeight: 800,
-  fontSize: isChampion ? '1.1rem' : '0.9375rem',
-  lineHeight: 1.2,
-  color: 'var(--color-text)',
-  textDecoration: 'none',
-  overflowWrap: 'anywhere',
-  wordBreak: 'break-word',
-  hyphens: 'auto',
-});
 
 function PodiumColumn({ p, place, rankBy, total, rankLabel, event }:
   { p: GroupedLeaderboardParticipant; place: number; rankBy: string; total: number; rankLabel: string; event: string }) {
   const isChampion = place === 1;
-  const card = CARD_BG[place];
+  const m = METAL[place];
   const time = timeOf(p, rankBy);
-  const band = PLACE_BAND[place];
-  // Card padding, kept in variables so the footer band can bleed to the card edges
-  // with matching negative margins instead of hard-coded magic numbers.
-  const padX = isChampion ? '1.1rem' : '0.95rem';
-  const padBottom = isChampion ? '1.15rem' : '1rem';
+
   return (
-    <div className="podium-col podium-rise" style={{ flex: 1, maxWidth: isChampion ? '270px' : '224px', minWidth: 0, alignSelf: 'flex-end', animationDelay: PLAT[place].delay }}>
-      <div
-        className={`podium-card${isChampion ? ' podium-card--champion' : ''}`}
-        style={{
-          position: 'relative',
-          overflow: 'hidden',
-          background: card.bg,
-          border: `1px solid ${card.ring}`,
-          borderRadius: '16px',
-          padding: `${isChampion ? '2.1rem' : '1.8rem'} ${padX} 0`,
-          marginBottom: '-4px',
-          boxShadow: isChampion ? '0 20px 44px rgba(212,160,23,0.28), 0 8px 18px rgba(11,28,50,0.16)' : '0 8px 18px rgba(11,28,50,0.10)',
-          transform: isChampion ? 'translateY(-14px) scale(1.03)' : 'none',
-          transformOrigin: 'bottom center',
-          textAlign: 'center',
-        }}
-      >
-        {isChampion && <span aria-hidden className="champion-sheen" />}
-        <div style={{ position: 'absolute', top: isChampion ? '-30px' : '-26px', left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
-          <Medal place={place} size={isChampion ? 46 : 38} />
+    <div className={`podium-col podium-rise${isChampion ? ' podium-col--champion' : ''}`}>
+      {/* Thick metallic FRAME; the white panel lives inside it. overflow stays
+          visible so the medal can hang above the top edge. */}
+      <div className="podium-frame" style={{ background: m.frame }}>
+        <div className="podium-medal">
+          <OrnateMedal place={place} size={isChampion ? 88 : 74} />
         </div>
-        <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem' }}>
+
+        {/* Share sits on the FRAME, not inside the panel: the panel clips to its
+            rounded corners (overflow:hidden) and would swallow the popup menu. */}
+        <div className="podium-share">
           <ShareMenu name={p.name} rank={p.rank} total={total} rankLabel={rankLabel} time={time} event={event} detailUrl={p.participantDetailUrl} tone={isChampion ? 'gold' : 'light'} />
         </div>
-        <InitialsAvatar name={p.name} place={place} size={isChampion ? 62 : 52} />
-        {p.participantDetailUrl ? (
-          <a href={p.participantDetailUrl} title={p.name} className="podium-name" style={nameStyle(isChampion)}>
-            {p.name}
-          </a>
-        ) : (
-          <div title={p.name} className="podium-name" style={nameStyle(isChampion)}>
-            {p.name}
+
+        <div className="podium-panel">
+          <InitialsAvatar name={p.name} place={place} />
+
+          {p.participantDetailUrl ? (
+            <a href={p.participantDetailUrl} title={p.name} className="podium-name">{p.name}</a>
+          ) : (
+            <div title={p.name} className="podium-name">{p.name}</div>
+          )}
+
+          <div className="podium-caplabel">BIB NO.</div>
+          <div className="podium-bib">{p.bib}</div>
+
+          <div className="podium-divider" />
+
+          <div className="podium-caplabel">FINISHED TIME</div>
+          <div className="podium-time">
+            <CountUpTime time={time} animate />
           </div>
-        )}
-        <div style={{ margin: '0.4rem 0 0.35rem' }}>
-          <span style={{ display: 'inline-block', backgroundColor: MAROON, color: '#fff', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.04em', padding: '0.18rem 0.72rem', borderRadius: '9999px', boxShadow: '0 2px 6px rgba(142,36,77,0.28)' }}>
-            BIB {p.bib}
-          </span>
-        </div>
-        <CountUpTime time={time} animate style={{ display: 'block', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontWeight: 700, fontSize: isChampion ? '1.22rem' : '1rem', color: NAVY, letterSpacing: '0.02em' }} />
-        {/* Footer band — bled to the card edges via negative margins matching the padding */}
-        <div
-          style={{
-            margin: `${padBottom} -${padX} 0`,
-            padding: '0.4rem 0.5rem',
-            background: band.bg,
-            color: '#fff',
-            fontFamily: 'var(--font-heading)',
-            fontWeight: 800,
-            fontSize: isChampion ? '0.72rem' : '0.65rem',
-            letterSpacing: '0.12em',
-            textShadow: '0 1px 2px rgba(0,0,0,0.35)',
-          }}
-        >
-          {band.label}
+
+          {/* Footer band — full width at the panel's bottom */}
+          <div className="podium-band" style={{ background: m.frame, color: m.bandText }}>
+            <span aria-hidden>{m.bandIcon}</span> {m.bandLabel}
+          </div>
         </div>
       </div>
-      <PodiumPlatform place={place} />
+    </div>
+  );
+}
+
+// ── 3D podium base ────────────────────────────────────────────────
+// Elliptical top face over a thicker body, with a thin red accent line. The
+// OFFICIAL RESULTS pill sits centred on it (published events only).
+
+function PodiumBase({ published }: { published: boolean }) {
+  return (
+    <div className="podium-base">
+      <svg viewBox="0 0 800 130" preserveAspectRatio="none" aria-hidden className="podium-base-svg">
+        {/* body */}
+        <rect x="20" y="34" width="760" height="66" fill={BASE_NAVY} />
+        {/* bottom cap — darker, gives the 3D roll */}
+        <ellipse cx="400" cy="100" rx="380" ry="28" fill="#132043" />
+        {/* top face — lighter navy */}
+        <ellipse cx="400" cy="34" rx="380" ry="28" fill="#24406F" />
+        <ellipse cx="400" cy="34" rx="380" ry="28" fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="2" />
+        {/* thin RED accent line across the base */}
+        <rect x="20" y="62" width="760" height="5" fill={RED} />
+      </svg>
+      {published && (
+        <span className="podium-official">
+          <span className="podium-official-dot" aria-hidden />
+          OFFICIAL RESULTS
+        </span>
+      )}
     </div>
   );
 }
@@ -463,16 +433,16 @@ function CardPodium({ participants, rankBy, published, total, rankLabel, event }
   const byPlace = (place: number) => participants[place - 1];
   return (
     <div className="podium-stage">
-      <PodiumBackdrop />
       {published && <Confetti />}
       <div className="podium-row">
         {PODIUM_ORDER.map((place) => {
           const p = byPlace(place);
           return p
             ? <PodiumColumn key={place} p={p} place={place} rankBy={rankBy} total={total} rankLabel={rankLabel} event={event} />
-            : <div key={place} className="podium-col" style={{ flex: 1, maxWidth: place === 1 ? '270px' : '224px' }} aria-hidden />;
+            : <div key={place} className={`podium-col${place === 1 ? ' podium-col--champion' : ''}`} aria-hidden />;
         })}
       </div>
+      <PodiumBase published={published} />
     </div>
   );
 }
@@ -489,33 +459,29 @@ const LAUREL_LEAVES = [
 
 function Laurel({ flip }: { flip?: boolean }) {
   return (
-    <svg width="22" height="30" viewBox="0 0 24 30" aria-hidden style={{ transform: flip ? 'scaleX(-1)' : undefined }}>
-      <path d="M11 28 C 6 22, 6 12, 15 3" fill="none" stroke="#C9A227" strokeWidth="1.1" strokeLinecap="round" opacity="0.7" />
+    <svg width="30" height="40" viewBox="0 0 24 30" aria-hidden style={{ transform: flip ? 'scaleX(-1)' : undefined }}>
+      <path d="M11 28 C 6 22, 6 12, 15 3" fill="none" stroke="#C9A227" strokeWidth="1.1" strokeLinecap="round" opacity="0.75" />
       {LAUREL_LEAVES.map((l, i) => (
-        <ellipse key={i} cx={l.x} cy={l.y} rx={l.rx} ry={l.ry} transform={`rotate(${l.rot} ${l.x} ${l.y})`} fill="#C9A227" opacity="0.9" />
+        <ellipse key={i} cx={l.x} cy={l.y} rx={l.rx} ry={l.ry} transform={`rotate(${l.rot} ${l.x} ${l.y})`} fill="#C9A227" opacity="0.95" />
       ))}
     </svg>
   );
 }
 
-function PodiumHeader({ subtitle, published }: { subtitle: string; published: boolean }) {
+// The OFFICIAL RESULTS badge now lives on the podium BASE, not here.
+function PodiumHeader({ subtitle }: { subtitle: string }) {
   return (
-    <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
-      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+    <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.65rem' }}>
         <Laurel />
-        <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '0.05em', color: 'var(--color-text)' }}>TOP 3 WINNERS</span>
+        <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.35rem, 3.2vw, 1.9rem)', letterSpacing: '0.05em', color: NAVY, textTransform: 'uppercase' }}>
+          Top 3 Winners
+        </span>
         <Laurel flip />
       </div>
-      <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.8125rem', letterSpacing: '0.14em', color: MAROON, marginTop: '0.35rem' }}>
-        {subtitle.toUpperCase()} <span style={{ color: '#D4A017' }}>★</span> RESULTS
+      <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.8125rem', letterSpacing: '0.18em', color: NAVY, marginTop: '0.4rem', textTransform: 'uppercase' }}>
+        {subtitle} <span style={{ color: '#D4A017' }}>★</span> Results
       </div>
-      {published && (
-        <div style={{ marginTop: '0.75rem' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', backgroundColor: NAVY, color: '#fff', fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '0.72rem', letterSpacing: '0.1em', padding: '0.42rem 1.05rem', borderRadius: '9999px', boxShadow: '0 6px 16px rgba(11,28,50,0.22)' }}>
-            <Trophy size={13} /> OFFICIAL RESULTS
-          </span>
-        </div>
-      )}
     </div>
   );
 }
@@ -552,9 +518,10 @@ function ResultTable({ participants, rankBy, total, rankLabel, event }:
             const time = timeOf(p, rankBy);
             return (
               <tr key={p.participantDetailUrl || i} className="rt-row" style={ROW_TINT[p.rank] ? { background: ROW_TINT[p.rank] } : undefined}>
+                {/* Rank only — the field total ("4 of 95") is deliberately NOT shown on
+                    the results landing page; it belongs on the participant's own page. */}
                 <td data-label="#" className="rt-rank">
                   <span style={{ fontWeight: 800 }}>{p.rank}</span>
-                  {total > 0 && <span className="rt-of"> of {total}</span>}
                 </td>
                 <td data-label="Name" className="rt-name">
                   {hasLink ? (
@@ -652,25 +619,138 @@ const STYLES = `
   @keyframes lb-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   .lb-view { animation: lb-fade-in 320ms ease both; }
 
-  .podium-stage { position: relative; overflow: hidden; border-radius: 16px 16px 0 0; padding: 2.75rem 0.5rem 0; background: linear-gradient(180deg, var(--color-bg-alt), #fff); }
-  .podium-row { position: relative; z-index: 2; display: flex; gap: 0.7rem; align-items: flex-end; justify-content: center; }
+  /* ── Podium stage ─────────────────────────────────────────────
+     Sizes are custom properties so the mobile breakpoint can rescale the whole
+     podium at once instead of overriding a dozen individual rules. */
+  .podium-stage {
+    --frame: 12px;
+    --avatar: 120px;
+    --card-min: 400px;
+    --champ-lift: 52px;
+    --name: 1.0625rem;
+    --time: 1.9rem;
+    position: relative;
+    border-radius: 16px 16px 0 0;
+    /* >= 66px of headroom: the champion medal reaches that far above the card top */
+    padding: 5rem 0.75rem 0;
+    background: linear-gradient(180deg, #FBFCFE 0%, #FFFFFF 100%);
+  }
+  /* align-items:end so 2nd and 3rd sit LOW while the champion is lifted */
+  .podium-row { position: relative; z-index: 2; display: flex; gap: 0.9rem; align-items: end; justify-content: center; }
 
-  .podium-backdrop { position: absolute; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
-  .podium-backdrop .blob { position: absolute; border-radius: 50%; filter: blur(42px); opacity: 0.16; }
-  .podium-backdrop .blob-a { width: 220px; height: 220px; left: -40px; top: -30px; background: var(--color-primary); }
-  .podium-backdrop .blob-b { width: 200px; height: 200px; right: -30px; top: -10px; background: ${MAROON}; }
-  .podium-backdrop .blob-c { width: 240px; height: 240px; left: 40%; bottom: -80px; background: #F5C542; opacity: 0.12; }
-  .podium-backdrop .track-motif { position: absolute; left: 0; right: 0; bottom: -10px; width: 100%; height: 70%; opacity: 0.06; }
+  .podium-col { flex: 1 1 0; min-width: 0; max-width: 260px; display: flex; }
+  /* 1st: obviously taller AND lifted clear of 2nd/3rd */
+  .podium-col--champion { max-width: 300px; margin-bottom: var(--champ-lift); }
+  .podium-col--champion .podium-frame { min-height: calc(var(--card-min) + 56px); }
+
+  /* Thick metallic frame; overflow visible so the medal can hang above it */
+  .podium-frame {
+    position: relative;
+    width: 100%;
+    min-height: var(--card-min);
+    padding: var(--frame);
+    border-radius: 16px;
+    box-shadow: 0 14px 30px rgba(11,28,50,0.18);
+    display: flex;
+  }
+  .podium-col--champion .podium-frame { box-shadow: 0 22px 46px rgba(212,160,23,0.30), 0 10px 22px rgba(11,28,50,0.18); }
+
+  /* White panel inside the frame */
+  .podium-panel {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    background: #FFFFFF;
+    border-radius: 8px;
+    padding: 2.6rem 0.85rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    overflow: hidden;      /* clips the footer band to the panel's rounded corners */
+  }
+
+  /* Medal: half above the card's top edge, horizontally centred */
+  .podium-medal { position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); z-index: 3; pointer-events: none; }
+  /* On the frame (not the panel) so the popup isn't clipped by the panel's overflow */
+  .podium-share { position: absolute; top: calc(var(--frame) + 0.45rem); right: calc(var(--frame) + 0.45rem); z-index: 5; }
+
+  .podium-avatar {
+    width: var(--avatar); height: var(--avatar);
+    border-radius: 50%;
+    border: 4px solid;
+    box-shadow: 0 4px 12px rgba(11,28,50,0.18), inset 0 2px 0 rgba(255,255,255,0.5);
+    display: flex; align-items: center; justify-content: center;
+    color: #1B2D5A;
+    font-family: var(--font-heading); font-weight: 800;
+    font-size: calc(var(--avatar) * 0.38);
+    line-height: 1; letter-spacing: 0.02em; user-select: none;
+    margin-bottom: 0.85rem; flex-shrink: 0;
+  }
+
+  /* Names WRAP — never clamped or truncated (prior mobile bug) */
+  .podium-name {
+    display: block;
+    font-family: var(--font-heading); font-weight: 800;
+    font-size: var(--name); line-height: 1.2;
+    color: #1B2D5A; text-transform: uppercase; letter-spacing: 0.01em;
+    text-decoration: none;
+    overflow-wrap: anywhere; word-break: break-word; hyphens: auto;
+    margin-bottom: 0.7rem;
+  }
+  a.podium-name:hover { text-decoration: underline; }
+
+  .podium-caplabel {
+    font-family: var(--font-body); font-weight: 700;
+    font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase;
+    color: #8A94A6; margin-bottom: 0.3rem;
+  }
+  .podium-bib {
+    display: inline-block; background: #C8102E; color: #fff;
+    font-family: var(--font-body); font-weight: 800; font-size: 0.95rem;
+    letter-spacing: 0.03em; padding: 0.26rem 1.05rem; border-radius: 9999px;
+    box-shadow: 0 3px 8px rgba(200,16,46,0.32); margin-bottom: 0.85rem;
+    overflow-wrap: anywhere; max-width: 100%;
+  }
+  .podium-divider { width: 72%; height: 1px; background: #E3E8EF; margin: 0 auto 0.85rem; }
+
+  /* Digital-style hero time — the card's visual anchor */
+  .podium-time {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+    font-weight: 700; font-size: var(--time); color: #1B2D5A;
+    letter-spacing: 0.06em; font-variant-numeric: tabular-nums;
+    line-height: 1.1; margin-bottom: 1rem; max-width: 100%;
+  }
+
+  /* Footer band pinned to the panel's bottom, full width */
+  .podium-band {
+    margin-top: auto;
+    width: calc(100% + 1.7rem);
+    margin-left: -0.85rem; margin-right: -0.85rem;
+    padding: 0.5rem 0.4rem;
+    font-family: var(--font-heading); font-weight: 800;
+    font-size: 0.68rem; letter-spacing: 0.12em;
+    display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+  }
+
+  /* ── 3D navy base ─────────────────────────────────────────────── */
+  .podium-base { position: relative; margin-top: -6px; z-index: 1; }
+  .podium-base-svg { display: block; width: 100%; height: 118px; }
+  .podium-official {
+    position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%);
+    display: inline-flex; align-items: center; gap: 0.45rem; white-space: nowrap;
+    background: #FFFFFF; color: #1B2D5A;
+    font-family: var(--font-heading); font-weight: 800;
+    font-size: 0.72rem; letter-spacing: 0.1em;
+    padding: 0.42rem 1.1rem; border-radius: 9999px;
+    box-shadow: 0 6px 16px rgba(11,28,50,0.32);
+  }
+  .podium-official-dot { width: 8px; height: 8px; border-radius: 50%; background: #C8102E; }
 
   @keyframes podium-rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
   .podium-rise { animation: podium-rise 560ms cubic-bezier(.2,.7,.3,1) both; }
-  a.podium-name:hover { text-decoration: underline; }
-  .podium-card { transition: box-shadow 220ms ease, transform 220ms ease; }
-  .podium-card:hover { box-shadow: 0 14px 30px rgba(11,28,50,0.20); }
-  .podium-card--champion:hover { box-shadow: 0 24px 50px rgba(212,160,23,0.34), 0 10px 20px rgba(11,28,50,0.18); }
-
-  @keyframes champion-shine { 0% { transform: translateX(-120%) rotate(8deg); } 60%, 100% { transform: translateX(240%) rotate(8deg); } }
-  .champion-sheen { position: absolute; top: 0; left: 0; width: 42%; height: 100%; background: linear-gradient(100deg, transparent, rgba(255,255,255,0.5), transparent); animation: champion-shine 3.4s ease-in-out 0.7s infinite; pointer-events: none; }
+  .podium-frame { transition: box-shadow 220ms ease, transform 220ms ease; }
+  .podium-col:hover .podium-frame { transform: translateY(-3px); }
 
   @keyframes confetti-settle { 0% { transform: translateY(-46px) rotate(0deg); opacity: 0; } 55% { opacity: 0.72; } 100% { transform: translateY(0) rotate(var(--r, 0deg)); opacity: 0.62; } }
   .podium-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; }
@@ -710,6 +790,23 @@ const STYLES = `
   @media (max-width: 760px) {
     .lb-grid { grid-template-columns: 1fr; gap: 2rem; }
   }
+  @media (max-width: 620px) {
+    .podium-stage {
+      --frame: 8px; --avatar: 84px; --card-min: 330px;
+      --champ-lift: 34px; --name: 0.875rem; --time: 1.35rem;
+      padding: 4rem 0.4rem 0;
+    }
+    .podium-row { gap: 0.45rem; }
+    .podium-panel { padding: 2rem 0.5rem 0; }
+    .podium-band { width: calc(100% + 1rem); margin-left: -0.5rem; margin-right: -0.5rem; font-size: 0.56rem; letter-spacing: 0.07em; }
+    .podium-base-svg { height: 84px; }
+    .podium-official { bottom: 18px; font-size: 0.62rem; padding: 0.34rem 0.8rem; }
+  }
+  @media (max-width: 400px) {
+    .podium-stage { --avatar: 64px; --card-min: 300px; --name: 0.8125rem; --time: 1.1rem; }
+    .podium-caplabel { font-size: 0.52rem; letter-spacing: 0.1em; }
+    .podium-bib { font-size: 0.8rem; padding: 0.2rem 0.7rem; }
+  }
   @media (max-width: 640px) {
     .rt-table thead { display: none; }
     .rt-table, .rt-table tbody, .rt-table tr, .rt-table td { display: block; width: 100%; }
@@ -725,8 +822,9 @@ const STYLES = `
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .lb-view, .podium-rise, .champion-sheen, .confetti-pc, .sk-shimmer { animation: none !important; }
-    .podium-card, .rt-row, .rt-chevron, .share-btn { transition: none !important; }
+    .lb-view, .podium-rise, .confetti-pc, .sk-shimmer { animation: none !important; }
+    .podium-frame, .rt-row, .rt-chevron, .share-btn { transition: none !important; }
+    .podium-col:hover .podium-frame { transform: none; }
   }
 `;
 
@@ -884,7 +982,7 @@ function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId:
           ) : (
             /* Male + Female ALWAYS both shown, side by side (stacks on mobile) */
             <div className="lb-view" key={selectedCategory || 'overall'}>
-              <PodiumHeader subtitle={headingText} published={published} />
+              <PodiumHeader subtitle={headingText} />
               <div className="lb-grid">
                 <GenderBlock label="Male" participants={maleList} rankBy={activeRankBy} published={published} total={maleTotal} rankLabel={rankLabel} event={shareEvent} />
                 <GenderBlock label="Female" participants={femaleList} rankBy={activeRankBy} published={published} total={femaleTotal} rankLabel={rankLabel} event={shareEvent} />
