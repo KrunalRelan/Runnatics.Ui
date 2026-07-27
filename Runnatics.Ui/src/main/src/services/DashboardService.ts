@@ -1,6 +1,7 @@
 import { apiClient } from '../utils/axios.config';
 import { DashboardStatsResponse } from '../models/Dashboard/DashboardStatsResponse';
 import { DashboardStatsDto } from '../models/Dashboard/DashboardStatsDto';
+import { EventRaceBreakdown, EMPTY_COUNTS } from '../models/Dashboard/EventRaceBreakdown';
 import { ResponseBase } from '../models/ResponseBase';
 import { ServiceUrl } from '../models';
 
@@ -36,6 +37,24 @@ export class DashboardService {
     static async getDashboardStats(): Promise<DashboardStatsResponse> {
         const response = await apiClient.get<ResponseBase<DashboardStatsResponse>>(ServiceUrl.dashboardStats());
         return response.data.message || {};
+    }
+
+    /**
+     * Full numeric breakdown for the event -> races landing page: event totals plus
+     * one entry per race. Single call — the server computes every count, so the UI
+     * never fans out one request per race.
+     */
+    static async getEventRaceBreakdown(eventId: string): Promise<EventRaceBreakdown> {
+        const response = await apiClient.get<ResponseBase<EventRaceBreakdown>>(
+            ServiceUrl.dashboardEventStats(eventId),
+        );
+        const payload = response.data.message;
+        return {
+            eventId: payload?.eventId ?? eventId,
+            eventName: payload?.eventName ?? '',
+            totals: payload?.totals ?? EMPTY_COUNTS,
+            raceStats: Array.isArray(payload?.raceStats) ? payload.raceStats : [],
+        };
     }
 
     static async getEventStats(eventId: string): Promise<DashboardStatsDto> {

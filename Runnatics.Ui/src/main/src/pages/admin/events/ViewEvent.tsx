@@ -350,7 +350,7 @@ const ViewEvent: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* BUG-23: Event-level dashboard stats + pie chart */}
+      {/* Numeric dashboard: event totals + one tile per race (replaced the pie chart) */}
       {eventId && <EventStatsPanel eventId={eventId} />}
 
       {/* Races Section */}
