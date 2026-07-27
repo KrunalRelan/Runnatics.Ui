@@ -5,6 +5,8 @@ export interface SupportQueryListItem {
   commentCount: number;
   lastUpdated: string;
   assignedToName: string | null;
+  /** Bind the row badge to this, not to statusName — labels are DB-defined. */
+  statusId: number;
   statusName: string;
 }
 
@@ -34,15 +36,26 @@ export interface SupportQueryComment {
   createdByName: string | null;
 }
 
+/** One status bucket. Cards, tabs and row badges all bind to `statusId`. */
+export interface SupportStatusCount {
+  statusId: number;
+  /** Raw stored value ("new_query", "Open"). Never render this directly. */
+  name: string;
+  displayName: string;
+  colorHex: string;
+  count: number;
+  /** Ticket rows reference this id but the lookup table has no such row. */
+  isUnknown: boolean;
+}
+
+/**
+ * Counts keyed by status ID. `total` is the SUM of `statuses` — the previous shape
+ * had a fixed property per seeded status name and computed total independently, so
+ * a DB holding different names showed "Total 14" with every bucket at 0.
+ */
 export interface SupportQueryCounts {
   total: number;
-  newQuery: number;
-  wip: number;
-  closed: number;
-  pending: number;
-  notYetStarted: number;
-  rejected: number;
-  duplicate: number;
+  statuses: SupportStatusCount[];
 }
 
 export interface ContactUsRequest {
@@ -73,6 +86,8 @@ export interface SupportLookup {
   id: number;
   name: string;
   displayName: string;
+  /** Resolved server-side so every surface uses the same colour for a status. */
+  colorHex: string;
 }
 
 /** A user who can be assigned a ticket. */

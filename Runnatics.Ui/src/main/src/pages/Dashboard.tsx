@@ -96,11 +96,16 @@ const Dashboard = () => {
       path: '/analytics',
     },
     {
-      title: 'Open Support Queries',
-      value: loading ? '...' : (supportCounts?.newQuery?.toString() || '0'),
+      // Was "Open Support Queries" bound to counts.newQuery and linking to statusId=1 —
+      // both assumed the seeded status set. On a DB whose lookup table holds different
+      // rows that read 0 and deep-linked to an unrelated status. Which statuses count as
+      // "open" is a workflow decision that hasn't been made, so this shows the total
+      // until it has.
+      title: 'Support Queries',
+      value: loading ? '...' : (supportCounts?.total?.toString() || '0'),
       icon: <SupportAgentIcon sx={{ fontSize: 40 }} />,
       color: '#0288d1',
-      path: '/support?statusId=1',
+      path: '/support',
     },
   ];
 

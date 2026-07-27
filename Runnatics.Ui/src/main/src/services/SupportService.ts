@@ -1,6 +1,7 @@
 import apiClient from '../utils/axios.config';
 import {
   SupportQueryCounts,
+  SupportStatusCount,
   SupportQueryListItem,
   SupportQueryDetail,
   SupportQueryComment,
@@ -30,15 +31,12 @@ export class SupportService {
   static async getCounts(): Promise<SupportQueryCounts> {
     const response = await apiClient.get<any>(ServiceUrl.supportCounts());
     const payload = response.data?.message ?? response.data;
+    const statuses = Array.isArray(payload?.statuses) ? payload.statuses : [];
     return {
-      total: payload?.total ?? 0,
-      newQuery: payload?.newQuery ?? 0,
-      wip: payload?.wip ?? 0,
-      closed: payload?.closed ?? 0,
-      pending: payload?.pending ?? 0,
-      notYetStarted: payload?.notYetStarted ?? 0,
-      rejected: payload?.rejected ?? 0,
-      duplicate: payload?.duplicate ?? 0,
+      // Trust the server's total, but fall back to the bucket sum so the header can
+      // never disagree with the cards beneath it.
+      total: payload?.total ?? statuses.reduce((n: number, s: SupportStatusCount) => n + (s.count ?? 0), 0),
+      statuses,
     };
   }
 

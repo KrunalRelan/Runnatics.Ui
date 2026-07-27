@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
@@ -31,50 +31,39 @@ import {
   Add as AddIcon,
   Search as SearchIcon,
   SupportAgent as SupportAgentIcon,
-  Inbox as InboxIcon,
-  Build as BuildIcon,
-  CheckCircle as CheckCircleIcon,
-  HourglassEmpty as HourglassIcon,
-  Block as BlockIcon,
   ChatBubbleOutline as ChatIcon,
 } from '@mui/icons-material';
 import { SupportService } from '../../../services/SupportService';
 import {
   SupportQueryListItem,
   SupportQueryCounts,
-  SupportLookup,
   ContactUsRequest,
 } from '../../../models/support/Support';
 import { getStatusVisual } from './statusVisuals';
 
-interface TabConfig {
-  label: string;
-  statusId: number | undefined;
-  countKey: keyof SupportQueryCounts;
-}
-
-const TABS: TabConfig[] = [
-  { label: 'All',             statusId: undefined, countKey: 'total' },
-  { label: 'New Query',       statusId: 1,         countKey: 'newQuery' },
-  { label: 'WIP',             statusId: 2,         countKey: 'wip' },
-  { label: 'Closed',          statusId: 3,         countKey: 'closed' },
-  { label: 'Pending',         statusId: 4,         countKey: 'pending' },
-  { label: 'Not Yet Started', statusId: 5,         countKey: 'notYetStarted' },
-  { label: 'Rejected',        statusId: 6,         countKey: 'rejected' },
-  { label: 'Duplicate',       statusId: 7,         countKey: 'duplicate' },
-];
-
 type SortField = 'subject' | 'commentCount' | 'lastUpdated' | 'assignedToName' | 'statusName';
 type SortOrder = 'asc' | 'desc';
 
-const STAT_CARDS = [
-  { label: 'Total',   countKey: 'total'    as keyof SupportQueryCounts, color: '#2563EB', Icon: SupportAgentIcon },
-  { label: 'New',     countKey: 'newQuery' as keyof SupportQueryCounts, color: '#0891B2', Icon: InboxIcon },
-  { label: 'WIP',     countKey: 'wip'      as keyof SupportQueryCounts, color: '#D97706', Icon: BuildIcon },
-  { label: 'Closed',  countKey: 'closed'   as keyof SupportQueryCounts, color: '#059669', Icon: CheckCircleIcon },
-  { label: 'Pending', countKey: 'pending'  as keyof SupportQueryCounts, color: '#7C3AED', Icon: HourglassIcon },
-  { label: 'Rejected',countKey: 'rejected' as keyof SupportQueryCounts, color: '#DC2626', Icon: BlockIcon },
-];
+// Tabs and stat cards are DERIVED from the counts payload, which is keyed by status
+// ID. Nothing here assumes what statuses exist or what they are called — that was the
+// bug: hardcoded ids 1-7 and English labels against a DB holding "Open"/"Resolved".
+interface TabConfig {
+  label: string;
+  statusId: number | undefined;
+  count: number;
+  color: string;
+}
+
+function buildTabs(counts: SupportQueryCounts | null): TabConfig[] {
+  const all: TabConfig = { label: 'All', statusId: undefined, count: counts?.total ?? 0, color: '#2563EB' };
+  const rest = (counts?.statuses ?? []).map((s) => ({
+    label: s.displayName,
+    statusId: s.statusId,
+    count: s.count,
+    color: s.colorHex,
+  }));
+  return [all, ...rest];
+}
 
 const TABLE_COLUMNS: { label: string; field?: SortField; flex: string }[] = [
   { label: '#',           field: undefined,      flex: '0 0 56px' },
@@ -91,8 +80,6 @@ const SupportQueryPage: React.FC = () => {
   const isDark = theme.palette.mode === 'dark';
   const [searchParams] = useSearchParams();
 
-  // Statuses come from the DB lookup table now, not a hard-coded TS array.
-  const [statuses, setStatuses] = useState<SupportLookup[]>([]);
   const [counts, setCounts] = useState<SupportQueryCounts | null>(null);
   const [countsLoading, setCountsLoading] = useState<boolean>(true);
   const [queries, setQueries] = useState<SupportQueryListItem[]>([]);
@@ -101,8 +88,22 @@ const SupportQueryPage: React.FC = () => {
   const [queriesError, setQueriesError] = useState<string | null>(null);
 
   const initialStatusId = searchParams.get('statusId') ? Number(searchParams.get('statusId')) : undefined;
-  const initialTabIndex = initialStatusId ? TABS.findIndex((t) => t.statusId === initialStatusId) : 0;
-  const [activeTab, setActiveTab] = useState<number>(initialTabIndex >= 0 ? initialTabIndex : 0);
+  const [activeTab, setActiveTab] = useState<number>(0);
+
+  // Tabs are derived, so a ?statusId= deep link can only be resolved once counts land.
+  const tabs = useMemo(() => buildTabs(counts), [counts]);
+  // fetchQueries reads the active tab without taking `tabs` as a dependency, which would
+  // re-create the callback on every counts refresh and re-trigger the fetch in a loop.
+  const tabsRef = useRef<TabConfig[]>(tabs);
+  useEffect(() => { tabsRef.current = tabs; }, [tabs]);
+
+  const deepLinkApplied = useRef(false);
+  useEffect(() => {
+    if (deepLinkApplied.current || initialStatusId === undefined || tabs.length <= 1) return;
+    const idx = tabs.findIndex((t) => t.statusId === initialStatusId);
+    if (idx >= 0) setActiveTab(idx);
+    deepLinkApplied.current = true;
+  }, [tabs, initialStatusId]);
 
   const [emailFilter, setEmailFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<number | ''>('');
@@ -137,7 +138,7 @@ const SupportQueryPage: React.FC = () => {
     try {
       setQueriesLoading(true);
       setQueriesError(null);
-      const tabStatusId = TABS[activeTab]?.statusId;
+      const tabStatusId = tabsRef.current[activeTab]?.statusId;
       const data = await SupportService.getQueries({
         submitterEmail: emailFilter || undefined,
         statusId: tabStatusId ?? (statusFilter !== '' ? Number(statusFilter) : undefined),
@@ -158,17 +159,21 @@ const SupportQueryPage: React.FC = () => {
     fetchCounts();
   }, [fetchCounts]);
 
-  // Load the status lookup once. The tab strip stays on fixed ids (they are the
-  // seeded 1-7 and drive the counts DTO's fixed keys); this feeds the filter dropdown.
-  useEffect(() => {
-    let active = true;
-    SupportService.getStatuses()
-      .then((s) => { if (active) setStatuses(s); })
-      .catch(() => { if (active) setStatuses([]); });
-    return () => { active = false; };
-  }, []);
-
   useEffect(() => { fetchQueries(); }, [fetchQueries]);
+
+  // Refresh BOTH counts and rows when the page regains focus. Returning from the detail
+  // page remounts this component, but this also covers a ticket edited in another tab.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') { fetchCounts(); fetchQueries(); }
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [fetchCounts, fetchQueries]);
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -269,10 +274,10 @@ const SupportQueryPage: React.FC = () => {
         </Box>
       </Paper>
 
-      {/* ── Stats Cards ── */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 2 }}>
-        {STAT_CARDS.map(({ label, countKey, color, Icon }) => (
-          <Paper key={label} sx={{
+      {/* ── Stats Cards ── one per status, plus Total; all from the counts payload ── */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 2 }}>
+        {tabs.map(({ label, statusId, count, color }) => (
+          <Paper key={statusId ?? 'all'} sx={{
             p: 2.5, borderRadius: 3,
             borderTop: `3px solid ${color}`,
             bgcolor: surfaceBg,
@@ -281,7 +286,7 @@ const SupportQueryPage: React.FC = () => {
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
               <Box sx={{ p: 0.75, borderRadius: 1.5, bgcolor: alpha(color, 0.1), display: 'flex' }}>
-                <Icon sx={{ fontSize: 16, color }} />
+                <SupportAgentIcon sx={{ fontSize: 16, color }} />
               </Box>
               <Typography variant="caption" fontWeight={700}
                 sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.6, fontSize: '0.65rem' }}>
@@ -292,7 +297,7 @@ const SupportQueryPage: React.FC = () => {
               <CircularProgress size={22} sx={{ color }} />
             ) : (
               <Typography variant="h4" fontWeight={800} sx={{ color, lineHeight: 1 }}>
-                {counts?.[countKey] ?? 0}
+                {count}
               </Typography>
             )}
           </Paper>
@@ -316,14 +321,14 @@ const SupportQueryPage: React.FC = () => {
               '& .MuiTabs-indicator': { height: 3, borderRadius: '3px 3px 0 0' },
             }}
           >
-            {TABS.map((tab, tabIdx) => (
+            {tabs.map((tab, tabIdx) => (
               <Tab
-                key={tab.label}
+                key={tab.statusId ?? 'all'}
                 label={
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                     <span>{tab.label}</span>
                     <Chip
-                      label={counts?.[tab.countKey] ?? 0}
+                      label={tab.count}
                       size="small"
                       sx={{
                         height: 18,
@@ -373,7 +378,7 @@ const SupportQueryPage: React.FC = () => {
             <Select value={statusFilter} label="Query Status"
               onChange={(e) => setStatusFilter(e.target.value as number | '')}>
               <MenuItem value="">All</MenuItem>
-              {statuses.map((s) => <MenuItem key={s.id} value={s.id}>{s.displayName}</MenuItem>)}
+              {(counts?.statuses ?? []).map((s) => <MenuItem key={s.statusId} value={s.statusId}>{s.displayName}</MenuItem>)}
             </Select>
           </FormControl>
           <Button variant="contained" onClick={handleSearch} sx={{ borderRadius: 2, px: 3 }}>
@@ -441,7 +446,13 @@ const SupportQueryPage: React.FC = () => {
               </Box>
             ) : (
               sortedQueries.map((q, index) => {
-                const sv = getStatusVisual(q.statusName, isDark);
+                // Resolve by ID against the same buckets the cards/tabs use, so a row
+                // badge can never show a label or colour the dashboard doesn't have.
+                const bucket = counts?.statuses.find((x) => x.statusId === q.statusId);
+                const label = bucket?.displayName ?? q.statusName;
+                const sv = bucket
+                  ? { color: bucket.colorHex, bg: alpha(bucket.colorHex, isDark ? 0.16 : 0.10) }
+                  : getStatusVisual(label, isDark);
                 return (
                   <Box
                     key={q.id}
@@ -478,7 +489,7 @@ const SupportQueryPage: React.FC = () => {
                     {/* Status */}
                     <Box sx={{ flex: '0 0 150px', pr: 1 }}>
                       <Chip
-                        label={q.statusName}
+                        label={label}
                         size="small"
                         sx={{
                           bgcolor: sv.bg,

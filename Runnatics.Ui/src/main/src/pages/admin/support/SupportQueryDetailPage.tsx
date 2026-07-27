@@ -327,7 +327,12 @@ const SupportQueryDetailPage: React.FC = () => {
   const sortedComments = [...query.comments].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
-  const statusVis = getStatusVisual(query.statusName, isDark);
+  // Resolve the badge from the SAME lookup the dropdowns use, keyed by id.
+  const statusLookup = statuses.find((s) => s.id === query.statusId);
+  const statusLabel = statusLookup?.displayName ?? query.statusName;
+  const statusVis = statusLookup?.colorHex
+    ? { color: statusLookup.colorHex, bg: alpha(statusLookup.colorHex, isDark ? 0.16 : 0.10) }
+    : getStatusVisual(statusLabel, isDark);
 
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto', p: 3 }}>
@@ -362,7 +367,7 @@ const SupportQueryDetailPage: React.FC = () => {
           }}>
             <Box sx={{ display: 'flex', gap: 1.5, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
               <Chip
-                label={query.statusName}
+                label={statusLabel}
                 size="small"
                 sx={{
                   bgcolor: statusVis.bg,
