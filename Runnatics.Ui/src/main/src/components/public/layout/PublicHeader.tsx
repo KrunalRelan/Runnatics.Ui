@@ -124,27 +124,8 @@ function PublicHeader() {
             >
               Results
             </Link>
-
-            {/* Get Started — orange */}
-            <Link
-              to="/contact"
-              style={{
-                marginLeft: '0.375rem',
-                fontFamily: 'var(--font-body)',
-                fontWeight: 600,
-                fontSize: '0.9375rem',
-                color: '#fff',
-                backgroundColor: 'var(--color-accent)',
-                textDecoration: 'none',
-                padding: '0.5rem 1.25rem',
-                borderRadius: '8px',
-                transition: 'background-color 0.2s',
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'var(--color-accent-hover)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'var(--color-accent)'; }}
-            >
-              Get Started
-            </Link>
+            {/* No "Get Started" CTA here — it pointed at /contact, the same place the
+                "Contact Us" nav link goes. One control per destination. */}
           </nav>
 
           {/* Hamburger — visibility controlled by CSS class */}
@@ -215,26 +196,7 @@ function PublicHeader() {
             >
               Results
             </Link>
-
-            {/* Get Started */}
-            <Link
-              to="/contact"
-              style={{
-                display: 'block',
-                marginTop: '0.75rem',
-                fontFamily: 'var(--font-body)',
-                fontWeight: 600,
-                fontSize: '1rem',
-                color: '#fff',
-                backgroundColor: 'var(--color-accent)',
-                textDecoration: 'none',
-                padding: '0.75rem 1.25rem',
-                borderRadius: '8px',
-                textAlign: 'center',
-              }}
-            >
-              Get Started
-            </Link>
+            {/* No "Get Started" CTA here either — duplicate of the "Contact Us" link. */}
           </div>
         )}
       </header>
