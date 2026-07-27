@@ -42,9 +42,10 @@ import { SupportService } from '../../../services/SupportService';
 import {
   SupportQueryListItem,
   SupportQueryCounts,
-  STATUS_OPTIONS,
+  SupportLookup,
   ContactUsRequest,
 } from '../../../models/support/Support';
+import { getStatusVisual } from './statusVisuals';
 
 interface TabConfig {
   label: string;
@@ -65,24 +66,6 @@ const TABS: TabConfig[] = [
 
 type SortField = 'subject' | 'commentCount' | 'lastUpdated' | 'assignedToName' | 'statusName';
 type SortOrder = 'asc' | 'desc';
-
-const STATUS_VISUAL: Record<string, { light: { color: string; bg: string }; dark: { color: string; bg: string } }> = {
-  'New Query':       { light: { color: '#1D4ED8', bg: '#EFF6FF' },  dark: { color: '#60A5FA', bg: 'rgba(96,165,250,0.12)' } },
-  'WIP':             { light: { color: '#B45309', bg: '#FFFBEB' },  dark: { color: '#FBBF24', bg: 'rgba(251,191,36,0.12)' } },
-  'Closed':          { light: { color: '#065F46', bg: '#ECFDF5' },  dark: { color: '#34D399', bg: 'rgba(52,211,153,0.12)' } },
-  'Pending':         { light: { color: '#5B21B6', bg: '#F5F3FF' },  dark: { color: '#A78BFA', bg: 'rgba(167,139,250,0.12)' } },
-  'Not Yet Started': { light: { color: '#374151', bg: '#F9FAFB' },  dark: { color: '#94A3B8', bg: 'rgba(148,163,184,0.12)' } },
-  'Rejected':        { light: { color: '#991B1B', bg: '#FEF2F2' },  dark: { color: '#F87171', bg: 'rgba(248,113,113,0.12)' } },
-  'Duplicate':       { light: { color: '#9A3412', bg: '#FFF7ED' },  dark: { color: '#FB923C', bg: 'rgba(251,146,60,0.12)' } },
-};
-
-const getStatusVisual = (statusName: string, isDark: boolean) => {
-  const v = STATUS_VISUAL[statusName];
-  if (!v) return isDark
-    ? { color: '#94A3B8', bg: 'rgba(148,163,184,0.12)' }
-    : { color: '#374151', bg: '#F9FAFB' };
-  return isDark ? v.dark : v.light;
-};
 
 const STAT_CARDS = [
   { label: 'Total',   countKey: 'total'    as keyof SupportQueryCounts, color: '#2563EB', Icon: SupportAgentIcon },
@@ -108,6 +91,8 @@ const SupportQueryPage: React.FC = () => {
   const isDark = theme.palette.mode === 'dark';
   const [searchParams] = useSearchParams();
 
+  // Statuses come from the DB lookup table now, not a hard-coded TS array.
+  const [statuses, setStatuses] = useState<SupportLookup[]>([]);
   const [counts, setCounts] = useState<SupportQueryCounts | null>(null);
   const [countsLoading, setCountsLoading] = useState<boolean>(true);
   const [queries, setQueries] = useState<SupportQueryListItem[]>([]);
@@ -172,6 +157,16 @@ const SupportQueryPage: React.FC = () => {
   useEffect(() => {
     fetchCounts();
   }, [fetchCounts]);
+
+  // Load the status lookup once. The tab strip stays on fixed ids (they are the
+  // seeded 1-7 and drive the counts DTO's fixed keys); this feeds the filter dropdown.
+  useEffect(() => {
+    let active = true;
+    SupportService.getStatuses()
+      .then((s) => { if (active) setStatuses(s); })
+      .catch(() => { if (active) setStatuses([]); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => { fetchQueries(); }, [fetchQueries]);
 
@@ -378,7 +373,7 @@ const SupportQueryPage: React.FC = () => {
             <Select value={statusFilter} label="Query Status"
               onChange={(e) => setStatusFilter(e.target.value as number | '')}>
               <MenuItem value="">All</MenuItem>
-              {STATUS_OPTIONS.map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
+              {statuses.map((s) => <MenuItem key={s.id} value={s.id}>{s.displayName}</MenuItem>)}
             </Select>
           </FormControl>
           <Button variant="contained" onClick={handleSearch} sx={{ borderRadius: 2, px: 3 }}>

@@ -7,8 +7,8 @@ import {
   AddCommentRequest,
   UpdateQueryRequest,
   ContactUsRequest,
-  AdminUser,
-  QueryTypeOption,
+  SupportLookup,
+  SupportAssignee,
 } from '../models/support/Support';
 import { ServiceUrl } from '../models/ServiceUrls';
 
@@ -44,11 +44,17 @@ export class SupportService {
 
   static async getQueries(params: GetQueriesParams): Promise<GetQueriesResponse> {
     const response = await apiClient.get<any>(ServiceUrl.supportQueries(), { params });
-    // Handle ResponseBase<T> envelope ({ message: ... }) used throughout this codebase
-    const payload = response.data?.message ?? response.data;
+    // ResponseBase<T> envelope: { message: T, totalCount: n }. TotalCount lives on the
+    // ENVELOPE, not inside message — message is the bare array. Reading it off the array
+    // (as this used to) always yielded 0, which broke pagination past page 1.
+    const envelope = response.data ?? {};
+    const payload = envelope.message ?? envelope;
+    const items = Array.isArray(payload?.items)
+      ? payload.items
+      : (Array.isArray(payload) ? payload : []);
     return {
-      items: Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []),
-      totalCount: payload?.totalCount ?? 0,
+      items,
+      totalCount: envelope.totalCount ?? payload?.totalCount ?? items.length,
     };
   }
 
@@ -78,23 +84,22 @@ export class SupportService {
     await apiClient.post(ServiceUrl.supportContactUs(), data);
   }
 
-  static async getAdminUsers(): Promise<AdminUser[]> {
-    try {
-      const response = await apiClient.get<any>(ServiceUrl.adminUsers());
-      const payload = response.data?.message ?? response.data;
-      return Array.isArray(payload) ? payload : [];
-    } catch {
-      return [];
-    }
+  static async getStatuses(): Promise<SupportLookup[]> {
+    const response = await apiClient.get<any>(ServiceUrl.supportStatuses());
+    const payload = response.data?.message ?? response.data;
+    return Array.isArray(payload) ? payload : [];
   }
 
-  static async getQueryTypes(): Promise<QueryTypeOption[]> {
-    try {
-      const response = await apiClient.get<any>(ServiceUrl.supportQueryTypes());
-      const payload = response.data?.message ?? response.data;
-      return Array.isArray(payload) ? payload : [];
-    } catch {
-      return [];
-    }
+  /** Query types are optional — an empty list is a legitimate result, not an error. */
+  static async getQueryTypes(): Promise<SupportLookup[]> {
+    const response = await apiClient.get<any>(ServiceUrl.supportQueryTypes());
+    const payload = response.data?.message ?? response.data;
+    return Array.isArray(payload) ? payload : [];
+  }
+
+  static async getAssignees(): Promise<SupportAssignee[]> {
+    const response = await apiClient.get<any>(ServiceUrl.supportAssignees());
+    const payload = response.data?.message ?? response.data;
+    return Array.isArray(payload) ? payload : [];
   }
 }

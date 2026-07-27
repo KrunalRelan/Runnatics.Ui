@@ -40,30 +40,11 @@ import { SupportService } from '../../../services/SupportService';
 import {
   SupportQueryDetail,
   SupportQueryComment,
-  STATUS_OPTIONS,
+  SupportLookup,
+  SupportAssignee,
   AddCommentRequest,
 } from '../../../models/support/Support';
-
-const STATUS_VISUAL: Record<string, { light: { color: string; bg: string }; dark: { color: string; bg: string } }> = {
-  'New Query':       { light: { color: '#1D4ED8', bg: '#EFF6FF' },  dark: { color: '#60A5FA', bg: 'rgba(96,165,250,0.12)' } },
-  'WIP':             { light: { color: '#B45309', bg: '#FFFBEB' },  dark: { color: '#FBBF24', bg: 'rgba(251,191,36,0.12)' } },
-  'Closed':          { light: { color: '#065F46', bg: '#ECFDF5' },  dark: { color: '#34D399', bg: 'rgba(52,211,153,0.12)' } },
-  'Pending':         { light: { color: '#5B21B6', bg: '#F5F3FF' },  dark: { color: '#A78BFA', bg: 'rgba(167,139,250,0.12)' } },
-  'Not Yet Started': { light: { color: '#374151', bg: '#F9FAFB' },  dark: { color: '#94A3B8', bg: 'rgba(148,163,184,0.12)' } },
-  'Rejected':        { light: { color: '#991B1B', bg: '#FEF2F2' },  dark: { color: '#F87171', bg: 'rgba(248,113,113,0.12)' } },
-  'Duplicate':       { light: { color: '#9A3412', bg: '#FFF7ED' },  dark: { color: '#FB923C', bg: 'rgba(251,146,60,0.12)' } },
-};
-
-const getStatusVisual = (statusName: string, isDark: boolean) => {
-  const v = STATUS_VISUAL[statusName];
-  if (!v) return isDark
-    ? { color: '#94A3B8', bg: 'rgba(148,163,184,0.12)' }
-    : { color: '#374151', bg: '#F9FAFB' };
-  return isDark ? v.dark : v.light;
-};
-
-const getInitials = (name: string | null) =>
-  name ? name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : '?';
+import { getStatusVisual, getInitials } from './statusVisuals';
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleString(undefined, {
@@ -175,7 +156,14 @@ const SupportQueryDetailPage: React.FC = () => {
   const [commentSaving, setCommentSaving] = useState<boolean>(false);
 
   const [updateStatusId, setUpdateStatusId] = useState<number | ''>('');
+  const [updateAssigneeId, setUpdateAssigneeId] = useState<number | ''>('');
+  const [updateQueryTypeId, setUpdateQueryTypeId] = useState<number | ''>('');
   const [updateSaving, setUpdateSaving] = useState<boolean>(false);
+
+  // Lookups, all DB-backed. Statuses replace the old hard-coded STATUS_OPTIONS.
+  const [statuses, setStatuses] = useState<SupportLookup[]>([]);
+  const [queryTypes, setQueryTypes] = useState<SupportLookup[]>([]);
+  const [assignees, setAssignees] = useState<SupportAssignee[]>([]);
 
   const [deleteCommentId, setDeleteCommentId] = useState<number | null>(null);
   const [deleteCommentLoading, setDeleteCommentLoading] = useState<boolean>(false);
@@ -196,6 +184,8 @@ const SupportQueryDetailPage: React.FC = () => {
       const data = await SupportService.getQueryById(Number(id));
       setQuery(data);
       setUpdateStatusId(data.statusId);
+      setUpdateAssigneeId(data.assignedToUserId ?? '');
+      setUpdateQueryTypeId(data.queryTypeId ?? '');
       // BUG-20: default the reply's ticket status to the query's current status so the
       // mandatory-status validation never silently blocks a reply that was just typed.
       setCommentStatusId(data.statusId);
@@ -210,6 +200,23 @@ const SupportQueryDetailPage: React.FC = () => {
   useEffect(() => {
     fetchQuery();
   }, [fetchQuery]);
+
+  // Lookups load once, independently of the ticket. A failure here degrades the
+  // dropdowns to empty rather than blocking the ticket itself from rendering.
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      SupportService.getStatuses().catch(() => []),
+      SupportService.getQueryTypes().catch(() => []),
+      SupportService.getAssignees().catch(() => []),
+    ]).then(([s, t, a]) => {
+      if (!active) return;
+      setStatuses(s);
+      setQueryTypes(t);
+      setAssignees(a);
+    });
+    return () => { active = false; };
+  }, []);
 
   const validateComment = (): boolean => {
     const errs: { text?: string; status?: string } = {};
@@ -279,8 +286,10 @@ const SupportQueryDetailPage: React.FC = () => {
       setUpdateSaving(true);
       await SupportService.updateQuery(query.id, {
         statusId: updateStatusId !== '' ? Number(updateStatusId) : query.statusId,
-        assignedToUserId: query.assignedToUserId ?? null,
-        queryTypeId: query.queryTypeId ?? null,
+        // The API treats 0 as "clear this field" and null as "leave unchanged", so an
+        // empty selection must send 0 — otherwise unassigning would silently no-op.
+        assignedToUserId: updateAssigneeId === '' ? 0 : Number(updateAssigneeId),
+        queryTypeId: updateQueryTypeId === '' ? 0 : Number(updateQueryTypeId),
       });
       showSnackbar('Query updated successfully', 'success');
       fetchQuery();
@@ -448,8 +457,8 @@ const SupportQueryDetailPage: React.FC = () => {
                   onChange={(e) => setCommentStatusId(e.target.value as number | '')}
                   sx={{ borderRadius: 2 }}
                 >
-                  {STATUS_OPTIONS.map((s) => (
-                    <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
+                  {statuses.map((s) => (
+                    <MenuItem key={s.id} value={s.id}>{s.displayName}</MenuItem>
                   ))}
                 </Select>
                 {commentErrors.status && (
@@ -539,11 +548,39 @@ const SupportQueryDetailPage: React.FC = () => {
                 <Select value={updateStatusId} label="Status"
                   onChange={(e) => setUpdateStatusId(e.target.value as number | '')}
                   sx={{ borderRadius: 2 }}>
-                  {STATUS_OPTIONS.map((s) => (
-                    <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
+                  {statuses.map((s) => (
+                    <MenuItem key={s.id} value={s.id}>{s.displayName}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
+
+              {/* Assignee — the API always supported this; there was simply no UI for it. */}
+              <FormControl fullWidth size="small">
+                <InputLabel>Assigned To</InputLabel>
+                <Select value={updateAssigneeId} label="Assigned To"
+                  onChange={(e) => setUpdateAssigneeId(e.target.value as number | '')}
+                  sx={{ borderRadius: 2 }}>
+                  <MenuItem value=""><em>Unassigned</em></MenuItem>
+                  {assignees.map((u) => (
+                    <MenuItem key={u.id} value={u.id}>{u.fullName}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {/* Query type — optional, and the lookup table may legitimately be empty. */}
+              {queryTypes.length > 0 && (
+                <FormControl fullWidth size="small">
+                  <InputLabel>Query Type</InputLabel>
+                  <Select value={updateQueryTypeId} label="Query Type"
+                    onChange={(e) => setUpdateQueryTypeId(e.target.value as number | '')}
+                    sx={{ borderRadius: 2 }}>
+                    <MenuItem value=""><em>None</em></MenuItem>
+                    {queryTypes.map((t) => (
+                      <MenuItem key={t.id} value={t.id}>{t.displayName}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
 
               <Button
                 variant="contained"

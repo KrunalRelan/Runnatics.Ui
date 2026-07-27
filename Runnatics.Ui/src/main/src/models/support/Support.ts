@@ -63,16 +63,21 @@ export interface UpdateQueryRequest {
   queryTypeId: number | null;
 }
 
-export interface StatusOption { id: number; name: string; }
-export interface AdminUser { id: number; fullName: string; }
-export interface QueryTypeOption { id: number; name: string; }
+/**
+ * A support lookup row (status or query type), served from the DB.
+ * `name` is the RAW stored value ("new_query") — match on it, never display it.
+ * `displayName` is the human label ("New Query"), derived server-side so the
+ * raw -> display mapping lives in exactly one place.
+ */
+export interface SupportLookup {
+  id: number;
+  name: string;
+  displayName: string;
+}
 
-export const STATUS_OPTIONS: StatusOption[] = [
-  { id: 1, name: 'New Query' },
-  { id: 2, name: 'WIP' },
-  { id: 3, name: 'Closed' },
-  { id: 4, name: 'Pending' },
-  { id: 5, name: 'Not Yet Started' },
-  { id: 6, name: 'Rejected' },
-  { id: 7, name: 'Duplicate' },
-];
+/** A user who can be assigned a ticket. */
+export interface SupportAssignee {
+  id: number;
+  fullName: string;
+  email: string;
+}

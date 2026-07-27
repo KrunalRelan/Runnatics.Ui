@@ -102,6 +102,7 @@ export const ServiceUrl = {
     supportCommentEmail: (commentId: number) => `support/comments/${commentId}/send-email`,
     supportContactUs: () => 'support/contact',
     supportQueryTypes: () => 'support/query-types',
-    adminUsers: () => 'users/admins',
+    supportStatuses: () => 'support/statuses',
+    supportAssignees: () => 'support/assignees',
 };
 
