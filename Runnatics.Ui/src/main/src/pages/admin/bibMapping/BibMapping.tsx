@@ -112,6 +112,18 @@ const PAGE_SIZE = 50;
 const SAME_CHIP_HINT =
   'Same chip still on the reader — remove it before the next scan (or press Resume to scan it again).';
 
+// Shared wording for BOTH multi-tag paths: the USB keyboard-wedge guard below and the
+// TCP/SignalR MultipleEpcDetected event. One constant so they can never drift apart.
+const MULTI_TAG_MESSAGE =
+  'Multiple tags detected — keep only one chip on the reader and scan again.';
+
+// Shown ONLY when the automatic rollback did not succeed. Never claim "nothing was
+// assigned" while the first EPC is in fact still mapped — name the BIB that needs
+// clearing by hand instead.
+const multiTagRollbackFailedMessage = (bibNumber: string, epc: string) =>
+  `Multiple tags detected, but the automatic rollback FAILED: BIB #${bibNumber} is still mapped to ${epc}. ` +
+  'Clear that mapping manually before scanning again.';
+
 const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
   // Server-side pagination/filter/search state owned by the component
   const [search, setSearch] = useState('');
@@ -167,6 +179,14 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
   // is mapped or the operator resumes — this is what stops "chip left on the pad".
   const lastMappedEpcRef = useRef<string>('');
 
+  // Identity of the mapping most recently committed, so a multi-tag event can roll it
+  // back and — if the rollback fails — name the BIB that still needs manual clearing.
+  const lastMappedRef = useRef<{ participantId: string; bibNumber: string; epc: string } | null>(null);
+
+  // Blocking multi-tag error. While set, ALL reader input is ignored (same as Paused);
+  // the operator must acknowledge it before mapping can continue.
+  const [multiTagError, setMultiTagError] = useState<string | null>(null);
+
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
   const searchRef = useRef<HTMLInputElement>(null);
@@ -193,8 +213,10 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
   useEffect(() => {
     lastMappedEpcRef.current = '';
     lastMapTimestampRef.current = 0;
+    lastMappedRef.current = null;
     setPaused(false);
     setSameChipHint(null);
+    setMultiTagError(null);
   }, [eventId, raceId]);
 
   // Clean up the hint timer on unmount.
@@ -210,6 +232,7 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
         // re-scan the chip that was just mapped (e.g. remap it to a different BIB).
         lastMappedEpcRef.current = '';
         lastMapTimestampRef.current = 0;
+        lastMappedRef.current = null;
         setSameChipHint(null);
       }
       return next;
@@ -223,8 +246,10 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
   useEffect(() => {
     if (multipleEpcEpcs && multipleEpcEpcs.length > 0) {
       // While paused, ignore the read but still consume the event.
-      if (!paused && focusedRowId) {
-        setMultipleEpcError(focusedRowId);
+      if (!paused) {
+        if (focusedRowId) setMultipleEpcError(focusedRowId);
+        // Same wording as the USB keyboard-wedge guard — one shared constant.
+        setMultiTagError(MULTI_TAG_MESSAGE);
       }
       // Consume the event so it can't re-fire on a later focus change
       clearMultipleEpc();
@@ -312,8 +337,10 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
 
   const handleSubmit = useCallback(
     async (participantId: string) => {
-      // Paused: ignore the read entirely and clear anything that landed in the field.
-      if (paused) {
+      // Paused, or an unacknowledged multi-tag error is on screen: ignore the read
+      // entirely and clear anything that landed in the field. The multi-tag error is
+      // BLOCKING — nothing maps again until the operator dismisses it.
+      if (paused || multiTagError) {
         clearPendingEpc(participantId);
         return;
       }
@@ -336,6 +363,22 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
         return;
       }
 
+      // Distinct-concatenation guard: two DIFFERENT chips typed into one field before
+      // Enter. Only applies ABOVE EPC_MAX_LEN — a legitimate 24-char EPC-96 (the most
+      // common tag format) also splits into two 12-char "valid looking" halves, so
+      // splitting at or below the max would reject normal single tags outright.
+      // Nothing has been written yet here, so there is nothing to roll back.
+      if (epc.length > EPC_MAX_LEN && epc.length % 2 === 0) {
+        const firstHalf = epc.slice(0, epc.length / 2);
+        const secondHalf = epc.slice(epc.length / 2);
+        const halfIsValidEpc = (h: string) => h.length >= EPC_MIN_LEN && h.length <= EPC_MAX_LEN;
+        if (firstHalf !== secondHalf && halfIsValidEpc(firstHalf) && halfIsValidEpc(secondHalf)) {
+          clearPendingEpc(participantId);
+          setMultiTagError(MULTI_TAG_MESSAGE);
+          return;
+        }
+      }
+
       // Same-EPC guard: ignore any read of the chip we just mapped — exact match, or a
       // re-read fragment that starts with it. Stays armed until a different chip is mapped
       // or the operator resumes. Clear the field so nothing concatenates.
@@ -346,10 +389,29 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
         return;
       }
 
-      // Coarse lockout window: silently gate rapid follow-on submissions after a successful
-      // map. Clear the field so a re-read within the window can't accumulate/concatenate.
+      // MULTI-TAG REJECTION. Reaching here inside the lockout window means a SECOND,
+      // DISTINCT EPC arrived within MAP_LOCKOUT_MS of the last commit (the same-EPC guard
+      // above already absorbed re-reads of the same chip) — i.e. two chips were on the pad.
+      // The requirement is "assign nothing", so the first mapping is rolled back. There is
+      // no auto-pick of the first or the last EPC.
       if (Date.now() - lastMapTimestampRef.current < MAP_LOCKOUT_MS) {
         clearPendingEpc(participantId);
+        const first = lastMappedRef.current;
+        // Nothing committed to undo — just gate the read, as before.
+        if (!first) return;
+
+        const rolledBack = await clearMapping(first.participantId);
+        if (rolledBack) {
+          // Rollback CONFIRMED — only now is it true that nothing is assigned.
+          lastMappedEpcRef.current = '';
+          lastMapTimestampRef.current = 0;
+          lastMappedRef.current = null;
+          setMultiTagError(MULTI_TAG_MESSAGE);
+        } else {
+          // Rollback failed: the first EPC is STILL mapped. Say so, and name the BIB —
+          // never claim "nothing assigned" when that is not the case.
+          setMultiTagError(multiTagRollbackFailedMessage(first.bibNumber, first.epc));
+        }
         return;
       }
 
@@ -357,6 +419,7 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
       if (result.status === 'ok') {
         lastMapTimestampRef.current = Date.now();
         lastMappedEpcRef.current = epc;
+        lastMappedRef.current = { participantId, bibNumber: row.bibNumber, epc };
         toast.success(`✓ BIB #${row.bibNumber} mapped to ${epc}`);
         if (soundEnabled) beep();
         if (result.nextId) setNextFocusId(result.nextId);
@@ -365,7 +428,7 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
         setDuplicate(result.duplicate);
       }
     },
-    [paused, rows, submitEpc, soundEnabled, incrementDuplicateAttempts, clearPendingEpc, showSameChipHint, MAP_LOCKOUT_MS],
+    [paused, multiTagError, rows, submitEpc, clearMapping, soundEnabled, incrementDuplicateAttempts, clearPendingEpc, showSameChipHint, MAP_LOCKOUT_MS],
   );
 
   const handleKeyDown = async (e: KeyboardEvent<HTMLInputElement>, participantId: string) => {
@@ -396,6 +459,11 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
     if (result.ok) {
       lastMapTimestampRef.current = Date.now();
       lastMappedEpcRef.current = epc;
+      lastMappedRef.current = {
+        participantId: duplicate.newParticipantId,
+        bibNumber: duplicate.newBib,
+        epc,
+      };
       if (soundEnabled) beep();
       if (result.nextId) setNextFocusId(result.nextId);
     }
@@ -426,7 +494,7 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
     if (ok) setClearTarget(null);
   };
 
-  const scanReady = focusedRowId !== null && !paused;
+  const scanReady = focusedRowId !== null && !paused && !multiTagError;
   const allMapped = progress.total > 0 && progress.mapped === progress.total;
 
   const focusedRow = useMemo(
@@ -434,7 +502,9 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
     [focusedRowId, rows],
   );
 
-  const statusLabel = paused
+  const statusLabel = multiTagError
+    ? 'Multiple tags — dismiss the error to continue'
+    : paused
     ? 'Paused — reader input ignored'
     : allMapped
       ? 'All mapped'
@@ -484,7 +554,23 @@ const BibMapping: React.FC<BibMappingProps> = ({ eventId, raceId }) => {
         </Alert>
       )}
 
-      {sameChipHint && !paused && (
+      {/* Blocking multi-tag error — reader input stays ignored until acknowledged. */}
+      {multiTagError && (
+        <Alert
+          severity="error"
+          variant="filled"
+          icon={<AlertCircle size={18} />}
+          action={
+            <Button color="inherit" size="small" onClick={() => setMultiTagError(null)}>
+              Dismiss
+            </Button>
+          }
+        >
+          {multiTagError}
+        </Alert>
+      )}
+
+      {sameChipHint && !paused && !multiTagError && (
         <Alert severity="warning" onClose={() => setSameChipHint(null)}>
           {sameChipHint}
         </Alert>
