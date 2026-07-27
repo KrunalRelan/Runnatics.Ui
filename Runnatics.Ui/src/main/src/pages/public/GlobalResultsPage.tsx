@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Search, Trophy, Share2, Link2, Check } from 'lucide-react';
+import { ChevronDown, ChevronRight, Search, Trophy, Share2, Link2, Check, User } from 'lucide-react';
 import { Container } from '../../components/public/ui';
 import { ErrorState } from '../../components/public/shared/ApiStates';
 import ResultsDisclaimer from '../../components/public/shared/ResultsDisclaimer';
@@ -292,10 +292,74 @@ function PodiumPlatform({ place }: { place: number }) {
   );
 }
 
+// ── Initials avatar (we hold no runner photos, so the circle carries initials) ──
+
+// First letter of the first name + first letter of the last name, uppercased.
+// Single-word name → one letter. Empty/blank → '' (caller renders a neutral glyph).
+// Array.from() splits by CODE POINT, so surrogate pairs and combining scripts are never
+// cut in half the way name[0] would; toLocaleUpperCase respects locale-specific casing.
+function initialsOf(name: string): string {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  const firstCodePoint = (s: string) => Array.from(s)[0] ?? '';
+  const letters =
+    parts.length === 1
+      ? firstCodePoint(parts[0])
+      : firstCodePoint(parts[0]) + firstCodePoint(parts[parts.length - 1]);
+  return letters.toLocaleUpperCase();
+}
+
+// Rank-tinted fills, deepened so WHITE initials clear WCAG AA (≥4.5:1) on every one —
+// the raw gold/silver from MEDAL_COLORS is far too light to carry white text.
+const AVATAR_TINT: Record<number, { fill: string; ring: string }> = {
+  1: { fill: '#8A6A0B', ring: '#F0D07A' },
+  2: { fill: '#5C6673', ring: '#D8DEE4' },
+  3: { fill: '#7A4420', ring: '#E1B08C' },
+};
+
+function InitialsAvatar({ name, place, size }: { name: string; place: number; size: number }) {
+  const tint = AVATAR_TINT[place];
+  const initials = initialsOf(name);
+  return (
+    <div
+      aria-hidden
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        margin: '0 auto 0.55rem',
+        background: tint.fill,
+        border: `2px solid ${tint.ring}`,
+        boxShadow: '0 4px 10px rgba(11,28,50,0.22), inset 0 1px 0 rgba(255,255,255,0.28)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontFamily: 'var(--font-heading)',
+        fontWeight: 800,
+        // Scale with the circle so 1–2 glyphs read clearly at card size and on mobile.
+        fontSize: `${Math.round(size * 0.4)}px`,
+        letterSpacing: '0.02em',
+        lineHeight: 1,
+        userSelect: 'none',
+      }}
+    >
+      {initials || <User size={Math.round(size * 0.46)} strokeWidth={2.2} />}
+    </div>
+  );
+}
+
 // ── Podium ─────────────────────────────────────────────────────────
 
 // Column order, left → right: 2nd, 1st (center, elevated), 3rd.
 const PODIUM_ORDER = [2, 1, 3] as const;
+
+// Footer band under each card — the rank stated in words.
+const PLACE_BAND: Record<number, { label: string; bg: string }> = {
+  1: { label: 'CHAMPION', bg: 'linear-gradient(90deg,#B8860B,#F0C33C,#B8860B)' },
+  2: { label: 'RUNNER UP', bg: 'linear-gradient(90deg,#78828E,#C2C9D1,#78828E)' },
+  3: { label: 'THIRD PLACE', bg: 'linear-gradient(90deg,#8A4E22,#CE8E5C,#8A4E22)' },
+};
 
 const CARD_BG: Record<number, { bg: string; ring: string }> = {
   1: { bg: 'linear-gradient(165deg,#FFFDF4 0%,#FFF2C9 100%)', ring: '#F0D07A' },
@@ -303,11 +367,32 @@ const CARD_BG: Record<number, { bg: string; ring: string }> = {
   3: { bg: 'linear-gradient(165deg,#FFFAF6 0%,#F6E2D3 100%)', ring: '#E1B08C' },
 };
 
+// Long names WRAP, never truncate (prior mobile bug). The old -webkit-line-clamp:2 +
+// overflow:hidden silently cut names off on narrow cards; overflowWrap:'anywhere' also
+// breaks a single over-long token instead of letting it overflow the card.
+const nameStyle = (isChampion: boolean): React.CSSProperties => ({
+  display: 'block',
+  fontFamily: 'var(--font-heading)',
+  fontWeight: 800,
+  fontSize: isChampion ? '1.1rem' : '0.9375rem',
+  lineHeight: 1.2,
+  color: 'var(--color-text)',
+  textDecoration: 'none',
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
+  hyphens: 'auto',
+});
+
 function PodiumColumn({ p, place, rankBy, total, rankLabel, event }:
   { p: GroupedLeaderboardParticipant; place: number; rankBy: string; total: number; rankLabel: string; event: string }) {
   const isChampion = place === 1;
   const card = CARD_BG[place];
   const time = timeOf(p, rankBy);
+  const band = PLACE_BAND[place];
+  // Card padding, kept in variables so the footer band can bleed to the card edges
+  // with matching negative margins instead of hard-coded magic numbers.
+  const padX = isChampion ? '1.1rem' : '0.95rem';
+  const padBottom = isChampion ? '1.15rem' : '1rem';
   return (
     <div className="podium-col podium-rise" style={{ flex: 1, maxWidth: isChampion ? '270px' : '224px', minWidth: 0, alignSelf: 'flex-end', animationDelay: PLAT[place].delay }}>
       <div
@@ -318,7 +403,7 @@ function PodiumColumn({ p, place, rankBy, total, rankLabel, event }:
           background: card.bg,
           border: `1px solid ${card.ring}`,
           borderRadius: '16px',
-          padding: isChampion ? '2.1rem 1.1rem 1.15rem' : '1.8rem 0.95rem 1rem',
+          padding: `${isChampion ? '2.1rem' : '1.8rem'} ${padX} 0`,
           marginBottom: '-4px',
           boxShadow: isChampion ? '0 20px 44px rgba(212,160,23,0.28), 0 8px 18px rgba(11,28,50,0.16)' : '0 8px 18px rgba(11,28,50,0.10)',
           transform: isChampion ? 'translateY(-14px) scale(1.03)' : 'none',
@@ -333,19 +418,13 @@ function PodiumColumn({ p, place, rankBy, total, rankLabel, event }:
         <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem' }}>
           <ShareMenu name={p.name} rank={p.rank} total={total} rankLabel={rankLabel} time={time} event={event} detailUrl={p.participantDetailUrl} tone={isChampion ? 'gold' : 'light'} />
         </div>
+        <InitialsAvatar name={p.name} place={place} size={isChampion ? 62 : 52} />
         {p.participantDetailUrl ? (
-          <a
-            href={p.participantDetailUrl}
-            title={p.name}
-            style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: isChampion ? '1.1rem' : '0.9375rem', lineHeight: 1.2, color: 'var(--color-text)', textDecoration: 'none', cursor: 'pointer' }}
-          >
+          <a href={p.participantDetailUrl} title={p.name} className="podium-name" style={nameStyle(isChampion)}>
             {p.name}
           </a>
         ) : (
-          <div
-            title={p.name}
-            style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: isChampion ? '1.1rem' : '0.9375rem', lineHeight: 1.2, color: 'var(--color-text)' }}
-          >
+          <div title={p.name} className="podium-name" style={nameStyle(isChampion)}>
             {p.name}
           </div>
         )}
@@ -355,6 +434,22 @@ function PodiumColumn({ p, place, rankBy, total, rankLabel, event }:
           </span>
         </div>
         <CountUpTime time={time} animate style={{ display: 'block', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontWeight: 700, fontSize: isChampion ? '1.22rem' : '1rem', color: NAVY, letterSpacing: '0.02em' }} />
+        {/* Footer band — bled to the card edges via negative margins matching the padding */}
+        <div
+          style={{
+            margin: `${padBottom} -${padX} 0`,
+            padding: '0.4rem 0.5rem',
+            background: band.bg,
+            color: '#fff',
+            fontFamily: 'var(--font-heading)',
+            fontWeight: 800,
+            fontSize: isChampion ? '0.72rem' : '0.65rem',
+            letterSpacing: '0.12em',
+            textShadow: '0 1px 2px rgba(0,0,0,0.35)',
+          }}
+        >
+          {band.label}
+        </div>
       </div>
       <PodiumPlatform place={place} />
     </div>
@@ -569,6 +664,7 @@ const STYLES = `
 
   @keyframes podium-rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
   .podium-rise { animation: podium-rise 560ms cubic-bezier(.2,.7,.3,1) both; }
+  a.podium-name:hover { text-decoration: underline; }
   .podium-card { transition: box-shadow 220ms ease, transform 220ms ease; }
   .podium-card:hover { box-shadow: 0 14px 30px rgba(11,28,50,0.20); }
   .podium-card--champion:hover { box-shadow: 0 24px 50px rgba(212,160,23,0.34), 0 10px 20px rgba(11,28,50,0.18); }
