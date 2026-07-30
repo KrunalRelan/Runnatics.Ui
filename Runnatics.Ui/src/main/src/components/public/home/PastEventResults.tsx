@@ -13,7 +13,9 @@ function PastEventResults() {
     [],
   );
 
-  const preview = events?.slice(0, 3) ?? [];
+  // Home shows the 5 most recent past events; the full list lives on /results.
+  // getPastEvents already asks for 5 — the slice is a belt-and-braces cap.
+  const preview = events?.slice(0, 5) ?? [];
 
   return (
     <Section tone="alt">

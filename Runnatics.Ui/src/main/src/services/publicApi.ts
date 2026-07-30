@@ -184,8 +184,13 @@ export async function getUpcomingEvents(signal?: AbortSignal): Promise<PublicEve
   return getEvents({ status: 'upcoming', take: 5 }, signal);
 }
 
+/**
+ * The 5 most recent past events, for the HOME page preview only.
+ * The results landing page shows every past event and uses getEventsPaged —
+ * do not route it through here.
+ */
 export async function getPastEvents(signal?: AbortSignal): Promise<PublicEvent[]> {
-  return getEvents({ status: 'past', take: 10 }, signal);
+  return getEvents({ status: 'past', take: 5 }, signal);
 }
 
 export interface PublicEventsPage {
