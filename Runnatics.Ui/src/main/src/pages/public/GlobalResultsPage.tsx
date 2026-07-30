@@ -407,22 +407,30 @@ function PodiumColumn({ p, place, rankBy, total, rankLabel, event }:
 }
 
 // ── 3D podium base ────────────────────────────────────────────────
-// Elliptical top face over a thicker body, with a thin red accent line, and the
-// status pill riding on the body below the accent line.
+// Matches the reference art: one WIDE flat-bottomed drum spanning past the
+// cards, a second raised pedestal under the champion, the thin red accent
+// line near the BOTTOM of the drum, and the status pill riding over it.
+// The cards stand ON the top face (the row overlaps the base via negative
+// margin), not floating above it.
 
 function PodiumBase({ published }: { published: boolean }) {
   return (
     <div className="podium-base">
-      <svg viewBox="0 0 800 130" preserveAspectRatio="none" aria-hidden className="podium-base-svg">
-        {/* body */}
-        <rect x="20" y="34" width="760" height="66" fill={BASE_NAVY} />
-        {/* bottom cap — darker, gives the 3D roll */}
-        <ellipse cx="400" cy="100" rx="380" ry="28" fill="#132043" />
-        {/* top face — lighter navy */}
-        <ellipse cx="400" cy="34" rx="380" ry="28" fill="#24406F" />
-        <ellipse cx="400" cy="34" rx="380" ry="28" fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="2" />
-        {/* thin RED accent line across the base */}
-        <rect x="20" y="62" width="760" height="5" fill={RED} />
+      <svg viewBox="0 0 900 150" preserveAspectRatio="none" aria-hidden className="podium-base-svg">
+        {/* main drum — full stage width, flat bottom (runs off the stage edge) */}
+        <rect x="0" y="70" width="900" height="80" fill={BASE_NAVY} />
+        <ellipse cx="450" cy="70" rx="450" ry="26" fill="#24406F" />
+        <ellipse cx="450" cy="70" rx="450" ry="26" fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="2" />
+
+        {/* thin RED accent line near the bottom of the drum */}
+        <rect x="0" y="120" width="900" height="6" fill={RED} />
+
+        {/* centre pedestal — the raised second tier the champion stands on */}
+        <rect x="283" y="18" width="334" height="62" fill={BASE_NAVY} />
+        <ellipse cx="450" cy="18" rx="167" ry="13" fill="#24406F" />
+        <ellipse cx="450" cy="18" rx="167" ry="13" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="2" />
+        {/* soft shadow where the pedestal meets the drum */}
+        <ellipse cx="450" cy="80" rx="185" ry="10" fill="rgba(0,0,0,0.18)" />
       </svg>
       {/* Same publish gate as the confetti: unpublished results carry no badge. */}
       {published && (
@@ -804,13 +812,17 @@ const STYLES = `
     display: flex; align-items: center; justify-content: center; gap: 0.35rem;
   }
 
-  /* ── 3D navy base ─────────────────────────────────────────────── */
-  .podium-base { position: relative; margin-top: -6px; z-index: 1; }
-  .podium-base-svg { display: block; width: 100%; height: 118px; }
+  /* ── 3D navy base ───────────────────────────────────────────────
+     margin-top pulls the drum UP under the cards so they stand on its top
+     face (SVG y=70/150) and the champion's bottom (champ-lift higher) lands
+     on the pedestal top (y=18/150). The negative inline margins stretch the
+     drum to the stage edges, wider than the card row. */
+  .podium-base { position: relative; margin-top: -70px; margin-inline: -0.75rem; z-index: 1; }
+  .podium-base-svg { display: block; width: 100%; height: 150px; }
 
-  /* Status pill riding on the base body, below the red accent line */
+  /* Status pill riding over the red accent line at the drum's bottom */
   .podium-badge {
-    position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%);
+    position: absolute; left: 50%; bottom: 5%; transform: translateX(-50%);
     display: inline-flex; align-items: center; gap: 0.45rem;
     white-space: nowrap;
     background: #fff; color: ${BASE_NAVY};
@@ -872,8 +884,11 @@ const STYLES = `
     .podium-col--champion { max-width: 250px; }
     .podium-panel { padding: 2rem 0.5rem 0; }
     .podium-band { width: calc(100% + 1rem); margin-left: -0.5rem; margin-right: -0.5rem; font-size: 0.56rem; letter-spacing: 0.07em; }
+    /* SVG scales to 84px: top face lands at y≈39, pedestal at y≈10 —
+       overlap and lift track the same ratio so cards keep standing on it */
+    .podium-base { margin-top: -39px; margin-inline: -0.4rem; }
     .podium-base-svg { height: 84px; }
-    .podium-badge { font-size: 0.58rem; letter-spacing: 0.1em; padding: 0.32rem 0.8rem; bottom: 8%; }
+    .podium-badge { font-size: 0.58rem; letter-spacing: 0.1em; padding: 0.32rem 0.8rem; bottom: 6%; }
     /* Tab must never overflow the viewport — it shrinks rather than clipping */
     .gt-wrap { display: flex; width: 100%; max-width: 380px; margin-inline: auto; }
     .gt-tab { flex: 1 1 0; min-width: 0; padding: 0.6rem 0.5rem; font-size: 0.8125rem; letter-spacing: 0.05em; }
