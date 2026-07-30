@@ -45,6 +45,7 @@ import {
   KeyboardDoubleArrowRight as KeyboardDoubleArrowRightIcon,
   Router as RouterIcon,
   SupportAgent as SupportAgentIcon,
+  Web as WebIcon,
 } from "@mui/icons-material";
 import {
   DashboardLayoutProps,
@@ -199,6 +200,13 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
       text: "Support",
       icon: <SupportAgentIcon />,
       path: "/support",
+    },
+    {
+      // Public website content editor — platform-level, so SuperAdmin only.
+      text: "About Page",
+      icon: <WebIcon />,
+      path: "/site/about",
+      roles: ["SuperAdmin"],
     },
 
   ];

@@ -12,6 +12,7 @@ import { eventsRoutes } from "./main/src/pages/admin/events/Routes";
 import { rfidRoutes } from "./main/src/pages/admin/rfid/Routes";
 import { deviceRoutes } from "./main/src/pages/admin/devices/Routes";
 import { supportRoutes } from "./main/src/pages/admin/support/Routes";
+import { aboutContentRoutes } from "./main/src/pages/admin/aboutContent/Routes";
 import { ProtectedRoute } from "./main/src/components/auth/ProtectedRoute";
 import ForbiddenPage from "./main/src/pages/ForbiddenPage";
 import { ALL_ROLES } from "./main/src/models/Auth";
@@ -157,6 +158,25 @@ function App() {
               {supportRoutes.map((route, index) => (
                 <Route
                   key={`support-${index}`}
+                  path={`/${route.path}`}
+                  element={
+                    <Suspense
+                      fallback={
+                        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+                          <CircularProgress />
+                        </Box>
+                      }
+                    >
+                      {route.element}
+                    </Suspense>
+                  }
+                />
+              ))}
+
+              {/* Site content routes (About page editor — SuperAdmin) */}
+              {aboutContentRoutes.map((route, index) => (
+                <Route
+                  key={`site-${index}`}
                   path={`/${route.path}`}
                   element={
                     <Suspense

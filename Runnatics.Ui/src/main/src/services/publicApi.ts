@@ -359,6 +359,26 @@ export function getGallery(eventSlug?: string, signal?: AbortSignal): Promise<Ga
   return fetchPublicApi<GalleryResponse>(`/gallery${qs}`, signal);
 }
 
+// ── About page content (editable via the admin About Page editor) ─
+
+export interface PublicAboutFounder {
+  name: string;
+  role?: string | null;
+  bio?: string | null;
+  photoBase64?: string | null;
+}
+
+export interface PublicAbout {
+  whoWeAre?: string | null;
+  mission?: string | null;
+  storyImageBase64?: string | null;
+  founders: PublicAboutFounder[];
+}
+
+export function getAboutContent(signal?: AbortSignal): Promise<PublicAbout> {
+  return fetchPublicApi<PublicAbout>('/about', signal);
+}
+
 // ── Platform stats ─────────────────────────────────────────────────
 
 export interface PublicStats {
