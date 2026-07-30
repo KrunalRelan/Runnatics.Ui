@@ -9,9 +9,8 @@ import useDebounce from '../../hooks/useDebounce';
 import { publicApi } from '../../../../api/publicApi';
 import type { GroupedLeaderboardParticipant } from '../../../../api/publicApi';
 
-// ── Brand palette (podium uses gold/silver/bronze; everything else navy + maroon) ─
+// ── Brand palette (podium uses gold/silver/bronze; everything else navy) ─
 const NAVY = 'var(--color-primary)';
-const MAROON = '#8E244D';
 
 // ── Small helpers ─────────────────────────────────────────────────
 
@@ -166,29 +165,38 @@ function ShareMenu({ name, rank, total, rankLabel, time, event, detailUrl, tone 
 
 // ── Confetti (published results only; settles once, then rests) ────
 
+// Multi-colour party palette, matching the reference art — the brand navy/maroon
+// alone read as corporate wallpaper rather than celebration.
+const C_RED = '#E4322B';
+const C_BLUE = '#2F6FE4';
+const C_YELLOW = '#F5C542';
+const C_GREEN = '#34A853';
+const C_PURPLE = '#8B5CF6';
+const C_PINK = '#EC4899';
+
 // Denser toward the TOP of the stage, thinning out lower down, so it reads as
 // falling celebration rather than an even wallpaper.
 const CONFETTI = [
-  { l: '4%',  t: '6%',  w: 7, h: 3, c: NAVY,      r: 20,  d: '0.05s' },
-  { l: '11%', t: '14%', w: 6, h: 6, c: '#F5C542', r: 0,   d: '0.35s' },
-  { l: '18%', t: '4%',  w: 8, h: 3, c: MAROON,    r: -25, d: '0.50s' },
-  { l: '24%', t: '19%', w: 5, h: 5, c: '#9CB4D8', r: 0,   d: '0.20s' },
-  { l: '31%', t: '8%',  w: 7, h: 3, c: '#F5C542', r: 35,  d: '0.60s' },
-  { l: '38%', t: '16%', w: 6, h: 3, c: NAVY,      r: -15, d: '0.30s' },
-  { l: '45%', t: '5%',  w: 5, h: 5, c: MAROON,    r: 0,   d: '0.55s' },
-  { l: '52%', t: '13%', w: 7, h: 3, c: '#9CB4D8', r: 25,  d: '0.15s' },
-  { l: '59%', t: '7%',  w: 6, h: 6, c: '#F5C542', r: 0,   d: '0.45s' },
-  { l: '66%', t: '17%', w: 8, h: 3, c: NAVY,      r: -30, d: '0.25s' },
-  { l: '73%', t: '5%',  w: 6, h: 3, c: MAROON,    r: 15,  d: '0.40s' },
-  { l: '80%', t: '15%', w: 5, h: 5, c: '#F5C542', r: 0,   d: '0.10s' },
-  { l: '87%', t: '9%',  w: 7, h: 3, c: '#9CB4D8', r: -20, d: '0.32s' },
-  { l: '94%', t: '18%', w: 6, h: 3, c: NAVY,      r: 28,  d: '0.48s' },
+  { l: '4%',  t: '6%',  w: 7, h: 3, c: C_BLUE,   r: 20,  d: '0.05s' },
+  { l: '11%', t: '14%', w: 6, h: 6, c: C_YELLOW, r: 0,   d: '0.35s' },
+  { l: '18%', t: '4%',  w: 8, h: 3, c: C_RED,    r: -25, d: '0.50s' },
+  { l: '24%', t: '19%', w: 5, h: 5, c: C_GREEN,  r: 0,   d: '0.20s' },
+  { l: '31%', t: '8%',  w: 7, h: 3, c: C_PURPLE, r: 35,  d: '0.60s' },
+  { l: '38%', t: '16%', w: 6, h: 3, c: C_YELLOW, r: -15, d: '0.30s' },
+  { l: '45%', t: '5%',  w: 5, h: 5, c: C_PINK,   r: 0,   d: '0.55s' },
+  { l: '52%', t: '13%', w: 7, h: 3, c: C_BLUE,   r: 25,  d: '0.15s' },
+  { l: '59%', t: '7%',  w: 6, h: 6, c: C_RED,    r: 0,   d: '0.45s' },
+  { l: '66%', t: '17%', w: 8, h: 3, c: C_GREEN,  r: -30, d: '0.25s' },
+  { l: '73%', t: '5%',  w: 6, h: 3, c: C_YELLOW, r: 15,  d: '0.40s' },
+  { l: '80%', t: '15%', w: 5, h: 5, c: C_PURPLE, r: 0,   d: '0.10s' },
+  { l: '87%', t: '9%',  w: 7, h: 3, c: C_BLUE,   r: -20, d: '0.32s' },
+  { l: '94%', t: '18%', w: 6, h: 3, c: C_RED,    r: 28,  d: '0.48s' },
   // sparser lower band
-  { l: '8%',  t: '38%', w: 5, h: 5, c: '#F5C542', r: 0,   d: '0.22s' },
-  { l: '29%', t: '44%', w: 6, h: 3, c: '#9CB4D8', r: 18,  d: '0.52s' },
-  { l: '55%', t: '41%', w: 5, h: 5, c: MAROON,    r: 0,   d: '0.18s' },
-  { l: '78%', t: '46%', w: 6, h: 3, c: NAVY,      r: -22, d: '0.38s' },
-  { l: '92%', t: '39%', w: 5, h: 5, c: '#F5C542', r: 0,   d: '0.28s' },
+  { l: '8%',  t: '38%', w: 5, h: 5, c: C_YELLOW, r: 0,   d: '0.22s' },
+  { l: '29%', t: '44%', w: 6, h: 3, c: C_PINK,   r: 18,  d: '0.52s' },
+  { l: '55%', t: '41%', w: 5, h: 5, c: C_GREEN,  r: 0,   d: '0.18s' },
+  { l: '78%', t: '46%', w: 6, h: 3, c: C_BLUE,   r: -22, d: '0.38s' },
+  { l: '92%', t: '39%', w: 5, h: 5, c: C_RED,    r: 0,   d: '0.28s' },
 ] as const;
 
 function Confetti() {
@@ -399,10 +407,10 @@ function PodiumColumn({ p, place, rankBy, total, rankLabel, event }:
 }
 
 // ── 3D podium base ────────────────────────────────────────────────
-// Elliptical top face over a thicker body, with a thin red accent line.
-// Carries no badge — the OFFICIAL RESULTS pill was dropped from the podium.
+// Elliptical top face over a thicker body, with a thin red accent line, and the
+// status pill riding on the body below the accent line.
 
-function PodiumBase() {
+function PodiumBase({ published }: { published: boolean }) {
   return (
     <div className="podium-base">
       <svg viewBox="0 0 800 130" preserveAspectRatio="none" aria-hidden className="podium-base-svg">
@@ -416,6 +424,57 @@ function PodiumBase() {
         {/* thin RED accent line across the base */}
         <rect x="20" y="62" width="760" height="5" fill={RED} />
       </svg>
+      {/* Same publish gate as the confetti: unpublished results carry no badge. */}
+      {published && (
+        <div className="podium-badge">
+          <span className="podium-badge-dot" aria-hidden />
+          Provisional Results
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Gender tab (segmented pill) ───────────────────────────────────
+// Replaces the side-by-side dual podium: one gender's podium + table at a time.
+
+type Gender = 'male' | 'female';
+const GENDER_TABS: { key: Gender; label: string; glyph: string }[] = [
+  { key: 'male', label: 'Male', glyph: '♂' },
+  { key: 'female', label: 'Female', glyph: '♀' },
+];
+
+function GenderTabs({ value, onChange }: { value: Gender; onChange: (g: Gender) => void }) {
+  // Left/Right arrows move between tabs, per the tablist pattern.
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const i = GENDER_TABS.findIndex((t) => t.key === value);
+    const next = e.key === 'ArrowRight' ? (i + 1) % GENDER_TABS.length : (i - 1 + GENDER_TABS.length) % GENDER_TABS.length;
+    onChange(GENDER_TABS[next].key);
+  };
+
+  return (
+    <div className="gt-wrap" role="tablist" aria-label="Result gender" onKeyDown={onKeyDown}>
+      {GENDER_TABS.map((t) => {
+        const active = t.key === value;
+        return (
+          <button
+            type="button"
+            key={t.key}
+            role="tab"
+            id={`gt-tab-${t.key}`}
+            aria-selected={active}
+            aria-controls={`gt-panel-${t.key}`}
+            tabIndex={active ? 0 : -1}
+            className={`gt-tab${active ? ' gt-tab--active' : ''}`}
+            onClick={() => onChange(t.key)}
+          >
+            <span className="gt-glyph" aria-hidden>{t.glyph}</span>
+            {t.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -436,7 +495,7 @@ function CardPodium({ participants, rankBy, published, total, rankLabel, event }
             : <div key={place} className={`podium-col${place === 1 ? ' podium-col--champion' : ''}`} aria-hidden />;
         })}
       </div>
-      <PodiumBase />
+      <PodiumBase published={published} />
     </div>
   );
 }
@@ -462,8 +521,10 @@ function Laurel({ flip }: { flip?: boolean }) {
   );
 }
 
-// The OFFICIAL RESULTS badge now lives on the podium BASE, not here.
-function PodiumHeader({ subtitle }: { subtitle: string }) {
+// The PROVISIONAL RESULTS badge lives on the podium BASE, not here. The gender
+// tab sits directly beneath the subtitle.
+function PodiumHeader({ subtitle, gender, onGenderChange }:
+  { subtitle: string; gender: Gender; onGenderChange: (g: Gender) => void }) {
   return (
     <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
       <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.65rem' }}>
@@ -476,6 +537,7 @@ function PodiumHeader({ subtitle }: { subtitle: string }) {
       <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.8125rem', letterSpacing: '0.18em', color: NAVY, marginTop: '0.4rem', textTransform: 'uppercase' }}>
         {subtitle} <span style={{ color: '#D4A017' }}>★</span> Results
       </div>
+      <GenderTabs value={gender} onChange={onGenderChange} />
     </div>
   );
 }
@@ -543,7 +605,8 @@ function ResultTable({ participants, rankBy, total, rankLabel, event }:
   );
 }
 
-// ── One gender column: podium (top 3) + table for the rest ────────
+// ── The active gender's block: podium (top 3) + table for the rest ─
+// One at a time — the tab above names it, so the block carries no heading.
 
 function GenderBlock({ label, participants, rankBy, published, total, rankLabel, event }:
   { label: string; participants: GroupedLeaderboardParticipant[]; rankBy: string; published: boolean; total: number; rankLabel: string; event: string }) {
@@ -552,9 +615,6 @@ function GenderBlock({ label, participants, rankBy, published, total, rankLabel,
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1.75rem', paddingBottom: '0.5rem', borderBottom: `2px solid ${NAVY}` }}>
-        <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.0625rem', color: 'var(--color-text)' }}>{label}</span>
-      </div>
       {participants.length === 0 ? (
         <div className="empty-gender">
           <Trophy size={26} style={{ opacity: 0.35 }} />
@@ -573,27 +633,22 @@ function GenderBlock({ label, participants, rankBy, published, total, rankLabel,
 
 // ── Shimmer skeleton (shown while loading) ────────────────────────
 
+// One column — the tabbed layout shows a single gender at a time.
 function ResultsSkeleton() {
   return (
     <div className="lb-body" aria-hidden>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2.5rem' }}>
-        {[0, 1].map((g) => (
-          <div key={g}>
-            <div className="sk sk-shimmer" style={{ height: 20, width: '40%', margin: '0 auto 1.75rem', borderRadius: 6 }} />
-            <div style={{ display: 'flex', gap: '0.7rem', alignItems: 'flex-end', justifyContent: 'center', marginBottom: '1rem' }}>
-              {[70, 100, 54].map((h, i) => (
-                <div key={i} style={{ flex: 1, maxWidth: 224 }}>
-                  <div className="sk sk-shimmer" style={{ height: 150, borderRadius: 16 }} />
-                  <div className="sk sk-shimmer" style={{ height: h, borderRadius: '4px 4px 0 0', marginTop: 8 }} />
-                </div>
-              ))}
-            </div>
-            {[0, 1, 2].map((r) => (
-              <div key={r} className="sk sk-shimmer" style={{ height: 40, borderRadius: 8, marginBottom: 8 }} />
-            ))}
+      <div className="sk sk-shimmer" style={{ height: 26, width: 260, margin: '0 auto 0.75rem', borderRadius: 6 }} />
+      <div className="sk sk-shimmer" style={{ height: 44, width: 330, margin: '0 auto 2rem', borderRadius: 12 }} />
+      <div style={{ display: 'flex', gap: '0.9rem', alignItems: 'flex-end', justifyContent: 'center', marginBottom: '1.5rem' }}>
+        {[[300, 400], [340, 456], [300, 400]].map(([w, h], i) => (
+          <div key={i} style={{ flex: 1, maxWidth: w, marginBottom: i === 1 ? 0 : 52 }}>
+            <div className="sk sk-shimmer" style={{ height: h, borderRadius: 16 }} />
           </div>
         ))}
       </div>
+      {[0, 1, 2, 3].map((r) => (
+        <div key={r} className="sk sk-shimmer" style={{ height: 40, borderRadius: 8, marginBottom: 8 }} />
+      ))}
     </div>
   );
 }
@@ -608,10 +663,30 @@ const STYLES = `
   .lb-racetitle { font-family: var(--font-body); font-size: 0.85rem; opacity: 0.8; margin-top: 0.1rem; }
   .lb-selectbar { display: flex; justify-content: center; align-items: center; gap: 0.625rem; padding: 0.85rem 1rem; background: var(--color-bg-alt); border-left: 1px solid var(--color-border); border-right: 1px solid var(--color-border); box-shadow: 0 6px 12px -8px rgba(11,28,50,0.25); }
   .lb-body { border: 1px solid var(--color-border); border-top: none; border-radius: 0 0 12px 12px; padding: 2rem 1.5rem; background: #fff; }
-  .lb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2.5rem; align-items: start; }
 
   @keyframes lb-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   .lb-view { animation: lb-fade-in 320ms ease both; }
+
+  /* ── Gender tab: segmented pill, navy active / white inactive ─── */
+  .gt-wrap {
+    display: inline-flex; margin-top: 1.15rem;
+    background: #fff; border: 1.5px solid ${BASE_NAVY};
+    border-radius: 12px; padding: 4px; gap: 4px;
+    box-shadow: 0 4px 14px rgba(11,28,50,0.12);
+  }
+  .gt-tab {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    min-width: 150px; padding: 0.7rem 1.6rem;
+    border: none; border-radius: 8px; background: transparent; cursor: pointer;
+    font-family: var(--font-heading); font-weight: 800;
+    font-size: 0.9375rem; letter-spacing: 0.09em; text-transform: uppercase;
+    color: ${BASE_NAVY};
+    transition: background 180ms ease, color 180ms ease;
+  }
+  .gt-tab:hover:not(.gt-tab--active) { background: rgba(27,45,90,0.07); }
+  .gt-tab:focus-visible { outline: 2px solid ${RED}; outline-offset: 2px; }
+  .gt-tab--active { background: ${BASE_NAVY}; color: #fff; cursor: default; }
+  .gt-glyph { font-size: 1.05em; line-height: 1; }
 
   /* ── Podium stage ─────────────────────────────────────────────
      Sizes are custom properties so the mobile breakpoint can rescale the whole
@@ -632,9 +707,11 @@ const STYLES = `
   /* align-items:end so 2nd and 3rd sit LOW while the champion is lifted */
   .podium-row { position: relative; z-index: 2; display: flex; gap: 0.9rem; align-items: end; justify-content: center; }
 
-  .podium-col { flex: 1 1 0; min-width: 0; max-width: 260px; display: flex; }
+  /* ~3:4 portrait: the widths are paired to --card-min so the cards keep that
+     ratio instead of reading as narrow slivers. */
+  .podium-col { flex: 1 1 0; min-width: 0; max-width: 300px; display: flex; }
   /* 1st: obviously taller AND lifted clear of 2nd/3rd */
-  .podium-col--champion { max-width: 300px; margin-bottom: var(--champ-lift); }
+  .podium-col--champion { max-width: 340px; margin-bottom: var(--champ-lift); }
   .podium-col--champion .podium-frame { min-height: calc(var(--card-min) + 56px); }
 
   /* Thick metallic frame; overflow visible so the medal can hang above it */
@@ -731,6 +808,19 @@ const STYLES = `
   .podium-base { position: relative; margin-top: -6px; z-index: 1; }
   .podium-base-svg { display: block; width: 100%; height: 118px; }
 
+  /* Status pill riding on the base body, below the red accent line */
+  .podium-badge {
+    position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%);
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    white-space: nowrap;
+    background: #fff; color: ${BASE_NAVY};
+    border-radius: 9999px; padding: 0.4rem 1.1rem;
+    font-family: var(--font-body); font-weight: 800;
+    font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.28);
+  }
+  .podium-badge-dot { width: 8px; height: 8px; border-radius: 50%; background: ${RED}; flex-shrink: 0; }
+
   @keyframes podium-rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
   .podium-rise { animation: podium-rise 560ms cubic-bezier(.2,.7,.3,1) both; }
   .podium-frame { transition: box-shadow 220ms ease, transform 220ms ease; }
@@ -771,9 +861,6 @@ const STYLES = `
   @keyframes sk-shimmer { 0% { background-position: -420px 0; } 100% { background-position: 420px 0; } }
   .sk-shimmer { background-image: linear-gradient(90deg, #E9EDF2 0px, #F4F7FA 200px, #E9EDF2 420px); background-size: 840px 100%; animation: sk-shimmer 1.3s linear infinite; }
 
-  @media (max-width: 760px) {
-    .lb-grid { grid-template-columns: 1fr; gap: 2rem; }
-  }
   @media (max-width: 620px) {
     .podium-stage {
       --frame: 8px; --avatar: 84px; --card-min: 330px;
@@ -781,14 +868,21 @@ const STYLES = `
       padding: 4rem 0.4rem 0;
     }
     .podium-row { gap: 0.45rem; }
+    .podium-col { max-width: 220px; }
+    .podium-col--champion { max-width: 250px; }
     .podium-panel { padding: 2rem 0.5rem 0; }
     .podium-band { width: calc(100% + 1rem); margin-left: -0.5rem; margin-right: -0.5rem; font-size: 0.56rem; letter-spacing: 0.07em; }
     .podium-base-svg { height: 84px; }
+    .podium-badge { font-size: 0.58rem; letter-spacing: 0.1em; padding: 0.32rem 0.8rem; bottom: 8%; }
+    /* Tab must never overflow the viewport — it shrinks rather than clipping */
+    .gt-wrap { display: flex; width: 100%; max-width: 380px; margin-inline: auto; }
+    .gt-tab { flex: 1 1 0; min-width: 0; padding: 0.6rem 0.5rem; font-size: 0.8125rem; letter-spacing: 0.05em; }
   }
   @media (max-width: 400px) {
     .podium-stage { --avatar: 64px; --card-min: 300px; --name: 0.8125rem; --time: 1.1rem; }
     .podium-caplabel { font-size: 0.52rem; letter-spacing: 0.1em; }
     .podium-bib { font-size: 0.8rem; padding: 0.2rem 0.7rem; }
+    .gt-tab { font-size: 0.75rem; gap: 0.3rem; }
   }
   @media (max-width: 640px) {
     .rt-table thead { display: none; }
@@ -816,6 +910,7 @@ const STYLES = `
 function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId: string; search: string }) {
   const debouncedSearch = useDebounce(search, 350);
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [gender, setGender] = useState<Gender>('male');
 
   const { data, loading, error, refetch } = usePublicApi(
     (signal) =>
@@ -905,6 +1000,12 @@ function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId:
   // Totals (Y in "X of Y") — full uncapped finisher counts per gender/view. Display only.
   const maleTotal = inCategoryView ? maleCatAll.length : maleOverallAll.length;
   const femaleTotal = inCategoryView ? femaleCatAll.length : femaleOverallAll.length;
+
+  // Only the tabbed gender is rendered. MALE is the default view.
+  const isMale = gender === 'male';
+  const activeList = isMale ? maleList : femaleList;
+  const activeTotal = isMale ? maleTotal : femaleTotal;
+  const activeGenderLabel = isMale ? 'Male' : 'Female';
   const rankLabel = inCategoryView ? 'Category Rank' : 'Gender Rank';
   const activeRankBy = inCategoryView ? categoryRankBy : overallRankBy;
   const sectionVisible = inCategoryView ? showCategory : showOverall;
@@ -963,12 +1064,19 @@ function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId:
               No results found.
             </div>
           ) : (
-            /* Male + Female ALWAYS both shown, side by side (stacks on mobile) */
-            <div className="lb-view" key={selectedCategory || 'overall'}>
-              <PodiumHeader subtitle={headingText} />
-              <div className="lb-grid">
-                <GenderBlock label="Male" participants={maleList} rankBy={activeRankBy} published={published} total={maleTotal} rankLabel={rankLabel} event={shareEvent} />
-                <GenderBlock label="Female" participants={femaleList} rankBy={activeRankBy} published={published} total={femaleTotal} rankLabel={rankLabel} event={shareEvent} />
+            /* ONE gender at a time, selected by the tab under the header */
+            <div className="lb-view" key={`${selectedCategory || 'overall'}-${gender}`}>
+              <PodiumHeader subtitle={headingText} gender={gender} onGenderChange={setGender} />
+              <div role="tabpanel" id={`gt-panel-${gender}`} aria-labelledby={`gt-tab-${gender}`}>
+                <GenderBlock
+                  label={activeGenderLabel}
+                  participants={activeList}
+                  rankBy={activeRankBy}
+                  published={published}
+                  total={activeTotal}
+                  rankLabel={rankLabel}
+                  event={shareEvent}
+                />
               </div>
             </div>
           )}
