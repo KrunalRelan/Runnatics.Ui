@@ -74,6 +74,8 @@ interface ApiEvent {
   bannerBase64?: string | null;
   thumbnailBase64?: string | null;
   hasPublishedResults?: boolean;
+  /** Server-computed EventDate <= UtcNow. The single upcoming/past predicate. */
+  isPast?: boolean;
 }
 
 // ── Normalised shapes used by components ──────────────────────────
@@ -143,7 +145,10 @@ function normaliseEvent(e: ApiEvent): PublicEvent {
     city: e.city ?? e.state ?? '',
     categories: e.raceCategories ?? [],
     registrationOpen: e.registrationOpen,
-    isPast: new Date(e.eventDate) < new Date(),
+    // Taken from the API, never recomputed here. eventDate serialises without a Z,
+    // so `new Date(e.eventDate)` parses a UTC instant as BROWSER-LOCAL and could
+    // put an event in a different bucket than the server's query did.
+    isPast: e.isPast ?? false,
     bannerBase64: e.bannerBase64 ?? null,
     thumbnailBase64: e.thumbnailBase64 ?? null,
     hasPublishedResults: e.hasPublishedResults ?? false,
