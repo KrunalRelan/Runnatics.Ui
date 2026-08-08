@@ -268,19 +268,14 @@ function laurelLeaf(cx: number, cy: number, rot: number, key: string) {
   return <ellipse key={key} cx={cx} cy={cy} rx={5.2} ry={2.6} transform={`rotate(${rot} ${cx} ${cy})`} fill="rgba(255,255,255,0.55)" />;
 }
 
-function OrnateMedal({ place, size }: { place: number; size: number }) {
+function OrnateMedal({ place }: { place: number }) {
   const m = METAL[place];
   const gid = `medal-${place}`;
   const rid = `medalring-${place}`;
   // viewBox 100x150: disc centred at (50,48) r=46, ribbon tails below.
+  // Size comes from CSS (.podium-medal svg) so it scales with the clamp() vars.
   return (
-    <svg
-      width={size}
-      height={size * 1.5}
-      viewBox="0 0 100 150"
-      aria-hidden
-      style={{ display: 'block', filter: 'drop-shadow(0 6px 10px rgba(11,28,50,0.32))' }}
-    >
+    <svg viewBox="0 0 100 150" aria-hidden>
       <defs>
         <radialGradient id={gid} cx="36%" cy="28%" r="78%">
           <stop offset="0%" stopColor={m.light} />
@@ -368,7 +363,7 @@ function PodiumColumn({ p, place, rankBy, total, rankLabel, event }:
           visible so the medal can hang above the top edge. */}
       <div className="podium-frame" style={{ background: m.frame }}>
         <div className="podium-medal">
-          <OrnateMedal place={place} size={isChampion ? 88 : 74} />
+          <OrnateMedal place={place} />
         </div>
 
         {/* Share sits on the FRAME, not inside the panel: the panel clips to its
@@ -413,7 +408,7 @@ function PodiumColumn({ p, place, rankBy, total, rankLabel, event }:
 // The cards stand ON the top face (the row overlaps the base via negative
 // margin), not floating above it.
 
-function PodiumBase({ published }: { published: boolean }) {
+function PodiumBase() {
   return (
     <div className="podium-base">
       <svg viewBox="0 0 900 150" preserveAspectRatio="none" aria-hidden className="podium-base-svg">
@@ -432,13 +427,6 @@ function PodiumBase({ published }: { published: boolean }) {
         {/* soft shadow where the pedestal meets the drum */}
         <ellipse cx="450" cy="80" rx="185" ry="10" fill="rgba(0,0,0,0.18)" />
       </svg>
-      {/* Same publish gate as the confetti: unpublished results carry no badge. */}
-      {published && (
-        <div className="podium-badge">
-          <span className="podium-badge-dot" aria-hidden />
-          Provisional Results
-        </div>
-      )}
     </div>
   );
 }
@@ -503,7 +491,15 @@ function CardPodium({ participants, rankBy, published, total, rankLabel, event }
             : <div key={place} className={`podium-col${place === 1 ? ' podium-col--champion' : ''}`} aria-hidden />;
         })}
       </div>
-      <PodiumBase published={published} />
+      <PodiumBase />
+      {/* Direct child of the stage (NOT inside the base) so it can paint above
+          the cards; same publish gate as the confetti. */}
+      {published && (
+        <div className="podium-badge">
+          <span className="podium-badge-dot" aria-hidden />
+          Provisional Results
+        </div>
+      )}
     </div>
   );
 }
@@ -520,7 +516,7 @@ const LAUREL_LEAVES = [
 
 function Laurel({ flip }: { flip?: boolean }) {
   return (
-    <svg width="30" height="40" viewBox="0 0 24 30" aria-hidden style={{ transform: flip ? 'scaleX(-1)' : undefined }}>
+    <svg className="podium-laurel" width="30" height="40" viewBox="0 0 24 30" aria-hidden style={{ transform: flip ? 'scaleX(-1)' : undefined }}>
       <path d="M11 28 C 6 22, 6 12, 15 3" fill="none" stroke="#C9A227" strokeWidth="1.1" strokeLinecap="round" opacity="0.75" />
       {LAUREL_LEAVES.map((l, i) => (
         <ellipse key={i} cx={l.x} cy={l.y} rx={l.rx} ry={l.ry} transform={`rotate(${l.rot} ${l.x} ${l.y})`} fill="#C9A227" opacity="0.95" />
@@ -647,9 +643,9 @@ function ResultsSkeleton() {
     <div className="lb-body" aria-hidden>
       <div className="sk sk-shimmer" style={{ height: 26, width: 260, margin: '0 auto 0.75rem', borderRadius: 6 }} />
       <div className="sk sk-shimmer" style={{ height: 44, width: 330, margin: '0 auto 2rem', borderRadius: 12 }} />
-      <div style={{ display: 'flex', gap: '0.9rem', alignItems: 'flex-end', justifyContent: 'center', marginBottom: '1.5rem' }}>
-        {[[300, 400], [340, 456], [300, 400]].map(([w, h], i) => (
-          <div key={i} style={{ flex: 1, maxWidth: w, marginBottom: i === 1 ? 0 : 52 }}>
+      <div style={{ display: 'flex', gap: '0.9rem', alignItems: 'flex-end', justifyContent: 'center', marginBottom: '1.5rem', maxWidth: 760, marginInline: 'auto' }}>
+        {[[236, 260], [252, 300], [236, 260]].map(([w, h], i) => (
+          <div key={i} style={{ flex: 1, maxWidth: w, marginBottom: i === 1 ? 24 : 0 }}>
             <div className="sk sk-shimmer" style={{ height: h, borderRadius: 16 }} />
           </div>
         ))}
@@ -669,7 +665,7 @@ const STYLES = `
   .lb-eventname { font-family: var(--font-body); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.7; }
   .lb-viewname { font-family: var(--font-heading); font-weight: 800; font-size: 1.2rem; }
   .lb-racetitle { font-family: var(--font-body); font-size: 0.85rem; opacity: 0.8; margin-top: 0.1rem; }
-  .lb-selectbar { display: flex; justify-content: center; align-items: center; gap: 0.625rem; padding: 0.85rem 1rem; background: var(--color-bg-alt); border-left: 1px solid var(--color-border); border-right: 1px solid var(--color-border); box-shadow: 0 6px 12px -8px rgba(11,28,50,0.25); }
+  .lb-selectbar { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.625rem; padding: 0.85rem 1rem; background: var(--color-bg-alt); border-left: 1px solid var(--color-border); border-right: 1px solid var(--color-border); box-shadow: 0 6px 12px -8px rgba(11,28,50,0.25); }
   .lb-body { border: 1px solid var(--color-border); border-top: none; border-radius: 0 0 12px 12px; padding: 2rem 1.5rem; background: #fff; }
 
   @keyframes lb-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -697,132 +693,166 @@ const STYLES = `
   .gt-glyph { font-size: 1.05em; line-height: 1; }
 
   /* ── Podium stage ─────────────────────────────────────────────
-     Sizes are custom properties so the mobile breakpoint can rescale the whole
-     podium at once instead of overriding a dozen individual rules. */
+     Every size is a clamp()-driven custom property: the whole podium scales
+     proportionally with the viewport instead of breaking at fixed px sizes.
+     Three across at EVERY width (grid, min-width:0), total height capped so
+     the results table stays above the fold on a 1080p screen. */
   .podium-stage {
-    --frame: 12px;
-    --avatar: 120px;
-    --card-min: 400px;
-    --champ-lift: 52px;
-    --name: 1.0625rem;
-    --time: 1.9rem;
+    /* The height budget (the hard cap) DRIVES every element size: each var
+       interpolates linearly from its 320px minimum to its desktop maximum as
+       the budget goes 240px → 400px. That keeps the natural content height
+       under the cap at EVERY width — independent vw slopes don't. */
+    --budget: clamp(240px, 42vw, 400px);
+    --medal: calc(40px + (var(--budget) - 240px) * 0.30);   /* 40 → 88px */
+    --avatar: calc(40px + (var(--budget) - 240px) * 0.30);  /* 40 → 88px */
+    --name: calc(0.65rem + (var(--budget) - 240px) * 0.04);      /* → 1.05rem */
+    --bibfs: calc(0.6rem + (var(--budget) - 240px) * 0.0275);    /* → 0.875rem */
+    --time: calc(0.7rem + (var(--budget) - 240px) * 0.065);      /* → 1.35rem */
+    --bandfs: calc(0.5rem + (var(--budget) - 240px) * 0.025);    /* → 0.75rem */
+    --caplabel: calc(0.45rem + (var(--budget) - 240px) * 0.015); /* → 0.6rem */
+    --pad: calc(6px + (var(--budget) - 240px) * 0.0875);    /* 6 → 20px */
+    --frame: calc(4px + (var(--budget) - 240px) * 0.025);   /* 4 → 8px */
+    --champ-lift: calc(8px + (var(--budget) - 240px) * 0.0375); /* 8 → 14px */
+    --baseh: calc(40px + (var(--budget) - 240px) * 0.15);   /* 40 → 64px */
+    --radius: clamp(8px, 1.5vw, 16px);
     position: relative;
+    max-height: var(--budget);
     border-radius: 16px 16px 0 0;
-    /* >= 66px of headroom: the champion medal reaches that far above the card top */
-    padding: 5rem 0.75rem 0;
+    /* headroom for the champion medal hanging above the card top */
+    padding: calc(var(--medal) * 0.6) clamp(4px, 1vw, 12px) 0;
     background: linear-gradient(180deg, #FBFCFE 0%, #FFFFFF 100%);
   }
-  /* align-items:end so 2nd and 3rd sit LOW while the champion is lifted */
-  .podium-row { position: relative; z-index: 2; display: flex; gap: 0.9rem; align-items: end; justify-content: center; }
+  /* THREE ACROSS AT EVERY BREAKPOINT — grid never wraps or scrolls.
+     align-items:end so 2nd and 3rd sit LOW while the champion is lifted. */
+  .podium-row {
+    position: relative; z-index: 2;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: end;
+    gap: clamp(4px, 1vw, 16px);
+    width: 100%;
+    max-width: 760px;
+    margin-inline: auto;
+  }
 
-  /* ~3:4 portrait: the widths are paired to --card-min so the cards keep that
-     ratio instead of reading as narrow slivers. */
-  .podium-col { flex: 1 1 0; min-width: 0; max-width: 300px; display: flex; }
-  /* 1st: obviously taller AND lifted clear of 2nd/3rd */
-  .podium-col--champion { max-width: 340px; margin-bottom: var(--champ-lift); }
-  .podium-col--champion .podium-frame { min-height: calc(var(--card-min) + 56px); }
+  /* min-width:0 is what lets a grid child SHRINK instead of overflowing */
+  .podium-col { min-width: 0; display: flex; }
+  .podium-col--champion { margin-bottom: var(--champ-lift); }
 
   /* Thick metallic frame; overflow visible so the medal can hang above it */
   .podium-frame {
     position: relative;
     width: 100%;
-    min-height: var(--card-min);
+    min-width: 0;
     padding: var(--frame);
-    border-radius: 16px;
+    border-radius: var(--radius);
     box-shadow: 0 14px 30px rgba(11,28,50,0.18);
     display: flex;
   }
   .podium-col--champion .podium-frame { box-shadow: 0 22px 46px rgba(212,160,23,0.30), 0 10px 22px rgba(11,28,50,0.18); }
 
-  /* White panel inside the frame */
+  /* White panel inside the frame. NO overflow:hidden here — content must never
+     be clipped; decoration layers do their own clipping. */
   .podium-panel {
     position: relative;
     flex: 1;
     min-width: 0;
     background: #FFFFFF;
-    border-radius: 8px;
-    padding: 2.6rem 0.85rem 0;
+    border-radius: calc(var(--radius) / 2);
+    padding: calc(var(--medal) * 0.3) var(--pad) 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    overflow: hidden;      /* clips the footer band to the panel's rounded corners */
   }
+  /* Champion card reads slightly taller: extra headroom under its bigger medal */
+  .podium-col--champion .podium-panel { padding-top: calc(var(--medal) * 0.38); }
 
-  /* Medal: half above the card's top edge, horizontally centred */
+  /* Medal: disc overlaps the card's top edge, horizontally centred */
   .podium-medal { position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); z-index: 3; pointer-events: none; }
-  /* On the frame (not the panel) so the popup isn't clipped by the panel's overflow */
-  .podium-share { position: absolute; top: calc(var(--frame) + 0.45rem); right: calc(var(--frame) + 0.45rem); z-index: 5; }
+  .podium-medal svg { display: block; width: var(--medal); height: calc(var(--medal) * 1.5); filter: drop-shadow(0 6px 10px rgba(11,28,50,0.32)); }
+  .podium-col--champion .podium-medal svg { width: calc(var(--medal) * 1.05); height: calc(var(--medal) * 1.575); }
+  /* On the frame (not the panel) so the popup isn't clipped */
+  .podium-share { position: absolute; top: calc(var(--frame) + 0.35rem); right: calc(var(--frame) + 0.35rem); z-index: 5; }
 
   .podium-avatar {
     width: var(--avatar); height: var(--avatar);
     border-radius: 50%;
-    border: 4px solid;
+    border: calc(2px + (var(--budget) - 240px) * 0.0125) solid;
     box-shadow: 0 4px 12px rgba(11,28,50,0.18), inset 0 2px 0 rgba(255,255,255,0.5);
     display: flex; align-items: center; justify-content: center;
     color: #1B2D5A;
     font-family: var(--font-heading); font-weight: 800;
     font-size: calc(var(--avatar) * 0.38);
     line-height: 1; letter-spacing: 0.02em; user-select: none;
-    margin-bottom: 0.85rem; flex-shrink: 0;
+    margin-bottom: clamp(3px, 0.7vw, 5px); flex-shrink: 0;
   }
+  .podium-avatar > svg { width: calc(var(--avatar) * 0.42); height: calc(var(--avatar) * 0.42); }
 
-  /* Names WRAP — never clamped or truncated (prior mobile bug) */
+  /* Names wrap INSIDE the card (never widen it), capped at two lines;
+     the title attribute carries the full name. */
   .podium-name {
-    display: block;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    max-width: 100%;
     font-family: var(--font-heading); font-weight: 800;
     font-size: var(--name); line-height: 1.2;
     color: #1B2D5A; text-transform: uppercase; letter-spacing: 0.01em;
     text-decoration: none;
-    overflow-wrap: anywhere; word-break: break-word; hyphens: auto;
-    margin-bottom: 0.7rem;
+    overflow-wrap: break-word; word-break: break-word; hyphens: auto;
+    margin-bottom: clamp(3px, 0.7vw, 5px);
   }
   a.podium-name:hover { text-decoration: underline; }
 
   .podium-caplabel {
     font-family: var(--font-body); font-weight: 700;
-    font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase;
-    color: #8A94A6; margin-bottom: 0.3rem;
+    font-size: var(--caplabel); letter-spacing: 0.12em; text-transform: uppercase;
+    color: #8A94A6; margin-bottom: clamp(2px, 0.5vw, 4px);
   }
   .podium-bib {
     display: inline-block; background: #C8102E; color: #fff;
-    font-family: var(--font-body); font-weight: 800; font-size: 0.95rem;
-    letter-spacing: 0.03em; padding: 0.26rem 1.05rem; border-radius: 9999px;
-    box-shadow: 0 3px 8px rgba(200,16,46,0.32); margin-bottom: 0.85rem;
+    font-family: var(--font-body); font-weight: 800; font-size: var(--bibfs);
+    letter-spacing: 0.03em; padding: clamp(2px, 0.5vw, 5px) clamp(8px, 2vw, 17px); border-radius: 9999px;
+    box-shadow: 0 3px 8px rgba(200,16,46,0.32); margin-bottom: clamp(3px, 0.9vw, 7px);
     overflow-wrap: anywhere; max-width: 100%;
   }
-  .podium-divider { width: 72%; height: 1px; background: #E3E8EF; margin: 0 auto 0.85rem; }
+  .podium-divider { width: 72%; height: 1px; background: #E3E8EF; margin: 0 auto clamp(3px, 0.9vw, 7px); }
 
   /* Digital-style hero time — the card's visual anchor */
   .podium-time {
     font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
     font-weight: 700; font-size: var(--time); color: #1B2D5A;
     letter-spacing: 0.06em; font-variant-numeric: tabular-nums;
-    line-height: 1.1; margin-bottom: 1rem; max-width: 100%;
+    white-space: nowrap;
+    line-height: 1.1; margin-bottom: clamp(4px, 1vw, 8px); max-width: 100%;
   }
 
-  /* Footer band pinned to the panel's bottom, full width */
+  /* Footer band pinned to the panel's bottom, full width; carries its own
+     bottom radius now that the panel no longer clips */
   .podium-band {
     margin-top: auto;
-    width: calc(100% + 1.7rem);
-    margin-left: -0.85rem; margin-right: -0.85rem;
-    padding: 0.5rem 0.4rem;
+    width: calc(100% + 2 * var(--pad));
+    margin-left: calc(-1 * var(--pad)); margin-right: calc(-1 * var(--pad));
+    padding: clamp(4px, 0.8vw, 8px) 0.4rem;
+    border-radius: 0 0 calc(var(--radius) / 2) calc(var(--radius) / 2);
     font-family: var(--font-heading); font-weight: 800;
-    font-size: 0.68rem; letter-spacing: 0.12em;
+    font-size: var(--bandfs); letter-spacing: 0.12em;
     display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+    white-space: nowrap;
   }
 
-  /* ── 3D navy base ───────────────────────────────────────────────
-     margin-top pulls the drum UP under the cards so they stand on its top
-     face (SVG y=70/150) and the champion's bottom (champ-lift higher) lands
-     on the pedestal top (y=18/150). The negative inline margins stretch the
-     drum to the stage edges, wider than the card row. */
-  .podium-base { position: relative; margin-top: -70px; margin-inline: -0.75rem; z-index: 1; }
-  .podium-base-svg { display: block; width: 100%; height: 150px; }
+  /* ── 3D navy base (pure decoration + status badge) ──────────────
+     margin-top tucks the drum UP under the cards so they stand on its top
+     face; negative inline margins stretch it wider than the card row. */
+  .podium-base { position: relative; margin-top: calc(var(--baseh) * -0.97); margin-inline: clamp(-12px, -1vw, -4px); z-index: 1; pointer-events: none; }
+  .podium-base-svg { display: block; width: 100%; height: var(--baseh); }
 
-  /* Status pill riding over the red accent line at the drum's bottom */
+  /* Status pill riding over the red accent line at the drum's bottom;
+     z-index above the card row so the champion card can't hide it */
   .podium-badge {
-    position: absolute; left: 50%; bottom: 5%; transform: translateX(-50%);
+    position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); z-index: 4;
     display: inline-flex; align-items: center; gap: 0.45rem;
     white-space: nowrap;
     background: #fff; color: ${BASE_NAVY};
@@ -873,31 +903,25 @@ const STYLES = `
   @keyframes sk-shimmer { 0% { background-position: -420px 0; } 100% { background-position: 420px 0; } }
   .sk-shimmer { background-image: linear-gradient(90deg, #E9EDF2 0px, #F4F7FA 200px, #E9EDF2 420px); background-size: 840px 100%; animation: sk-shimmer 1.3s linear infinite; }
 
-  @media (max-width: 620px) {
-    .podium-stage {
-      --frame: 8px; --avatar: 84px; --card-min: 330px;
-      --champ-lift: 34px; --name: 0.875rem; --time: 1.35rem;
-      padding: 4rem 0.4rem 0;
-    }
-    .podium-row { gap: 0.45rem; }
-    .podium-col { max-width: 220px; }
-    .podium-col--champion { max-width: 250px; }
-    .podium-panel { padding: 2rem 0.5rem 0; }
-    .podium-band { width: calc(100% + 1rem); margin-left: -0.5rem; margin-right: -0.5rem; font-size: 0.56rem; letter-spacing: 0.07em; }
-    /* SVG scales to 84px: top face lands at y≈39, pedestal at y≈10 —
-       overlap and lift track the same ratio so cards keep standing on it */
-    .podium-base { margin-top: -39px; margin-inline: -0.4rem; }
-    .podium-base-svg { height: 84px; }
-    .podium-badge { font-size: 0.58rem; letter-spacing: 0.1em; padding: 0.32rem 0.8rem; bottom: 6%; }
+  /* Below sm: decoration (confetti, laurels, navy base drum) disappears —
+     the three cards keep ALL their fields and stay three across. The
+     Provisional Results badge is information, not decoration: it drops into
+     normal flow, centred under the cards. */
+  @media (max-width: 639px) {
+    .podium-confetti { display: none; }
+    .podium-base-svg { display: none; }
+    .podium-laurel { display: none; }
+    .podium-base { margin-top: 0; margin-inline: 0; }
+    /* In flow below the cards (the drum it rides on is hidden here) */
+    .podium-badge { position: static; transform: none; display: table; margin: 0.2rem auto 0; font-size: 0.58rem; letter-spacing: 0.1em; padding: 0.2rem 0.7rem; box-shadow: 0 2px 8px rgba(0,0,0,0.18); border: 1px solid var(--color-border); }
+    .podium-caplabel { letter-spacing: 0.08em; }
     /* Tab must never overflow the viewport — it shrinks rather than clipping */
     .gt-wrap { display: flex; width: 100%; max-width: 380px; margin-inline: auto; }
     .gt-tab { flex: 1 1 0; min-width: 0; padding: 0.6rem 0.5rem; font-size: 0.8125rem; letter-spacing: 0.05em; }
   }
   @media (max-width: 400px) {
-    .podium-stage { --avatar: 64px; --card-min: 300px; --name: 0.8125rem; --time: 1.1rem; }
-    .podium-caplabel { font-size: 0.52rem; letter-spacing: 0.1em; }
-    .podium-bib { font-size: 0.8rem; padding: 0.2rem 0.7rem; }
     .gt-tab { font-size: 0.75rem; gap: 0.3rem; }
+    .podium-band { letter-spacing: 0.03em; gap: 0.2rem; }
   }
   @media (max-width: 640px) {
     .rt-table thead { display: none; }
