@@ -361,7 +361,7 @@ export function getGallery(eventSlug?: string, signal?: AbortSignal): Promise<Ga
 
 // ── About page content (editable via the admin About Page editor) ─
 
-export interface PublicAboutFounder {
+export interface PublicTeamMember {
   name: string;
   role?: string | null;
   bio?: string | null;
@@ -372,7 +372,8 @@ export interface PublicAbout {
   whoWeAre?: string | null;
   mission?: string | null;
   storyImageBase64?: string | null;
-  founders: PublicAboutFounder[];
+  // JSON field name is the API contract — the section renders as "Team".
+  founders: PublicTeamMember[];
 }
 
 export function getAboutContent(signal?: AbortSignal): Promise<PublicAbout> {
