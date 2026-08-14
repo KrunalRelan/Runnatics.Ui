@@ -9,6 +9,12 @@ interface ServiceSection {
   desc: string;
   features: string[];
   reverse: boolean;
+  image: string;
+  imageAlt: string;
+  /** CSS object-position — chosen per image so cover-cropping never cuts
+      baked-in text or the main subject (the 4/3 panel crop is aspect-fixed,
+      so these hold at every breakpoint). */
+  imagePosition?: string;
 }
 
 const services: ServiceSection[] = [
@@ -16,26 +22,40 @@ const services: ServiceSection[] = [
     icon: Timer, title: 'RFID Chip Timing', reverse: false,
     desc: 'Precision RFID chip-based timing for races of all sizes. Real-time results with checkpoint splits, gun time, and chip time accuracy.',
     features: ['Chip-level accuracy', 'Checkpoint splits & live tracking', 'Gun time and net (chip) time'],
+    image: '/images/services/timing_services.jpeg',
+    imageAlt: 'Runner crossing the finish line under a race timing clock while an official records times on a tablet',
+    imagePosition: 'center 60%',
   },
   {
     icon: QrCode, title: 'BIB Distribution Software and Management', reverse: true,
     desc: 'Complete BIB management solution including design, printing, distribution tracking, and on-site collection management.',
     features: ['BIB design & printing', 'Distribution tracking dashboard', 'On-site collection management'],
+    image: '/images/services/bib_expo.jpg',
+    imageAlt: 'Volunteer handing a race bib to a runner at the bib expo distribution counter',
+    imagePosition: 'center top',
   },
   {
     icon: ClipboardList, title: 'Event Registration Platform', reverse: false,
     desc: 'Online event registration portal for participants with payment processing, category selection, and automated confirmation.',
     features: ['Secure payment processing', 'Category & wave selection', 'Automated email confirmations'],
+    image: '/images/services/event_registration.jpeg',
+    imageAlt: 'Staff member assisting participants with self-service check-in kiosks at an event registration desk',
+    imagePosition: 'right center',
   },
   {
     icon: Wrench, title: 'Event Operations & Equipment Leasing Services', reverse: true,
     desc: 'Full event production support including barricading, cones, event production equipment, medals, and t-shirts. Everything you need for race day.',
     features: ['Barricading, cones & signage', 'Medals, t-shirts & bib collection kits', 'On-ground production support'],
+    image: '/images/services/equipment_and_leasing.jpeg',
+    imageAlt: 'Race crew placing traffic cones beside barricades and a leased-equipment service tent on the course',
   },
   {
     icon: Camera, title: 'Race Day Photo Tagging', reverse: false,
     desc: 'Automated race day photography with BIB-based photo tagging. Participants can find their photos instantly using their BIB number.',
     features: ['BIB-based photo tagging', 'Checkpoint & finish line coverage', 'Instant personalised galleries'],
+    image: '/images/services/photo_tagging.jpeg',
+    imageAlt: 'Race photographer shooting runners while tagged photos appear in an online gallery by bib number',
+    imagePosition: '30% center',
   },
 ];
 
@@ -52,7 +72,7 @@ function ServicesPage() {
         </Container>
       </Section>
 
-      {services.map(({ icon: Icon, title, desc, features, reverse }, i) => (
+      {services.map(({ icon: Icon, title, desc, features, reverse, image, imageAlt, imagePosition }, i) => (
         <Section key={title} tone={i % 2 === 0 ? 'light' : 'alt'}>
           <Container>
             <div style={{
@@ -78,9 +98,14 @@ function ServicesPage() {
                 </ul>
                 <Button variant="primary" href="/contact">Get Started</Button>
               </div>
-              {/* Placeholder image */}
-              <div style={{ direction: 'ltr', aspectRatio: '4/3', backgroundColor: '#E5E7EB', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icon size={52} color="#D1D5DB" />
+              <div style={{ direction: 'ltr', aspectRatio: '4/3', backgroundColor: '#E5E7EB', borderRadius: '14px', overflow: 'hidden' }}>
+                <img
+                  src={image}
+                  alt={imageAlt}
+                  loading="lazy"
+                  decoding="async"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: imagePosition ?? 'center', display: 'block' }}
+                />
               </div>
             </div>
           </Container>
