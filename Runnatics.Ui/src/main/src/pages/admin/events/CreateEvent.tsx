@@ -87,7 +87,9 @@ export const CreateEvent: React.FC = () => {
     id: undefined,
     eventId: undefined,
     removeBanner: false,
-    published: true,
+    // OFF by default: the event stays hidden from the public site until the
+    // organiser deliberately flips "Publish Event" on.
+    published: false,
     rankOnNet: false,
     showResultSummaryForRaces: false,
     useOldData: false,
@@ -141,7 +143,7 @@ export const CreateEvent: React.FC = () => {
     },
     eventSettings: {
       removeBanner: false,
-      published: true,
+      published: false,
       rankOnNet: false,
       allowParticipantEdit: false,
       useOldData: false,
