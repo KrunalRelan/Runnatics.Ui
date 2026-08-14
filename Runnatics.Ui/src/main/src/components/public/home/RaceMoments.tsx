@@ -1,16 +1,23 @@
-import { Camera } from 'lucide-react';
 import { useState } from 'react';
 import { Section, Container, Heading, Button } from '../ui';
 import useScrollReveal from '../../../hooks/useScrollReveal';
 
-const moments = [
-  'Delhi Marathon 2025', 'Mumbai Night Run', 'Bengaluru 10K',
-  'Airtel Half Marathon', 'Hyderabad Marathon', 'Pune Monsoon Run',
-];
+// Real gallery images only — no placeholder tiles, ever. Until a caller passes
+// images (there is no gallery API yet), the whole section renders nothing.
+export interface RaceMomentImage {
+  url: string;
+  caption?: string;
+}
 
-function RaceMoments() {
+interface RaceMomentsProps {
+  images?: RaceMomentImage[];
+}
+
+function RaceMoments({ images }: RaceMomentsProps) {
   const ref = useScrollReveal();
   const [hovered, setHovered] = useState<number | null>(null);
+
+  if (!images || images.length === 0) return null;
 
   return (
     <Section tone="alt">
@@ -29,7 +36,7 @@ function RaceMoments() {
             marginBottom: '2.5rem',
           }}
         >
-          {moments.map((name, i) => (
+          {images.map((img, i) => (
             <div
               key={i}
               style={{
@@ -38,45 +45,42 @@ function RaceMoments() {
                 backgroundColor: '#D1D5DB',
                 borderRadius: '10px',
                 overflow: 'hidden',
-                cursor: 'pointer',
               }}
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
             >
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Camera size={32} color="#9CA3AF" />
-              </div>
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  backgroundColor: 'rgba(10,18,32,0.75)',
-                  display: 'flex',
-                  alignItems: 'flex-end',
-                  padding: '1rem',
-                  opacity: hovered === i ? 1 : 0,
-                  transition: 'opacity 0.25s',
-                }}
-              >
-                <span
+              <img
+                src={img.url}
+                alt={img.caption ?? 'Race moment'}
+                loading="lazy"
+                decoding="async"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              {img.caption && (
+                <div
                   style={{
-                    fontFamily: 'var(--font-body)',
-                    fontWeight: 600,
-                    fontSize: '0.9375rem',
-                    color: '#fff',
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundColor: 'rgba(10,18,32,0.75)',
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    padding: '1rem',
+                    opacity: hovered === i ? 1 : 0,
+                    transition: 'opacity 0.25s',
                   }}
                 >
-                  {name}
-                </span>
-              </div>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      fontWeight: 600,
+                      fontSize: '0.9375rem',
+                      color: '#fff',
+                    }}
+                  >
+                    {img.caption}
+                  </span>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Camera, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Section, Container, Heading, Button } from '../../components/public/ui';
 import CTABanner from '../../components/public/shared/CTABanner';
-import { GalleryComingSoon, ErrorState } from '../../components/public/shared/ApiStates';
+import { GalleryComingSoon } from '../../components/public/shared/ApiStates';
 import usePublicApi from '../../hooks/usePublicApi';
 import { getGallery, type GalleryImage } from '../../services/publicApi';
 
@@ -10,7 +10,7 @@ function GalleryPage() {
   const [filterEvent, setFilterEvent] = useState('All');
   const [lightboxId, setLightboxId] = useState<string | number | null>(null);
 
-  const { data, loading, error, refetch } = usePublicApi(
+  const { data, loading, error } = usePublicApi(
     (signal) => getGallery(undefined, signal),
     [],
   );
@@ -79,9 +79,10 @@ function GalleryPage() {
             </div>
           )}
 
-          {!loading && error && <ErrorState message={error} onRetry={refetch} />}
-
-          {!loading && !error && allImages.length === 0 && <GalleryComingSoon />}
+          {/* The gallery API doesn't exist yet, so a fetch error IS the empty
+              state — show "coming soon", never an error-with-retry, and never
+              placeholder tiles. */}
+          {!loading && (error || allImages.length === 0) && <GalleryComingSoon />}
 
           {!loading && !error && allImages.length > 0 && filtered.length === 0 && (
             <div style={{ textAlign: 'center', padding: '3rem', fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)' }}>
