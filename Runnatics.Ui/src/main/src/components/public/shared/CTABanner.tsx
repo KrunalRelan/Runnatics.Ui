@@ -9,7 +9,7 @@ interface CTABannerProps {
 
 function CTABanner({
   title = 'Marathon Management Made Smarter',
-  subtitle = 'Join 1000+ events powered by Racetik',
+  subtitle,
   ctaLabel = 'Get Started Today',
   ctaHref = '/contact',
 }: CTABannerProps) {
@@ -28,21 +28,23 @@ function CTABanner({
             fontFamily: 'var(--font-heading)',
             fontWeight: 700,
             fontSize: 'clamp(1.75rem, 4vw, 2.5rem)',
-            margin: '0 0 0.75rem',
+            margin: subtitle ? '0 0 0.75rem' : '0 0 2rem',
           }}
         >
           {title}
         </h2>
-        <p
-          style={{
-            fontFamily: 'var(--font-body)',
-            fontSize: '1.0625rem',
-            color: 'rgba(255,255,255,0.8)',
-            marginBottom: '2rem',
-          }}
-        >
-          {subtitle}
-        </p>
+        {subtitle && (
+          <p
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: '1.0625rem',
+              color: 'rgba(255,255,255,0.8)',
+              marginBottom: '2rem',
+            }}
+          >
+            {subtitle}
+          </p>
+        )}
         <Button
           variant="secondary"
           size="lg"

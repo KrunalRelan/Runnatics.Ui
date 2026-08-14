@@ -267,7 +267,7 @@ function ContactPage() {
         </Container>
       </Section>
 
-      <CTABanner title="Ready to Power Your Event?" subtitle="Join 1000+ events that trust Racetik for precision timing and management." />
+      <CTABanner title="Ready to Power Your Event?" />
     </>
   );
 }
