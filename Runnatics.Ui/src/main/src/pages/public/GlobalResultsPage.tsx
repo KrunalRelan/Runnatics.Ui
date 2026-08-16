@@ -1380,6 +1380,13 @@ function GlobalResultsPage() {
                   border: '1px solid var(--color-border)',
                   borderRadius: '8px',
                   backgroundColor: '#fff',
+                  // The admin dashboard's dark mode sets color-scheme: dark app-wide
+                  // (CssBaseline enableColorScheme); an unpinned text color then renders
+                  // WHITE on this white field — typed text invisible until selected.
+                  // Pin the whole control to light so no UA scheme can invert it.
+                  color: 'var(--color-text)',
+                  caretColor: 'var(--color-text)',
+                  colorScheme: 'light',
                   outline: 'none',
                   boxSizing: 'border-box',
                 }}
