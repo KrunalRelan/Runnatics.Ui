@@ -5,7 +5,6 @@ import { Container } from '../../components/public/ui';
 import { ErrorState } from '../../components/public/shared/ApiStates';
 import ResultsDisclaimer from '../../components/public/shared/ResultsDisclaimer';
 import usePublicApi from '../../hooks/usePublicApi';
-import useDebounce from '../../hooks/useDebounce';
 import { publicApi } from '../../../../api/publicApi';
 import type { GroupedLeaderboardParticipant } from '../../../../api/publicApi';
 
@@ -946,21 +945,23 @@ const STYLES = `
 
 // ── Leaderboard view (rendered once event + race selected) ─────────
 
-function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId: string; search: string }) {
-  const debouncedSearch = useDebounce(search, 350);
+function LeaderboardView({ eventId, raceId }: { eventId: string; raceId: string; search: string }) {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [gender, setGender] = useState<Gender>('male');
 
+  // The leaderboard itself is ALWAYS unfiltered: the podium and the table below
+  // never change while a search is active (matches render in the panel under the
+  // search box instead), and clearing the search needs no refetch.
   const { data, loading, error, refetch } = usePublicApi(
     (signal) =>
       publicApi.getGroupedLeaderboard(
         eventId,
         raceId,
         // showAll:true → full lists so we can cap PER GENDER client-side.
-        { search: debouncedSearch || undefined, showAll: true },
+        { showAll: true },
         signal,
       ),
-    [eventId, raceId, debouncedSearch],
+    [eventId, raceId],
   );
 
   const genderCategories = data?.genderCategories ?? [];
