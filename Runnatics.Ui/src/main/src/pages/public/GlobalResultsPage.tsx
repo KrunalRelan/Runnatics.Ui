@@ -5,8 +5,9 @@ import { Container } from '../../components/public/ui';
 import { ErrorState } from '../../components/public/shared/ApiStates';
 import ResultsDisclaimer from '../../components/public/shared/ResultsDisclaimer';
 import usePublicApi from '../../hooks/usePublicApi';
+import useDebounce from '../../hooks/useDebounce';
 import { publicApi } from '../../../../api/publicApi';
-import type { GroupedLeaderboardParticipant } from '../../../../api/publicApi';
+import type { GroupedLeaderboardParticipant, GroupedLeaderboardResponse } from '../../../../api/publicApi';
 
 // ── Brand palette (podium uses gold/silver/bronze; everything else navy) ─
 const NAVY = 'var(--color-primary)';
@@ -945,7 +946,9 @@ const STYLES = `
 
 // ── Leaderboard view (rendered once event + race selected) ─────────
 
-function LeaderboardView({ eventId, raceId }: { eventId: string; raceId: string; search: string }) {
+function LeaderboardView({ eventId, raceId, search }: { eventId: string; raceId: string; search: string }) {
+  const debouncedSearch = useDebounce(search, 350);
+  const searchTerm = debouncedSearch.trim();
   const [selectedCategory, setSelectedCategory] = useState('');
   const [gender, setGender] = useState<Gender>('male');
 
@@ -963,6 +966,36 @@ function LeaderboardView({ eventId, raceId }: { eventId: string; raceId: string;
       ),
     [eventId, raceId],
   );
+
+  // Search matches for the panel under the search box. A SEPARATE hook instance:
+  // its state can never clobber the leaderboard's, and usePublicApi aborts the
+  // previous in-flight request (and refuses aborted setState) whenever the term
+  // changes — a slow older response cannot overwrite a newer one.
+  const { data: searchData, loading: searchLoading } = usePublicApi<GroupedLeaderboardResponse | null>(
+    (signal) =>
+      searchTerm
+        ? publicApi.getGroupedLeaderboard(eventId, raceId, { search: searchTerm, showAll: true }, signal)
+        : Promise.resolve(null),
+    [eventId, raceId, searchTerm],
+  );
+
+  // Overall list when present; the grouped category lists as a fallback for
+  // events whose Overall section is toggled off (deduped — a runner appears in
+  // both gender and category buckets).
+  const searchMatches = useMemo(() => {
+    if (!searchTerm || !searchData) return [];
+    if (searchData.overallResults?.length) return searchData.overallResults;
+    const seen = new Set<string>();
+    return (searchData.genderCategories ?? [])
+      .flatMap((g) => g.categories.flatMap((c) => c.participants ?? []))
+      .filter((p) => {
+        const key = p.participantDetailUrl || `${p.bib}|${p.name}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [searchTerm, searchData]);
+  const searchRankBy = searchData?.overallRankBy ?? searchData?.rankBy ?? 'ChipTime';
 
   const genderCategories = data?.genderCategories ?? [];
   const overallResults = data?.overallResults ?? [];
@@ -1062,6 +1095,48 @@ function LeaderboardView({ eventId, raceId }: { eventId: string; raceId: string;
   return (
     <div>
       <style>{STYLES}</style>
+
+      {/* Search result panel — directly below the search box, above the podium.
+          The leaderboard (podium + table) below never reacts to the term. */}
+      {/* Arbitrary-value utilities only: this app loads Tailwind's utilities layer
+          without the default theme, so scale classes (p-4, gap-x-3, rounded-xl,
+          text-gray-500…) resolve to unset vars and silently do nothing. */}
+      {searchTerm && (
+        <div className="mb-[1rem] rounded-[12px] border border-[#E5E7EB] bg-[#fff] p-[1rem] shadow-[0_1px_3px_rgba(11,28,50,0.08)]">
+          {searchLoading ? (
+            <div className="text-[0.875rem] text-[#6B7280]">Searching…</div>
+          ) : searchMatches.length === 0 ? (
+            <div className="text-[0.875rem] text-[#4B5563]">
+              No participant found for &lsquo;{searchTerm}&rsquo; in {data?.raceName ?? searchData?.raceName ?? 'this race'} — try selecting a different race.
+            </div>
+          ) : (
+            <ul>
+              {searchMatches.slice(0, 10).map((p, i) => (
+                <li
+                  key={p.participantDetailUrl || `${p.bib}-${i}`}
+                  className="flex flex-wrap items-center gap-x-[0.75rem] gap-y-[0.25rem] border-t border-[#F3F4F6] py-[0.5rem] first:border-t-0 first:pt-0 last:pb-0"
+                >
+                  {p.participantDetailUrl ? (
+                    <a
+                      href={p.participantDetailUrl}
+                      className="text-[0.9375rem] font-[600] text-[color:var(--color-primary)] underline underline-offset-[2px] hover:opacity-[0.8]"
+                    >
+                      {p.name.trim()}
+                    </a>
+                  ) : (
+                    <span className="text-[0.9375rem] font-[600]">{p.name.trim()}</span>
+                  )}
+                  <span className="text-[0.875rem] text-[#6B7280]">BIB {p.bib}</span>
+                  <span className="text-[0.875rem] text-[#6B7280] tabular-nums">{timeOf(p, searchRankBy)}</span>
+                </li>
+              ))}
+              {searchMatches.length > 10 && (
+                <li className="pt-[0.5rem] text-[0.75rem] text-[#9CA3AF]">Showing first 10 of {searchMatches.length} matches</li>
+              )}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* Sticky context bar — event name + view + category selector stay visible */}
       <div className="lb-sticky">
