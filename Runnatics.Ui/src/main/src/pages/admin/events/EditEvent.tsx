@@ -394,16 +394,24 @@ export const EditEvent: React.FC = () => {
     }
   };
 
-  // Handle file upload — convert to base64
+  // Handle file upload — convert to base64 (replaceable at any time)
   const handleFileChange = (file: File | null) => {
     setBannerFile(file);
     if (!file) {
       setBannerBase64(null);
     } else {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onload = () => {
         const result = reader.result as string;
         setBannerBase64(result.split(',')[1] ?? null);
+      };
+      reader.onerror = () => {
+        setBannerFile(null);
+        setBannerBase64(null);
+        setErrors((prev) => ({
+          ...prev,
+          bannerImage: "Could not read the selected file. Please try a different image.",
+        }));
       };
       reader.readAsDataURL(file);
     }
@@ -423,11 +431,26 @@ export const EditEvent: React.FC = () => {
       setThumbnailBase64(null);
     } else {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onload = () => {
         const result = reader.result as string;
         setThumbnailBase64(result.split(',')[1] ?? null);
       };
+      reader.onerror = () => {
+        setThumbnailFile(null);
+        setThumbnailBase64(null);
+        setErrors((prev) => ({
+          ...prev,
+          thumbnailImage: "Could not read the selected file. Please try a different image.",
+        }));
+      };
       reader.readAsDataURL(file);
+    }
+    if (errors.thumbnailImage) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.thumbnailImage;
+        return newErrors;
+      });
     }
   };
 
@@ -512,7 +535,7 @@ export const EditEvent: React.FC = () => {
         state: apiData.state || "",
         country: apiData.country || "",
         zipCode: apiData.zipCode || "",
-        ...(!existingBannerBase64 && bannerBase64 ? { bannerBase64 } : {}),
+        ...(bannerBase64 ? { bannerBase64 } : {}),
         ...(thumbnailBase64 ? { thumbnailBase64 } : {}),
       };
 
@@ -723,52 +746,46 @@ export const EditEvent: React.FC = () => {
                   rows={1}
                 />
 
-                {existingBannerBase64 ? (
-                  <Box>
-                    <Box sx={{ borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider', mb: 1 }}>
+                {/* Banner — replaceable at any time; preview shows the new file if picked, else the saved one */}
+                <Box>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    fullWidth
+                    sx={{ height: 56 }}
+                  >
+                    {bannerFile
+                      ? bannerFile.name
+                      : existingBannerBase64
+                        ? "Replace Event Banner Image"
+                        : "Upload Event Banner Image"}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        handleFileChange(file);
+                      }}
+                    />
+                  </Button>
+                  <FormHelperText>
+                    Recommended: 3600 x 900 px (4:1), JPG or WebP, under 500 KB. Keep text and
+                    logos in the centre — edges may be cropped on smaller screens.
+                  </FormHelperText>
+                  {(bannerBase64 || existingBannerBase64) && (
+                    <Box sx={{ mt: 1, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
                       <img
-                        src={base64ToDataUrl(existingBannerBase64)}
-                        alt="Event Banner"
+                        src={base64ToDataUrl(bannerBase64 || existingBannerBase64!)}
+                        alt={bannerBase64 ? "Banner Preview" : "Event Banner"}
                         style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }}
                       />
                     </Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Banner already uploaded. It cannot be changed.
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Box>
-                    <Button
-                      variant="outlined"
-                      component="label"
-                      fullWidth
-                      sx={{ height: 56 }}
-                    >
-                      {bannerFile ? bannerFile.name : "Upload Event Banner Image"}
-                      <input
-                        type="file"
-                        hidden
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] || null;
-                          handleFileChange(file);
-                        }}
-                      />
-                    </Button>
-                    {bannerBase64 && (
-                      <Box sx={{ mt: 1, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
-                        <img
-                          src={base64ToDataUrl(bannerBase64)}
-                          alt="Banner Preview"
-                          style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }}
-                        />
-                      </Box>
-                    )}
-                    {errors.bannerImage && (
-                      <FormHelperText error>{errors.bannerImage}</FormHelperText>
-                    )}
-                  </Box>
-                )}
+                  )}
+                  {errors.bannerImage && (
+                    <FormHelperText error>{errors.bannerImage}</FormHelperText>
+                  )}
+                </Box>
 
                 {/* Thumbnail — optional, replaceable; used on event tiles */}
                 <Box>
@@ -794,6 +811,9 @@ export const EditEvent: React.FC = () => {
                     />
                   </Button>
                   <FormHelperText>Shown on event tiles. If omitted, the banner is used.</FormHelperText>
+                  {errors.thumbnailImage && (
+                    <FormHelperText error>{errors.thumbnailImage}</FormHelperText>
+                  )}
                   {(thumbnailBase64 || existingThumbnailBase64) && (
                     <Box sx={{ mt: 1, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
                       <img
