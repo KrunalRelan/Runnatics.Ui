@@ -15,11 +15,6 @@ import {
   IconButton,
   Typography,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   CircularProgress,
   Alert,
   TextField,
@@ -31,6 +26,7 @@ import {
   Tab,
 } from "@mui/material";
 import PageContainer from "@/main/src/components/PageContainer";
+import DeleteEvent from "./DeleteEvent";
 
 import {
   Edit as EditIcon,
@@ -322,40 +318,22 @@ const EventsList: React.FC = () => {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!eventToDelete || !eventToDelete.id) return;
+  // The DeleteEvent dialog performs the delete itself (with a type-to-confirm
+  // gate and in-dialog error display); this runs only after it succeeds.
+  const handleDeleted = async () => {
+    setDeleteDialogOpen(false);
 
-    try {
-      await EventService.deleteEvent(eventToDelete.id);
-      setDeleteDialogOpen(false);
-      setEventToDelete(null);
+    setSnackbar({
+      open: true,
+      message: `Event "${eventToDelete?.name}" deleted successfully!`,
+      severity: "success",
+    });
+    setEventToDelete(null);
 
-      // Show success message
-      setSnackbar({
-        open: true,
-        message: `Event "${eventToDelete.name}" deleted successfully!`,
-        severity: "success",
-      });
-
-      // Reset and re-fetch
-      setCurrentPage(1);
-      setHasMoreFutureEvents(true);
-      await fetchEvents({ ...searchCriteria, pageNumber: 1 }, tabValue, true);
-    } catch (err: any) {
-      console.error("Error deleting event:", err);
-
-      // Show error message
-      setSnackbar({
-        open: true,
-        message:
-          err.response?.data?.message ||
-          "Failed to delete event. Please try again.",
-        severity: "error",
-      });
-
-      setDeleteDialogOpen(false);
-      setEventToDelete(null);
-    }
+    // Reset and re-fetch
+    setCurrentPage(1);
+    setHasMoreFutureEvents(true);
+    await fetchEvents({ ...searchCriteria, pageNumber: 1 }, tabValue, true);
   };
 
   const handleDeleteCancel = () => {
@@ -1080,33 +1058,12 @@ const EventsList: React.FC = () => {
       )}
 
       {/* Delete Confirmation Dialog */}
-      <Dialog
+      <DeleteEvent
         open={deleteDialogOpen}
         onClose={handleDeleteCancel}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">Confirm Delete</DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            Are you sure you want to delete the event "{eventToDelete?.name}"?
-            This action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDeleteCancel} color="primary">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDeleteConfirm}
-            color="error"
-            variant="contained"
-            autoFocus
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onDelete={handleDeleted}
+        event={eventToDelete}
+      />
 
       {/* Success/Error Snackbar */}
       <Snackbar
