@@ -11,7 +11,8 @@ import {
     Divider,
     Stack,
     SelectChangeEvent,
-    CardContent
+    CardContent,
+    FormHelperText
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { CertificateField, FIELD_TYPE_METADATA } from '../../models/Certificate';
@@ -222,6 +223,26 @@ export const FieldPropertiesPanel: React.FC<FieldPropertiesPanelProps> = ({
                 </FormControl>
             </Stack>
 
+            {/* Alignment */}
+            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                <InputLabel>Alignment</InputLabel>
+                <Select
+                    name="alignment"
+                    value={field.alignment || 'left'}
+                    label="Alignment"
+                    onChange={handleSelectChange}
+                >
+                    <MenuItem value="left">Left</MenuItem>
+                    <MenuItem value="center">Center</MenuItem>
+                    <MenuItem value="right">Right</MenuItem>
+                </Select>
+                <FormHelperText>
+                    {field.width
+                        ? 'Anchored inside the Width box below.'
+                        : 'Anchored at X. Set a Width to align inside a box.'}
+                </FormHelperText>
+            </FormControl>
+
             {/* Dimensions (Optional) - Width and Height in one row */}
             <Stack direction="row" spacing={1}>
                 <TextField
@@ -232,8 +253,9 @@ export const FieldPropertiesPanel: React.FC<FieldPropertiesPanelProps> = ({
                     value={field.width || ''}
                     onChange={(e) => handleChange('width', e.target.value ? parseFloat(e.target.value) : undefined)}
                     placeholder="Optional"
+                    helperText="Box spans X to X+Width. Text shrinks to fit."
                 />
-                
+
                 <TextField
                     fullWidth
                     size="small"

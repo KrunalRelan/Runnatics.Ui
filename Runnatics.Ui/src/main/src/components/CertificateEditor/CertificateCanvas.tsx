@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CertificateField, CertificateTemplate, CertificateFieldType } from '../../models/Certificate';
 import { Box, Paper } from '@mui/material';
+import { fieldBounds, layoutField } from './fieldLayout';
 
 interface CertificateCanvasProps {
   template: CertificateTemplate;
@@ -105,25 +106,42 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
   const drawFields = (ctx: CanvasRenderingContext2D) => {
     template.fields.forEach(field => {
       const text = getFieldText(field);
-      
-      ctx.font = `${field.fontStyle || 'normal'} ${field.fontWeight || 'normal'} ${field.fontSize}px ${field.font}`;
+
+      // layoutField sets ctx.font (post-shrink) and resolves the anchor inside the width box
+      const laid = layoutField(ctx, field, text);
       ctx.fillStyle = `#${field.fontColor}`;
       ctx.textAlign = field.alignment || 'left';
-      
-      ctx.fillText(text, field.xCoordinate, field.yCoordinate);
+
+      ctx.fillText(laid.text, laid.drawX, field.yCoordinate);
 
       // Highlight selected field with bright, visible border
       if (field.id === selectedFieldId) {
+        const bounds = fieldBounds(ctx, field, text);
+
+        // Show the width box itself, so the operator can see what the text is aligned inside
+        if (field.width && field.width > 0) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(33, 150, 243, 0.45)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([10, 8]);
+          ctx.strokeRect(
+            field.xCoordinate,
+            field.yCoordinate - field.fontSize,
+            field.width,
+            field.fontSize
+          );
+          ctx.restore();
+        }
+
         ctx.strokeStyle = '#2196f3';
         ctx.lineWidth = 5;
         ctx.shadowColor = 'rgba(33, 150, 243, 0.5)';
         ctx.shadowBlur = 8;
-        const metrics = ctx.measureText(text);
         ctx.strokeRect(
-          field.xCoordinate - 5,
-          field.yCoordinate - field.fontSize - 5,
-          metrics.width + 10,
-          field.fontSize + 10
+          bounds.left - 5,
+          bounds.top - 5,
+          bounds.width + 10,
+          bounds.height + 10
         );
         // Reset shadow
         ctx.shadowColor = 'transparent';
@@ -198,15 +216,12 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
     // Search in reverse order (top fields first)
     for (let i = template.fields.length - 1; i >= 0; i--) {
       const field = template.fields[i];
-      const text = getFieldText(field);
-      
-      ctx.font = `${field.fontStyle || 'normal'} ${field.fontWeight || 'normal'} ${field.fontSize}px ${field.font}`;
-      const metrics = ctx.measureText(text);
-      
-      const fieldLeft = field.xCoordinate - 5;
-      const fieldTop = field.yCoordinate - field.fontSize - 5;
-      const fieldWidth = metrics.width + 10;
-      const fieldHeight = field.fontSize + 10;
+      const bounds = fieldBounds(ctx, field, getFieldText(field));
+
+      const fieldLeft = bounds.left - 5;
+      const fieldTop = bounds.top - 5;
+      const fieldWidth = bounds.width + 10;
+      const fieldHeight = bounds.height + 10;
 
       if (x >= fieldLeft && x <= fieldLeft + fieldWidth &&
           y >= fieldTop && y <= fieldTop + fieldHeight) {

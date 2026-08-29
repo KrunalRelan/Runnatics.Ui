@@ -32,6 +32,7 @@ import { CertificateTemplate, CertificateField, CertificateFieldType, FIELD_TYPE
 import { CertificateService } from '../../../services/CertificateService';
 import { CertificateCanvas } from '../../../components/CertificateEditor/CertificateCanvas';
 import { FieldPropertiesPanel } from '../../../components/CertificateEditor/FieldPropertiesPanel';
+import { layoutField } from '../../../components/CertificateEditor/fieldLayout';
 import { v4 as uuidv4 } from 'uuid';
 
 const SAMPLE_DATA = {
@@ -472,10 +473,11 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
           // Draw all fields
           template.fields.forEach(field => {
             const text = (SAMPLE_DATA as Record<string, string>)[field.fieldType] || field.content || `[${field.fieldType}]`;
-            ctx.font = `${field.fontStyle || 'normal'} ${field.fontWeight || 'normal'} ${field.fontSize}px ${field.font}`;
+            // layoutField sets ctx.font (post-shrink) and resolves the anchor inside the width box
+            const laid = layoutField(ctx, field, text);
             ctx.fillStyle = `#${field.fontColor}`;
             ctx.textAlign = field.alignment || 'left';
-            ctx.fillText(text, field.xCoordinate, field.yCoordinate);
+            ctx.fillText(laid.text, laid.drawX, field.yCoordinate);
           });
 
           // Open preview in new window
