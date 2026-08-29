@@ -17,6 +17,11 @@ import {
   CircularProgress,
   Typography,
   useMediaQuery,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
 } from "@mui/material";
 import {
   Add,
@@ -28,6 +33,7 @@ import {
   ViewWeek,
   Visibility,
   ViewColumn,
+  Sms,
 } from "@mui/icons-material";
 import {
   Popover,
@@ -49,6 +55,7 @@ import { CheckpointsService } from "@/main/src/services/CheckpointsService";
 import { Checkpoint } from "@/main/src/models/checkpoints/Checkpoint";
 import { RFIDService } from "@/main/src/services/RFIDService";
 import { LeaderboardService } from "@/main/src/services/LeaderboardService";
+import type { TestResultsSms } from "@/main/src/services/LeaderboardService";
 
 // LAZY LOAD DIALOG COMPONENTS - Only loaded when needed
 const AddParticipant = lazy(
@@ -709,6 +716,67 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     }
   };
 
+  // ── Single-participant test SMS ──────────────────────────────────────────
+  // Sends one real message so the content and the MSG91 correlation can be checked without
+  // messaging a whole race. The server logs it as "RaceCompletionTest", so a test never
+  // suppresses that participant's real results SMS.
+  const [testSmsParticipant, setTestSmsParticipant] = useState<Participant | null>(null);
+  const [testSmsPhone, setTestSmsPhone] = useState<string>("");
+  const [testSmsSending, setTestSmsSending] = useState<boolean>(false);
+  const [testSmsResult, setTestSmsResult] = useState<TestResultsSms | null>(null);
+  const [testSmsError, setTestSmsError] = useState<string>("");
+
+  const handleOpenTestSms = (participant: Participant) => {
+    setTestSmsParticipant(participant);
+    setTestSmsPhone(participant.phone ?? "");
+    setTestSmsResult(null);
+    setTestSmsError("");
+  };
+
+  const handleCloseTestSms = () => {
+    setTestSmsParticipant(null);
+    setTestSmsPhone("");
+    setTestSmsResult(null);
+    setTestSmsError("");
+  };
+
+  const handleSendTestSms = async () => {
+    if (!testSmsParticipant?.id) return;
+    try {
+      setTestSmsSending(true);
+      setTestSmsError("");
+      setTestSmsResult(null);
+
+      // Only send an override when it differs from the stored number, so the default path
+      // exercises exactly what a real send would do.
+      const trimmed = testSmsPhone.trim();
+      const override =
+        trimmed && trimmed !== (testSmsParticipant.phone ?? "").trim() ? trimmed : undefined;
+
+      const response = await LeaderboardService.sendTestResultsSms(
+        eventId,
+        raceId,
+        testSmsParticipant.id,
+        override
+      );
+
+      if (response.message) {
+        setTestSmsResult(response.message);
+        if (!response.message.success) {
+          setTestSmsError(response.message.errorMessage || "The provider rejected the message.");
+        }
+      } else {
+        setTestSmsError(response.error?.message || "No response from the server.");
+      }
+    } catch (error: any) {
+      setTestSmsError(
+        error?.response?.data?.error?.message || error?.message || "Unknown error"
+      );
+    } finally {
+      setTestSmsSending(false);
+    }
+  };
+
   const handleExportResultsExcel = async () => {
     try {
       setExportingResults(true);
@@ -964,7 +1032,7 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     },
     {
       headerName: "Actions",
-      width: 90,
+      width: 120,
       pinned: "right" as const,
       cellRenderer: (params: any) => (
         <Stack
@@ -996,6 +1064,18 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
             disabled={resultsBusy}
           >
             <Edit fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            color="secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenTestSms(params.data);
+            }}
+            title="Send test results SMS"
+            disabled={resultsBusy}
+          >
+            <Sms fontSize="small" />
           </IconButton>
           <IconButton
             size="small"
@@ -1453,6 +1533,85 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           ))}
         </Box>
       </Popover>
+
+      {/* Single-participant test results SMS */}
+      <Dialog
+        open={Boolean(testSmsParticipant)}
+        onClose={testSmsSending ? undefined : handleCloseTestSms}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Send test results SMS</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            This sends a <strong>real SMS</strong> to the number below. It is logged separately
+            from production sends, so it will not stop this participant receiving their real
+            results SMS.
+          </Alert>
+
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Using the result data for{" "}
+            <strong>
+              {testSmsParticipant?.fullName ||
+                `${testSmsParticipant?.firstName ?? ""} ${testSmsParticipant?.lastName ?? ""}`.trim()}
+            </strong>{" "}
+            (bib {testSmsParticipant?.bib}).
+          </Typography>
+
+          <TextField
+            fullWidth
+            size="small"
+            label="Send to"
+            value={testSmsPhone}
+            onChange={(e) => setTestSmsPhone(e.target.value)}
+            disabled={testSmsSending}
+            helperText={
+              testSmsPhone.trim() !== (testSmsParticipant?.phone ?? "").trim()
+                ? "Overriding the participant's number — the message goes to you, not to them."
+                : "The participant's own number. Change it to send the message to yourself instead."
+            }
+          />
+
+          {testSmsError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {testSmsError}
+            </Alert>
+          )}
+
+          {testSmsResult?.success && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Accepted by MSG91 for <strong>{testSmsResult.recipient}</strong>
+                {testSmsResult.usedOverridePhone ? " (override)" : ""}.
+              </Typography>
+              <Typography variant="body2" component="div">
+                <div>
+                  Name + bib: <strong>{testSmsResult.nameWithBib}</strong>
+                </div>
+                <div>Finish time: {testSmsResult.finishTime}</div>
+                <div>Race: {testSmsResult.raceTitle}</div>
+                <div style={{ marginTop: 8, wordBreak: "break-all" }}>
+                  Provider message id:{" "}
+                  <strong>{testSmsResult.providerMessageId || "(none returned)"}</strong>
+                </div>
+              </Typography>
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseTestSms} variant="outlined" disabled={testSmsSending}>
+            Close
+          </Button>
+          <Button
+            onClick={handleSendTestSms}
+            variant="contained"
+            color="primary"
+            disabled={testSmsSending || !testSmsPhone.trim()}
+          >
+            {testSmsSending ? "Sending..." : "Send test SMS"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 };
