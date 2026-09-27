@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
   TextField,
   Button,
@@ -613,16 +613,13 @@ export const CreateEvent: React.FC = () => {
     }
   };
 
-  const handleBack = () => {
-    navigate(`/dashboard`);
-  };
-
   return (
     <PageContainer>
       <Button
         variant="outlined"
         startIcon={<ArrowBackIcon />}
-        onClick={handleBack}
+        component={RouterLink}
+        to="/dashboard"
         sx={{ mb: 2 }}
       >
         Back

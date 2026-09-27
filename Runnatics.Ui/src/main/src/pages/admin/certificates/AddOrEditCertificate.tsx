@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -557,7 +557,8 @@ export const AddOrEditCertificate: React.FC<AddOrEditCertificateProps> = ({ even
       {/* Header Section with Title and Action Buttons */}
       {!propsEventId && (
         <IconButton 
-          onClick={() => navigate('/admin/certificates')} 
+          component={RouterLink}
+          to="/admin/certificates"
           sx={{ mb: 1 }}
         >
           <BackIcon />

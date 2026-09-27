@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { Link as RouterLink, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -753,6 +753,9 @@ const ParticipantDetail: React.FC = () => {
     };
   }, [eventId, raceId, participantId]);
 
+  // Both params are required by this page's route, so the race page is always the back target.
+  const backUrl = `/events/event-details/${eventId}/race/${raceId}`;
+
   const handleBack = () => {
     if (eventId && raceId) {
       navigate(`/events/event-details/${eventId}/race/${raceId}`);
@@ -1102,7 +1105,8 @@ const ParticipantDetail: React.FC = () => {
           <Button
             variant="outlined"
             startIcon={<ArrowBack />}
-            onClick={handleBack}
+            component={RouterLink}
+            to={backUrl}
             sx={{ mt: 2 }}
           >
             Back to Participants
@@ -1120,7 +1124,16 @@ const ParticipantDetail: React.FC = () => {
           <Button
             variant="outlined"
             startIcon={<ArrowBack />}
-            onClick={() => (hasPendingCrossings ? setPendingDiscardGuard("back") : handleBack())}
+            component={RouterLink}
+            to={backUrl}
+            onClick={(e: React.MouseEvent) => {
+              // A plain click leaving this tab goes through the unsaved-crossings guard;
+              // Ctrl/Cmd/Shift+click opens a new tab and leaves this one's edits intact.
+              if (hasPendingCrossings && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+                e.preventDefault();
+                setPendingDiscardGuard("back");
+              }
+            }}
             sx={{
               borderColor: colors.border.main,
               color: colors.text.primary,

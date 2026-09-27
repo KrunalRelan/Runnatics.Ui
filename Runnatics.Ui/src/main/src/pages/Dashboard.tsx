@@ -1,6 +1,6 @@
 // src/main/src/pages/Dashboard.tsx
 import { Box, Typography, Paper, Card, CardContent, Button, Divider, Avatar, Stack, CircularProgress } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import {
   Event as EventIcon,
@@ -157,7 +157,11 @@ const Dashboard = () => {
         {cards.map((card, index) => (
           <Box key={index}>
             <Card
+              component={RouterLink}
+              to={card.path}
               sx={{
+                display: 'block',
+                textDecoration: 'none',
                 height: '100%',
                 cursor: 'pointer',
                 transition: 'transform 0.2s, box-shadow 0.2s',
@@ -166,7 +170,6 @@ const Dashboard = () => {
                   boxShadow: 4,
                 },
               }}
-              onClick={() => navigate(card.path)}
             >
               <CardContent>
                 <Box
@@ -238,8 +241,9 @@ const Dashboard = () => {
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
               <Card
-                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                onClick={() => navigate('/events/events-create')}
+                component={RouterLink}
+                to="/events/events-create"
+                sx={{ display: 'block', textDecoration: 'none', cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
               >
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -249,8 +253,9 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
               <Card
-                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                onClick={() => navigate('/events/events-dashboard')}
+                component={RouterLink}
+                to="/events/events-dashboard"
+                sx={{ display: 'block', textDecoration: 'none', cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
               >
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -260,8 +265,9 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
               <Card
-                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                onClick={() => navigate('/profile')}
+                component={RouterLink}
+                to="/profile"
+                sx={{ display: 'block', textDecoration: 'none', cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
               >
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

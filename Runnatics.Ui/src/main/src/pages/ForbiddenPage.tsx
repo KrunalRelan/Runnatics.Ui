@@ -1,11 +1,10 @@
 import React from 'react';
 import { Box, Button, Typography } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const ForbiddenPage: React.FC = () => {
-    const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
 
     return (
@@ -50,7 +49,8 @@ const ForbiddenPage: React.FC = () => {
             <Button
                 variant="contained"
                 size="large"
-                onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}
+                component={RouterLink}
+                to={isAuthenticated ? '/dashboard' : '/login'}
             >
                 {isAuthenticated ? 'Back to Dashboard' : 'Go to Login'}
             </Button>

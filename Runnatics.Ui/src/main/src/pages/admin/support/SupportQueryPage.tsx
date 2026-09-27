@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -75,7 +75,6 @@ const TABLE_COLUMNS: { label: string; field?: SortField; flex: string }[] = [
 ];
 
 const SupportQueryPage: React.FC = () => {
-  const navigate = useNavigate();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const [searchParams] = useSearchParams();
@@ -456,8 +455,11 @@ const SupportQueryPage: React.FC = () => {
                 return (
                   <Box
                     key={q.id}
-                    onClick={() => navigate(`/support/${q.id}`)}
+                    component={RouterLink}
+                    to={`/support/${q.id}`}
                     sx={{
+                      color: 'inherit',
+                      textDecoration: 'none',
                       display: 'flex',
                       alignItems: 'center',
                       px: 3,

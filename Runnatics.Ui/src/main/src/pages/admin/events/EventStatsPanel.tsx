@@ -12,7 +12,7 @@
 // ============================================================================
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Box, Card, CardContent, CircularProgress, Typography, alpha, useTheme } from '@mui/material';
 import { DashboardService } from '../../../services/DashboardService';
@@ -91,7 +91,6 @@ const MetricGrid: React.FC<{ counts: EventRaceCounts; compact?: boolean }> = ({ 
 );
 
 const EventStatsPanel: React.FC<EventStatsPanelProps> = ({ eventId }) => {
-  const navigate = useNavigate();
   const theme = useTheme();
 
   const { data, isLoading, error } = useQuery({
@@ -153,8 +152,11 @@ const EventStatsPanel: React.FC<EventStatsPanelProps> = ({ eventId }) => {
               <Card
                 key={race.raceId}
                 variant="outlined"
-                onClick={() => navigate(`/events/event-details/${eventId}/race/${race.raceId}`)}
+                component={RouterLink}
+                to={`/events/event-details/${eventId}/race/${race.raceId}`}
                 sx={{
+                  display: 'block',
+                  textDecoration: 'none',
                   cursor: 'pointer',
                   borderRadius: 2,
                   transition: 'background-color 0.15s, box-shadow 0.15s, transform 0.15s',

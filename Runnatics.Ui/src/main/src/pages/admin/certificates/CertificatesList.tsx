@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link as RouterLink, useParams } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -27,7 +27,6 @@ import { CertificateTemplate } from '../../../models/Certificate';
 import { CertificateService } from '../../../services/CertificateService';
 
 export const CertificatesList: React.FC = () => {
-  const navigate = useNavigate();
   const { eventId } = useParams<{ eventId: string }>();
   
   const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
@@ -106,7 +105,8 @@ export const CertificatesList: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => navigate('/admin/certificates/add')}
+            component={RouterLink}
+            to="/admin/certificates/add"
           >
             Create Template
           </Button>
@@ -165,7 +165,8 @@ export const CertificatesList: React.FC = () => {
                     </IconButton>
                     <IconButton
                       size="small"
-                      onClick={() => navigate(`/admin/certificates/edit/${template.id}`)}
+                      component={RouterLink}
+                      to={`/admin/certificates/edit/${template.id}`}
                       title="Edit"
                     >
                       <EditIcon fontSize="small" />

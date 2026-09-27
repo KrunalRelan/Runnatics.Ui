@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Box,
@@ -35,7 +35,6 @@ import { formatDateTime } from "@/main/src/utils/dateTime";
 
 const ViewEvent: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
-  const navigate = useNavigate();
 
   // Search criteria state
   const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>(
@@ -112,22 +111,6 @@ const ViewEvent: React.FC = () => {
       "Failed to load races"
     : null;
 
-  const handleBack = () => {
-    navigate("/events/events-dashboard");
-  };
-
-  const handleAddRace = () => {
-    if (eventId) {
-      navigate(`/events/event-details/${eventId}/race/add`);
-    }
-  };
-
-  const handleEditRace = (raceId: string) => {
-    if (eventId) {
-      navigate(`/events/event-details/${eventId}/race/edit/${raceId}`);
-    }
-  };
-
   const handleSearchCriteriaChange = (criteria: SearchCriteria) => {
     setSearchCriteria(criteria);
   };
@@ -155,7 +138,8 @@ const ViewEvent: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={handleBack}
+          component={RouterLink}
+          to="/events/events-dashboard"
         >
           Back to Events
         </Button>
@@ -172,7 +156,8 @@ const ViewEvent: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={handleBack}
+          component={RouterLink}
+          to="/events/events-dashboard"
         >
           Back to Events
         </Button>
@@ -188,7 +173,8 @@ const ViewEvent: React.FC = () => {
           <Button
             variant="outlined"
             startIcon={<ArrowBackIcon />}
-            onClick={handleBack}
+            component={RouterLink}
+            to="/events/events-dashboard"
           >
             Back
           </Button>
@@ -219,7 +205,8 @@ const ViewEvent: React.FC = () => {
           <Stack direction="row" spacing={1}>
             <Button
               variant="outlined"
-              onClick={() => navigate(`/events/events-edit/${eventId}`)}
+              component={RouterLink}
+              to={`/events/events-edit/${eventId}`}
               size="large"
             >
               Edit Event
@@ -228,7 +215,8 @@ const ViewEvent: React.FC = () => {
               variant="contained"
               color="primary"
               startIcon={<AddIcon />}
-              onClick={handleAddRace}
+              component={RouterLink}
+              to={`/events/event-details/${eventId}/race/add`}
               size="large"
             >
               Add Race
@@ -368,7 +356,8 @@ const ViewEvent: React.FC = () => {
             <Button
               variant="outlined"
               startIcon={<AddIcon />}
-              onClick={handleAddRace}
+              component={RouterLink}
+              to={`/events/event-details/${eventId}/race/add`}
             >
               Add Race
             </Button>
@@ -388,7 +377,6 @@ const ViewEvent: React.FC = () => {
               loading={racesLoading}
               eventTimeZone={event?.timeZone || "Asia/Kolkata"}
               onSearchCriteriaChange={handleSearchCriteriaChange}
-              onEdit={handleEditRace}
             />
           )}
         </CardContent>

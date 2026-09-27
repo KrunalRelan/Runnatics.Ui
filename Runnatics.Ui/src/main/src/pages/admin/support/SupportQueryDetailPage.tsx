@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useParams } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -140,7 +140,6 @@ const CommentCard: React.FC<CommentCardProps> = ({
 // ── Main Component ────────────────────────────────────────────────────────────
 const SupportQueryDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const primaryColor = isDark ? '#60A5FA' : '#2563EB';
@@ -314,7 +313,7 @@ const SupportQueryDetailPage: React.FC = () => {
     return (
       <Box sx={{ p: 3, maxWidth: 600, mx: 'auto' }}>
         <Alert severity="error" sx={{ borderRadius: 3, mb: 2 }}>{error}</Alert>
-        <Button startIcon={<ArrowBackIcon />} variant="outlined" onClick={() => navigate('/support')}
+        <Button startIcon={<ArrowBackIcon />} variant="outlined" component={RouterLink} to="/support"
           sx={{ borderRadius: 2 }}>
           Back to Support
         </Button>
@@ -341,7 +340,8 @@ const SupportQueryDetailPage: React.FC = () => {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/support')}
+          component={RouterLink}
+          to="/support"
           sx={{ borderRadius: 2, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
         >
           Support Queries

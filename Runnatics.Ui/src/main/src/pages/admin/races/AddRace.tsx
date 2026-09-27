@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
@@ -164,9 +164,7 @@ export const AddRace: React.FC = () => {
     }));
   }, [overrideLeaderboardSettings, leaderBoardSettings]);
 
-  const handleBack = () => {
-    navigate(`/events/event-details/${eventId}`);
-  };
+  const backUrl = `/events/event-details/${eventId}`;
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -372,7 +370,7 @@ export const AddRace: React.FC = () => {
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
-        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={handleBack}>
+        <Button variant="outlined" startIcon={<ArrowBackIcon />} component={RouterLink} to={backUrl}>
           Back to Event
         </Button>
       </PageContainer>
@@ -386,7 +384,8 @@ export const AddRace: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={handleBack}
+          component={RouterLink}
+          to={backUrl}
           sx={{ mb: 2 }}
         >
           Back
@@ -680,7 +679,8 @@ export const AddRace: React.FC = () => {
           >
             <Button
               variant="outlined"
-              onClick={handleBack}
+              component={RouterLink}
+              to={backUrl}
               disabled={isSubmitting}
               size="large"
               fullWidth={false}

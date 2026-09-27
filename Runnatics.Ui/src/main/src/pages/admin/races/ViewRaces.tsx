@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -145,41 +145,14 @@ const ViewRaces: React.FC = () => {
   }, [eventId, selectedRaceId, activeTab]);
 
   // Handlers
-  const handleBack = () => {
-    if (eventId) {
-      navigate(`/events/event-details/${eventId}`);
-    } else {
-      navigate("/events/events-dashboard");
-    }
-  };
+  const backUrl = eventId ? `/events/event-details/${eventId}` : "/events/events-dashboard";
 
+  // Tabs 0-2 are links to other pages (rendered as RouterLinks below, so they can be opened
+  // in a new tab). Selecting one must not switch this page's in-place tab â€” a Ctrl/middle-click
+  // opens the new tab while this one stays where it was.
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    if (newValue <= 2) return;
     setActiveTab(newValue);
-
-    if (!eventId || !selectedRaceId) return;
-
-    switch (newValue) {
-      case 0:
-        navigate("/events/events-dashboard");
-        break;
-      case 1:
-        navigate(`/events/events-edit/${eventId}`);
-        break;
-      case 2:
-        if (selectedRaceId) navigate(`/events/event-details/${eventId}/race/edit/${selectedRaceId}`);
-        break;
-      case 3:
-      case 4:
-      case 5:
-      case 6:
-      case 7:
-      case 8:
-      case 9:
-        // Stay on current page, just change the active tab
-        break;
-      default:
-        break;
-    }
   };
 
   const handleRaceChange = (newRaceId: string) => {
@@ -246,7 +219,8 @@ const ViewRaces: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={<ArrowBack />}
-          onClick={handleBack}
+          component={RouterLink}
+          to={backUrl}
           sx={{ mt: 2 }}
         >
           Back
@@ -263,7 +237,8 @@ const ViewRaces: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={<ArrowBack />}
-          onClick={handleBack}
+          component={RouterLink}
+          to={backUrl}
           sx={{ mt: 2 }}
         >
           Back
@@ -280,7 +255,8 @@ const ViewRaces: React.FC = () => {
           <Button
             variant="outlined"
             startIcon={<ArrowBack />}
-            onClick={handleBack}
+            component={RouterLink}
+            to={backUrl}
           >
             Back
           </Button>
@@ -364,9 +340,23 @@ const ViewRaces: React.FC = () => {
             icon={<Dashboard />}
             iconPosition="start"
             label="Event Dashboard"
+            component={RouterLink}
+            to="/events/events-dashboard"
           />
-          <Tab icon={<Edit />} iconPosition="start" label="Event Details" />
-          <Tab icon={<Edit />} iconPosition="start" label="Edit Race" />
+          <Tab
+            icon={<Edit />}
+            iconPosition="start"
+            label="Event Details"
+            component={RouterLink}
+            to={`/events/events-edit/${eventId}`}
+          />
+          <Tab
+            icon={<Edit />}
+            iconPosition="start"
+            label="Edit Race"
+            component={RouterLink}
+            to={`/events/event-details/${eventId}/race/edit/${selectedRaceId}`}
+          />
           <Tab icon={<People />} iconPosition="start" label="Participants" />
 
           <Tab icon={<Place />} iconPosition="start" label="Checkpoints" />

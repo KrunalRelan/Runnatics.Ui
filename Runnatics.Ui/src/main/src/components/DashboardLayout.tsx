@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import {
   Box,
@@ -281,11 +281,13 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
                 onMouseLeave={handleMouseLeave}
               >
                 <ListItemButton
+                  // Leaf items are real links (right-click → open in new tab); items with a
+                  // submenu stay plain buttons that toggle it.
+                  {...(!item.submenu ? { component: RouterLink, to: item.path } : {})}
                   onClick={() => {
                     if (item.submenu && !isMinimized) {
                       handleSubmenuClick(item.text);
                     } else if (!item.submenu) {
-                      navigate(item.path);
                       setMobileOpen(false);
                     }
                   }}
@@ -348,10 +350,9 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
                           ? "action.selected"
                           : "transparent",
                       }}
-                      onClick={() => {
-                        navigate(subItem.path);
-                        setMobileOpen(false);
-                      }}
+                      component={RouterLink}
+                      to={subItem.path}
+                      onClick={() => setMobileOpen(false)}
                     >
                       <ListItemIcon
                         sx={{ color: "text.secondary", minWidth: 40 }}
@@ -420,8 +421,9 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
                                 color: 'white',
                               },
                             }}
+                            component={RouterLink}
+                            to={subItem.path}
                             onClick={() => {
-                              navigate(subItem.path);
                               setMobileOpen(false);
                               handlePopperMouseLeave();
                             }}
@@ -538,7 +540,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
             onClose={handleProfileMenuClose}
             onClick={handleProfileMenuClose}
           >
-            <MenuItem onClick={() => navigate("/profile")}>
+            <MenuItem component={RouterLink} to="/profile">
               <ListItemIcon>
                 <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>
                   {user?.firstName?.[0] || user?.email?.[0] || "U"}
@@ -549,7 +551,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
                 secondary={user?.email || "View profile"}
               />
             </MenuItem>
-            <MenuItem onClick={() => navigate("/settings")}>
+            <MenuItem component={RouterLink} to="/settings">
               <ListItemIcon>
                 <SettingsIcon fontSize="small" />
               </ListItemIcon>

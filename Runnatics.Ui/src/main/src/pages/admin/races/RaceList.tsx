@@ -22,7 +22,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import type { ColDef } from "ag-grid-community";
 import { Race } from "@/main/src/models/races/Race";
 import { RaceService } from "@/main/src/services/RaceService";
@@ -38,7 +38,6 @@ interface RaceListProps {
   /** @deprecated Race times are always rendered in IST. Prop kept for callers that still pass it. */
   eventTimeZone?: string;
   onSearchCriteriaChange: (criteria: SearchCriteria) => void;
-  onEdit?: (raceId: string) => void;
   onDelete?: (raceId: string) => void;
 }
 
@@ -54,10 +53,8 @@ export const RaceList: React.FC<RaceListProps> = ({
   totalCount, // ✅ Changed
   loading = false,
   onSearchCriteriaChange,
-  onEdit,
   onDelete,
 }) => {
-  const navigate = useNavigate();
   const [localRaces, setLocalRaces] = useState<Race[]>(races);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [raceToDelete, setRaceToDelete] = useState<Race | null>(null);
@@ -82,15 +79,6 @@ export const RaceList: React.FC<RaceListProps> = ({
     message: "",
     severity: "success",
   });
-
-  const handleEditClick = (
-    eventId: number | undefined,
-    raceId: number | undefined
-  ) => {
-    if (eventId && raceId) {
-      navigate(`/events/event-details/${eventId}/race/${raceId}/edit`);
-    }
-  };
 
   const handleDeleteClick = (race: Race) => {
     setRaceToDelete(race);
@@ -164,19 +152,12 @@ export const RaceList: React.FC<RaceListProps> = ({
   const RaceTitleCellRenderer = useCallback(
     (props: any) => {
       const race = props.data;
-      const handleClick = (e: React.MouseEvent) => {
-        e.preventDefault();
-        if (race?.id && race.eventId) {
-          navigate(`/events/event-details/${race.eventId}/race/${race.id}`);
-        }
-      };
 
       return (
         <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
           <Typography
-            component="a"
-            href={`/events/event-details/${race.eventId}/race/${race.id}`}
-            onClick={handleClick}
+            component={RouterLink}
+            to={`/events/event-details/${race.eventId}/race/${race.id}`}
             sx={{
               color: "primary.main",
               textDecoration: "none",
@@ -192,7 +173,7 @@ export const RaceList: React.FC<RaceListProps> = ({
         </Box>
       );
     },
-    [navigate]
+    []
   );
 
   // Start DateTime Cell Renderer
@@ -245,13 +226,8 @@ export const RaceList: React.FC<RaceListProps> = ({
             <IconButton
               color="primary"
               size="small"
-              onClick={() => {
-                if (onEdit && race.id) {
-                  onEdit(String(race.id));
-                } else {
-                  handleEditClick(race.eventId, race.id);
-                }
-              }}
+              component={RouterLink}
+              to={`/events/event-details/${race.eventId}/race/edit/${race.id}`}
             >
               <EditIcon fontSize="small" />
             </IconButton>
@@ -274,7 +250,7 @@ export const RaceList: React.FC<RaceListProps> = ({
         </Stack>
       );
     },
-    [onEdit, onDelete]
+    [onDelete]
   );
 
   // Column Definitions

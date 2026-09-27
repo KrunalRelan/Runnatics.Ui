@@ -6,7 +6,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import {
   Box,
   Button,
@@ -71,7 +71,6 @@ const getDefaultSearchCriteria = (): EventSearchRequest => ({
 });
 
 const EventsList: React.FC = () => {
-  const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [searchCriteria, setSearchCriteria] = useState<EventSearchRequest>(
     getDefaultSearchCriteria()
@@ -303,16 +302,6 @@ const EventsList: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchQuery, startDate, endDate, validateDateRange]);
 
-  const handleCreateEvent = () => {
-    navigate("/events/events-create");
-  };
-
-  const handleEditEvent = (eventId: number | undefined) => {
-    if (eventId) {
-      navigate(`/events/events-edit/${eventId}`);
-    }
-  };
-
   const handleDeleteClick = (event: Event) => {
     setEventToDelete(event);
     setDeleteDialogOpen(true);
@@ -445,7 +434,8 @@ const EventsList: React.FC = () => {
             <IconButton
               color="primary"
               size="small"
-              onClick={() => handleEditEvent(event.id)}
+              component={RouterLink}
+              to={`/events/events-edit/${event.id}`}
             >
               <EditIcon fontSize="small" />
             </IconButton>
@@ -472,19 +462,12 @@ const EventsList: React.FC = () => {
   const EventNameCellRenderer = useCallback(
     (props: any) => {
       const event = props.data;
-      const handleClick = (e: React.MouseEvent) => {
-        e.preventDefault();
-        if (event?.id) {
-          navigate(`/events/event-details/${event.id}`);
-        }
-      };
 
       return (
         <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
           <Typography
-            component="a"
-            href={`/events/event-details/${event?.id}`}
-            onClick={handleClick}
+            component={RouterLink}
+            to={`/events/event-details/${event?.id}`}
             sx={{
               color: "primary.main",
               textDecoration: "none",
@@ -499,7 +482,7 @@ const EventsList: React.FC = () => {
         </Box>
       );
     },
-    [navigate]
+    []
   );
 
   // Published status cell renderer
@@ -692,9 +675,6 @@ const EventsList: React.FC = () => {
       pageSize: size,
     }));
   };
- const handleBack = () => {
-    navigate(`/dashboard`);
-  };
 
   if (loading && events.length === 0) {
     return (
@@ -709,7 +689,8 @@ const EventsList: React.FC = () => {
       <Button
         variant="outlined"
         startIcon={<ArrowBackIcon />}
-        onClick={handleBack}
+        component={RouterLink}
+        to="/dashboard"
         sx={{ mb: 2 }}
       >
         Back
@@ -730,7 +711,8 @@ const EventsList: React.FC = () => {
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          onClick={handleCreateEvent}
+          component={RouterLink}
+          to="/events/events-create"
         >
           Create Event
         </Button>
@@ -929,7 +911,8 @@ const EventsList: React.FC = () => {
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
-                  onClick={handleCreateEvent}
+                  component={RouterLink}
+                  to="/events/events-create"
                 >
                   Create Your First Event
                 </Button>

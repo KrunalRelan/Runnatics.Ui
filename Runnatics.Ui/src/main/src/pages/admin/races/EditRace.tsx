@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import {
   Box,
   Button,
@@ -208,9 +208,7 @@ export const EditRace: React.FC = () => {
     }));
   }, [overrideLeaderboardSettings, leaderBoardSettings]);
 
-  const handleBack = () => {
-    navigate(`/events/event-details/${eventId}`);
-  };
+  const backUrl = `/events/event-details/${eventId}`;
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -410,7 +408,8 @@ export const EditRace: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={handleBack}
+          component={RouterLink}
+          to={backUrl}
           sx={{ mb: 2 }}
         >
           Back
@@ -712,7 +711,8 @@ export const EditRace: React.FC = () => {
           >
             <Button
               variant="outlined"
-              onClick={handleBack}
+              component={RouterLink}
+              to={backUrl}
               disabled={isSubmitting}
               size="large"
               fullWidth={false}

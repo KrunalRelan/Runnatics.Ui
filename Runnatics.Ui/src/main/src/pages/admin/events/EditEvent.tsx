@@ -1,7 +1,7 @@
 // src/main/src/pages/admin/events/EditEvent.tsx
 
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import {
   TextField,
   Select,
@@ -346,10 +346,6 @@ export const EditEvent: React.FC = () => {
     }));
   }, [eventSettings, leaderBoardSettings]);
 
-  const handleBack = () => {
-    navigate(`/events/events-dashboard`);
-  };
-
   // Handle input changes for TextField
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -613,7 +609,8 @@ export const EditEvent: React.FC = () => {
       <Button
         variant="outlined"
         startIcon={<ArrowBackIcon />}
-        onClick={handleBack}
+        component={RouterLink}
+        to="/events/events-dashboard"
         sx={{ mb: 2 }}
       >
         Back
@@ -1145,7 +1142,8 @@ export const EditEvent: React.FC = () => {
           >
             <Button
               variant="outlined"
-              onClick={() => navigate("/events/events-dashboard")}
+              component={RouterLink}
+              to="/events/events-dashboard"
               disabled={isSubmitting}
               size="large"
               fullWidth={false}

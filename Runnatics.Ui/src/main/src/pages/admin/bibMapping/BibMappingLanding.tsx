@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -16,7 +16,6 @@ import { EventService } from '../../../services/EventService';
 import { RaceService } from '../../../services/RaceService';
 
 const BibMappingLanding: React.FC = () => {
-  const navigate = useNavigate();
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const eventsQuery = useQuery({
@@ -115,11 +114,8 @@ const BibMappingLanding: React.FC = () => {
               {races.map((race) => (
                 <Card key={race.id} variant="outlined" sx={{ minWidth: 200, flex: '1 1 200px' }}>
                   <CardActionArea
-                    onClick={() =>
-                      navigate(
-                        `/events/event-details/${selectedEventId}/race/${race.id}/bib-mapping`
-                      )
-                    }
+                    component={RouterLink}
+                    to={`/events/event-details/${selectedEventId}/race/${race.id}/bib-mapping`}
                   >
                     <CardContent>
                       <Typography variant="subtitle1" fontWeight={600}>
