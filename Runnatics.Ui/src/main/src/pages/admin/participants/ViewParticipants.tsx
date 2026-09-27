@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import {
   Box,
   Button,
@@ -125,7 +125,6 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
   raceName,
 }) => {
   // Navigation
-  const navigate = useNavigate();
 
   // State
   const [participantsLoading, setParticipantsLoading] = useState<boolean>(false);
@@ -579,11 +578,16 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
     }));
   };
 
-  // Handler to view participant details
-  const handleViewParticipant = (participant: Participant) => {
-    if (participant.id) {
-      navigate(`/events/event-details/${eventId}/race/${raceId}/participant/${participant.id}`);
-    }
+  // Participant detail links are real <a href>s (RouterLink) so right-click "Open link in
+  // new tab", Ctrl/Cmd+click and middle-click all work; a plain left-click still routes in-app.
+  const participantDetailUrl = (participant: Participant, mode?: "edit") =>
+    `/events/event-details/${eventId}/race/${raceId}/participant/${participant.id}${mode ? `?mode=${mode}` : ""}`;
+
+  // Keeps a link click from reaching the grid row, and makes it inert while Process/Clear
+  // runs — same page-level busy lock as the buttons.
+  const handleParticipantLinkClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (resultsBusy) e.preventDefault();
   };
 
    const handleEditParticipant = (participant: Participant) => {
@@ -924,25 +928,19 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
       cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
       cellRenderer: (params: any) => {
         const participant = params.data as Participant;
+        if (!participant?.id) return params.value;
         return (
           <Box
-            component="span"
+            component={RouterLink}
+            to={participantDetailUrl(participant, "edit")}
             sx={{
               color: "primary.main",
               cursor: "pointer",
               fontWeight: 600,
+              textDecoration: "none",
               "&:hover": { textDecoration: "underline" },
             }}
-            onClick={(e) => {
-              e.stopPropagation();
-              // Inert while Process/Clear runs — same page-level busy lock as the buttons
-              if (resultsBusy) return;
-              if (participant?.id) {
-                navigate(
-                  `/events/event-details/${eventId}/race/${raceId}/participant/${participant.id}?mode=edit`
-                );
-              }
-            }}
+            onClick={handleParticipantLinkClick}
           >
             {params.value}
           </Box>
@@ -971,6 +969,19 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
         whiteSpace: 'nowrap',
       },
       cellClass: 'participant-name-cell',
+      cellRenderer: (params: any) => {
+        const participant = params.data as Participant;
+        if (!participant?.id) return params.value;
+        return (
+          <RouterLink
+            to={participantDetailUrl(participant)}
+            style={{ color: 'inherit', textDecoration: 'inherit' }}
+            onClick={handleParticipantLinkClick}
+          >
+            {params.value}
+          </RouterLink>
+        );
+      },
     },
     {
       field: "gender",
@@ -1044,10 +1055,9 @@ const ViewParticipants: React.FC<ViewParticipantsProps> = ({
           <IconButton
             size="small"
             color="info"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleViewParticipant(params.data);
-            }}
+            component={RouterLink}
+            to={participantDetailUrl(params.data)}
+            onClick={handleParticipantLinkClick}
             title="View Details"
             disabled={resultsBusy}
           >
