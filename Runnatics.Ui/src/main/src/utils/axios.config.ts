@@ -14,7 +14,7 @@ export const apiClient = axios.create({
         'Content-Type': 'application/json',
     },
     withCredentials: false,
-    timeout: 30000,
+    timeout: 60000,
 });
 
 // Separate axios instance used ONLY for refresh-token calls.
@@ -90,7 +90,28 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
     (response) => response,
     async (error) => {
-        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+        const originalRequest = error.config as InternalAxiosRequestConfig & {
+            _retry?: boolean;
+            _timeoutRetry?: boolean;
+        };
+
+        // Request timed out (e.g. backend/DB cold start after idle). Retry once
+        // for read-only search calls, since a cold start can outlast the client
+        // timeout even though the request itself is safe to repeat.
+        if (error.code === 'ECONNABORTED' && originalRequest && !originalRequest._timeoutRetry) {
+            const isSearchCall =
+                originalRequest.method?.toLowerCase() === 'get' ||
+                originalRequest.url?.includes('/search');
+
+            if (isSearchCall) {
+                originalRequest._timeoutRetry = true;
+                return apiClient(originalRequest);
+            }
+
+            error.userMessage =
+                'The server is taking longer than expected to respond (it may be waking up after being idle). Please try again in a moment.';
+            return Promise.reject(error);
+        }
 
         // No response at all — network / CORS error
         if (!error.response) {
